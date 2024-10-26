@@ -1,0 +1,11 @@
+[build]
+  command = "expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20.18.0"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

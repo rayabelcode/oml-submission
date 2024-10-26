@@ -8,27 +8,27 @@ import SettingsScreen from '../screens/SettingsScreen.js';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          if (route.name === 'Dashboard') {
-            return <Home size={size} color={color} />;
-          } else if (route.name === 'Contacts') {
-            return <Users size={size} color={color} />;
-          } else if (route.name === 'Settings') {
-            return <Settings size={size} color={color} />;
-          }
-        },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
-        headerShown: true,
-        headerTitleAlign: 'center',
-      })}
-    >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Contacts" component={ContactsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
-    </Tab.Navigator>
-  );
+	return (
+		<Tab.Navigator
+			screenOptions={({ route }) => ({
+				tabBarIcon: ({ focused, color, size }) => {
+					if (route.name === 'Dashboard') {
+						return <Home size={size} color={color} />;
+					} else if (route.name === 'Contacts') {
+						return <Users size={size} color={color} />;
+					} else if (route.name === 'Settings') {
+						return <Settings size={size} color={color} />;
+					}
+				},
+				tabBarActiveTintColor: '#007AFF',
+				tabBarInactiveTintColor: 'gray',
+				headerShown: true,
+				headerTitleAlign: 'center',
+			})}
+		>
+			<Tab.Screen name="Dashboard" component={DashboardScreen} />
+			<Tab.Screen name="Contacts" component={ContactsScreen} />
+			<Tab.Screen name="Settings" component={SettingsScreen} />
+		</Tab.Navigator>
+	);
 }
