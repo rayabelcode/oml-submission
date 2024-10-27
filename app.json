@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rayabel.onmylistapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -31,6 +32,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e44d94bc-5464-4591-a0b4-4d388f070600"
+      }
     }
   }
 }
