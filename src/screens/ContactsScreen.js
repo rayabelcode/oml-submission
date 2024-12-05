@@ -15,7 +15,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Search, Plus, Phone, Mail, Clock, User, Trash2 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import { fetchContacts, deleteContact, addContact } from '../utils/firestore';
+import { fetchContacts, deleteContact, addContact, addReminder } from '../utils/firestore';
 
 export default function ContactsScreen() {
 	const { user } = useAuth();
@@ -24,6 +24,8 @@ export default function ContactsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [isFormVisible, setIsFormVisible] = useState(false);
+	const [isReminderModalVisible, setIsReminderModalVisible] = useState(false);
+	const [selectedContact, setSelectedContact] = useState(null);
 
 	async function loadContacts() {
 		try {
@@ -87,6 +89,33 @@ export default function ContactsScreen() {
 		}
 	};
 
+	const handleAddReminder = async (reminderData) => {
+		console.log('handleAddReminder called with data:', reminderData);
+		try {
+			console.log('Attempting to add reminder...');
+			console.log('User ID:', user.uid);
+			const result = await addReminder(user.uid, reminderData);
+			console.log('Reminder added successfully:', result);
+			Alert.alert(
+				'Reminder Created',
+				`A new reminder "${reminderData.title}" has been created and will appear on your dashboard.`,
+				[
+					{
+						text: 'OK',
+						onPress: () => console.log('Reminder alert closed'),
+					},
+				]
+			);
+		} catch (error) {
+			console.error('Detailed error:', {
+				message: error.message,
+				code: error.code,
+				stack: error.stack,
+			});
+			Alert.alert('Error', 'Failed to create reminder');
+		}
+	};
+
 	const ContactCard = ({ id, name, email, phone, frequency, last_contact }) => (
 		<TouchableOpacity
 			style={styles.contactCard}
@@ -121,10 +150,24 @@ export default function ContactsScreen() {
 				)}
 				<TouchableOpacity
 					style={styles.actionIcon}
-					onPress={() => Alert.alert('Coming Soon', 'This feature is under development')}
+					onPress={() => {
+						console.log('Clock icon pressed for contact:', name);
+						const reminderData = {
+							title: `Reminder for ${name}`,
+							description: '',
+							contact_id: id,
+							reminder_type: 'call',
+							due_date: new Date(),
+						};
+						console.log('Reminder data created:', reminderData);
+						setSelectedContact({ id, name });
+						console.log('Selected contact set:', { id, name });
+						handleAddReminder(reminderData);
+					}}
 				>
 					<Clock size={20} color="#007AFF" />
 				</TouchableOpacity>
+
 				<TouchableOpacity
 					style={[styles.actionIcon, { marginLeft: 10 }]}
 					onPress={() => handleDeleteContact(id)}

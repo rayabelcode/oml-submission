@@ -11,7 +11,7 @@ import {
 	TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Bell, MessageCircle, Clock, Plus } from 'lucide-react-native';
+import { Bell, Plus } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import {
 	fetchReminders,
@@ -299,19 +299,9 @@ export default function DashboardScreen() {
 			</View>
 
 			<View style={styles.quickActions}>
-				<TouchableOpacity
-					style={styles.actionButton}
-					onPress={() => {
-						console.log('Quick action pressed');
-						window.alert('Testing basic alert'); // Using window.alert instead
-					}}
-				>
-					<MessageCircle size={24} color="#007AFF" />
-					<Text style={styles.actionText}>New Reminder</Text>
-				</TouchableOpacity>
 				<TouchableOpacity style={styles.actionButton} onPress={() => setIsAddModalVisible(true)}>
-					<Clock size={24} color="#007AFF" />
-					<Text style={styles.actionText}>Set Reminder</Text>
+					<Plus size={24} color="#007AFF" />
+					<Text style={styles.actionText}>New Reminder</Text>
 				</TouchableOpacity>
 			</View>
 
