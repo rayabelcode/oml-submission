@@ -13,12 +13,18 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Bell, MessageCircle, Clock, Plus } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import { fetchReminders, completeReminder, addReminder, fetchContacts } from '../utils/firestore';
+import {
+	fetchReminders,
+	completeReminder,
+	addReminder,
+	fetchContacts,
+	updateReminder,
+} from '../utils/firestore';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Modal component
-const AddReminderModal = ({
+const ReminderModal = ({
 	visible,
 	onClose,
 	onSubmit,
@@ -27,11 +33,12 @@ const AddReminderModal = ({
 	setReminderData,
 	showDatePicker,
 	setShowDatePicker,
+	isEditing,
 }) => (
 	<Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
 		<View style={styles.modalContainer}>
 			<View style={styles.modalContent}>
-				<Text style={styles.modalTitle}>Add New Reminder</Text>
+				<Text style={styles.modalTitle}>{isEditing ? 'Edit Reminder' : 'Add New Reminder'}</Text>
 
 				<TextInput
 					style={styles.input}
@@ -96,7 +103,7 @@ const AddReminderModal = ({
 					</TouchableOpacity>
 
 					<TouchableOpacity style={[styles.button, styles.saveButton]} onPress={onSubmit}>
-						<Text style={styles.buttonText}>Add Reminder</Text>
+						<Text style={styles.buttonText}>{isEditing ? 'Save Changes' : 'Add Reminder'}</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
@@ -105,20 +112,8 @@ const AddReminderModal = ({
 );
 
 // ReminderCard component
-const ReminderCard = ({ id, title, description, due_date, contact, reminder_type, onComplete }) => (
-	<TouchableOpacity
-		style={styles.card}
-		onPress={() => {
-			Alert.alert(title, `${description}\n\nContact: ${contact?.name || 'No contact'}`, [
-				{ text: 'Cancel', style: 'cancel' },
-				{
-					text: 'Mark Complete',
-					onPress: () => onComplete(id),
-					style: 'default',
-				},
-			]);
-		}}
-	>
+const ReminderCard = ({ id, title, description, due_date, contact, reminder_type, onComplete, onEdit }) => (
+	<View style={styles.card}>
 		<View style={styles.cardHeader}>
 			<Bell size={20} color="#007AFF" />
 			<Text style={styles.cardTitle}>{title}</Text>
@@ -135,7 +130,15 @@ const ReminderCard = ({ id, title, description, due_date, contact, reminder_type
 				<Text style={styles.tag}>{reminder_type}</Text>
 			</View>
 		)}
-	</TouchableOpacity>
+		<View style={styles.cardActions}>
+			<TouchableOpacity style={styles.cardButton} onPress={() => onEdit(id)}>
+				<Text style={styles.cardButtonText}>Edit</Text>
+			</TouchableOpacity>
+			<TouchableOpacity style={styles.cardButton} onPress={() => onComplete(id)}>
+				<Text style={styles.cardButtonText}>Complete</Text>
+			</TouchableOpacity>
+		</View>
+	</View>
 );
 
 // Main component
@@ -154,6 +157,8 @@ export default function DashboardScreen() {
 		due_date: new Date(),
 	});
 	const [showDatePicker, setShowDatePicker] = useState(false);
+	const [editingReminderId, setEditingReminderId] = useState(null);
+	const [isEditing, setIsEditing] = useState(false);
 
 	async function loadReminders() {
 		try {
@@ -202,6 +207,35 @@ export default function DashboardScreen() {
 		}
 	}
 
+	const handleEditReminder = (reminderId) => {
+		const reminderToEdit = reminders.find((rem) => rem.id === reminderId);
+		if (reminderToEdit) {
+			setNewReminder({
+				title: reminderToEdit.title,
+				description: reminderToEdit.description,
+				contact_id: reminderToEdit.contact?.id || '',
+				reminder_type: reminderToEdit.reminder_type,
+				due_date: new Date(reminderToEdit.due_date),
+			});
+			setEditingReminderId(reminderId);
+			setIsEditing(true);
+			setIsAddModalVisible(true);
+		}
+	};
+
+	const handleCloseModal = () => {
+		setIsAddModalVisible(false);
+		setIsEditing(false);
+		setEditingReminderId(null);
+		setNewReminder({
+			title: '',
+			description: '',
+			contact_id: '',
+			reminder_type: 'call',
+			due_date: new Date(),
+		});
+	};
+
 	const handleAddReminder = async () => {
 		if (!newReminder.title.trim()) {
 			Alert.alert('Error', 'Please enter a title for the reminder');
@@ -209,9 +243,17 @@ export default function DashboardScreen() {
 		}
 
 		try {
-			await addReminder(user.uid, newReminder);
+			if (isEditing) {
+				await updateReminder(editingReminderId, newReminder);
+				Alert.alert('Success', 'Reminder updated successfully');
+			} else {
+				await addReminder(user.uid, newReminder);
+				Alert.alert('Success', 'Reminder added successfully');
+			}
+
 			setIsAddModalVisible(false);
 			loadReminders();
+			// Reset form
 			setNewReminder({
 				title: '',
 				description: '',
@@ -219,10 +261,11 @@ export default function DashboardScreen() {
 				reminder_type: 'call',
 				due_date: new Date(),
 			});
-			Alert.alert('Success', 'Reminder added successfully');
+			setIsEditing(false);
+			setEditingReminderId(null);
 		} catch (error) {
-			console.error('Error adding reminder:', error);
-			Alert.alert('Error', 'Failed to add reminder');
+			console.error('Error with reminder:', error);
+			Alert.alert('Error', isEditing ? 'Failed to update reminder' : 'Failed to add reminder');
 		}
 	};
 
@@ -238,15 +281,16 @@ export default function DashboardScreen() {
 		<View style={styles.container}>
 			<StatusBar style="auto" />
 
-			<AddReminderModal
+			<ReminderModal
 				visible={isAddModalVisible}
-				onClose={() => setIsAddModalVisible(false)}
+				onClose={handleCloseModal}
 				onSubmit={handleAddReminder}
 				contacts={contacts}
 				reminderData={newReminder}
 				setReminderData={setNewReminder}
 				showDatePicker={showDatePicker}
 				setShowDatePicker={setShowDatePicker}
+				isEditing={isEditing}
 			/>
 
 			<View style={styles.header}>
@@ -255,7 +299,13 @@ export default function DashboardScreen() {
 			</View>
 
 			<View style={styles.quickActions}>
-				<TouchableOpacity style={styles.actionButton} onPress={() => setIsAddModalVisible(true)}>
+				<TouchableOpacity
+					style={styles.actionButton}
+					onPress={() => {
+						console.log('Quick action pressed');
+						window.alert('Testing basic alert'); // Using window.alert instead
+					}}
+				>
 					<MessageCircle size={24} color="#007AFF" />
 					<Text style={styles.actionText}>New Reminder</Text>
 				</TouchableOpacity>
@@ -281,7 +331,12 @@ export default function DashboardScreen() {
 					</View>
 				) : (
 					reminders.map((reminder) => (
-						<ReminderCard key={reminder.id} {...reminder} onComplete={handleCompleteReminder} />
+						<ReminderCard
+							key={reminder.id}
+							{...reminder}
+							onComplete={handleCompleteReminder}
+							onEdit={handleEditReminder}
+						/>
 					))
 				)}
 			</ScrollView>
@@ -459,6 +514,26 @@ const styles = StyleSheet.create({
 	tagContainer: {
 		marginLeft: 30,
 		marginTop: 5,
+	},
+	cardActions: {
+		flexDirection: 'row',
+		justifyContent: 'flex-end',
+		marginTop: 10,
+		paddingTop: 10,
+		borderTopWidth: 1,
+		borderTopColor: '#eee',
+	},
+	cardButton: {
+		backgroundColor: '#007AFF',
+		paddingVertical: 6,
+		paddingHorizontal: 12,
+		borderRadius: 6,
+		marginLeft: 10,
+	},
+	cardButtonText: {
+		color: '#fff',
+		fontSize: 14,
+		fontWeight: '500',
 	},
 	tag: {
 		color: '#007AFF',
