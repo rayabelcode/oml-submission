@@ -69,25 +69,21 @@ export default function ContactsScreen() {
 		setIsFormVisible(true);
 	};
 
-	const handleDeleteContact = async (contactId) => {
-		try {
-			Alert.alert('Delete Contact', 'Are you sure you want to delete this contact?', [
-				{
-					text: 'Cancel',
-					style: 'cancel',
-				},
-				{
-					text: 'Delete',
-					style: 'destructive',
-					onPress: async () => {
-						await deleteContact(contactId);
-						loadContacts();
-					},
-				},
-			]);
-		} catch (error) {
-			console.error('Error deleting contact:', error.message);
-			Alert.alert('Error', 'Failed to delete contact');
+	const handleDeleteContact = (contactId) => {
+		if (window.confirm('Are you sure you want to delete this contact?')) {
+			console.log('1. Starting delete');
+			try {
+				console.log('2. Before deleteContact call');
+				deleteContact(contactId).then(() => {
+					console.log('3. After deleteContact');
+					loadContacts().then(() => {
+						console.log('4. Contacts reloaded');
+					});
+				});
+			} catch (error) {
+				console.error('Delete error:', error);
+				alert('Failed to delete contact');
+			}
 		}
 	};
 
@@ -95,14 +91,7 @@ export default function ContactsScreen() {
 		<TouchableOpacity
 			style={styles.contactCard}
 			onPress={() => {
-				Alert.alert(name, `Frequency: ${frequency || 'Not set'}\n${email || ''}\n${phone || ''}`, [
-					{ text: 'Cancel', style: 'cancel' },
-					{
-						text: 'Delete',
-						onPress: () => handleDeleteContact(id),
-						style: 'destructive',
-					},
-				]);
+				Alert.alert(name, `Frequency: ${frequency || 'Not set'}\n${email || ''}\n${phone || ''}`);
 			}}
 		>
 			<View style={styles.contactHeader}>

@@ -12,6 +12,7 @@ import {
 	serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { getDoc } from 'firebase/firestore';
 
 // User operations
 export const createUserDocument = async (userId, userData) => {
@@ -32,17 +33,20 @@ export const createUserDocument = async (userId, userData) => {
 
 // Contact operations
 export const addContact = async (userId, contactData) => {
+	console.log('Adding contact for user:', userId);
 	try {
 		const contactsRef = collection(db, 'contacts');
 		const newContact = {
 			...contactData,
-			user_id: userId,
+			user_id: userId, // Must match Firebase auth UID
 			created_at: serverTimestamp(),
 			last_contact: null,
 			last_updated: serverTimestamp(),
 		};
 
+		console.log('Creating contact with data:', newContact);
 		const docRef = await addDoc(contactsRef, newContact);
+		console.log('Contact created with ID:', docRef.id);
 		return { id: docRef.id, ...newContact };
 	} catch (error) {
 		console.error('Error adding contact:', error);
@@ -74,10 +78,19 @@ export const fetchContacts = async (userId, searchQuery = '') => {
 };
 
 export const deleteContact = async (contactId) => {
+	console.log('A. Starting delete in Firestore for ID:', contactId);
 	try {
-		await deleteDoc(doc(db, 'contacts', contactId));
+		const contactRef = doc(db, 'contacts', contactId);
+		console.log('B. Contact reference created');
+		const contactSnap = await getDoc(contactRef);
+		console.log('C. Document data:', contactSnap.data());
+		await deleteDoc(contactRef);
+		console.log('D. Delete completed in Firestore');
 	} catch (error) {
-		console.error('Error deleting contact:', error);
+		console.error('Firestore delete error:', {
+			code: error.code,
+			message: error.message,
+		});
 		throw error;
 	}
 };
