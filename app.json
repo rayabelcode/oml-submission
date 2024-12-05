@@ -16,17 +16,22 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourdomain.onmylist"
+      "bundleIdentifier": "com.rayabel.onmylistapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourdomain.onmylist"
+      "package": "com.rayabel.onmylistapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-build-properties",
+      "expo-font"
+    ]
   }
 }
