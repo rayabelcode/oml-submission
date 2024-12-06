@@ -2,7 +2,7 @@
   "expo": {
     "name": "OnMyList",
     "slug": "OnMyList",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,14 +16,16 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rayabel.onmylistapp"
+      "bundleIdentifier": "com.rayabel.onmylistapp",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.rayabel.onmylistapp"
+      "package": "com.rayabel.onmylistapp",
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +34,11 @@
     "plugins": [
       "expo-build-properties",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a2b79805-c750-4012-92e8-fee850d83b9c"
+      }
+    }
   }
 }
