@@ -20,6 +20,8 @@ import {
 	updateContact,
 } from '../utils/firestore';
 import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 
 // Sort options
 const SORT_OPTIONS = {
@@ -123,7 +125,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 							<Text style={styles.dateButtonText}>Next Contact: {nextDate.toLocaleDateString()}</Text>
 						</TouchableOpacity>
 
-						{showDatePicker && (
+						{showDatePicker && Platform.OS !== 'web' ? (
 							<DateTimePicker
 								value={nextDate}
 								mode="date"
@@ -135,7 +137,24 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 									}
 								}}
 							/>
-						)}
+						) : showDatePicker ? (
+							<input
+								type="date"
+								value={nextDate.toISOString().split('T')[0]}
+								onChange={(e) => {
+									setShowDatePicker(false);
+									setNextDate(new Date(e.target.value));
+								}}
+								style={{
+									padding: 10,
+									marginBottom: 15,
+									borderRadius: 10,
+									borderWidth: 1,
+									borderColor: '#ddd',
+									width: '100%',
+								}}
+							/>
+						) : null}
 
 						<View style={styles.historySection}>
 							<Text style={styles.sectionTitle}>Contact History</Text>

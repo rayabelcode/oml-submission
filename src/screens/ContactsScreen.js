@@ -10,7 +10,6 @@ import {
 	TextInput,
 	RefreshControl,
 	Alert,
-	FlatList,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Plus, User, History, Edit, X } from 'lucide-react-native';
@@ -146,8 +145,27 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 		phone: '',
 		frequency: 'weekly',
 		notes: '',
-		...initialData,
 	});
+
+	useEffect(() => {
+		if (initialData) {
+			setFormData({
+				name: initialData.name || '',
+				email: initialData.email || '',
+				phone: initialData.phone || '',
+				frequency: initialData.frequency || 'weekly',
+				notes: initialData.notes || '',
+			});
+		} else {
+			setFormData({
+				name: '',
+				email: '',
+				phone: '',
+				frequency: 'weekly',
+				notes: '',
+			});
+		}
+	}, [initialData]);
 
 	return (
 		<Modal visible={visible} animationType="slide" transparent={true}>

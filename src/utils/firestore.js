@@ -105,8 +105,9 @@ export const deleteContact = async (contactId) => {
 export const addContactHistory = async (contactId, historyData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
+		const now = new Date().toISOString();
 		const historyEntry = {
-			date: serverTimestamp(),
+			date: now,
 			notes: historyData.notes || '',
 			completed: true,
 		};
