@@ -145,21 +145,23 @@ export const fetchContactHistory = async (contactId) => {
 export const fetchUpcomingContacts = async (userId) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
-		const today = new Date();
-		today.setHours(0, 0, 0, 0); // Start of today
 
-		const q = query(
-			contactsRef,
-			where('user_id', '==', userId),
-			where('next_contact', '>=', today.toISOString()),
-			orderBy('next_contact', 'asc')
-		);
+		const q = query(contactsRef, where('user_id', '==', userId), where('next_contact', '!=', null));
 
 		const querySnapshot = await getDocs(q);
-		return querySnapshot.docs.map((doc) => ({
-			id: doc.id,
-			...doc.data(),
-		}));
+		const contacts = [];
+
+		querySnapshot.forEach((doc) => {
+			const data = doc.data();
+			if (data.next_contact) {
+				contacts.push({
+					id: doc.id,
+					...data,
+				});
+			}
+		});
+
+		return contacts;
 	} catch (error) {
 		console.error('Error fetching upcoming contacts:', error);
 		throw error;

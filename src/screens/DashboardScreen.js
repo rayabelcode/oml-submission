@@ -175,7 +175,6 @@ export default function DashboardScreen() {
 			const loadFunction = viewMode === VIEW_MODES.UPCOMING ? fetchUpcomingContacts : fetchPastContacts;
 			const contactsList = await loadFunction(user.uid);
 
-			// Sort contacts based on selected option
 			const sortedContacts = [...contactsList].sort((a, b) => {
 				switch (sortBy) {
 					case SORT_OPTIONS.NEXT_CONTACT:
