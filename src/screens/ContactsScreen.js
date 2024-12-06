@@ -137,30 +137,81 @@ const ContactCard = ({ contact, onPress }) => {
 	);
 };
 
-// Contact Details Modal
 const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) => {
 	const [history, setHistory] = useState([]);
 	const [notes, setNotes] = useState('');
+	const [editMode, setEditMode] = useState(null); // Track editing state
+	const [isCallNotesModalVisible, setIsCallNotesModalVisible] = useState(false); // Call Notes modal state
+	const [callNotes, setCallNotes] = useState(''); // Call notes text
+	const [callDate, setCallDate] = useState(new Date()); // Call date
 
+	// Fetch Contact History
 	useEffect(() => {
 		if (contact?.id) {
-			fetchContactHistory(contact.id).then(setHistory);
+			fetchContactHistory(contact?.id).then(setHistory);
 		}
 	}, [contact]);
 
-	if (!contact) return null;
+	// If contact does not exist, return nothing
+	if (!contact) {
+		return null;
+	}
+
+	// Edit a specific history note
+	const handleEditHistory = async (index, updatedNote) => {
+		try {
+			const updatedHistory = [...history];
+			updatedHistory[index].notes = updatedNote;
+
+			await updateContact(contact.id, { contact_history: updatedHistory });
+			setHistory(updatedHistory);
+			setEditMode(null);
+			Alert.alert('Success', 'Contact history updated');
+		} catch (error) {
+			console.error('Error editing history:', error);
+			Alert.alert('Error', 'Failed to update contact history');
+		}
+	};
+
+	const handleAddCallNotes = async (notes, date) => {
+		if (!notes.trim()) {
+			Alert.alert('Error', 'Please enter the call notes');
+			return;
+		}
+
+		try {
+			// Add new entry to Firestore
+			await addContactHistory(contact.id, {
+				notes,
+				date: date.toISOString(),
+			});
+
+			// Refresh the history and close modal
+			const updatedHistory = await fetchContactHistory(contact.id);
+			setHistory(updatedHistory);
+			setCallNotes('');
+			setCallDate(new Date());
+			setIsCallNotesModalVisible(false);
+			Alert.alert('Success', 'Call notes added!');
+		} catch (error) {
+			console.error('Error adding call notes:', error);
+			Alert.alert('Error', 'Failed to add call notes');
+		}
+	};
 
 	return (
 		<Modal visible={visible} animationType="slide" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
+					{/* Header */}
 					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>{contact.name}</Text>
+						<Text style={styles.modalTitle}>{contact?.name || 'Unknown'}</Text>
 						<TouchableOpacity onPress={onClose}>
 							<X size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
+					{/* Contact Information */}
 					<ScrollView style={styles.modalScroll}>
 						<View style={styles.contactInfo}>
 							{contact.email && <Text style={styles.contactDetail}>Email: {contact.email}</Text>}
@@ -172,8 +223,9 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 							)}
 						</View>
 
+						{/* Notes Section */}
 						<View style={styles.notesSection}>
-							<Text style={styles.sectionTitle}>Notes</Text>
+							<Text style={styles.sectionTitle}>Contact Notes</Text>
 							<TextInput
 								style={styles.notesInput}
 								multiline
@@ -183,28 +235,135 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 							/>
 						</View>
 
+						{/* Contact History */}
 						<View style={styles.historySection}>
 							<Text style={styles.sectionTitle}>Contact History</Text>
 							{history.map((entry, index) => (
 								<View key={index} style={styles.historyEntry}>
 									<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-									<Text style={styles.historyNotes}>{entry.notes}</Text>
+									{editMode === index ? (
+										<TextInput
+											style={styles.historyNotesInput}
+											value={entry.notes}
+											onChangeText={(text) => {
+												const updatedHistory = [...history];
+												updatedHistory[index].notes = text;
+												setHistory(updatedHistory);
+											}}
+										/>
+									) : (
+										<Text style={styles.historyNotes}>{entry.notes}</Text>
+									)}
+									<TouchableOpacity
+										style={[styles.modalButton, styles.editButton]}
+										onPress={() =>
+											editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
+										}
+									>
+										<Text style={styles.buttonText}>{editMode === index ? 'Save' : 'Edit'}</Text>
+									</TouchableOpacity>
 								</View>
 							))}
 						</View>
 					</ScrollView>
 
+					{/* Footer Buttons */}
 					<View style={styles.modalActions}>
-						<TouchableOpacity style={[styles.modalButton, styles.editButton]} onPress={() => onEdit(contact)}>
+						<TouchableOpacity
+							style={[styles.modalButton, styles.editFooterButton]}
+							onPress={() => onEdit(contact)}
+						>
 							<Edit size={20} color="#fff" />
 							<Text style={styles.buttonText}>Edit</Text>
 						</TouchableOpacity>
+
 						<TouchableOpacity
-							style={[styles.modalButton, styles.scheduleButton]}
+							style={[styles.modalButton, styles.callNotesButton]}
+							onPress={() => setIsCallNotesModalVisible(true)}
+						>
+							<Text style={styles.buttonText}>Call Notes</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={[styles.modalButton, styles.scheduleFooterButton]}
 							onPress={() => onSchedule(contact)}
 						>
 							<History size={20} color="#fff" />
 							<Text style={styles.buttonText}>Schedule</Text>
+						</TouchableOpacity>
+					</View>
+
+					{/* Call Notes Modal */}
+					<CallNotesModal
+						visible={isCallNotesModalVisible}
+						onClose={() => {
+							setIsCallNotesModalVisible(false);
+							setCallNotes(''); // Clear call notes
+							setCallDate(new Date()); // Reset date
+						}}
+						onSubmit={handleAddCallNotes}
+						callNotes={callNotes} // Pass down call notes
+						setCallNotes={setCallNotes}
+						callDate={callDate} // Pass down call date
+						setCallDate={setCallDate}
+					/>
+				</View>
+			</View>
+		</Modal>
+	);
+};
+
+const CallNotesModal = ({ visible, onClose, onSubmit, callNotes, setCallNotes, callDate, setCallDate }) => {
+	const [showDatePicker, setShowDatePicker] = useState(false);
+
+	return (
+		<Modal visible={visible} transparent={true} animationType="slide">
+			<View style={styles.modalContainer}>
+				<View style={styles.modalContent}>
+					{/* Modal Header */}
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Add Call Notes</Text>
+						<TouchableOpacity onPress={onClose}>
+							<X size={24} color="#666" />
+						</TouchableOpacity>
+					</View>
+
+					{/* Notes Input */}
+					<TextInput
+						style={styles.notesInput}
+						value={callNotes}
+						onChangeText={setCallNotes}
+						placeholder="What did you discuss?"
+						multiline
+					/>
+
+					{/* Date Picker */}
+					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+						<Text style={styles.dateButtonText}>Call Date: {callDate.toLocaleDateString()}</Text>
+					</TouchableOpacity>
+
+					{showDatePicker && (
+						<DateTimePicker
+							value={callDate}
+							mode="date"
+							display="default"
+							onChange={(event, date) => {
+								setShowDatePicker(false);
+								if (date) setCallDate(date);
+							}}
+						/>
+					)}
+
+					{/* Confirmation and Cancel Buttons */}
+					<View style={styles.modalActions}>
+						<TouchableOpacity
+							style={[styles.modalButton, styles.saveButton]}
+							onPress={() => onSubmit(callNotes, callDate)}
+						>
+							<Text style={styles.buttonText}>Confirm</Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={onClose}>
+							<Text style={styles.buttonText}>Cancel</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -658,8 +817,67 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		marginHorizontal: 5,
 	},
+	// History Notes Input
+	historyNotesInput: {
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderRadius: 5,
+		padding: 8,
+		marginTop: 5,
+		backgroundColor: '#f9f9f9',
+	},
+	// Button for Edit/Save
 	editButton: {
 		backgroundColor: '#007AFF',
+		padding: 5,
+		borderRadius: 5,
+		marginTop: 10,
+		alignSelf: 'flex-start',
+	},
+	// Complete Button for Unscheduled Contacts
+	completeButton: {
+		backgroundColor: '#007AFF',
+		marginTop: 15,
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderRadius: 10,
+		alignItems: 'center',
+	},
+	// Edit Footer Button
+	editFooterButton: {
+		backgroundColor: '#007AFF',
+		flexDirection: 'row',
+		padding: 15,
+		borderRadius: 10,
+	},
+	// Schedule Footer Button
+	scheduleFooterButton: {
+		backgroundColor: '#4CAF50',
+		flexDirection: 'row',
+		padding: 15,
+		borderRadius: 10,
+	},
+	callNotesButton: {
+		backgroundColor: '#FFA500', // Orange button
+		flexDirection: 'row',
+		padding: 15,
+		borderRadius: 10,
+		alignItems: 'center',
+		justifyContent: 'center',
+		marginHorizontal: 5,
+	},
+	dateButtonText: {
+		fontSize: 16,
+		color: '#333',
+		fontWeight: '500',
+	},
+	editButtonText: {
+		color: '#fff',
+		fontSize: 14,
+		fontWeight: '500',
+	},
+	unscheduledSection: {
+		marginTop: 20,
 	},
 	scheduleButton: {
 		backgroundColor: '#4CAF50',

@@ -105,23 +105,21 @@ export const deleteContact = async (contactId) => {
 export const addContactHistory = async (contactId, historyData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
-		const now = new Date().toISOString();
-		const historyEntry = {
-			date: now,
+		const newHistoryEntry = {
+			date: new Date().toISOString(),
 			notes: historyData.notes || '',
 			completed: true,
 		};
 
+		// Append the new entry to the contact's history
 		await updateDoc(contactRef, {
-			contact_history: arrayUnion(historyEntry),
+			contact_history: arrayUnion(newHistoryEntry),
 			last_updated: serverTimestamp(),
-			next_contact: historyData.next_contact || null,
 		});
 
-		return historyEntry;
+		return newHistoryEntry;
 	} catch (error) {
-		console.error('Error adding contact history:', error);
-		throw error;
+		throw new Error('Error adding contact history: ' + error.message);
 	}
 };
 
