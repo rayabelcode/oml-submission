@@ -69,14 +69,27 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 	}, [contact]);
 
 	const handleComplete = async () => {
+		if (!notes.trim()) {
+			Alert.alert('Error', 'Please add notes about your contact');
+			return;
+		}
+
 		try {
 			await addContactHistory(contact.id, {
 				notes: notes,
 				next_contact: nextDate.toISOString(),
 			});
+
+			// Update the contact's main notes and dates
+			await updateContact(contact.id, {
+				notes: notes,
+				last_contact: new Date().toISOString(),
+				next_contact: nextDate.toISOString(),
+			});
+
 			onComplete();
 			onClose();
-			Alert.alert('Success', 'Contact marked as completed');
+			Alert.alert('Success', 'Contact completed and next contact scheduled');
 		} catch (error) {
 			console.error('Error completing contact:', error);
 			Alert.alert('Error', 'Failed to complete contact');
