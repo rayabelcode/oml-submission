@@ -1,483 +1,609 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from 'react-native';
+import { Modal, Image, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import {
-	StyleSheet,
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	TextInput,
-	RefreshControl,
-	Alert,
-	Linking,
+    StyleSheet,
+    Text,
+    View,
+    ScrollView,
+    TouchableOpacity,
+    TextInput,
+    RefreshControl,
+    Alert,
+    FlatList,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Search, Plus, Phone, Mail, Clock, User, Trash2 } from 'lucide-react-native';
+import { Plus, User, History, Edit, X } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import { fetchContacts, deleteContact, addContact, addReminder } from '../utils/firestore';
+import { 
+    fetchContacts, 
+    deleteContact, 
+    addContact, 
+    updateContact,
+    addContactHistory,
+    fetchContactHistory 
+} from '../utils/firestore';
+import Logo from '../../assets/full-logo-color.png';
 
+// Screen width for grid calculation
+const windowWidth = Dimensions.get('window').width;
+const numColumns = 3;
+const cardMargin = 10;
+const cardWidth = (windowWidth - (cardMargin * (numColumns + 1))) / numColumns;
+
+// Contact Card Component
+const ContactCard = ({ contact, onPress }) => {
+    const getInitials = (name) => {
+        return name
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .toUpperCase();
+    };
+
+    return (
+        <TouchableOpacity style={styles.card} onPress={() => onPress(contact)}>
+            <View style={styles.cardAvatar}>
+                {contact.photo_url ? (
+                    <Image source={{ uri: contact.photo_url }} style={styles.avatarImage} />
+                ) : (
+                    <Text style={styles.avatarText}>{getInitials(contact.name)}</Text>
+                )}
+            </View>
+            <Text style={styles.cardName} numberOfLines={1}>{contact.name}</Text>
+            {contact.next_contact && (
+                <View style={styles.scheduleBadge}>
+                    <View style={styles.scheduleDot} />
+                </View>
+            )}
+        </TouchableOpacity>
+    );
+};
+
+// Contact Details Modal
+const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) => {
+    const [history, setHistory] = useState([]);
+    const [notes, setNotes] = useState('');
+
+    useEffect(() => {
+        if (contact?.id) {
+            fetchContactHistory(contact.id).then(setHistory);
+        }
+    }, [contact]);
+
+    if (!contact) return null;
+
+    return (
+        <Modal visible={visible} animationType="slide" transparent={true}>
+            <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{contact.name}</Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <X size={24} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.modalScroll}>
+                        <View style={styles.contactInfo}>
+                            {contact.email && (
+                                <Text style={styles.contactDetail}>Email: {contact.email}</Text>
+                            )}
+                            {contact.phone && (
+                                <Text style={styles.contactDetail}>Phone: {contact.phone}</Text>
+                            )}
+                            {contact.next_contact && (
+                                <Text style={styles.contactDetail}>
+                                    Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
+                                </Text>
+                            )}
+                        </View>
+
+                        <View style={styles.notesSection}>
+                            <Text style={styles.sectionTitle}>Notes</Text>
+                            <TextInput
+                                style={styles.notesInput}
+                                multiline
+                                value={notes}
+                                onChangeText={setNotes}
+                                placeholder="Add notes about this contact..."
+                            />
+                        </View>
+
+                        <View style={styles.historySection}>
+                            <Text style={styles.sectionTitle}>Contact History</Text>
+                            {history.map((entry, index) => (
+                                <View key={index} style={styles.historyEntry}>
+                                    <Text style={styles.historyDate}>
+                                        {new Date(entry.date).toLocaleDateString()}
+                                    </Text>
+                                    <Text style={styles.historyNotes}>{entry.notes}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </ScrollView>
+
+                    <View style={styles.modalActions}>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.editButton]} 
+                            onPress={() => onEdit(contact)}
+                        >
+                            <Edit size={20} color="#fff" />
+                            <Text style={styles.buttonText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.scheduleButton]}
+                            onPress={() => onSchedule(contact)}
+                        >
+                            <History size={20} color="#fff" />
+                            <Text style={styles.buttonText}>Schedule</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+// Add/Edit Contact Modal
+const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        frequency: 'weekly',
+        notes: '',
+        ...initialData
+    });
+
+    return (
+        <Modal visible={visible} animationType="slide" transparent={true}>
+            <View style={styles.modalContainer}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>
+                            {initialData ? 'Edit Contact' : 'Add New Contact'}
+                        </Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <X size={24} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.modalScroll}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Name"
+                            value={formData.name}
+                            onChangeText={(text) => setFormData({ ...formData, name: text })}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email"
+                            value={formData.email}
+                            onChangeText={(text) => setFormData({ ...formData, email: text })}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Phone"
+                            value={formData.phone}
+                            onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                            keyboardType="phone-pad"
+                        />
+
+                        <TextInput
+                            style={[styles.input, styles.notesInput]}
+                            placeholder="Notes"
+                            value={formData.notes}
+                            onChangeText={(text) => setFormData({ ...formData, notes: text })}
+                            multiline
+                        />
+                    </ScrollView>
+
+                    <View style={styles.modalActions}>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.cancelButton]} 
+                            onPress={onClose}
+                        >
+                            <Text style={styles.buttonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.modalButton, styles.saveButton]}
+                            onPress={() => onSubmit(formData)}
+                        >
+                            <Text style={styles.buttonText}>Save</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+// Main Component
 export default function ContactsScreen() {
-	const { user } = useAuth();
-	const [contacts, setContacts] = useState([]);
-	const [searchQuery, setSearchQuery] = useState('');
-	const [refreshing, setRefreshing] = useState(false);
-	const [loading, setLoading] = useState(true);
-	const [isFormVisible, setIsFormVisible] = useState(false);
-	const [isReminderModalVisible, setIsReminderModalVisible] = useState(false);
-	const [selectedContact, setSelectedContact] = useState(null);
+    const { user } = useAuth();
+    const [contacts, setContacts] = useState({ scheduledContacts: [], unscheduledContacts: [] });
+    const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [isFormVisible, setIsFormVisible] = useState(false);
+    const [isDetailsVisible, setIsDetailsVisible] = useState(false);
+    const [selectedContact, setSelectedContact] = useState(null);
+    const [editingContact, setEditingContact] = useState(null);
 
-	async function loadContacts() {
-		try {
-			if (!user) return;
+    async function loadContacts() {
+        try {
+            if (!user) return;
+            const contactsList = await fetchContacts(user.uid);
+            setContacts(contactsList);
+        } catch (error) {
+            console.error('Error loading contacts:', error);
+            Alert.alert('Error', 'Failed to load contacts');
+        } finally {
+            setLoading(false);
+        }
+    }
 
-			const contactsList = await fetchContacts(user.uid, searchQuery);
-			setContacts(contactsList);
-		} catch (error) {
-			console.error('Error fetching contacts:', error.message);
-			Alert.alert('Error', 'Failed to load contacts');
-		} finally {
-			setLoading(false);
-		}
-	}
+    useEffect(() => {
+        loadContacts();
+    }, [user]);
 
-	useEffect(() => {
-		loadContacts();
-	}, [user, searchQuery]);
+    const onRefresh = React.useCallback(async () => {
+        setRefreshing(true);
+        await loadContacts();
+        setRefreshing(false);
+    }, []);
 
-	const onRefresh = React.useCallback(async () => {
-		setRefreshing(true);
-		await loadContacts();
-		setRefreshing(false);
-	}, []);
+    const handleAddContact = async (formData) => {
+        try {
+            await addContact(user.uid, formData);
+            setIsFormVisible(false);
+            loadContacts();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to add contact');
+        }
+    };
 
-	const handleCall = async (phone) => {
-		try {
-			await Linking.openURL(`tel:${phone}`);
-		} catch (error) {
-			Alert.alert('Error', 'Could not open phone app');
-		}
-	};
+    const handleEditContact = async (formData) => {
+        try {
+            await updateContact(editingContact.id, formData);
+            setIsFormVisible(false);
+            setEditingContact(null);
+            loadContacts();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to update contact');
+        }
+    };
 
-	const handleEmail = async (email) => {
-		try {
-			await Linking.openURL(`mailto:${email}`);
-		} catch (error) {
-			Alert.alert('Error', 'Could not open email app');
-		}
-	};
+    const handleOpenDetails = (contact) => {
+        setSelectedContact(contact);
+        setIsDetailsVisible(true);
+    };
 
-	const handleAddContact = () => {
-		setIsFormVisible(true);
-	};
+    const handleStartEdit = (contact) => {
+        setEditingContact(contact);
+        setIsDetailsVisible(false);
+        setIsFormVisible(true);
+    };
 
-	const handleDeleteContact = (contactId) => {
-		if (window.confirm('Are you sure you want to delete this contact?')) {
-			console.log('1. Starting delete');
-			try {
-				console.log('2. Before deleteContact call');
-				deleteContact(contactId).then(() => {
-					console.log('3. After deleteContact');
-					loadContacts().then(() => {
-						console.log('4. Contacts reloaded');
-					});
-				});
-			} catch (error) {
-				console.error('Delete error:', error);
-				alert('Failed to delete contact');
-			}
-		}
-	};
+    if (!user) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.message}>Please log in to view your contacts</Text>
+            </View>
+        );
+    }
 
-	const handleAddReminder = async (reminderData) => {
-		console.log('handleAddReminder called with data:', reminderData);
-		try {
-			console.log('Attempting to add reminder...');
-			console.log('User ID:', user.uid);
-			const result = await addReminder(user.uid, reminderData);
-			console.log('Reminder added successfully:', result);
-			Alert.alert(
-				'Reminder Created',
-				`A new reminder "${reminderData.title}" has been created and will appear on your dashboard.`,
-				[
-					{
-						text: 'OK',
-						onPress: () => console.log('Reminder alert closed'),
-					},
-				]
-			);
-		} catch (error) {
-			console.error('Detailed error:', {
-				message: error.message,
-				code: error.code,
-				stack: error.stack,
-			});
-			Alert.alert('Error', 'Failed to create reminder');
-		}
-	};
+    return (
+        <View style={styles.container}>
+            <StatusBar style="auto" />
 
-	const ContactCard = ({ id, name, email, phone, frequency, last_contact }) => (
-		<TouchableOpacity
-			style={styles.contactCard}
-			onPress={() => {
-				Alert.alert(name, `Frequency: ${frequency || 'Not set'}\n${email || ''}\n${phone || ''}`);
-			}}
-		>
-			<View style={styles.contactHeader}>
-				<View style={styles.avatarContainer}>
-					<User size={24} color="#007AFF" />
-				</View>
-				<View style={styles.contactInfo}>
-					<Text style={styles.contactName}>{name}</Text>
-					{last_contact && (
-						<Text style={styles.contactDetail}>
-							Last Contact: {new Date(last_contact).toLocaleDateString()}
-						</Text>
-					)}
-					<Text style={styles.contactDetail}>Frequency: {frequency || 'Not set'}</Text>
-				</View>
-			</View>
-			<View style={styles.contactActions}>
-				{phone && (
-					<TouchableOpacity style={styles.actionIcon} onPress={() => handleCall(phone)}>
-						<Phone size={20} color="#007AFF" />
-					</TouchableOpacity>
-				)}
-				{email && (
-					<TouchableOpacity style={styles.actionIcon} onPress={() => handleEmail(email)}>
-						<Mail size={20} color="#007AFF" />
-					</TouchableOpacity>
-				)}
-				<TouchableOpacity
-					style={styles.actionIcon}
-					onPress={() => {
-						console.log('Clock icon pressed for contact:', name);
-						const reminderData = {
-							title: `Reminder for ${name}`,
-							description: '',
-							contact_id: id,
-							reminder_type: 'call',
-							due_date: new Date(),
-						};
-						console.log('Reminder data created:', reminderData);
-						setSelectedContact({ id, name });
-						console.log('Selected contact set:', { id, name });
-						handleAddReminder(reminderData);
-					}}
-				>
-					<Clock size={20} color="#007AFF" />
-				</TouchableOpacity>
+            <View style={styles.header}>
+                <Image
+                    source={Logo}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+            </View>
 
-				<TouchableOpacity
-					style={[styles.actionIcon, { marginLeft: 10 }]}
-					onPress={() => handleDeleteContact(id)}
-				>
-					<Trash2 size={20} color="#FF3B30" />
-				</TouchableOpacity>
-			</View>
-		</TouchableOpacity>
-	);
+            <TouchableOpacity 
+                style={styles.addButton}
+                onPress={() => setIsFormVisible(true)}
+            >
+                <Plus size={20} color="#fff" />
+                <Text style={styles.addButtonText}>Add New Contact</Text>
+            </TouchableOpacity>
 
-	const ContactForm = () => {
-		const [localFormData, setLocalFormData] = useState({
-			name: '',
-			email: '',
-			phone: '',
-			frequency: 'weekly',
-		});
+            <ScrollView
+                style={styles.content}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+            >
+                {loading ? (
+                    <Text style={styles.message}>Loading contacts...</Text>
+                ) : (
+                    <>
+                        {contacts.scheduledContacts.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Scheduled Contacts</Text>
+                                <View style={styles.grid}>
+                                    {contacts.scheduledContacts.map(contact => (
+                                        <ContactCard
+                                            key={contact.id}
+                                            contact={contact}
+                                            onPress={handleOpenDetails}
+                                        />
+                                    ))}
+                                </View>
+                            </View>
+                        )}
 
-		return (
-			<Modal
-				visible={isFormVisible}
-				animationType="slide"
-				transparent={true}
-				onRequestClose={() => setIsFormVisible(false)}
-			>
-				<View style={styles.modalContainer}>
-					<View style={styles.modalContent}>
-						<Text style={styles.modalTitle}>Add New Contact</Text>
+                        {contacts.unscheduledContacts.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Other Contacts</Text>
+                                <View style={styles.grid}>
+                                    {contacts.unscheduledContacts.map(contact => (
+                                        <ContactCard
+                                            key={contact.id}
+                                            contact={contact}
+                                            onPress={handleOpenDetails}
+                                        />
+                                    ))}
+                                </View>
+                            </View>
+                        )}
 
-						<TextInput
-							style={styles.input}
-							placeholder="Name"
-							value={localFormData.name}
-							onChangeText={(text) => setLocalFormData({ ...localFormData, name: text })}
-						/>
+                        {contacts.scheduledContacts.length === 0 && 
+                         contacts.unscheduledContacts.length === 0 && (
+                            <Text style={styles.message}>No contacts yet</Text>
+                        )}
+                    </>
+                )}
+            </ScrollView>
 
-						<TextInput
-							style={styles.input}
-							placeholder="Email"
-							value={localFormData.email}
-							onChangeText={(text) => setLocalFormData({ ...localFormData, email: text })}
-							keyboardType="email-address"
-							autoCapitalize="none"
-						/>
+            <ContactForm
+                visible={isFormVisible}
+                onClose={() => {
+                    setIsFormVisible(false);
+                    setEditingContact(null);
+                }}
+                onSubmit={editingContact ? handleEditContact : handleAddContact}
+                initialData={editingContact}
+            />
 
-						<TextInput
-							style={styles.input}
-							placeholder="Phone"
-							value={localFormData.phone}
-							onChangeText={(text) => setLocalFormData({ ...localFormData, phone: text })}
-							keyboardType="phone-pad"
-						/>
-
-						<View style={styles.pickerContainer}>
-							<Text>Contact Frequency:</Text>
-							<Picker
-								selectedValue={localFormData.frequency}
-								style={styles.picker}
-								onValueChange={(value) => setLocalFormData({ ...localFormData, frequency: value })}
-							>
-								<Picker.Item label="Daily" value="daily" />
-								<Picker.Item label="Weekly" value="weekly" />
-								<Picker.Item label="Monthly" value="monthly" />
-								<Picker.Item label="Quarterly" value="quarterly" />
-							</Picker>
-						</View>
-
-						<View style={styles.buttonContainer}>
-							<TouchableOpacity
-								style={[styles.button, styles.cancelButton]}
-								onPress={() => {
-									setIsFormVisible(false);
-									setLocalFormData({
-										name: '',
-										email: '',
-										phone: '',
-										frequency: 'weekly',
-									});
-								}}
-							>
-								<Text style={styles.buttonText}>Cancel</Text>
-							</TouchableOpacity>
-
-							<TouchableOpacity
-								style={[styles.button, styles.saveButton]}
-								onPress={async () => {
-									if (!localFormData.name.trim()) {
-										Alert.alert('Error', 'Name is required');
-										return;
-									}
-
-									try {
-										await addContact(user.uid, localFormData);
-										setIsFormVisible(false);
-										setLocalFormData({
-											name: '',
-											email: '',
-											phone: '',
-											frequency: 'weekly',
-										});
-										loadContacts();
-									} catch (error) {
-										Alert.alert('Error', 'Failed to add contact');
-									}
-								}}
-							>
-								<Text style={styles.buttonText}>Save</Text>
-							</TouchableOpacity>
-						</View>
-					</View>
-				</View>
-			</Modal>
-		);
-	};
-
-	if (!user) {
-		return (
-			<View style={styles.container}>
-				<Text style={styles.message}>Please log in to view your contacts</Text>
-			</View>
-		);
-	}
-
-	return (
-		<View style={styles.container}>
-			<StatusBar style="auto" />
-
-			<ContactForm />
-
-			<View style={styles.searchContainer}>
-				<Search size={20} color="#666" style={styles.searchIcon} />
-				<TextInput
-					style={styles.searchInput}
-					placeholder="Search contacts..."
-					value={searchQuery}
-					onChangeText={setSearchQuery}
-					clearButtonMode="while-editing"
-				/>
-			</View>
-
-			<TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
-				<Plus size={20} color="#fff" />
-				<Text style={styles.addButtonText}>Add New Contact</Text>
-			</TouchableOpacity>
-
-			<ScrollView
-				style={styles.contactsList}
-				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-			>
-				{loading ? (
-					<Text style={styles.message}>Loading contacts...</Text>
-				) : contacts.length === 0 ? (
-					<Text style={styles.message}>{searchQuery ? 'No contacts found' : 'No contacts yet'}</Text>
-				) : (
-					contacts.map((contact) => <ContactCard key={contact.id} {...contact} />)
-				)}
-			</ScrollView>
-		</View>
-	);
+            <ContactDetailsModal
+                visible={isDetailsVisible}
+                contact={selectedContact}
+                onClose={() => {
+                    setIsDetailsVisible(false);
+                    setSelectedContact(null);
+                }}
+                onEdit={handleStartEdit}
+                onSchedule={(contact) => {
+                    // Schedule functionality to be implemented
+                    Alert.alert('Coming Soon', 'Scheduling will be implemented in the next update');
+                }}
+            />
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: '#fff',
-	},
-	searchContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		padding: 15,
-		backgroundColor: '#f8f9fa',
-	},
-	searchIcon: {
-		marginRight: 10,
-	},
-	searchInput: {
-		flex: 1,
-		height: 40,
-		backgroundColor: '#fff',
-		borderRadius: 20,
-		paddingHorizontal: 15,
-		borderWidth: 1,
-		borderColor: '#ddd',
-	},
-	addButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#007AFF',
-		margin: 15,
-		padding: 15,
-		borderRadius: 10,
-		justifyContent: 'center',
-	},
-	addButtonText: {
-		color: '#fff',
-		marginLeft: 10,
-		fontWeight: '500',
-	},
-	contactsList: {
-		flex: 1,
-		padding: 15,
-	},
-	contactCard: {
-		backgroundColor: '#f8f9fa',
-		padding: 15,
-		borderRadius: 10,
-		marginBottom: 10,
-		borderWidth: 1,
-		borderColor: '#eee',
-	},
-	contactHeader: {
-		flexDirection: 'row',
-		marginBottom: 10,
-	},
-	avatarContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: '#e8f2ff',
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 10,
-	},
-	contactInfo: {
-		flex: 1,
-	},
-	contactName: {
-		fontSize: 18,
-		fontWeight: '500',
-		marginBottom: 5,
-	},
-	contactDetail: {
-		color: '#666',
-		fontSize: 14,
-	},
-	contactActions: {
-		flexDirection: 'row',
-		justifyContent: 'flex-end',
-		borderTopWidth: 1,
-		borderTopColor: '#eee',
-		paddingTop: 10,
-		marginTop: 5,
-	},
-	actionIcon: {
-		marginLeft: 15,
-		padding: 5,
-	},
-	message: {
-		textAlign: 'center',
-		padding: 20,
-		color: '#666',
-	},
-
-	modalContainer: {
-		flex: 1,
-		justifyContent: 'center',
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		padding: 20,
-	},
-	modalContent: {
-		backgroundColor: 'white',
-		borderRadius: 20,
-		padding: 20,
-		shadowColor: '#000',
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
-	},
-	modalTitle: {
-		fontSize: 20,
-		fontWeight: 'bold',
-		marginBottom: 20,
-		textAlign: 'center',
-	},
-	input: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		padding: 10,
-		borderRadius: 10,
-		marginBottom: 15,
-	},
-	pickerContainer: {
-		marginBottom: 15,
-	},
-	picker: {
-		marginTop: 5,
-	},
-	buttonContainer: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-	},
-	button: {
-		flex: 1,
-		padding: 15,
-		borderRadius: 10,
-		marginHorizontal: 5,
-	},
-	cancelButton: {
-		backgroundColor: '#FF3B30',
-	},
-	saveButton: {
-		backgroundColor: '#007AFF',
-	},
-	buttonText: {
-		color: 'white',
-		textAlign: 'center',
-		fontWeight: '500',
-	},
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    header: {
+        padding: 20,
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    logo: {
+        width: '80%',
+        height: 50,
+    },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#007AFF',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        marginVertical: 15,
+        marginHorizontal: 20,
+        justifyContent: 'center',
+    },
+    addButtonText: {
+        color: '#fff',
+        marginLeft: 10,
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    content: {
+        flex: 1,
+    },
+    section: {
+        padding: 15,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 15,
+        color: '#333',
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginHorizontal: -cardMargin,
+    },
+    card: {
+        width: cardWidth,
+        margin: cardMargin,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    cardAvatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#e8f2ff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    avatarImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+    },
+    avatarText: {
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#007AFF',
+    },
+    cardName: {
+        fontSize: 16,
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+	scheduleBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    scheduleDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#4CAF50',
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        maxHeight: '80%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    modalScroll: {
+        maxHeight: '80%',
+    },
+    contactInfo: {
+        marginBottom: 20,
+    },
+    contactDetail: {
+        fontSize: 16,
+        marginBottom: 5,
+        color: '#666',
+    },
+    notesSection: {
+        marginBottom: 20,
+    },
+    notesInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 10,
+        padding: 10,
+        minHeight: 100,
+        textAlignVertical: 'top',
+    },
+    historySection: {
+        marginBottom: 20,
+    },
+    historyEntry: {
+        marginBottom: 10,
+        padding: 10,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 10,
+    },
+    historyDate: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 5,
+    },
+    historyNotes: {
+        fontSize: 16,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+    },
+    modalButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 15,
+        borderRadius: 10,
+        marginHorizontal: 5,
+    },
+    editButton: {
+        backgroundColor: '#007AFF',
+    },
+    scheduleButton: {
+        backgroundColor: '#4CAF50',
+    },
+    cancelButton: {
+        backgroundColor: '#FF3B30',
+    },
+    saveButton: {
+        backgroundColor: '#007AFF',
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '500',
+        marginLeft: 5,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 15,
+        fontSize: 16,
+    },
+    message: {
+        textAlign: 'center',
+        padding: 20,
+        color: '#666',
+        fontSize: 16,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 15,
+        paddingHorizontal: 15,
+        color: '#333',
+    },
 });
