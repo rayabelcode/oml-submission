@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import {
@@ -25,6 +25,7 @@ import {
 import Logo from '../../assets/full-logo-color.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
+import { generateTopicSuggestions } from '../utils/ai';
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
@@ -144,6 +145,10 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 	const [isCallNotesModalVisible, setIsCallNotesModalVisible] = useState(false); // Call Notes modal state
 	const [callNotes, setCallNotes] = useState(''); // Call notes text
 	const [callDate, setCallDate] = useState(new Date()); // Call date
+	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
+	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
+
+	const suggestionCache = useRef({}); // Contact-specific suggestions cache
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -151,6 +156,37 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 			fetchContactHistory(contact?.id).then(setHistory);
 		}
 	}, [contact]);
+
+	// Fetch AI Topic Suggestions
+	useEffect(() => {
+		if (visible && contact?.id) {
+			if (history.length > 0) {
+				// Check if suggestions are already cached for the contact
+				if (suggestionCache.current[contact.id]) {
+					// Use cached suggestions
+					setSuggestions(suggestionCache.current[contact.id]);
+				} else {
+					// Fetch fresh suggestions
+					(async () => {
+						setLoadingSuggestions(true);
+						try {
+							const topics = await generateTopicSuggestions(history);
+							// Store suggestions in the cache
+							suggestionCache.current[contact.id] = topics;
+							setSuggestions(topics);
+						} catch (error) {
+							console.error('Error fetching topic suggestions:', error);
+							setSuggestions(['No suggestions available.']);
+						} finally {
+							setLoadingSuggestions(false);
+						}
+					})();
+				}
+			} else {
+				setSuggestions(['No call history available to analyze.']);
+			}
+		}
+	}, [visible, history, contact?.id]); // Include contact.id as a dependency
 
 	// If contact does not exist, return nothing
 	if (!contact) {
@@ -180,18 +216,24 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 		}
 
 		try {
-			// Add new entry to Firestore
+			// Add new call history to Firestore
 			await addContactHistory(contact.id, {
 				notes,
 				date: date.toISOString(),
 			});
 
-			// Refresh the history and close modal
+			// Refresh the history
 			const updatedHistory = await fetchContactHistory(contact.id);
 			setHistory(updatedHistory);
+
+			// Invalidate cache for the contact
+			delete suggestionCache.current[contact.id];
+
+			// Reset call notes input
 			setCallNotes('');
 			setCallDate(new Date());
 			setIsCallNotesModalVisible(false);
+
 			Alert.alert('Success', 'Call notes added!');
 		} catch (error) {
 			console.error('Error adding call notes:', error);
@@ -223,7 +265,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 							)}
 						</View>
 
-						{/* Notes Section */}
+						{/* Contact Notes Section */}
 						<View style={styles.notesSection}>
 							<Text style={styles.sectionTitle}>Contact Notes</Text>
 							<TextInput
@@ -233,6 +275,20 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 								onChangeText={setNotes}
 								placeholder="Add notes about this contact..."
 							/>
+
+							{/* Suggested Topics Section */}
+							{loadingSuggestions ? (
+								<Text style={styles.suggestionsText}>Loading suggestions...</Text>
+							) : (
+								<View style={styles.suggestionsContainer}>
+									<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
+									{suggestions.map((topic, index) => (
+										<Text key={index} style={styles.suggestion}>
+											- {topic}
+										</Text>
+									))}
+								</View>
+							)}
 						</View>
 
 						{/* Contact History */}
@@ -856,6 +912,28 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		padding: 15,
 		borderRadius: 10,
+	},
+	suggestionsContainer: {
+		marginTop: 10,
+		padding: 10,
+		backgroundColor: '#f9f9f9',
+		borderRadius: 8,
+	},
+	suggestionsTitle: {
+		fontSize: 16,
+		fontWeight: '600',
+		color: '#333',
+		marginBottom: 5,
+	},
+	suggestionsText: {
+		fontSize: 14,
+		color: '#666',
+		textAlign: 'center',
+	},
+	suggestion: {
+		fontSize: 14,
+		color: '#333',
+		marginBottom: 5,
 	},
 	callNotesButton: {
 		backgroundColor: '#FFA500', // Orange button
