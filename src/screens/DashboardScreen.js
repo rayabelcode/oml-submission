@@ -178,7 +178,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 	);
 };
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ route }) {
 	const { user } = useAuth();
 	const [contacts, setContacts] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
@@ -220,7 +220,7 @@ export default function DashboardScreen() {
 		if (user) {
 			loadContacts();
 		}
-	}, [user, viewMode, sortBy]);
+	}, [user, viewMode, sortBy, route?.params?.refresh]);
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);

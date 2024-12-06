@@ -23,12 +23,88 @@ import {
 	fetchContactHistory,
 } from '../utils/firestore';
 import Logo from '../../assets/full-logo-color.png';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
 const numColumns = 3;
 const cardMargin = 10;
 const cardWidth = (windowWidth - cardMargin * (numColumns + 1)) / numColumns;
+
+// Schedule Modal Component
+const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
+	const [selectedDate, setSelectedDate] = useState(new Date());
+	const [showPicker, setShowPicker] = useState(false);
+
+	const handleConfirm = () => {
+		onSubmit(selectedDate);
+	};
+
+	return (
+		<Modal visible={visible} animationType="slide" transparent={true}>
+			<View style={styles.modalContainer}>
+				<View style={styles.modalContent}>
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Schedule Contact</Text>
+						<TouchableOpacity onPress={onClose}>
+							<X size={24} color="#666" />
+						</TouchableOpacity>
+					</View>
+
+					<View style={styles.modalScroll}>
+						<Text style={styles.label}>Select Next Contact Date:</Text>
+						{Platform.OS === 'web' ? (
+							<input
+								type="datetime-local"
+								onChange={(e) => {
+									setSelectedDate(new Date(e.target.value));
+								}}
+								style={{
+									padding: 10,
+									marginBottom: 15,
+									borderRadius: 10,
+									borderWidth: 1,
+									borderColor: '#ddd',
+									width: '100%',
+								}}
+							/>
+						) : (
+							<>
+								<TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(true)}>
+									<Text style={styles.dateButtonText}>
+										{selectedDate.toLocaleDateString()} {selectedDate.toLocaleTimeString()}
+									</Text>
+								</TouchableOpacity>
+								{showPicker && (
+									<DateTimePicker
+										value={selectedDate}
+										mode="datetime"
+										is24Hour={true}
+										display="spinner"
+										onChange={(event, date) => {
+											setShowPicker(false);
+											if (date) {
+												setSelectedDate(date);
+											}
+										}}
+									/>
+								)}
+							</>
+						)}
+
+						<TouchableOpacity
+							style={[styles.modalButton, styles.saveButton, { marginTop: 20 }]}
+							onPress={handleConfirm}
+						>
+							<Text style={styles.buttonText}>Confirm Schedule</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</View>
+		</Modal>
+	);
+};
 
 // Contact Card Component
 const ContactCard = ({ contact, onPress }) => {
@@ -230,7 +306,7 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 };
 
 // Main Component
-export default function ContactsScreen() {
+export default function ContactsScreen({ navigation }) {
 	const { user } = useAuth();
 	const [contacts, setContacts] = useState({ scheduledContacts: [], unscheduledContacts: [] });
 	const [refreshing, setRefreshing] = useState(false);
@@ -239,6 +315,7 @@ export default function ContactsScreen() {
 	const [isDetailsVisible, setIsDetailsVisible] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
 	const [editingContact, setEditingContact] = useState(null);
+	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
 
 	async function loadContacts() {
 		try {
@@ -371,16 +448,31 @@ export default function ContactsScreen() {
 					setSelectedContact(null);
 				}}
 				onEdit={handleStartEdit}
-				onSchedule={async (contact) => {
+				onSchedule={() => {
+					setIsDetailsVisible(false);
+					setIsScheduleModalVisible(true);
+				}}
+			/>
+			<ScheduleModal
+				visible={isScheduleModalVisible}
+				contact={selectedContact}
+				onClose={() => setIsScheduleModalVisible(false)}
+				onSubmit={async (date) => {
 					try {
-						const nextContact = new Date();
-						nextContact.setDate(nextContact.getDate() + 7); // Default to 1 week
-						await updateContact(contact.id, {
-							next_contact: nextContact.toISOString(),
+						await updateContact(selectedContact.id, {
+							next_contact: date.toISOString(),
 						});
 						loadContacts();
+						setIsScheduleModalVisible(false);
 						setIsDetailsVisible(false);
-						Alert.alert('Success', 'Contact has been scheduled');
+						Alert.alert('Success', 'Contact has been scheduled', [
+							{
+								text: 'OK',
+								onPress: () => {
+									navigation.navigate('Calendar', { refresh: Date.now() });
+								},
+							},
+						]);
 					} catch (error) {
 						console.error('Error scheduling contact:', error);
 						Alert.alert('Error', 'Failed to schedule contact');
