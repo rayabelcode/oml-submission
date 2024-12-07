@@ -11,7 +11,7 @@ import {
 	TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Calendar, Clock, History, User, ChevronDown, X } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import {
 	fetchUpcomingContacts,
@@ -44,7 +44,7 @@ const ContactCard = ({ contact, onPress }) => (
 				{contact.photo_url ? (
 					<Image source={{ uri: contact.photo_url }} style={styles.avatar} />
 				) : (
-					<User size={24} color="#007AFF" />
+					<Icon name="person-outline" size={24} color="#007AFF" />
 				)}
 			</View>
 			<View style={styles.cardInfo}>
@@ -53,7 +53,7 @@ const ContactCard = ({ contact, onPress }) => (
 					Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
 				</Text>
 			</View>
-			<Clock size={16} color="#666" />
+			<Icon name="time-outline" size={16} color="#666" />
 		</View>
 	</TouchableOpacity>
 );
@@ -107,7 +107,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>{contact.name}</Text>
 						<TouchableOpacity onPress={onClose}>
-							<X size={24} color="#666" />
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
@@ -258,7 +258,11 @@ export default function DashboardScreen({ route }) {
 						style={[styles.toggleButton, viewMode === VIEW_MODES.UPCOMING && styles.toggleButtonActive]}
 						onPress={() => setViewMode(VIEW_MODES.UPCOMING)}
 					>
-						<Calendar size={20} color={viewMode === VIEW_MODES.UPCOMING ? '#007AFF' : '#666'} />
+						<Icon
+							name="calendar-outline"
+							size={20}
+							color={viewMode === VIEW_MODES.UPCOMING ? '#007AFF' : '#666'}
+						/>
 						<Text style={[styles.toggleText, viewMode === VIEW_MODES.UPCOMING && styles.toggleTextActive]}>
 							Upcoming
 						</Text>
@@ -268,7 +272,7 @@ export default function DashboardScreen({ route }) {
 						style={[styles.toggleButton, viewMode === VIEW_MODES.ARCHIVE && styles.toggleButtonActive]}
 						onPress={() => setViewMode(VIEW_MODES.ARCHIVE)}
 					>
-						<History size={20} color={viewMode === VIEW_MODES.ARCHIVE ? '#007AFF' : '#666'} />
+						<Icon name="time-outline" size={20} color={viewMode === VIEW_MODES.ARCHIVE ? '#007AFF' : '#666'} />
 						<Text style={[styles.toggleText, viewMode === VIEW_MODES.ARCHIVE && styles.toggleTextActive]}>
 							Archive
 						</Text>

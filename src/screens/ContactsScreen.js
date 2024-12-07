@@ -12,7 +12,7 @@ import {
 	Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Plus, User, History, Edit, X } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import {
 	fetchContacts,
@@ -49,7 +49,7 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>Schedule Contact</Text>
 						<TouchableOpacity onPress={onClose}>
-							<X size={24} color="#666" />
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
@@ -249,7 +249,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>{contact?.name || 'Unknown'}</Text>
 						<TouchableOpacity onPress={onClose}>
-							<X size={24} color="#666" />
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
@@ -329,7 +329,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 							style={[styles.modalButton, styles.editFooterButton]}
 							onPress={() => onEdit(contact)}
 						>
-							<Edit size={20} color="#fff" />
+							<Icon name="create-outline" size={20} color="#fff" />
 							<Text style={styles.buttonText}>Edit</Text>
 						</TouchableOpacity>
 
@@ -344,7 +344,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 							style={[styles.modalButton, styles.scheduleFooterButton]}
 							onPress={() => onSchedule(contact)}
 						>
-							<History size={20} color="#fff" />
+							<Icon name="time-outline" size={20} color="#fff" />
 							<Text style={styles.buttonText}>Schedule</Text>
 						</TouchableOpacity>
 					</View>
@@ -380,7 +380,7 @@ const CallNotesModal = ({ visible, onClose, onSubmit, callNotes, setCallNotes, c
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>Add Call Notes</Text>
 						<TouchableOpacity onPress={onClose}>
-							<X size={24} color="#666" />
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
@@ -465,7 +465,7 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>{initialData ? 'Edit Contact' : 'Add New Contact'}</Text>
 						<TouchableOpacity onPress={onClose}>
-							<X size={24} color="#666" />
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
@@ -604,7 +604,7 @@ export default function ContactsScreen({ navigation }) {
 			</View>
 
 			<TouchableOpacity style={styles.addButton} onPress={() => setIsFormVisible(true)}>
-				<Plus size={20} color="#fff" />
+				<Icon name="add-outline" size={20} color="#fff" />
 				<Text style={styles.addButtonText}>Add New Contact</Text>
 			</TouchableOpacity>
 

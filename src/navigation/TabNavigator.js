@@ -1,5 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Users, Calendar, Settings } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ContactsScreen from '../screens/ContactsScreen';
@@ -11,15 +11,15 @@ export default function TabNavigator() {
 	return (
 		<Tab.Navigator
 			screenOptions={({ route }) => ({
-				tabBarIcon: ({ focused, color, size }) => {
-					if (route.name === 'Contacts') {
-						return <Users size={size} color={color} />;
-					} else if (route.name === 'Calendar') {
-						return <Calendar size={size} color={color} />;
-					} else if (route.name === 'Settings') {
-						return <Settings size={size} color={color} />;
-					}
+				tabBarIcon: ({ color, size }) => {
+					const iconName = {
+						Contacts: 'people-outline',
+						Calendar: 'calendar-outline',
+						Settings: 'settings-outline',
+					}[route.name];
+					return <Icon name={iconName} size={size} color={color} />;
 				},
+
 				tabBarActiveTintColor: '#007AFF',
 				tabBarInactiveTintColor: 'gray',
 				headerShown: true,
