@@ -1,32 +1,38 @@
 {
-  "cli": {
-    "version": ">= 3.0.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "ios": {
-        "distribution": "store",
-        "autoIncrement": true
-      },
-      "android": {
-        "buildType": "apk"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "ray.abel@gmail.com"
-      },
-      "android": {}
-    }
-  }
+	"cli": {
+		"version": ">= 3.0.0",
+		"appVersionSource": "remote"
+	},
+	"build": {
+		"development": {
+			"developmentClient": true,
+			"distribution": "internal"
+		},
+		"preview": {
+			"distribution": "store",
+			"ios": {
+				"autoIncrement": true
+			},
+			"android": {
+				"autoIncrement": true
+			}
+		},
+		"production": {
+			"ios": {
+				"distribution": "store",
+				"autoIncrement": true
+			},
+			"android": {
+				"buildType": "apk"
+			}
+		}
+	},
+	"submit": {
+		"production": {
+			"ios": {
+				"appleId": "ray.abel@gmail.com"
+			},
+			"android": {}
+		}
+	}
 }

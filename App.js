@@ -13,8 +13,8 @@ import Constants from 'expo-constants';
 Sentry.init({
   dsn: Constants.expoConfig?.extra?.SENTRY_DSN // Use expoConfig for production builds
     || Constants.manifest?.extra?.SENTRY_DSN, // Fallback to manifest for development mode
-  enableNative: false,
-  debug: true // Set to false in production to disable debug logging
+  enableNative: false, // Required for Expo Managed Workflow
+  debug: false // Disable debug logs in production
 });
 
 // Ignore specific Firebase warnings
