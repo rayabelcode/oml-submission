@@ -1,44 +1,39 @@
 {
-  "expo": {
-    "name": "OnMyList",
-    "slug": "OnMyList",
-    "version": "1.0.6",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.rayabel.onmylistapp"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.rayabel.onmylistapp",
-      "versionCode": 6
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "newArchEnabled": true,
-    "plugins": [
-      "expo-build-properties",
-      "expo-font"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "a2b79805-c750-4012-92e8-fee850d83b9c"
-      },
-      "SENTRY_DSN": "https://ae4044a257736a2b94a57c097af1fef3@o4508427691491328.ingest.us.sentry.io/4508427722817536"
-    }
-  }
+	"expo": {
+		"name": "OnMyList",
+		"slug": "OnMyList",
+		"version": "1.0.12",
+		"orientation": "portrait",
+		"icon": "./assets/icon.png",
+		"userInterfaceStyle": "light",
+		"splash": {
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#ffffff"
+		},
+		"assetBundlePatterns": ["**/*"],
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": "com.rayabel.onmylistapp"
+		},
+		"android": {
+			"adaptiveIcon": {
+				"foregroundImage": "./assets/adaptive-icon.png",
+				"backgroundColor": "#ffffff"
+			},
+			"package": "com.rayabel.onmylistapp",
+			"versionCode": 6
+		},
+		"web": {
+			"favicon": "./assets/favicon.png"
+		},
+		"newArchEnabled": true,
+		"plugins": ["expo-build-properties", "expo-font"],
+		"extra": {
+			"eas": {
+				"projectId": "a2b79805-c750-4012-92e8-fee850d83b9c"
+			},
+			"SENTRY_DSN": "https://ae4044a257736a2b94a57c097af1fef3@o4508427691491328.ingest.us.sentry.io/4508427722817536"
+		}
+	}
 }
