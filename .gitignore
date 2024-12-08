@@ -1,18 +1,28 @@
+# Dependencies
 node_modules/
+
+# Expo Files
 .expo/
 .backup/
+web-build/
+
+# Builds
 dist/
+
+# Logs
 npm-debug.*
+
+# Sensitive files
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
-web-build/
+
+# Environment
 .env
-.env.supabase
+eas.json
 
 # macOS
 .DS_Store
-

@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.12",
+		"version": "1.0.13",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
@@ -14,7 +14,10 @@
 		"assetBundlePatterns": ["**/*"],
 		"ios": {
 			"supportsTablet": true,
-			"bundleIdentifier": "com.rayabel.onmylistapp"
+			"bundleIdentifier": "com.rayabel.onmylistapp",
+			"infoPlist": {
+				"UIBackgroundModes": ["remote-notification"]
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
@@ -22,7 +25,8 @@
 				"backgroundColor": "#ffffff"
 			},
 			"package": "com.rayabel.onmylistapp",
-			"versionCode": 6
+			"versionCode": 6,
+			"permissions": ["RECEIVE_BOOT_COMPLETED"]
 		},
 		"web": {
 			"favicon": "./assets/favicon.png"

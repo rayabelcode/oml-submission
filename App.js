@@ -1,5 +1,5 @@
-// Required polyfill for URL support in React Native
 import 'react-native-url-polyfill/auto';
+import 'react-native-gesture-handler';
 
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
@@ -13,11 +13,10 @@ import * as Notifications from 'expo-notifications';
 // Initialize Sentry
 Sentry.init({
 	dsn: Constants.expoConfig?.extra?.SENTRY_DSN || Constants.manifest?.extra?.SENTRY_DSN,
-	enableNative: false, // Required for Expo Managed Workflow
-	debug: false, // Disable debug logs in production builds
+	enableNative: false,
+	debug: false,
 });
 
-// Ignore unnecessary warnings
 LogBox.ignoreLogs(['Setting a timer', 'AsyncStorage has been extracted from react-native core']);
 
 // Register for Expo Push Notifications
@@ -42,12 +41,11 @@ async function registerForPushNotificationsAsync() {
 	return token;
 }
 
-export default function App() {
+function App() {
 	useEffect(() => {
 		async function setupPushNotifications() {
 			await registerForPushNotificationsAsync();
 
-			// Set up foreground notification handling
 			Notifications.setNotificationHandler({
 				handleNotification: async () => ({
 					shouldShowAlert: true,
@@ -56,7 +54,6 @@ export default function App() {
 				}),
 			});
 
-			// Foreground notification listener
 			Notifications.addNotificationReceivedListener((notification) => {
 				console.log('Foreground notification received:', notification);
 			});
@@ -72,4 +69,10 @@ export default function App() {
 			</NavigationContainer>
 		</AuthProvider>
 	);
+}
+
+const SentryWrappedApp = Sentry.wrap(App);
+
+export default function AppContainer() {
+	return <SentryWrappedApp />;
 }
