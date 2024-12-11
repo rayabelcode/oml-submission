@@ -147,8 +147,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 	const [callDate, setCallDate] = useState(new Date()); // Call date
 	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
-
-	const suggestionCache = useRef({}); // Contact-specific suggestions cache
+	const suggestionCache = useRef({}); // Contact-specific suggestions cache with timestamps
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -160,33 +159,39 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 	// Fetch AI Topic Suggestions
 	useEffect(() => {
 		if (visible && contact?.id) {
-			if (history.length > 0) {
-				// Check if suggestions are already cached for the contact
-				if (suggestionCache.current[contact.id]) {
-					// Use cached suggestions
-					setSuggestions(suggestionCache.current[contact.id]);
-				} else {
-					// Fetch fresh suggestions
-					(async () => {
-						setLoadingSuggestions(true);
-						try {
-							const topics = await generateTopicSuggestions(history);
-							// Store suggestions in the cache
-							suggestionCache.current[contact.id] = topics;
-							setSuggestions(topics);
-						} catch (error) {
-							console.error('Error fetching topic suggestions:', error);
-							setSuggestions(['No suggestions available.']);
-						} finally {
-							setLoadingSuggestions(false);
-						}
-					})();
+			const fetchSuggestions = async () => {
+				// Don't fetch if no history
+				if (!contact.contact_history?.length) {
+					setSuggestions(['No conversation history yet. Start your first conversation!']);
+					return;
 				}
-			} else {
-				setSuggestions(['No call history available to analyze.']);
-			}
+
+				// Check cache
+				const cached = suggestionCache.current[contact.id];
+				if (cached && cached.historyLength === contact.contact_history.length) {
+					setSuggestions(cached.suggestions);
+					return;
+				}
+
+				setLoadingSuggestions(true);
+				try {
+					const topics = await generateTopicSuggestions(contact, contact.contact_history);
+					suggestionCache.current[contact.id] = {
+						suggestions: topics,
+						historyLength: contact.contact_history.length,
+					};
+					setSuggestions(topics);
+				} catch (error) {
+					console.error('Error fetching topic suggestions:', error);
+					setSuggestions(['Unable to generate suggestions at this time.']);
+				} finally {
+					setLoadingSuggestions(false);
+				}
+			};
+
+			fetchSuggestions();
 		}
-	}, [visible, history, contact?.id]); // Include contact.id as a dependency
+	}, [visible, contact?.id, contact?.contact_history?.length]); // Dependencies
 
 	// If contact does not exist, return nothing
 	if (!contact) {
