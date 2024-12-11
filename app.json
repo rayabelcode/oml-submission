@@ -25,7 +25,6 @@
 				"backgroundColor": "#ffffff"
 			},
 			"package": "com.rayabel.onmylistapp",
-			"versionCode": 6,
 			"permissions": ["RECEIVE_BOOT_COMPLETED"]
 		},
 		"web": {
