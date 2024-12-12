@@ -7,7 +7,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import { Alert, LogBox } from 'react-native';
+import { Alert, LogBox, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 // Initialize Sentry
@@ -21,6 +21,10 @@ LogBox.ignoreLogs(['Setting a timer', 'AsyncStorage has been extracted from reac
 
 // Register for Expo Push Notifications
 async function registerForPushNotificationsAsync() {
+	if (Platform.OS === 'web') {
+		return null; // Skip web notifications
+	}
+
 	const { status: existingStatus } = await Notifications.getPermissionsAsync();
 	let finalStatus = existingStatus;
 
