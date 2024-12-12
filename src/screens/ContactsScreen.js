@@ -26,6 +26,7 @@ import Logo from '../../assets/full-logo-color.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import { generateTopicSuggestions } from '../utils/ai';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Caching AI suggestions
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
@@ -147,7 +148,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 	const [callDate, setCallDate] = useState(new Date()); // Call date
 	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
-	const suggestionCache = useRef({}); // Contact-specific suggestions cache with timestamps
+	const [suggestionCache, setSuggestionCache] = useState({});
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -160,42 +161,69 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 		}
 	}, [contact]);
 
+	// Load cached suggestions from storage
+	useEffect(() => {
+		const loadCache = async () => {
+			try {
+				const cached = await AsyncStorage.getItem('suggestionCache');
+				if (cached) {
+					setSuggestionCache(JSON.parse(cached));
+				}
+			} catch (error) {
+				console.error('Error loading suggestion cache:', error);
+			}
+		};
+		loadCache();
+	}, []);
+
 	// Fetch AI Topic Suggestions
 	useEffect(() => {
 		if (visible && contact?.id) {
-			const fetchSuggestions = async () => {
-				// Don't fetch if no history
-				if (!contact.contact_history?.length) {
-					setSuggestions(['No conversation history yet. Start your first conversation!']);
-					return;
-				}
+			const cached = suggestionCache[contact.id];
 
-				// Check cache
-				const cached = suggestionCache.current[contact.id];
-				if (cached && cached.historyLength === contact.contact_history.length) {
-					setSuggestions(cached.suggestions);
-					return;
-				}
+			// Use cached suggestions if available
+			if (cached) {
+				setSuggestions(cached.suggestions);
+				return;
+			}
 
-				setLoadingSuggestions(true);
-				try {
-					const topics = await generateTopicSuggestions(contact, contact.contact_history);
-					suggestionCache.current[contact.id] = {
-						suggestions: topics,
-						historyLength: contact.contact_history.length,
+			// Initialize for first-time viewing
+			if (!contact.contact_history?.length) {
+				setSuggestions(['No conversation history yet. Start your first conversation!']);
+				return;
+			}
+
+			// Only fetch if no cache exists
+			setLoadingSuggestions(true);
+			generateTopicSuggestions(contact, contact.contact_history)
+				.then(async (topics) => {
+					const newCache = {
+						...suggestionCache,
+						[contact.id]: {
+							suggestions: topics,
+							historyLength: contact.contact_history.length,
+							timestamp: Date.now(),
+						},
 					};
+					setSuggestionCache(newCache);
 					setSuggestions(topics);
-				} catch (error) {
+
+					// Save to AsyncStorage
+					try {
+						await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+					} catch (error) {
+						console.error('Error saving suggestion cache:', error);
+					}
+				})
+				.catch((error) => {
 					console.error('Error fetching topic suggestions:', error);
 					setSuggestions(['Unable to generate suggestions at this time.']);
-				} finally {
+				})
+				.finally(() => {
 					setLoadingSuggestions(false);
-				}
-			};
-
-			fetchSuggestions();
+				});
 		}
-	}, [visible, contact?.id, contact?.contact_history?.length]); // Dependencies
+	}, [visible, contact?.id, suggestionCache]);
 
 	// If contact does not exist, return nothing
 	if (!contact) {
@@ -276,16 +304,26 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 			};
 			setSelectedContact(updatedContact);
 
-			// Refresh suggestions immediately
+			// Refresh suggestions after new call note
 			setLoadingSuggestions(true);
 			try {
-				delete suggestionCache.current[contact.id];
 				const topics = await generateTopicSuggestions(updatedContact, sortedHistory);
-				suggestionCache.current[contact.id] = {
-					suggestions: topics,
-					historyLength: sortedHistory.length,
+				const newCache = {
+					...suggestionCache,
+					[contact.id]: {
+						suggestions: topics,
+						historyLength: sortedHistory.length,
+						timestamp: Date.now(),
+					},
 				};
+				setSuggestionCache(newCache);
 				setSuggestions(topics);
+
+				// Save to AsyncStorage
+				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+			} catch (error) {
+				console.error('Error updating suggestions:', error);
+				setSuggestions(['Unable to generate suggestions at this time.']);
 			} finally {
 				setLoadingSuggestions(false);
 			}
