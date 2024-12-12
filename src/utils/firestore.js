@@ -101,7 +101,6 @@ export const deleteContact = async (contactId) => {
 	}
 };
 
-// Contact history functions
 export const addContactHistory = async (contactId, historyData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
@@ -111,9 +110,16 @@ export const addContactHistory = async (contactId, historyData) => {
 			completed: true,
 		};
 
-		// Append the new entry to the contact's history
+		// Get current history first
+		const contactDoc = await getDoc(contactRef);
+		const currentHistory = contactDoc.data().contact_history || [];
+
+		// Add new entry at beginning of array
+		const updatedHistory = [newHistoryEntry, ...currentHistory];
+
+		// Update with new history array
 		await updateDoc(contactRef, {
-			contact_history: arrayUnion(newHistoryEntry),
+			contact_history: updatedHistory,
 			last_updated: serverTimestamp(),
 		});
 
@@ -133,7 +139,10 @@ export const fetchContactHistory = async (contactId) => {
 		}
 
 		const data = contactSnap.data();
-		return data.contact_history || [];
+		const history = data.contact_history || [];
+
+		// Sort history newest first
+		return history.sort((a, b) => new Date(b.date) - new Date(a.date));
 	} catch (error) {
 		console.error('Error fetching contact history:', error);
 		throw error;

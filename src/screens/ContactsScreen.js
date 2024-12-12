@@ -138,7 +138,7 @@ const ContactCard = ({ contact, onPress }) => {
 	);
 };
 
-const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) => {
+const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, onEdit, onSchedule }) => {
 	const [history, setHistory] = useState([]);
 	const [notes, setNotes] = useState('');
 	const [editMode, setEditMode] = useState(null); // Track editing state
@@ -152,7 +152,11 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 	// Fetch Contact History
 	useEffect(() => {
 		if (contact?.id) {
-			fetchContactHistory(contact?.id).then(setHistory);
+			fetchContactHistory(contact?.id).then((history) => {
+				// Sort history with newest first
+				const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
+				setHistory(sortedHistory);
+			});
 		}
 	}, [contact]);
 
@@ -214,11 +218,44 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 		}
 	};
 
+	const handleDeleteHistory = async (index) => {
+		try {
+			const updatedHistory = history.filter((_, i) => i !== index);
+
+			// Update both contact and contact_history in Firestore
+			await updateContact(contact.id, {
+				contact_history: updatedHistory,
+			});
+
+			// Update local state
+			setHistory(updatedHistory);
+
+			// Update the contact object with new history
+			const updatedContact = {
+				...contact,
+				contact_history: updatedHistory,
+			};
+			setSelectedContact(updatedContact);
+
+			// Refresh suggestions
+			delete suggestionCache.current[contact.id];
+			const topics = await generateTopicSuggestions(updatedContact, updatedHistory);
+			setSuggestions(topics);
+
+			Alert.alert('Success', 'History entry deleted');
+		} catch (error) {
+			console.error('Error deleting history:', error);
+			Alert.alert('Error', 'Failed to delete history entry');
+		}
+	};
+
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
 			Alert.alert('Error', 'Please enter the call notes');
 			return;
 		}
+
+		setIsCallNotesModalVisible(false); // Close modal first
 
 		try {
 			// Add new call history to Firestore
@@ -227,17 +264,35 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 				date: date.toISOString(),
 			});
 
-			// Refresh the history
+			// Refresh the history immediately
 			const updatedHistory = await fetchContactHistory(contact.id);
-			setHistory(updatedHistory);
+			const sortedHistory = [...updatedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+			setHistory(sortedHistory);
 
-			// Invalidate cache for the contact
-			delete suggestionCache.current[contact.id];
+			// Update contact in state with new history
+			const updatedContact = {
+				...contact,
+				contact_history: sortedHistory,
+			};
+			setSelectedContact(updatedContact);
 
-			// Reset call notes input
+			// Refresh suggestions immediately
+			setLoadingSuggestions(true);
+			try {
+				delete suggestionCache.current[contact.id];
+				const topics = await generateTopicSuggestions(updatedContact, sortedHistory);
+				suggestionCache.current[contact.id] = {
+					suggestions: topics,
+					historyLength: sortedHistory.length,
+				};
+				setSuggestions(topics);
+			} finally {
+				setLoadingSuggestions(false);
+			}
+
+			// Reset form
 			setCallNotes('');
 			setCallDate(new Date());
-			setIsCallNotesModalVisible(false);
 
 			Alert.alert('Success', 'Call notes added!');
 		} catch (error) {
@@ -315,14 +370,37 @@ const ContactDetailsModal = ({ visible, contact, onClose, onEdit, onSchedule }) 
 									) : (
 										<Text style={styles.historyNotes}>{entry.notes}</Text>
 									)}
-									<TouchableOpacity
-										style={[styles.modalButton, styles.editButton]}
-										onPress={() =>
-											editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-										}
-									>
-										<Text style={styles.buttonText}>{editMode === index ? 'Save' : 'Edit'}</Text>
-									</TouchableOpacity>
+									<View style={styles.historyActions}>
+										<TouchableOpacity
+											style={styles.editButton}
+											onPress={() =>
+												editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
+											}
+										>
+											<Text style={styles.buttonText}>{editMode === index ? 'Save' : 'Edit'}</Text>
+										</TouchableOpacity>
+										<TouchableOpacity
+											style={styles.deleteButton}
+											onPress={() => {
+												if (Platform.OS === 'web') {
+													if (window.confirm('Are you sure you want to delete this entry?')) {
+														handleDeleteHistory(index);
+													}
+												} else {
+													Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
+														{ text: 'Cancel', style: 'cancel' },
+														{
+															text: 'Delete',
+															style: 'destructive',
+															onPress: () => handleDeleteHistory(index),
+														},
+													]);
+												}
+											}}
+										>
+											<Text style={styles.buttonText}>Delete</Text>
+										</TouchableOpacity>
+									</View>
 								</View>
 							))}
 						</View>
@@ -663,6 +741,7 @@ export default function ContactsScreen({ navigation }) {
 			<ContactDetailsModal
 				visible={isDetailsVisible}
 				contact={selectedContact}
+				setSelectedContact={setSelectedContact}
 				onClose={() => {
 					setIsDetailsVisible(false);
 					setSelectedContact(null);
@@ -673,6 +752,7 @@ export default function ContactsScreen({ navigation }) {
 					setIsScheduleModalVisible(true);
 				}}
 			/>
+
 			<ScheduleModal
 				visible={isScheduleModalVisible}
 				contact={selectedContact}
@@ -887,14 +967,6 @@ const styles = StyleSheet.create({
 		marginTop: 5,
 		backgroundColor: '#f9f9f9',
 	},
-	// Button for Edit/Save
-	editButton: {
-		backgroundColor: '#007AFF',
-		padding: 5,
-		borderRadius: 5,
-		marginTop: 10,
-		alignSelf: 'flex-start',
-	},
 	// Complete Button for Unscheduled Contacts
 	completeButton: {
 		backgroundColor: '#007AFF',
@@ -954,11 +1026,6 @@ const styles = StyleSheet.create({
 		color: '#333',
 		fontWeight: '500',
 	},
-	editButtonText: {
-		color: '#fff',
-		fontSize: 14,
-		fontWeight: '500',
-	},
 	unscheduledSection: {
 		marginTop: 20,
 	},
@@ -997,5 +1064,36 @@ const styles = StyleSheet.create({
 		marginBottom: 15,
 		paddingHorizontal: 15,
 		color: '#333',
+	},
+	historyActions: {
+		flexDirection: 'row',
+		justifyContent: 'flex-end',
+		marginTop: 10,
+		gap: 10,
+	},
+	// Button for Edit/Save
+	editButton: {
+		backgroundColor: '#007AFF',
+		padding: 10,
+		borderRadius: 5,
+		minWidth: 80,
+		alignItems: 'center',
+		justifyContent: 'center',
+		height: 40,
+	},
+	editButtonText: {
+		color: '#fff',
+		fontSize: 14,
+		fontWeight: '500',
+	},
+	// Button for Delete
+	deleteButton: {
+		backgroundColor: '#FF3B30',
+		padding: 10,
+		borderRadius: 5,
+		minWidth: 80,
+		alignItems: 'center',
+		justifyContent: 'center',
+		height: 40,
 	},
 });
