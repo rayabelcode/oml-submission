@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
 	StyleSheet,
 	Text,
@@ -80,15 +81,19 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 								</TouchableOpacity>
 								{showPicker && (
 									<DateTimePicker
-										value={selectedDate}
-										mode="datetime"
-										is24Hour={true}
-										display="spinner"
+										value={callDate}
+										mode="date"
+										display="default" // this is important for web
 										onChange={(event, date) => {
-											setShowPicker(false);
-											if (date) {
-												setSelectedDate(date);
+											// Only close if we actually selected a date
+											if (date && event.type === 'set') {
+												// Check the event type
+												const newDate = new Date(date);
+												newDate.setHours(12, 0, 0, 0);
+												setCallDate(newDate);
+												setShowDatePicker(false);
 											}
+											// Don't close if we're just navigating months (event.type === 'dismissed')
 										}}
 									/>
 								)}
@@ -110,13 +115,13 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 
 // Contact Card Component
 const ContactCard = ({ contact, onPress }) => {
-	const getInitials = (name) => {
-		return name
-			.split(' ')
-			.map((word) => word[0])
-			.join('')
-			.toUpperCase();
+	const getInitials = (firstName, lastName) => {
+		const firstInitial = firstName ? firstName[0] : '';
+		const lastInitial = lastName ? lastName[0] : '';
+		return (firstInitial + lastInitial).toUpperCase();
 	};
+
+	const fullName = `${contact.first_name} ${contact.last_name || ''}`.trim();
 
 	return (
 		<TouchableOpacity style={styles.card} onPress={() => onPress(contact)}>
@@ -124,11 +129,11 @@ const ContactCard = ({ contact, onPress }) => {
 				{contact.photo_url ? (
 					<Image source={{ uri: contact.photo_url }} style={styles.avatarImage} />
 				) : (
-					<Text style={styles.avatarText}>{getInitials(contact.name)}</Text>
+					<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
 				)}
 			</View>
 			<Text style={styles.cardName} numberOfLines={1}>
-				{contact.name}
+				{fullName}
 			</Text>
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
@@ -139,16 +144,82 @@ const ContactCard = ({ contact, onPress }) => {
 	);
 };
 
+const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
+	const [newTag, setNewTag] = useState('');
+
+	const handleAddTag = () => {
+		if (newTag.trim()) {
+			onAddTag(newTag.trim());
+			setNewTag('');
+		}
+	};
+
+	const handleKeyPress = (e) => {
+		if (e.key === 'Enter' && newTag.trim()) {
+			handleAddTag();
+		}
+	};
+
+	return (
+		<Modal visible={visible} animationType="slide" transparent={true}>
+			<View style={styles.modalContainer}>
+				<View style={styles.modalContent}>
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Current Tags</Text>
+						<TouchableOpacity onPress={onClose}>
+							<Icon name="close-outline" size={24} color="#666" />
+						</TouchableOpacity>
+					</View>
+
+					<View style={styles.tagsContainer}>
+						{tags?.map((tag, index) => (
+							<View key={index} style={styles.tagBubble}>
+								<Text style={styles.tagText}>{tag}</Text>
+								<TouchableOpacity onPress={() => onDeleteTag(tag)}>
+									<Icon name="close-circle" size={20} color="#666" />
+								</TouchableOpacity>
+							</View>
+						))}
+					</View>
+
+					<View style={styles.tagInputContainer}>
+						<TextInput
+							style={styles.tagInput}
+							placeholder="Type new tag..."
+							value={newTag}
+							onChangeText={setNewTag}
+							onKeyPress={handleKeyPress}
+							onSubmitEditing={handleAddTag}
+						/>
+						<TouchableOpacity
+							style={[styles.tagButton, !newTag.trim() && styles.tagButtonDisabled]}
+							onPress={handleAddTag}
+							disabled={!newTag.trim()}
+						>
+							<Text style={styles.buttonText}>Add</Text>
+						</TouchableOpacity>
+					</View>
+
+					<TouchableOpacity style={styles.doneButton} onPress={onClose}>
+						<Text style={styles.buttonText}>Done</Text>
+					</TouchableOpacity>
+				</View>
+			</View>
+		</Modal>
+	);
+};
+
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, onEdit, onSchedule }) => {
 	const [history, setHistory] = useState([]);
 	const [notes, setNotes] = useState('');
 	const [editMode, setEditMode] = useState(null); // Track editing state
-	const [isCallNotesModalVisible, setIsCallNotesModalVisible] = useState(false); // Call Notes modal state
 	const [callNotes, setCallNotes] = useState(''); // Call notes text
 	const [callDate, setCallDate] = useState(new Date()); // Call date
+	const [showDatePicker, setShowDatePicker] = useState(false); //Date picker for call notes
 	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
-	const [suggestionCache, setSuggestionCache] = useState({});
+	const [suggestionCache, setSuggestionCache] = useState({}); // Cache for AI suggestions
+	const [isTagsModalVisible, setIsTagsModalVisible] = useState(false); // Tags modal state
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -283,13 +354,21 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 			return;
 		}
 
-		setIsCallNotesModalVisible(false); // Close modal first
-
 		try {
+			// Create local date with time set to noon to avoid timezone issues
+			const localDate = new Date(date);
+			localDate.setHours(12, 0, 0, 0);
+
+			// Format date as YYYY-MM-DD
+			const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(
+				2,
+				'0'
+			)}-${String(localDate.getDate()).padStart(2, '0')}`;
+
 			// Add new call history to Firestore
 			await addContactHistory(contact.id, {
 				notes,
-				date: date.toISOString(),
+				date: dateStr,
 			});
 
 			// Refresh the history immediately
@@ -343,51 +422,93 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 		<Modal visible={visible} animationType="slide" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
-					{/* Header */}
 					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>{contact?.name || 'Unknown'}</Text>
+						<Text style={styles.modalTitle}>
+							{contact.first_name} {contact.last_name}
+						</Text>
 						<TouchableOpacity onPress={onClose}>
 							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
-					{/* Contact Information */}
 					<ScrollView style={styles.modalScroll}>
-						<View style={styles.contactInfo}>
-							{contact.email && <Text style={styles.contactDetail}>Email: {contact.email}</Text>}
-							{contact.phone && <Text style={styles.contactDetail}>Phone: {contact.phone}</Text>}
-							{contact.next_contact && (
-								<Text style={styles.contactDetail}>
-									Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
-								</Text>
-							)}
-						</View>
-
-						{/* Contact Notes Section */}
-						<View style={styles.notesSection}>
-							<Text style={styles.sectionTitle}>Contact Notes</Text>
+						{/* Call Notes Section */}
+						<View style={styles.callNotesSection}>
 							<TextInput
-								style={styles.notesInput}
+								style={styles.callNotesInput}
 								multiline
-								value={notes}
-								onChangeText={setNotes}
-								placeholder="Add notes about this contact..."
+								value={callNotes}
+								onChangeText={setCallNotes}
+								placeholder="What did you discuss?"
 							/>
-
-							{/* Suggested Topics Section */}
-							{loadingSuggestions ? (
-								<Text style={styles.suggestionsText}>Loading suggestions...</Text>
-							) : (
-								<View style={styles.suggestionsContainer}>
-									<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
-									{suggestions.map((topic, index) => (
-										<Text key={index} style={styles.suggestion}>
-											- {topic}
-										</Text>
-									))}
-								</View>
-							)}
+							<View style={styles.callNotesControls}>
+								<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+									<Text style={styles.dateButtonText}>
+										{callDate.toDateString() === new Date().toDateString()
+											? 'Today'
+											: callDate.toLocaleDateString()}
+									</Text>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={styles.submitCallButton}
+									onPress={() => handleAddCallNotes(callNotes, callDate)}
+								>
+									<Text style={styles.buttonText}>Submit</Text>
+								</TouchableOpacity>
+							</View>
 						</View>
+						{/* Date Picker Modal */}
+						<Modal visible={showDatePicker} transparent={true} animationType="fade">
+							<TouchableOpacity
+								style={styles.datePickerModalOverlay}
+								onPress={() => setShowDatePicker(false)}
+								activeOpacity={1}
+							>
+								<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
+									{Platform.OS === 'web' ? (
+										<DatePicker
+											selected={callDate}
+											onChange={(date) => {
+												const newDate = new Date(date);
+												newDate.setHours(12, 0, 0, 0);
+												setCallDate(newDate);
+												setShowDatePicker(false);
+											}}
+											inline
+											dateFormat="MM/dd/yyyy"
+										/>
+									) : (
+										<DateTimePicker
+											value={callDate}
+											mode="date"
+											display="spinner"
+											onChange={(event, date) => {
+												if (date) {
+													const newDate = new Date(date);
+													newDate.setHours(12, 0, 0, 0);
+													setCallDate(newDate);
+												}
+												setShowDatePicker(false);
+											}}
+										/>
+									)}
+								</View>
+							</TouchableOpacity>
+						</Modal>
+
+						{/* AI Suggestions */}
+						{loadingSuggestions ? (
+							<Text style={styles.suggestionsText}>Loading suggestions...</Text>
+						) : (
+							<View style={styles.suggestionsContainer}>
+								<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
+								{suggestions.map((topic, index) => (
+									<Text key={index} style={styles.suggestion}>
+										• {topic}
+									</Text>
+								))}
+							</View>
+						)}
 
 						{/* Contact History */}
 						<View style={styles.historySection}>
@@ -447,102 +568,43 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 					{/* Footer Buttons */}
 					<View style={styles.modalActions}>
 						<TouchableOpacity
-							style={[styles.modalButton, styles.editFooterButton]}
-							onPress={() => onEdit(contact)}
+							style={[styles.modalButton, styles.scheduleButton]}
+							onPress={() => onSchedule(contact)}
 						>
+							<Icon name="calendar-outline" size={20} color="#fff" />
+							<Text style={styles.buttonText}>Schedule</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={[styles.modalButton, styles.tagsButton]}
+							onPress={() => setIsTagsModalVisible(true)}
+						>
+							<Icon name="pricetag-outline" size={20} color="#fff" />
+							<Text style={styles.buttonText}>Tags</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity style={[styles.modalButton, styles.editButton]} onPress={() => onEdit(contact)}>
 							<Icon name="create-outline" size={20} color="#fff" />
 							<Text style={styles.buttonText}>Edit</Text>
 						</TouchableOpacity>
-
-						<TouchableOpacity
-							style={[styles.modalButton, styles.callNotesButton]}
-							onPress={() => setIsCallNotesModalVisible(true)}
-						>
-							<Text style={styles.buttonText}>Call Notes</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity
-							style={[styles.modalButton, styles.scheduleFooterButton]}
-							onPress={() => onSchedule(contact)}
-						>
-							<Icon name="time-outline" size={20} color="#fff" />
-							<Text style={styles.buttonText}>Schedule</Text>
-						</TouchableOpacity>
 					</View>
 
-					{/* Call Notes Modal */}
-					<CallNotesModal
-						visible={isCallNotesModalVisible}
-						onClose={() => {
-							setIsCallNotesModalVisible(false);
-							setCallNotes(''); // Clear call notes
-							setCallDate(new Date()); // Reset date
+					{/* Tags Modal */}
+					<TagsModal
+						visible={isTagsModalVisible}
+						onClose={() => setIsTagsModalVisible(false)}
+						tags={contact.tags || []}
+						onAddTag={async (tag) => {
+							const updatedTags = [...(contact.tags || []), tag];
+							await updateContact(contact.id, { tags: updatedTags });
+							setSelectedContact({ ...contact, tags: updatedTags });
 						}}
-						onSubmit={handleAddCallNotes}
-						callNotes={callNotes} // Pass down call notes
-						setCallNotes={setCallNotes}
-						callDate={callDate} // Pass down call date
-						setCallDate={setCallDate}
+						onDeleteTag={async (tagToDelete) => {
+							const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+							await updateContact(contact.id, { tags: updatedTags });
+							setSelectedContact({ ...contact, tags: updatedTags });
+						}}
 					/>
-				</View>
-			</View>
-		</Modal>
-	);
-};
-
-const CallNotesModal = ({ visible, onClose, onSubmit, callNotes, setCallNotes, callDate, setCallDate }) => {
-	const [showDatePicker, setShowDatePicker] = useState(false);
-
-	return (
-		<Modal visible={visible} transparent={true} animationType="slide">
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					{/* Modal Header */}
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>Add Call Notes</Text>
-						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-						</TouchableOpacity>
-					</View>
-
-					{/* Notes Input */}
-					<TextInput
-						style={styles.notesInput}
-						value={callNotes}
-						onChangeText={setCallNotes}
-						placeholder="What did you discuss?"
-						multiline
-					/>
-
-					{/* Date Picker */}
-					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-						<Text style={styles.dateButtonText}>Call Date: {callDate.toLocaleDateString()}</Text>
-					</TouchableOpacity>
-
-					{showDatePicker && (
-						<DateTimePicker
-							value={callDate}
-							mode="date"
-							display="default"
-							onChange={(event, date) => {
-								setShowDatePicker(false);
-								if (date) setCallDate(date);
-							}}
-						/>
-					)}
-
-					{/* Confirmation and Cancel Buttons */}
-					<View style={styles.modalActions}>
-						<TouchableOpacity
-							style={[styles.modalButton, styles.saveButton]}
-							onPress={() => onSubmit(callNotes, callDate)}
-						>
-							<Text style={styles.buttonText}>Confirm</Text>
-						</TouchableOpacity>
-						<TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={onClose}>
-							<Text style={styles.buttonText}>Cancel</Text>
-						</TouchableOpacity>
-					</View>
 				</View>
 			</View>
 		</Modal>
@@ -552,32 +614,35 @@ const CallNotesModal = ({ visible, onClose, onSubmit, callNotes, setCallNotes, c
 // Add/Edit Contact Modal
 const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 	const [formData, setFormData] = useState({
-		name: '',
+		first_name: '',
+		last_name: '',
 		email: '',
 		phone: '',
 		frequency: 'weekly',
-		notes: '',
 	});
 
 	useEffect(() => {
 		if (initialData) {
 			setFormData({
-				name: initialData.name || '',
+				first_name: initialData.first_name || '',
+				last_name: initialData.last_name || '',
 				email: initialData.email || '',
 				phone: initialData.phone || '',
 				frequency: initialData.frequency || 'weekly',
 				notes: initialData.notes || '',
 			});
 		} else {
+			// Reset form when modal is opened/closed
 			setFormData({
-				name: '',
+				first_name: '',
+				last_name: '',
 				email: '',
 				phone: '',
 				frequency: 'weekly',
 				notes: '',
 			});
 		}
-	}, [initialData]);
+	}, [initialData, visible]);
 
 	return (
 		<Modal visible={visible} animationType="slide" transparent={true}>
@@ -593,9 +658,16 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 					<ScrollView style={styles.modalScroll}>
 						<TextInput
 							style={styles.input}
-							placeholder="Name"
-							value={formData.name}
-							onChangeText={(text) => setFormData({ ...formData, name: text })}
+							placeholder="First Name"
+							value={formData.first_name}
+							onChangeText={(text) => setFormData({ ...formData, first_name: text })}
+						/>
+
+						<TextInput
+							style={styles.input}
+							placeholder="Last Name"
+							value={formData.last_name}
+							onChangeText={(text) => setFormData({ ...formData, last_name: text })}
 						/>
 
 						<TextInput
@@ -614,14 +686,6 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 							onChangeText={(text) => setFormData({ ...formData, phone: text })}
 							keyboardType="phone-pad"
 						/>
-
-						<TextInput
-							style={[styles.input, styles.notesInput]}
-							placeholder="Notes"
-							value={formData.notes}
-							onChangeText={(text) => setFormData({ ...formData, notes: text })}
-							multiline
-						/>
 					</ScrollView>
 
 					<View style={styles.modalActions}>
@@ -630,7 +694,13 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={[styles.modalButton, styles.saveButton]}
-							onPress={() => onSubmit(formData)}
+							onPress={() => {
+								if (!formData.first_name.trim()) {
+									Alert.alert('Error', 'First name is required');
+									return;
+								}
+								onSubmit(formData);
+							}}
 						>
 							<Text style={styles.buttonText}>Save</Text>
 						</TouchableOpacity>
@@ -724,7 +794,13 @@ export default function ContactsScreen({ navigation }) {
 				<Image source={Logo} style={styles.logo} resizeMode="contain" />
 			</View>
 
-			<TouchableOpacity style={styles.addButton} onPress={() => setIsFormVisible(true)}>
+			<TouchableOpacity
+				style={styles.addButton}
+				onPress={() => {
+					setEditingContact(null);
+					setIsFormVisible(true);
+				}}
+			>
 				<Icon name="add-outline" size={20} color="#fff" />
 				<Text style={styles.addButtonText}>Add New Contact</Text>
 			</TouchableOpacity>
@@ -1078,9 +1154,8 @@ const styles = StyleSheet.create({
 	},
 	buttonText: {
 		color: '#fff',
-		fontSize: 16,
+		fontSize: 14,
 		fontWeight: '500',
-		marginLeft: 5,
 	},
 	input: {
 		borderWidth: 1,
@@ -1112,12 +1187,11 @@ const styles = StyleSheet.create({
 	// Button for Edit/Save
 	editButton: {
 		backgroundColor: '#007AFF',
-		padding: 10,
-		borderRadius: 5,
-		minWidth: 80,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 6,
+		minWidth: 60,
 		alignItems: 'center',
-		justifyContent: 'center',
-		height: 40,
 	},
 	editButtonText: {
 		color: '#fff',
@@ -1127,11 +1201,107 @@ const styles = StyleSheet.create({
 	// Button for Delete
 	deleteButton: {
 		backgroundColor: '#FF3B30',
-		padding: 10,
-		borderRadius: 5,
-		minWidth: 80,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 6,
+		minWidth: 60,
 		alignItems: 'center',
+	},
+	// Call Notes Section
+	callNotesSection: {
+		marginBottom: 20,
+		padding: 15,
+	},
+	callNotesInput: {
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderRadius: 10,
+		padding: 15,
+		minHeight: 100,
+		marginBottom: 10,
+		fontSize: 16,
+	},
+	callNotesControls: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+	},
+	dateButton: {
+		backgroundColor: '#f0f0f0',
+		padding: 10,
+		borderRadius: 8,
+		flex: 1,
+		marginRight: 10,
+	},
+	submitCallButton: {
+		backgroundColor: '#4CAF50',
+		padding: 10,
+		borderRadius: 8,
+		width: 100,
+		alignItems: 'center',
+	},
+	// Tags Styles
+	tagsContainer: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		padding: 10,
+		gap: 8,
+	},
+	tagBubble: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#e8f2ff',
+		borderRadius: 15,
+		paddingVertical: 5,
+		paddingHorizontal: 10,
+	},
+	tagText: {
+		color: '#007AFF',
+		marginRight: 5,
+	},
+	tagInputContainer: {
+		flexDirection: 'row',
+		padding: 10,
+		gap: 10,
+	},
+	tagInput: {
+		flex: 1,
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderRadius: 8,
+		padding: 10,
+	},
+	tagButton: {
+		backgroundColor: '#007AFF',
+		padding: 10,
+		borderRadius: 8,
+		width: 80,
+		alignItems: 'center',
+	},
+	tagButtonDisabled: {
+		backgroundColor: '#ccc',
+	},
+	doneButton: {
+		backgroundColor: '#4CAF50',
+		padding: 15,
+		borderRadius: 8,
+		alignItems: 'center',
+		margin: 10,
+	},
+	tagsButton: {
+		backgroundColor: '#007AFF',
+	},
+	// Date Picker Modal
+	datePickerModalOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 		justifyContent: 'center',
-		height: 40,
+		alignItems: 'center',
+	},
+	datePickerContainer: {
+		backgroundColor: 'white',
+		padding: 20,
+		borderRadius: 10,
+		minWidth: 300,
 	},
 });

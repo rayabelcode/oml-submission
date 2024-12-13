@@ -14,6 +14,11 @@ const firebaseConfig = {
 	appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Verify config
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+	console.error('Firebase configuration is incomplete. Check your environment variables.');
+}
+
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 

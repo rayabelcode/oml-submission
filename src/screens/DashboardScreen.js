@@ -48,7 +48,7 @@ const ContactCard = ({ contact, onPress }) => (
 				)}
 			</View>
 			<View style={styles.cardInfo}>
-				<Text style={styles.cardName}>{contact.name}</Text>
+				<Text style={styles.cardName}>{`${contact.first_name} ${contact.last_name || ''}`}</Text>
 				<Text style={styles.cardDate}>
 					Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
 				</Text>
@@ -272,7 +272,11 @@ export default function DashboardScreen({ route }) {
 						style={[styles.toggleButton, viewMode === VIEW_MODES.ARCHIVE && styles.toggleButtonActive]}
 						onPress={() => setViewMode(VIEW_MODES.ARCHIVE)}
 					>
-						<Icon name="time-outline" size={20} color={viewMode === VIEW_MODES.ARCHIVE ? '#007AFF' : '#666'} />
+						<Icon
+							name="time-outline"
+							size={20}
+							color={viewMode === VIEW_MODES.ARCHIVE ? '#007AFF' : '#666'}
+						/>
 						<Text style={[styles.toggleText, viewMode === VIEW_MODES.ARCHIVE && styles.toggleTextActive]}>
 							Archive
 						</Text>

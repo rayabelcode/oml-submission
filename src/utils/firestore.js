@@ -39,9 +39,12 @@ export const addContact = async (userId, contactData) => {
 		const newContact = {
 			...contactData,
 			user_id: userId,
+			first_name: contactData.first_name || '',
+			last_name: contactData.last_name || '',
 			photo_url: contactData.photo_url || null,
 			notes: contactData.notes || '',
 			contact_history: [],
+			tags: [],
 			next_contact: null,
 			created_at: serverTimestamp(),
 			last_updated: serverTimestamp(),
@@ -58,7 +61,7 @@ export const addContact = async (userId, contactData) => {
 export const fetchContacts = async (userId) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
-		const q = query(contactsRef, where('user_id', '==', userId), orderBy('name'));
+		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
 
 		const querySnapshot = await getDocs(q);
 		const contacts = [];
@@ -67,7 +70,6 @@ export const fetchContacts = async (userId) => {
 			contacts.push({ id: doc.id, ...doc.data() });
 		});
 
-		// Sort contacts by those with and without next_contact
 		return {
 			scheduledContacts: contacts.filter((contact) => contact.next_contact !== null),
 			unscheduledContacts: contacts.filter((contact) => contact.next_contact === null),
@@ -105,7 +107,7 @@ export const addContactHistory = async (contactId, historyData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
 		const newHistoryEntry = {
-			date: new Date().toISOString(),
+			date: historyData.date || new Date().toISOString(),
 			notes: historyData.notes || '',
 			completed: true,
 		};
@@ -141,8 +143,13 @@ export const fetchContactHistory = async (contactId) => {
 		const data = contactSnap.data();
 		const history = data.contact_history || [];
 
-		// Sort history newest first
-		return history.sort((a, b) => new Date(b.date) - new Date(a.date));
+		// Convert timestamps and sort
+		return history
+			.map((entry) => ({
+				...entry,
+				date: entry.date, // Keep the ISO string format
+			}))
+			.sort((a, b) => new Date(b.date) - new Date(a.date));
 	} catch (error) {
 		console.error('Error fetching contact history:', error);
 		throw error;
