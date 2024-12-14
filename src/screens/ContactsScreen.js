@@ -23,6 +23,7 @@ import {
 	updateContact,
 	addContactHistory,
 	fetchContactHistory,
+	uploadContactPhoto,
 } from '../utils/firestore';
 import Logo from '../../assets/full-logo-color.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -943,7 +944,6 @@ export default function ContactsScreen({ navigation }) {
 	// Handle contact import
 	const handleImportContacts = async () => {
 		try {
-			console.log('Starting contact import...');
 			const { status } = await Contacts.requestPermissionsAsync();
 			if (status !== 'granted') {
 				Alert.alert('Permission Denied', 'Please enable contact access in your settings to import contacts.');
@@ -951,7 +951,6 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			if (Platform.OS === 'ios') {
-				console.log('Opening iOS contact picker...');
 				const result = await Contacts.presentContactPickerAsync({
 					allowsEditing: false,
 					fields: [
@@ -963,9 +962,9 @@ export default function ContactsScreen({ navigation }) {
 					],
 				});
 
-				console.log('Contact picker result:', result);
-				// Note the change here - we pass the contact directly
-				await handleContactSelection(result);
+				if (result) {
+					await handleContactSelection(result);
+				}
 			} else {
 				// Android fallback code...
 			}
@@ -1018,26 +1017,41 @@ export default function ContactsScreen({ navigation }) {
 	// Handle contact selection
 	const handleContactSelection = async (contact) => {
 		try {
-			console.log('Processing contact:', contact);
+			const fullContact = await Contacts.getContactByIdAsync(contact.id, [
+				Contacts.Fields.FirstName,
+				Contacts.Fields.LastName,
+				Contacts.Fields.PhoneNumbers,
+				Contacts.Fields.Emails,
+				Contacts.Fields.Image,
+			]);
 
-			// Get primary phone number
 			const phoneNumber = contact.phoneNumbers?.[0]?.number;
-			console.log('Phone number:', phoneNumber);
-
 			if (!phoneNumber) {
 				Alert.alert('Invalid Contact', 'Selected contact must have a phone number');
 				return;
 			}
 
-			// Format phone number
 			const formattedPhone = formatPhoneNumber(phoneNumber);
-			console.log('Formatted phone:', formattedPhone);
 
-			// Check for existing contact
 			const existingContact = await checkForExistingContact(formattedPhone);
 			if (existingContact) {
 				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 				return;
+			}
+
+			let photoUrl = null;
+			if (fullContact.imageAvailable && fullContact.image) {
+				try {
+					const manipResult = await ImageManipulator.manipulateAsync(
+						fullContact.image.uri,
+						[{ resize: { width: 300, height: 300 } }],
+						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+					);
+
+					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+				} catch (photoError) {
+					console.error('Photo processing error:', photoError);
+				}
 			}
 
 			const contactData = {
@@ -1048,18 +1062,15 @@ export default function ContactsScreen({ navigation }) {
 				notes: '',
 				contact_history: [],
 				tags: [],
-				photo_url: null,
+				photo_url: photoUrl,
 				frequency: 'weekly',
 				created_at: serverTimestamp(),
 				last_updated: serverTimestamp(),
 				user_id: user.uid,
 			};
 
-			console.log('Contact data to add:', contactData);
-
 			// Add contact to Firebase
 			const newContact = await addContact(user.uid, contactData);
-			console.log('New contact added:', newContact);
 
 			// Refresh contacts list
 			await loadContacts();
@@ -1067,8 +1078,6 @@ export default function ContactsScreen({ navigation }) {
 			// Show contact details modal
 			setSelectedContact(newContact);
 			setIsDetailsVisible(true);
-
-			Alert.alert('Success', 'Contact imported successfully');
 		} catch (error) {
 			console.error('Contact import error:', error);
 			Alert.alert('Error', 'Failed to import contact: ' + error.message);
