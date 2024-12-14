@@ -1,0 +1,45 @@
+.react-datepicker {
+	font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: white;
+	display: inline-block;
+	position: relative;
+}
+
+.react-datepicker__month-container {
+	float: left;
+	background: white;
+}
+
+.react-datepicker__header {
+	background: white;
+	border-bottom: 1px solid #ddd;
+	padding: 8px 0;
+	text-align: center;
+}
+
+.react-datepicker__current-month {
+	font-weight: bold;
+	font-size: 14px;
+}
+
+.react-datepicker__day-names,
+.react-datepicker__week {
+	display: flex;
+	justify-content: space-around;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+	width: 2rem;
+	line-height: 2rem;
+	text-align: center;
+	margin: 0.2rem;
+}
+
+.react-datepicker__day--selected {
+	background: #007aff;
+	color: white;
+	border-radius: 50%;
+}

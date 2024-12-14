@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+import '../../assets/react-datepicker.css';
 import {
 	StyleSheet,
 	Text,
@@ -57,43 +57,59 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 
 					<View style={styles.modalScroll}>
 						<Text style={styles.label}>Select Next Contact Date:</Text>
+
+						{/* Web Platform */}
 						{Platform.OS === 'web' ? (
-							<input
-								type="datetime-local"
-								onChange={(e) => {
-									setSelectedDate(new Date(e.target.value));
+							<DatePicker
+								selected={selectedDate}
+								onChange={(date) => {
+									const newDate = new Date(date);
+									newDate.setHours(12, 0, 0, 0);
+									setSelectedDate(newDate);
 								}}
-								style={{
-									padding: 10,
-									marginBottom: 15,
-									borderRadius: 10,
-									borderWidth: 1,
-									borderColor: '#ddd',
-									width: '100%',
-								}}
+								inline
+								dateFormat="MM/dd/yyyy"
 							/>
 						) : (
+							/* iOS/Android Native Date Picker */
 							<>
 								<TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(true)}>
 									<Text style={styles.dateButtonText}>
-										{selectedDate.toLocaleDateString()} {selectedDate.toLocaleTimeString()}
+										{selectedDate.toDateString() === new Date().toDateString()
+											? 'Today'
+											: selectedDate.toLocaleDateString()}
 									</Text>
 								</TouchableOpacity>
-								{showPicker && (
+
+								{Platform.OS === 'ios' && showPicker && (
 									<DateTimePicker
-										value={callDate}
+										value={selectedDate}
 										mode="date"
-										display="default" // this is important for web
+										display="spinner"
 										onChange={(event, date) => {
-											// Only close if we actually selected a date
-											if (date && event.type === 'set') {
-												// Check the event type
+											if (date) {
 												const newDate = new Date(date);
 												newDate.setHours(12, 0, 0, 0);
-												setCallDate(newDate);
-												setShowDatePicker(false);
+												setSelectedDate(newDate);
 											}
-											// Don't close if we're just navigating months (event.type === 'dismissed')
+										}}
+										textColor="#000000"
+										style={{ backgroundColor: 'white' }}
+									/>
+								)}
+
+								{Platform.OS === 'android' && showPicker && (
+									<DateTimePicker
+										value={selectedDate}
+										mode="date"
+										display="default"
+										onChange={(event, date) => {
+											setShowPicker(false);
+											if (event.type === 'set') {
+												const newDate = new Date(date);
+												newDate.setHours(12, 0, 0, 0);
+												setSelectedDate(newDate);
+											}
 										}}
 									/>
 								)}
@@ -477,7 +493,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 											inline
 											dateFormat="MM/dd/yyyy"
 										/>
-									) : (
+									) : Platform.OS === 'ios' ? (
 										<DateTimePicker
 											value={callDate}
 											mode="date"
@@ -488,7 +504,25 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 													newDate.setHours(12, 0, 0, 0);
 													setCallDate(newDate);
 												}
+												if (event.type === 'set') {
+													setShowDatePicker(false);
+												}
+											}}
+											textColor="#000000"
+											style={{ backgroundColor: 'white' }}
+										/>
+									) : (
+										<DateTimePicker
+											value={callDate}
+											mode="date"
+											display="default"
+											onChange={(event, date) => {
 												setShowDatePicker(false);
+												if (event.type === 'set' && date) {
+													const newDate = new Date(date);
+													newDate.setHours(12, 0, 0, 0);
+													setCallDate(newDate);
+												}
 											}}
 										/>
 									)}
@@ -1164,6 +1198,8 @@ const styles = StyleSheet.create({
 		padding: 15,
 		marginBottom: 15,
 		fontSize: 16,
+		color: '#333',
+		backgroundColor: '#fff',
 	},
 	message: {
 		textAlign: 'center',
