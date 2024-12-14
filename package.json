@@ -50,7 +50,9 @@
     "react-native-svg": "15.8.0",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vector-icons": "^10.2.0",
-    "react-native-web": "~0.19.10"
+    "react-native-web": "~0.19.10",
+    "expo-contacts": "~14.0.2",
+    "expo-image-manipulator": "~13.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

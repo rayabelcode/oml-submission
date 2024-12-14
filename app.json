@@ -16,7 +16,9 @@
 			"supportsTablet": true,
 			"bundleIdentifier": "com.rayabel.onmylistapp",
 			"infoPlist": {
-				"UIBackgroundModes": ["remote-notification"]
+				"UIBackgroundModes": ["remote-notification"],
+				"NSContactsUsageDescription": "OnMyList needs access to contacts to help you import and manage your connections.",
+				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app."
 			}
 		},
 		"android": {

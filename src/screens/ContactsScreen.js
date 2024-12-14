@@ -29,6 +29,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import { generateTopicSuggestions } from '../utils/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Caching AI suggestions
+import * as Contacts from 'expo-contacts'; // Import Contacts API
+import * as ImageManipulator from 'expo-image-manipulator'; // Image resizing
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
@@ -227,6 +229,60 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 					<TouchableOpacity style={styles.doneButton} onPress={onClose}>
 						<Text style={styles.buttonText}>Done</Text>
 					</TouchableOpacity>
+				</View>
+			</View>
+		</Modal>
+	);
+};
+
+const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => {
+	const [searchText, setSearchText] = useState('');
+	const [filteredContacts, setFilteredContacts] = useState([]);
+
+	useEffect(() => {
+		if (searchText) {
+			const filtered = contacts.filter((contact) => {
+				const fullName = `${contact.firstName || ''} ${contact.lastName || ''}`.toLowerCase();
+				return fullName.includes(searchText.toLowerCase());
+			});
+			setFilteredContacts(filtered);
+		} else {
+			setFilteredContacts([]);
+		}
+	}, [searchText, contacts]);
+
+	return (
+		<Modal visible={visible} animationType="slide" transparent={true}>
+			<View style={styles.modalContainer}>
+				<View style={styles.modalContent}>
+					<View style={styles.modalHeader}>
+						<Text style={styles.modalTitle}>Search Contacts</Text>
+						<TouchableOpacity onPress={onClose}>
+							<Icon name="close-outline" size={24} color="#666" />
+						</TouchableOpacity>
+					</View>
+
+					<TextInput
+						style={styles.searchInput}
+						placeholder="Search by name..."
+						value={searchText}
+						onChangeText={setSearchText}
+						autoFocus={true}
+					/>
+
+					<ScrollView style={styles.searchResults}>
+						{filteredContacts.map((contact, index) => (
+							<TouchableOpacity
+								key={index}
+								style={styles.searchResultItem}
+								onPress={() => onSelectContact(contact)}
+							>
+								<Text style={styles.searchResultText}>
+									{`${contact.firstName || ''} ${contact.lastName || ''}`.trim()}
+								</Text>
+							</TouchableOpacity>
+						))}
+					</ScrollView>
 				</View>
 			</View>
 		</Modal>
@@ -821,6 +877,8 @@ export default function ContactsScreen({ navigation }) {
 	const [selectedContact, setSelectedContact] = useState(null);
 	const [editingContact, setEditingContact] = useState(null);
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
+	const [deviceContacts, setDeviceContacts] = useState([]);
+	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
 
 	async function loadContacts() {
 		try {
@@ -835,6 +893,202 @@ export default function ContactsScreen({ navigation }) {
 		}
 	}
 
+	// Format phone number to E.164 standard
+	const formatPhoneNumber = (phoneNumber) => {
+		// Remove all non-numeric characters
+		const cleaned = phoneNumber.replace(/\D/g, '');
+
+		// Handle US/Canada numbers
+		if (cleaned.length === 10) {
+			return `+1${cleaned}`;
+		} else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+			return `+${cleaned}`;
+		}
+
+		// Return international numbers as-is with + prefix
+		return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+	};
+
+	// Check for existing contact by phone number
+	const checkForExistingContact = async (phoneNumber) => {
+		try {
+			const allContacts = [...contacts.scheduledContacts, ...contacts.unscheduledContacts];
+			return allContacts.find(
+				(contact) => formatPhoneNumber(contact.phone) === formatPhoneNumber(phoneNumber)
+			);
+		} catch (error) {
+			console.error('Error checking for existing contact:', error);
+			return null;
+		}
+	};
+
+	// Validate phone number
+	const isValidPhoneNumber = (phoneNumber) => {
+		const cleaned = phoneNumber.replace(/\D/g, '');
+		// Basic validation for US/Canada numbers
+		if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
+			return true;
+		}
+		// Basic validation for international numbers (>= 10 digits)
+		return cleaned.length >= 10;
+	};
+
+	// Handle contact import
+	const handleImportContacts = async () => {
+		try {
+			const { status } = await Contacts.requestPermissionsAsync();
+			if (status !== 'granted') {
+				Alert.alert('Permission Denied', 'Please enable contact access in your settings to import contacts.');
+				return;
+			}
+
+			const { data } = await Contacts.getContactsAsync({
+				fields: ['firstName', 'lastName', 'phoneNumbers', 'image', 'notes', 'emails'],
+			});
+
+			if (!data || data.length === 0) {
+				Alert.alert('No Contacts', 'No contacts found on device');
+				return;
+			}
+
+			const validContacts = data.filter(
+				(contact) => (contact.firstName || contact.lastName) && contact.phoneNumbers?.length > 0
+			);
+
+			if (validContacts.length === 0) {
+				Alert.alert('No Valid Contacts', 'No contacts with names and phone numbers found');
+				return;
+			}
+
+			setDeviceContacts(validContacts);
+			setIsSearchModalVisible(true);
+		} catch (error) {
+			Alert.alert('Error', 'Failed to access contacts');
+		}
+	};
+
+	// Show contact picker
+	const showContactPicker = async (contacts) => {
+		// Sort contacts by first name
+		const sortedContacts = contacts
+			.filter((contact) => contact.firstName || contact.lastName)
+			.sort((a, b) => {
+				const nameA = `${a.firstName || ''} ${a.lastName || ''}`.trim();
+				const nameB = `${b.firstName || ''} ${b.lastName || ''}`.trim();
+				return nameA.localeCompare(nameB);
+			});
+
+		if (sortedContacts.length === 0) {
+			Alert.alert('No Contacts', 'No valid contacts found');
+			return;
+		}
+
+		// Create items for picker
+		const items = sortedContacts.map((contact) => ({
+			label: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+			value: contact,
+		}));
+
+		// Show picker
+		Alert.alert(
+			'Select Contact',
+			'Choose a contact to import:',
+			items
+				.map((item) => ({
+					text: item.label,
+					onPress: () => handleContactSelection(item.value),
+				}))
+				.concat([
+					{
+						text: 'Cancel',
+						style: 'cancel',
+					},
+				])
+		);
+	};
+
+	// Handle contact selection
+	const handleContactSelection = async (contact) => {
+		try {
+			// Handle phone numbers
+			let phoneNumber = null;
+			if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+				if (contact.phoneNumbers.length === 1) {
+					phoneNumber = formatPhoneNumber(contact.phoneNumbers[0].number);
+				} else {
+					// Show phone number picker
+					const phoneOptions = contact.phoneNumbers.map((phone) => ({
+						text: `${phone.label}: ${phone.number}`,
+						onPress: () => importContact(contact, formatPhoneNumber(phone.number)),
+					}));
+
+					Alert.alert('Select Phone Number', 'Choose a phone number:', [
+						...phoneOptions,
+						{ text: 'Cancel', style: 'cancel' },
+					]);
+					return;
+				}
+			}
+
+			await importContact(contact, phoneNumber);
+		} catch (error) {
+			console.error('Error selecting contact:', error);
+			Alert.alert('Error', 'Failed to import contact');
+		}
+	};
+
+	// Import contact
+	const importContact = async (contact, phoneNumber) => {
+		try {
+			// Validate phone number if present
+			if (phoneNumber && !isValidPhoneNumber(phoneNumber)) {
+				Alert.alert('Invalid Phone', 'Please enter a valid phone number');
+				return;
+			}
+
+			// Check for existing contact
+			const existingContact = await checkForExistingContact(phoneNumber);
+			if (existingContact) {
+				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
+				return;
+			}
+
+			// Process image if available
+			let photoUrl = null;
+			if (contact.imageAvailable && contact.image) {
+				try {
+					const manipResult = await ImageManipulator.manipulateAsync(
+						contact.image.uri,
+						[{ resize: { width: 300, height: 300 } }],
+						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+					);
+					photoUrl = manipResult.uri;
+				} catch (error) {
+					console.error('Error processing image:', error);
+				}
+			}
+
+			// Create contact data
+			const contactData = {
+				first_name: contact.firstName || '',
+				last_name: contact.lastName || '',
+				phone: phoneNumber,
+				email: contact.emails && contact.emails[0] ? contact.emails[0].email : '',
+				notes: '',
+				tags: contact.notes ? [contact.notes] : [],
+				photo_url: photoUrl,
+				frequency: 'weekly',
+			};
+
+			await addContact(user.uid, contactData);
+			Alert.alert('Success', 'Contact imported successfully');
+			loadContacts();
+		} catch (error) {
+			console.error('Error importing contact:', error);
+			Alert.alert('Error', 'Failed to import contact');
+		}
+	};
+
 	useEffect(() => {
 		loadContacts();
 	}, [user]);
@@ -847,10 +1101,46 @@ export default function ContactsScreen({ navigation }) {
 
 	const handleAddContact = async (formData) => {
 		try {
+			// Add to OnMyList
 			await addContact(user.uid, formData);
+
+			// Add to iOS Contacts if on iOS
+			if (Platform.OS === 'ios') {
+				const { status } = await Contacts.requestPermissionsAsync();
+				if (status === 'granted') {
+					try {
+						const contact = {
+							[Contacts.Fields.FirstName]: formData.first_name,
+							[Contacts.Fields.LastName]: formData.last_name,
+							[Contacts.Fields.PhoneNumbers]: [
+								{
+									label: 'mobile',
+									number: formData.phone,
+								},
+							],
+							[Contacts.Fields.Emails]: formData.email
+								? [
+										{
+											label: 'work',
+											email: formData.email,
+										},
+								  ]
+								: [],
+						};
+
+						await Contacts.addContactAsync(contact);
+						Alert.alert('Success', 'Contact added to OnMyList and iOS Contacts');
+					} catch (error) {
+						console.error('Error adding to iOS contacts:', error);
+						Alert.alert('Partial Success', 'Contact added to OnMyList but failed to add to iOS Contacts');
+					}
+				}
+			}
+
 			setIsFormVisible(false);
 			loadContacts();
 		} catch (error) {
+			console.error('Error adding contact:', error);
 			Alert.alert('Error', 'Failed to add contact');
 		}
 	};
@@ -858,10 +1148,56 @@ export default function ContactsScreen({ navigation }) {
 	const handleEditContact = async (formData) => {
 		try {
 			await updateContact(editingContact.id, formData);
+
+			// Update iOS Contact if on iOS
+			if (Platform.OS === 'ios') {
+				const { status } = await Contacts.requestPermissionsAsync();
+				if (status === 'granted') {
+					try {
+						// Find existing contact by phone number
+						const { data } = await Contacts.getContactsAsync({
+							fields: ['phoneNumbers'],
+						});
+
+						const existingContact = data.find((contact) =>
+							contact.phoneNumbers?.some(
+								(phone) => formatPhoneNumber(phone.number) === formatPhoneNumber(formData.phone)
+							)
+						);
+
+						if (existingContact) {
+							const updatedContact = {
+								[Contacts.Fields.FirstName]: formData.first_name,
+								[Contacts.Fields.LastName]: formData.last_name,
+								[Contacts.Fields.PhoneNumbers]: [
+									{
+										label: 'mobile',
+										number: formData.phone,
+									},
+								],
+								[Contacts.Fields.Emails]: formData.email
+									? [
+											{
+												label: 'work',
+												email: formData.email,
+											},
+									  ]
+									: [],
+							};
+
+							await Contacts.updateContactAsync(existingContact);
+						}
+					} catch (error) {
+						console.error('Error updating iOS contact:', error);
+					}
+				}
+			}
+
 			setIsFormVisible(false);
 			setEditingContact(null);
 			loadContacts();
 		} catch (error) {
+			console.error('Error updating contact:', error);
 			Alert.alert('Error', 'Failed to update contact');
 		}
 	};
@@ -893,16 +1229,22 @@ export default function ContactsScreen({ navigation }) {
 				<Image source={Logo} style={styles.logo} resizeMode="contain" />
 			</View>
 
-			<TouchableOpacity
-				style={styles.addButton}
-				onPress={() => {
-					setEditingContact(null);
-					setIsFormVisible(true);
-				}}
-			>
-				<Icon name="add-outline" size={20} color="#fff" />
-				<Text style={styles.addButtonText}>Add New Contact</Text>
-			</TouchableOpacity>
+			<View style={styles.buttonContainer}>
+				<TouchableOpacity style={styles.importButton} onPress={handleImportContacts}>
+					<Icon name="people-outline" size={20} color="#fff" />
+					<Text style={styles.importButtonText}>Import from Contacts</Text>
+				</TouchableOpacity>
+				<TouchableOpacity
+					style={styles.secondaryButton}
+					onPress={() => {
+						setEditingContact(null);
+						setIsFormVisible(true);
+					}}
+				>
+					<Icon name="add-outline" size={20} color="#007AFF" />
+					<Text style={styles.secondaryButtonText}>Add New Contact</Text>
+				</TouchableOpacity>
+			</View>
 
 			<ScrollView
 				style={styles.content}
@@ -992,6 +1334,15 @@ export default function ContactsScreen({ navigation }) {
 					}
 				}}
 			/>
+			<ContactSearchModal
+				visible={isSearchModalVisible}
+				contacts={deviceContacts}
+				onClose={() => setIsSearchModalVisible(false)}
+				onSelectContact={(contact) => {
+					setIsSearchModalVisible(false);
+					handleContactSelection(contact);
+				}}
+			/>
 		</View>
 	);
 }
@@ -1011,23 +1362,6 @@ const styles = StyleSheet.create({
 	logo: {
 		width: '80%',
 		height: 50,
-	},
-	addButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#007AFF',
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 10,
-		marginVertical: 15,
-		marginHorizontal: 20,
-		justifyContent: 'center',
-	},
-	addButtonText: {
-		color: '#fff',
-		marginLeft: 10,
-		fontSize: 16,
-		fontWeight: '500',
 	},
 	content: {
 		flex: 1,
@@ -1408,5 +1742,64 @@ const styles = StyleSheet.create({
 		padding: 20,
 		borderRadius: 10,
 		minWidth: 300,
+	},
+	buttonContainer: {
+		padding: 20,
+		gap: 10,
+	},
+	// Import Button
+	importButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#007AFF',
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderRadius: 10,
+		justifyContent: 'center',
+	},
+	importButtonText: {
+		color: '#fff',
+		marginLeft: 10,
+		fontSize: 16,
+		fontWeight: '500',
+	},
+	secondaryButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#f8f9fa',
+		paddingVertical: 12,
+		paddingHorizontal: 20,
+		borderRadius: 10,
+		justifyContent: 'center',
+		borderWidth: 1,
+		borderColor: '#007AFF',
+	},
+	secondaryButtonText: {
+		color: '#007AFF',
+		marginLeft: 10,
+		fontSize: 16,
+		fontWeight: '500',
+	},
+	// Contacts Search Modal
+	searchInput: {
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderRadius: 10,
+		padding: 15,
+		marginBottom: 15,
+		fontSize: 16,
+		backgroundColor: '#fff',
+	},
+	searchResults: {
+		maxHeight: '80%',
+	},
+	searchResultItem: {
+		padding: 15,
+		borderBottomWidth: 1,
+		borderBottomColor: '#eee',
+	},
+	searchResultText: {
+		fontSize: 16,
+		color: '#333',
 	},
 });
