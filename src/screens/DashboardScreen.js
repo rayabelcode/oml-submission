@@ -22,6 +22,8 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
+import DatePicker from 'react-datepicker';
+import '../../assets/react-datepicker.css';
 
 // Sort options
 const SORT_OPTIONS = {
@@ -125,36 +127,118 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 							<Text style={styles.dateButtonText}>Next Contact: {nextDate.toLocaleDateString()}</Text>
 						</TouchableOpacity>
 
-						{showDatePicker && Platform.OS !== 'web' ? (
-							<DateTimePicker
-								value={nextDate}
-								mode="date"
-								display="default"
-								onChange={(event, selectedDate) => {
-									setShowDatePicker(false);
-									if (selectedDate) {
-										setNextDate(selectedDate);
-									}
-								}}
-							/>
-						) : showDatePicker ? (
-							<input
-								type="date"
-								value={nextDate.toISOString().split('T')[0]}
-								onChange={(e) => {
-									setShowDatePicker(false);
-									setNextDate(new Date(e.target.value));
-								}}
-								style={{
-									padding: 10,
-									marginBottom: 15,
-									borderRadius: 10,
-									borderWidth: 1,
-									borderColor: '#ddd',
-									width: '100%',
-								}}
-							/>
-						) : null}
+						{showDatePicker && (
+							<Modal visible={showDatePicker} transparent={true} animationType="fade">
+								<TouchableOpacity
+									style={styles.datePickerModalOverlay}
+									onPress={() => setShowDatePicker(false)}
+									activeOpacity={1}
+								>
+									<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
+										{Platform.OS === 'web' ? (
+											<DatePicker
+												selected={nextDate}
+												onChange={(date) => {
+													const newDate = new Date(date);
+													newDate.setHours(12, 0, 0, 0);
+													setNextDate(newDate);
+													setShowDatePicker(false);
+												}}
+												inline
+												dateFormat="MM/dd/yyyy"
+												renderCustomHeader={({
+													date,
+													decreaseMonth,
+													increaseMonth,
+													prevMonthButtonDisabled,
+													nextMonthButtonDisabled,
+												}) => (
+													<div
+														style={{
+															display: 'flex',
+															justifyContent: 'space-between',
+															alignItems: 'center',
+															padding: '10px',
+														}}
+													>
+														<button
+															onClick={decreaseMonth}
+															disabled={prevMonthButtonDisabled}
+															style={{
+																border: 'none',
+																background: 'none',
+																cursor: 'pointer',
+															}}
+														>
+															<Icon
+																name="chevron-back-outline"
+																size={24}
+																color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
+															/>
+														</button>
+														<span style={{ fontWeight: '500', fontSize: '16px' }}>
+															{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+														</span>
+														<button
+															onClick={increaseMonth}
+															disabled={nextMonthButtonDisabled}
+															style={{
+																border: 'none',
+																background: 'none',
+																cursor: 'pointer',
+															}}
+														>
+															<Icon
+																name="chevron-forward-outline"
+																size={24}
+																color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
+															/>
+														</button>
+													</div>
+												)}
+											/>
+										) : Platform.OS === 'ios' ? (
+											<DateTimePicker
+												value={nextDate}
+												mode="date"
+												display="inline"
+												onChange={(event, date) => {
+													if (date) {
+														const newDate = new Date(date);
+														newDate.setHours(12, 0, 0, 0);
+														setNextDate(newDate);
+													}
+													if (event.type === 'set') {
+														setShowDatePicker(false);
+													}
+												}}
+												textColor="#000000"
+												accentColor="#007AFF"
+												themeVariant="light"
+												style={{
+													height: 400,
+													backgroundColor: 'white',
+												}}
+											/>
+										) : (
+											<DateTimePicker
+												value={nextDate}
+												mode="date"
+												display="default"
+												onChange={(event, date) => {
+													setShowDatePicker(false);
+													if (event.type === 'set' && date) {
+														const newDate = new Date(date);
+														newDate.setHours(12, 0, 0, 0);
+														setNextDate(newDate);
+													}
+												}}
+											/>
+										)}
+									</View>
+								</TouchableOpacity>
+							</Modal>
+						)}
 
 						<View style={styles.historySection}>
 							<Text style={styles.sectionTitle}>Contact History</Text>
@@ -529,5 +613,27 @@ const styles = StyleSheet.create({
 		padding: 20,
 		color: '#666',
 		fontSize: 16,
+	},
+	// Date Picker Modal
+	datePickerModalOverlay: {
+		flex: 1,
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
+		justifyContent: 'center',
+		alignItems: 'center',
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+	},
+	datePickerContainer: {
+		backgroundColor: 'white',
+		borderRadius: 10,
+		padding: 0, // Remove padding
+		width: '90%', // Control width
+		maxWidth: 400,
+		alignItems: 'center',
+		justifyContent: 'center',
+		overflow: 'hidden',
 	},
 });

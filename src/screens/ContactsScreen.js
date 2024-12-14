@@ -85,7 +85,7 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 									<DateTimePicker
 										value={selectedDate}
 										mode="date"
-										display="spinner"
+										display="inline"
 										onChange={(event, date) => {
 											if (date) {
 												const newDate = new Date(date);
@@ -94,7 +94,13 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 											}
 										}}
 										textColor="#000000"
-										style={{ backgroundColor: 'white' }}
+										accentColor="#007AFF"
+										themeVariant="light"
+										style={{
+											height: 400,
+											width: '100%',
+											backgroundColor: 'white',
+										}}
 									/>
 								)}
 
@@ -497,7 +503,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 										<DateTimePicker
 											value={callDate}
 											mode="date"
-											display="spinner"
+											display="inline"
 											onChange={(event, date) => {
 												if (date) {
 													const newDate = new Date(date);
@@ -509,7 +515,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 												}
 											}}
 											textColor="#000000"
-											style={{ backgroundColor: 'white' }}
+											accentColor="#007AFF"
+											themeVariant="light"
+											style={{
+												height: 400,
+												width: '100%',
+												backgroundColor: 'white',
+											}}
 										/>
 									) : (
 										<DateTimePicker
