@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.13",
+		"version": "1.0.14",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
 			"bundleIdentifier": "com.rayabel.onmylistapp",
 			"infoPlist": {
 				"UIBackgroundModes": ["remote-notification"],
-				"NSContactsUsageDescription": "OnMyList needs access to contacts to help you import and manage your connections.",
+				"NSContactsUsageDescription": "Allow OnMyList to access your contacts to import them into the app.",
 				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app."
 			}
 		},

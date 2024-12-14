@@ -14,6 +14,8 @@ import {
 	arrayUnion,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { storage } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // User functions
 export const createUserDocument = async (userId, userData) => {
@@ -55,6 +57,31 @@ export const addContact = async (userId, contactData) => {
 	} catch (error) {
 		console.error('Error adding contact:', error);
 		throw error;
+	}
+};
+
+// Upload contact photo
+export const uploadContactPhoto = async (userId, photoUri) => {
+	try {
+		if (!photoUri) return null;
+
+		// Create blob from URI
+		const response = await fetch(photoUri);
+		const blob = await response.blob();
+
+		// Create unique filename
+		const filename = `contacts/${userId}/${Date.now()}.jpg`;
+		const storageRef = ref(storage, filename);
+
+		// Upload photo
+		await uploadBytes(storageRef, blob);
+
+		// Get download URL
+		const downloadURL = await getDownloadURL(storageRef);
+		return downloadURL;
+	} catch (error) {
+		console.error('Error uploading photo:', error);
+		return null;
 	}
 };
 
