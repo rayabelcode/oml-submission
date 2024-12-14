@@ -24,6 +24,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import DatePicker from 'react-datepicker';
 import '../../assets/react-datepicker.css';
+import { SafeAreaView } from 'react-native';
 
 // Sort options
 const SORT_OPTIONS = {
@@ -72,32 +73,8 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 		}
 	}, [contact]);
 
-	const handleComplete = async () => {
-		if (!notes.trim()) {
-			Alert.alert('Error', 'Please add notes about your contact');
-			return;
-		}
-
-		try {
-			await addContactHistory(contact.id, {
-				notes: notes,
-				next_contact: nextDate.toISOString(),
-			});
-
-			// Update the contact's main notes and dates
-			await updateContact(contact.id, {
-				notes: notes,
-				last_contact: new Date().toISOString(),
-				next_contact: nextDate.toISOString(),
-			});
-
-			onComplete();
-			onClose();
-			Alert.alert('Success', 'Contact completed and next contact scheduled');
-		} catch (error) {
-			console.error('Error completing contact:', error);
-			Alert.alert('Error', 'Failed to complete contact');
-		}
+	const handleComplete = () => {
+		onClose();
 	};
 
 	if (!contact) return null;
@@ -108,20 +85,10 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
 						<Text style={styles.modalTitle}>{contact.name}</Text>
-						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-						</TouchableOpacity>
 					</View>
 
 					<ScrollView style={styles.modalScroll}>
 						<Text style={styles.label}>Contact Notes:</Text>
-						<TextInput
-							style={styles.notesInput}
-							multiline
-							value={notes}
-							onChangeText={setNotes}
-							placeholder="What did you discuss?"
-						/>
 
 						<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
 							<Text style={styles.dateButtonText}>Next Contact: {nextDate.toLocaleDateString()}</Text>
@@ -253,7 +220,7 @@ const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
 
 					<View style={styles.modalActions}>
 						<TouchableOpacity style={[styles.button, styles.completeButton]} onPress={handleComplete}>
-							<Text style={styles.buttonText}>Complete & Schedule Next</Text>
+							<Text style={styles.buttonText}>Done</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -281,11 +248,16 @@ export default function DashboardScreen({ route }) {
 			const sortedContacts = [...contactsList].sort((a, b) => {
 				switch (sortBy) {
 					case SORT_OPTIONS.NEXT_CONTACT:
-						return new Date(a.next_contact) - new Date(b.next_contact);
+						return new Date(a.next_contact || 0) - new Date(b.next_contact || 0);
 					case SORT_OPTIONS.LAST_CONTACT:
-						return new Date(b.last_contact || 0) - new Date(a.last_contact || 0);
+						// Get the most recent history entry date or use 0 if no history
+						const aLastDate = a.contact_history?.length ? new Date(a.contact_history[0].date) : 0;
+						const bLastDate = b.contact_history?.length ? new Date(b.contact_history[0].date) : 0;
+						return bLastDate - aLastDate;
 					case SORT_OPTIONS.NAME:
-						return a.name.localeCompare(b.name);
+						const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim();
+						const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim();
+						return aName.localeCompare(bName);
 					default:
 						return 0;
 				}
@@ -366,18 +338,46 @@ export default function DashboardScreen({ route }) {
 						</Text>
 					</TouchableOpacity>
 				</View>
-
 				<View style={styles.sortContainer}>
 					<Text style={styles.sortLabel}>Sort by:</Text>
-					<Picker
-						selectedValue={sortBy}
-						style={styles.sortPicker}
-						onValueChange={(value) => setSortBy(value)}
-					>
-						<Picker.Item label="Next Contact" value={SORT_OPTIONS.NEXT_CONTACT} />
-						<Picker.Item label="Last Contact" value={SORT_OPTIONS.LAST_CONTACT} />
-						<Picker.Item label="Name" value={SORT_OPTIONS.NAME} />
-					</Picker>
+					<View style={styles.sortButtonsContainer}>
+						<TouchableOpacity
+							style={[styles.sortButton, sortBy === SORT_OPTIONS.NEXT_CONTACT && styles.sortButtonActive]}
+							onPress={() => setSortBy(SORT_OPTIONS.NEXT_CONTACT)}
+						>
+							<Text
+								style={[
+									styles.sortButtonText,
+									sortBy === SORT_OPTIONS.NEXT_CONTACT && styles.sortButtonTextActive,
+								]}
+							>
+								Next Contact
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.sortButton, sortBy === SORT_OPTIONS.LAST_CONTACT && styles.sortButtonActive]}
+							onPress={() => setSortBy(SORT_OPTIONS.LAST_CONTACT)}
+						>
+							<Text
+								style={[
+									styles.sortButtonText,
+									sortBy === SORT_OPTIONS.LAST_CONTACT && styles.sortButtonTextActive,
+								]}
+							>
+								Last Contact
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.sortButton, sortBy === SORT_OPTIONS.NAME && styles.sortButtonActive]}
+							onPress={() => setSortBy(SORT_OPTIONS.NAME)}
+						>
+							<Text
+								style={[styles.sortButtonText, sortBy === SORT_OPTIONS.NAME && styles.sortButtonTextActive]}
+							>
+								Name
+							</Text>
+						</TouchableOpacity>
+					</View>
 				</View>
 			</View>
 
@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#fff',
+		paddingTop: Platform.OS === 'ios' ? 50 : 0,
 	},
 	header: {
 		padding: 20,
@@ -462,18 +463,46 @@ const styles = StyleSheet.create({
 		color: '#007AFF',
 	},
 	sortContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingHorizontal: 10,
+		padding: 15,
+		borderBottomWidth: 1,
+		borderBottomColor: '#eee',
 	},
 	sortLabel: {
 		fontSize: 16,
 		color: '#666',
-		marginRight: 10,
+		marginBottom: 10,
+	},
+	sortButtonsContainer: {
+		flexDirection: 'row',
+		justifyContent: 'flex-start',
+		gap: 10,
 	},
 	sortPicker: {
 		flex: 1,
 		height: 40,
+		backgroundColor: '#fff',
+		marginLeft: -8,
+		color: '#333',
+	},
+	sortButton: {
+		paddingVertical: 8,
+		paddingHorizontal: 16,
+		borderRadius: 20,
+		backgroundColor: '#f8f9fa',
+		borderWidth: 1,
+		borderColor: '#eee',
+	},
+	sortButtonActive: {
+		backgroundColor: '#e8f2ff',
+		borderColor: '#007AFF',
+	},
+	sortButtonText: {
+		color: '#666',
+		fontSize: 14,
+		fontWeight: '500',
+	},
+	sortButtonTextActive: {
+		color: '#007AFF',
 	},
 	contactsList: {
 		flex: 1,

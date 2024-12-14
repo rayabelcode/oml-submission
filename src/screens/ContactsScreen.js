@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
+import { SafeAreaView } from 'react-native';
 import '../../assets/react-datepicker.css';
 import {
 	StyleSheet,
@@ -66,6 +67,7 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 									const newDate = new Date(date);
 									newDate.setHours(12, 0, 0, 0);
 									setSelectedDate(newDate);
+									setShowPicker(false);
 								}}
 								inline
 								dateFormat="MM/dd/yyyy"
@@ -232,8 +234,8 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 };
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, onEdit, onSchedule }) => {
-	const [history, setHistory] = useState([]);
-	const [notes, setNotes] = useState('');
+	const [history, setHistory] = useState([]); // Contact history notes
+	const [notes, setNotes] = useState(''); // Contact notes
 	const [editMode, setEditMode] = useState(null); // Track editing state
 	const [callNotes, setCallNotes] = useState(''); // Call notes text
 	const [callDate, setCallDate] = useState(new Date()); // Call date
@@ -462,6 +464,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 								value={callNotes}
 								onChangeText={setCallNotes}
 								placeholder="What did you discuss?"
+								placeholderTextColor="#666666"
 							/>
 							<View style={styles.callNotesControls}>
 								<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -498,6 +501,56 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 											}}
 											inline
 											dateFormat="MM/dd/yyyy"
+											renderCustomHeader={({
+												date,
+												decreaseMonth,
+												increaseMonth,
+												prevMonthButtonDisabled,
+												nextMonthButtonDisabled,
+											}) => (
+												<div
+													style={{
+														display: 'flex',
+														justifyContent: 'space-between',
+														alignItems: 'center',
+														padding: '10px',
+													}}
+												>
+													<button
+														onClick={decreaseMonth}
+														disabled={prevMonthButtonDisabled}
+														style={{
+															border: 'none',
+															background: 'none',
+															cursor: 'pointer',
+														}}
+													>
+														<Icon
+															name="chevron-back-outline"
+															size={24}
+															color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
+														/>
+													</button>
+													<span style={{ fontWeight: '500', fontSize: '16px' }}>
+														{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+													</span>
+													<button
+														onClick={increaseMonth}
+														disabled={nextMonthButtonDisabled}
+														style={{
+															border: 'none',
+															background: 'none',
+															cursor: 'pointer',
+														}}
+													>
+														<Icon
+															name="chevron-forward-outline"
+															size={24}
+															color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
+														/>
+													</button>
+												</div>
+											)}
 										/>
 									) : Platform.OS === 'ios' ? (
 										<DateTimePicker
@@ -947,6 +1000,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#fff',
+		paddingTop: Platform.OS === 'ios' ? 50 : 0,
 	},
 	header: {
 		padding: 20,
@@ -1268,6 +1322,9 @@ const styles = StyleSheet.create({
 		minHeight: 100,
 		marginBottom: 10,
 		fontSize: 16,
+		color: '#000000',
+		backgroundColor: '#ffffff',
+		placeholderTextColor: '#666666',
 	},
 	callNotesControls: {
 		flexDirection: 'row',

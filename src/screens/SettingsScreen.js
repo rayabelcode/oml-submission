@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, TextInput, Alert } from 'react-native';
+import { 
+    StyleSheet, 
+    Text, 
+    View, 
+    ScrollView, 
+    TouchableOpacity, 
+    Switch, 
+    TextInput, 
+    Alert,
+    Platform,
+    SafeAreaView 
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+
 
 export default function SettingsScreen() {
 	const { user, signIn, signUp, signOut } = useAuth();
@@ -188,6 +200,7 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#fff',
+		paddingTop: Platform.OS === 'ios' ? 50 : 0,
 	},
 	profileSection: {
 		flexDirection: 'row',
