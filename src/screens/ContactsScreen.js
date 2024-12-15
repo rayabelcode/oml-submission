@@ -38,10 +38,8 @@ import { serverTimestamp } from 'firebase/firestore';
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
-const numColumns = 3;
-const cardMargin = 10;
-const cardWidth = (windowWidth - cardMargin * (numColumns + 1)) / numColumns;
 
+// Get initials for image avatar
 const getInitials = (firstName, lastName) => {
 	const firstInitial = firstName ? firstName[0] : '';
 	const lastInitial = lastName ? lastName[0] : '';
@@ -172,9 +170,14 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 					<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
 				)}
 			</View>
-			<Text style={styles.cardName} numberOfLines={1}>
-				{`${contact.first_name} ${contact.last_name || ''}`}
-			</Text>
+			<View style={styles.nameContainer}>
+				<Text style={styles.firstName} numberOfLines={1}>
+					{contact.first_name}
+				</Text>
+				<Text style={styles.lastName} numberOfLines={1}>
+					{contact.last_name || ''}
+				</Text>
+			</View>
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
 					<View style={styles.scheduleDot} />
@@ -1347,17 +1350,17 @@ export default function ContactsScreen({ navigation }) {
 			<View style={styles.buttonContainer}>
 				<TouchableOpacity style={styles.importButton} onPress={handleImportContacts}>
 					<Icon name="people-outline" size={20} color="#fff" />
-					<Text style={styles.importButtonText}>Import from Contacts</Text>
+					<Text style={styles.importButtonText}>Add Contact</Text>
 				</TouchableOpacity>
 				<TouchableOpacity
-					style={styles.secondaryButton}
+					style={styles.newButton}
 					onPress={() => {
 						setEditingContact(null);
 						setIsFormVisible(true);
 					}}
 				>
 					<Icon name="add-outline" size={20} color="#007AFF" />
-					<Text style={styles.secondaryButtonText}>Add New Contact</Text>
+					<Text style={styles.newButtonText}>New</Text>
 				</TouchableOpacity>
 			</View>
 
@@ -1494,6 +1497,7 @@ const styles = StyleSheet.create({
 	},
 	section: {
 		padding: 15,
+		paddingHorizontal: 10,
 	},
 	sectionTitle: {
 		fontSize: 18,
@@ -1504,11 +1508,12 @@ const styles = StyleSheet.create({
 	grid: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
-		marginHorizontal: -cardMargin,
+		paddingHorizontal: 0,
+		justifyContent: 'flex-start',
 	},
 	card: {
-		width: cardWidth,
-		margin: cardMargin,
+		width: '31%',
+		margin: '1%',
 		backgroundColor: '#f8f9fa',
 		borderRadius: 12,
 		padding: 15,
@@ -1870,11 +1875,15 @@ const styles = StyleSheet.create({
 		minWidth: 300,
 	},
 	buttonContainer: {
-		padding: 20,
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		padding: 15,
 		gap: 10,
 	},
 	// Import Button
 	importButton: {
+		flex: 1,
 		flexDirection: 'row',
 		alignItems: 'center',
 		backgroundColor: '#007AFF',
@@ -1946,5 +1955,38 @@ const styles = StyleSheet.create({
 	},
 	deleteButton: {
 		backgroundColor: '#FF3B30',
+	},
+	newButton: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		backgroundColor: '#f8f9fa',
+		paddingVertical: 11, //height
+		paddingHorizontal: 14,
+		borderRadius: 10,
+		justifyContent: 'center',
+		borderWidth: 1.1,
+		borderColor: '#007AFF',
+	},
+	newButtonText: {
+		color: '#007AFF',
+		marginLeft: 5,
+		fontSize: 16,
+		fontWeight: '500',
+	},
+	nameContainer: {
+		width: '100%',
+		alignItems: 'center',
+	},
+	firstName: {
+		fontSize: 14,
+		fontWeight: '500',
+		textAlign: 'center',
+		marginTop: 8,
+	},
+	lastName: {
+		fontSize: 14,
+		fontWeight: '500',
+		textAlign: 'center',
+		color: '#000',
 	},
 });
