@@ -160,16 +160,30 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 		>
 			<View style={styles.cardAvatar}>
 				{contact.photo_url ? (
-					<ExpoImage
-						source={{ uri: contact.photo_url }}
-						style={styles.avatarImage}
-						cachePolicy="memory-disk"
-						transition={200}
-					/>
+					Platform.OS === 'web' ? (
+						contact.photo_url.startsWith('file://') ? (
+							<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+						) : (
+							<ExpoImage
+								source={{ uri: contact.photo_url }}
+								style={styles.avatarImage}
+								cachePolicy="memory-disk"
+								transition={200}
+							/>
+						)
+					) : (
+						<ExpoImage
+							source={{ uri: contact.photo_url }}
+							style={styles.avatarImage}
+							cachePolicy="memory-disk"
+							transition={200}
+						/>
+					)
 				) : (
 					<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
 				)}
 			</View>
+
 			<View style={styles.nameContainer}>
 				<Text style={styles.firstName} numberOfLines={1}>
 					{contact.first_name}
@@ -1172,6 +1186,10 @@ export default function ContactsScreen({ navigation }) {
 					);
 
 					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+					if (!photoUrl || photoUrl.startsWith('file://')) {
+						console.error('Invalid photo URL returned:', photoUrl);
+						photoUrl = null;
+					}
 				} catch (photoError) {
 					console.error('Photo processing error:', photoError);
 				}

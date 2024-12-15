@@ -82,6 +82,7 @@ export const uploadContactPhoto = async (userId, photoUri) => {
 		return downloadURL;
 	} catch (error) {
 		console.error('Error uploading photo:', error);
+		console.error('Error details:', error.message);
 		return null;
 	}
 };
