@@ -48,6 +48,7 @@ export const addContact = async (userId, contactData) => {
 			contact_history: [],
 			tags: [],
 			next_contact: null,
+			archived: false,
 			created_at: serverTimestamp(),
 			last_updated: serverTimestamp(),
 		};
@@ -88,13 +89,18 @@ export const uploadContactPhoto = async (userId, photoUri) => {
 export const fetchContacts = async (userId) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
+		// Change query to handle contacts without archived field
 		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
 
 		const querySnapshot = await getDocs(q);
 		const contacts = [];
 
 		querySnapshot.forEach((doc) => {
-			contacts.push({ id: doc.id, ...doc.data() });
+			const contactData = doc.data();
+			// Include contact if archived is false or undefined
+			if (!contactData.archived) {
+				contacts.push({ id: doc.id, ...contactData });
+			}
 		});
 
 		return {
@@ -103,6 +109,20 @@ export const fetchContacts = async (userId) => {
 		};
 	} catch (error) {
 		console.error('Error fetching contacts:', error);
+		throw error;
+	}
+};
+
+// Archive contact
+export const archiveContact = async (contactId) => {
+	try {
+		const contactRef = doc(db, 'contacts', contactId);
+		await updateDoc(contactRef, {
+			archived: true,
+			last_updated: serverTimestamp(),
+		});
+	} catch (error) {
+		console.error('Error archiving contact:', error);
 		throw error;
 	}
 };

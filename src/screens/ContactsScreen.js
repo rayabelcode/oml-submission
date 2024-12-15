@@ -18,6 +18,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import {
 	fetchContacts,
+	archiveContact,
 	deleteContact,
 	addContact,
 	updateContact,
@@ -40,6 +41,12 @@ const windowWidth = Dimensions.get('window').width;
 const numColumns = 3;
 const cardMargin = 10;
 const cardWidth = (windowWidth - cardMargin * (numColumns + 1)) / numColumns;
+
+const getInitials = (firstName, lastName) => {
+	const firstInitial = firstName ? firstName[0] : '';
+	const lastInitial = lastName ? lastName[0] : '';
+	return (firstInitial + lastInitial).toUpperCase();
+};
 
 // Schedule Modal Component
 const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
@@ -143,17 +150,16 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 };
 
 // Contact Card Component
-const ContactCard = ({ contact, onPress }) => {
-	const getInitials = (firstName, lastName) => {
-		const firstInitial = firstName ? firstName[0] : '';
-		const lastInitial = lastName ? lastName[0] : '';
-		return (firstInitial + lastInitial).toUpperCase();
-	};
-
-	const fullName = `${contact.first_name} ${contact.last_name || ''}`.trim();
+const ContactCard = ({ contact, onPress, loadContacts }) => {
+	const [showActions, setShowActions] = useState(false);
 
 	return (
-		<TouchableOpacity style={styles.card} onPress={() => onPress(contact)}>
+		<TouchableOpacity
+			style={styles.card}
+			onPress={() => onPress(contact)}
+			onLongPress={() => setShowActions(true)}
+			delayLongPress={500}
+		>
 			<View style={styles.cardAvatar}>
 				{contact.photo_url ? (
 					<ExpoImage
@@ -167,11 +173,68 @@ const ContactCard = ({ contact, onPress }) => {
 				)}
 			</View>
 			<Text style={styles.cardName} numberOfLines={1}>
-				{fullName}
+				{`${contact.first_name} ${contact.last_name || ''}`}
 			</Text>
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
 					<View style={styles.scheduleDot} />
+				</View>
+			)}
+
+			{showActions && (
+				<View style={styles.cardActions}>
+					<TouchableOpacity
+						style={styles.cardActionButton}
+						onPress={() => {
+							Alert.alert(
+								'Delete Contact',
+								'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
+								[
+									{ text: 'Cancel', style: 'cancel' },
+									{
+										text: 'Delete',
+										style: 'destructive',
+										onPress: async () => {
+											try {
+												await deleteContact(contact.id);
+												setShowActions(false);
+												await loadContacts();
+											} catch (error) {
+												console.error('Delete error:', error);
+												Alert.alert('Error', 'Unable to delete contact');
+											}
+										},
+									},
+								]
+							);
+						}}
+					>
+						<Icon name="close-circle" size={24} color="#FF3B30" />
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						style={styles.cardActionButton}
+						onPress={() => {
+							Alert.alert('Archive Contact', 'Archive this contact?', [
+								{ text: 'Cancel', style: 'cancel' },
+								{
+									text: 'Archive',
+									onPress: async () => {
+										try {
+											await archiveContact(contact.id);
+											setShowActions(false);
+											await loadContacts();
+										} catch (error) {
+											console.error('Archive error:', error);
+											Alert.alert('Error', 'Unable to archive contact');
+										}
+									},
+								},
+							]);
+						}}
+					>
+						<Icon name="archive" size={24} color="#007AFF" />
+					</TouchableOpacity>
 				</View>
 			)}
 		</TouchableOpacity>
@@ -775,7 +838,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 };
 
 // Add/Edit Contact Modal
-const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
+const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadContacts }) => {
 	const [formData, setFormData] = useState({
 		first_name: '',
 		last_name: '',
@@ -852,9 +915,66 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null }) => {
 					</ScrollView>
 
 					<View style={styles.modalActions}>
+						<TouchableOpacity
+							style={[styles.modalButton, styles.deleteButton]}
+							onPress={() => {
+								Alert.alert(
+									'Delete Contact',
+									'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
+									[
+										{ text: 'Cancel', style: 'cancel' },
+										{
+											text: 'Delete',
+											style: 'destructive',
+											onPress: async () => {
+												try {
+													if (initialData?.id) {
+														await deleteContact(initialData.id);
+														onClose();
+														await loadContacts();
+													}
+												} catch (error) {
+													console.error('Delete error:', error);
+													Alert.alert('Error', 'Unable to delete contact');
+												}
+											},
+										},
+									]
+								);
+							}}
+						>
+							<Text style={styles.buttonText}>Delete</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							style={[styles.modalButton, styles.archiveButton]}
+							onPress={() => {
+								Alert.alert('Archive Contact', 'Archive this contact?', [
+									{ text: 'Cancel', style: 'cancel' },
+									{
+										text: 'Archive',
+										onPress: async () => {
+											try {
+												if (initialData?.id) {
+													await archiveContact(initialData.id);
+													onClose();
+													loadContacts();
+												}
+											} catch (error) {
+												Alert.alert('Error', 'Failed to archive contact');
+											}
+										},
+									},
+								]);
+							}}
+						>
+							<Text style={styles.buttonText}>Archive</Text>
+						</TouchableOpacity>
+
 						<TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={onClose}>
 							<Text style={styles.buttonText}>Cancel</Text>
 						</TouchableOpacity>
+
 						<TouchableOpacity
 							style={[styles.modalButton, styles.saveButton]}
 							onPress={() => {
@@ -1254,7 +1374,12 @@ export default function ContactsScreen({ navigation }) {
 								<Text style={styles.sectionTitle}>Scheduled Contacts</Text>
 								<View style={styles.grid}>
 									{contacts.scheduledContacts.map((contact) => (
-										<ContactCard key={contact.id} contact={contact} onPress={handleOpenDetails} />
+										<ContactCard
+											key={contact.id}
+											contact={contact}
+											onPress={handleOpenDetails}
+											loadContacts={loadContacts}
+										/>
 									))}
 								</View>
 							</View>
@@ -1265,7 +1390,12 @@ export default function ContactsScreen({ navigation }) {
 								<Text style={styles.sectionTitle}>Other Contacts</Text>
 								<View style={styles.grid}>
 									{contacts.unscheduledContacts.map((contact) => (
-										<ContactCard key={contact.id} contact={contact} onPress={handleOpenDetails} />
+										<ContactCard
+											key={contact.id}
+											contact={contact}
+											onPress={handleOpenDetails}
+											loadContacts={loadContacts}
+										/>
 									))}
 								</View>
 							</View>
@@ -1286,6 +1416,7 @@ export default function ContactsScreen({ navigation }) {
 				}}
 				onSubmit={editingContact ? handleEditContact : handleAddContact}
 				initialData={editingContact}
+				loadContacts={loadContacts}
 			/>
 
 			<ContactDetailsModal
@@ -1796,5 +1927,24 @@ const styles = StyleSheet.create({
 	searchResultText: {
 		fontSize: 16,
 		color: '#333',
+	},
+	cardActions: {
+		position: 'absolute',
+		top: 5,
+		right: 5,
+		flexDirection: 'row',
+		backgroundColor: 'rgba(255, 255, 255, 0.9)',
+		borderRadius: 15,
+		padding: 5,
+	},
+	cardActionButton: {
+		padding: 5,
+		marginHorizontal: 2,
+	},
+	archiveButton: {
+		backgroundColor: '#007AFF',
+	},
+	deleteButton: {
+		backgroundColor: '#FF3B30',
 	},
 });
