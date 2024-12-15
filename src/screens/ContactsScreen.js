@@ -47,7 +47,7 @@ const getInitials = (firstName, lastName) => {
 };
 
 // Schedule Modal Component
-const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
+const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisible, loadContacts }) => {
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [showPicker, setShowPicker] = useState(false);
 
@@ -56,7 +56,7 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 	};
 
 	return (
-		<Modal visible={visible} animationType="slide" transparent={true}>
+		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
@@ -66,81 +66,70 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit }) => {
 						</TouchableOpacity>
 					</View>
 
-					<View style={styles.modalScroll}>
-						<Text style={styles.label}>Select Next Contact Date:</Text>
+					<View style={styles.scheduleContainer}>
+						<Text style={styles.scheduleLabel}>Next Contact Date</Text>
+						<Text style={styles.selectedDate}>{selectedDate.toLocaleDateString()}</Text>
+					</View>
 
-						{/* Web Platform */}
-						{Platform.OS === 'web' ? (
-							<DatePicker
-								selected={selectedDate}
-								onChange={(date) => {
+					{Platform.OS === 'web' ? (
+						<DatePicker
+							selected={selectedDate}
+							onChange={(date) => {
+								const newDate = new Date(date);
+								newDate.setHours(12, 0, 0, 0);
+								setSelectedDate(newDate);
+								setShowPicker(false);
+							}}
+							inline
+							dateFormat="MM/dd/yyyy"
+						/>
+					) : (
+						<DateTimePicker
+							value={selectedDate}
+							mode="date"
+							display="inline"
+							onChange={(event, date) => {
+								if (date) {
 									const newDate = new Date(date);
 									newDate.setHours(12, 0, 0, 0);
 									setSelectedDate(newDate);
-									setShowPicker(false);
-								}}
-								inline
-								dateFormat="MM/dd/yyyy"
-							/>
-						) : (
-							/* iOS/Android Native Date Picker */
-							<>
-								<TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(true)}>
-									<Text style={styles.dateButtonText}>
-										{selectedDate.toDateString() === new Date().toDateString()
-											? 'Today'
-											: selectedDate.toLocaleDateString()}
-									</Text>
-								</TouchableOpacity>
+								}
+							}}
+							textColor="#000000"
+							accentColor="#007AFF"
+							themeVariant="light"
+						/>
+					)}
 
-								{Platform.OS === 'ios' && showPicker && (
-									<DateTimePicker
-										value={selectedDate}
-										mode="date"
-										display="inline"
-										onChange={(event, date) => {
-											if (date) {
-												const newDate = new Date(date);
-												newDate.setHours(12, 0, 0, 0);
-												setSelectedDate(newDate);
-											}
-										}}
-										textColor="#000000"
-										accentColor="#007AFF"
-										themeVariant="light"
-										style={{
-											height: 400,
-											width: '100%',
-											backgroundColor: 'white',
-										}}
-									/>
-								)}
+					<TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+						<Text style={styles.confirmButtonText}>Confirm</Text>
+					</TouchableOpacity>
 
-								{Platform.OS === 'android' && showPicker && (
-									<DateTimePicker
-										value={selectedDate}
-										mode="date"
-										display="default"
-										onChange={(event, date) => {
-											setShowPicker(false);
-											if (event.type === 'set') {
-												const newDate = new Date(date);
-												newDate.setHours(12, 0, 0, 0);
-												setSelectedDate(newDate);
-											}
-										}}
-									/>
-								)}
-							</>
-						)}
-
-						<TouchableOpacity
-							style={[styles.modalButton, styles.saveButton, { marginTop: 20 }]}
-							onPress={handleConfirm}
-						>
-							<Text style={styles.buttonText}>Confirm Schedule</Text>
-						</TouchableOpacity>
-					</View>
+					<TouchableOpacity
+						style={styles.removeScheduleButton}
+						onPress={() => {
+							Alert.alert('Remove Schedule', 'Are you sure you want to remove the next scheduled contact?', [
+								{ text: 'Cancel', style: 'cancel' },
+								{
+									text: 'Remove',
+									onPress: async () => {
+										try {
+											await updateContact(contact.id, {
+												next_contact: null,
+											});
+											await loadContacts(); // Refresh contacts
+											onClose();
+											setIsDetailsVisible(true);
+										} catch (error) {
+											Alert.alert('Error', 'Failed to remove schedule');
+										}
+									},
+								},
+							]);
+						}}
+					>
+						<Text style={styles.removeScheduleText}>Remove Next Call</Text>
+					</TouchableOpacity>
 				</View>
 			</View>
 		</Modal>
@@ -199,59 +188,67 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 			)}
 
 			{showActions && (
-				<View style={styles.cardActions}>
-					<TouchableOpacity
-						style={styles.cardActionButton}
-						onPress={() => {
-							Alert.alert(
-								'Delete Contact',
-								'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
-								[
-									{ text: 'Cancel', style: 'cancel' },
-									{
-										text: 'Delete',
-										style: 'destructive',
-										onPress: async () => {
-											try {
-												await deleteContact(contact.id);
-												setShowActions(false);
-												await loadContacts();
-											} catch (error) {
-												console.error('Delete error:', error);
-												Alert.alert('Error', 'Unable to delete contact');
-											}
-										},
-									},
-								]
-							);
-						}}
-					>
-						<Icon name="close-circle" size={24} color="#FF3B30" />
+				<View style={styles.actionsContainer}>
+					<TouchableOpacity style={styles.closeButton} onPress={() => setShowActions(false)}>
+						<Icon name="close" size={24} color="#000" />
 					</TouchableOpacity>
 
-					<TouchableOpacity
-						style={styles.cardActionButton}
-						onPress={() => {
-							Alert.alert('Archive Contact', 'Archive this contact?', [
-								{ text: 'Cancel', style: 'cancel' },
-								{
-									text: 'Archive',
-									onPress: async () => {
-										try {
-											await archiveContact(contact.id);
-											setShowActions(false);
-											await loadContacts();
-										} catch (error) {
-											console.error('Archive error:', error);
-											Alert.alert('Error', 'Unable to archive contact');
-										}
-									},
-								},
-							]);
-						}}
-					>
-						<Icon name="archive" size={24} color="#007AFF" />
-					</TouchableOpacity>
+					<View style={styles.cardActions}>
+						<View style={styles.actionButtonsContainer}>
+							<TouchableOpacity
+								style={styles.cardActionButton}
+								onPress={() => {
+									Alert.alert(
+										'Delete Contact',
+										'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
+										[
+											{ text: 'Cancel', style: 'cancel' },
+											{
+												text: 'Delete',
+												style: 'destructive',
+												onPress: async () => {
+													try {
+														await deleteContact(contact.id);
+														setShowActions(false);
+														await loadContacts();
+													} catch (error) {
+														console.error('Delete error:', error);
+														Alert.alert('Error', 'Unable to delete contact');
+													}
+												},
+											},
+										]
+									);
+								}}
+							>
+								<Icon name="trash-outline" size={32} color="rgba(255, 0, 0, 0.8)" />
+							</TouchableOpacity>
+
+							<TouchableOpacity
+								style={styles.cardActionButton}
+								onPress={() => {
+									Alert.alert('Archive Contact', 'Archive this contact?', [
+										{ text: 'Cancel', style: 'cancel' },
+										{
+											text: 'Archive',
+											onPress: async () => {
+												try {
+													await archiveContact(contact.id);
+													setShowActions(false);
+													await loadContacts();
+												} catch (error) {
+													console.error('Archive error:', error);
+													Alert.alert('Error', 'Unable to archive contact');
+												}
+											},
+										},
+									]);
+								}}
+							>
+								<Icon name="archive" size={32} color="rgba(0, 122, 255, 0.8)" />
+							</TouchableOpacity>
+						</View>
+					</View>
 				</View>
 			)}
 		</TouchableOpacity>
@@ -268,14 +265,8 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 		}
 	};
 
-	const handleKeyPress = (e) => {
-		if (e.key === 'Enter' && newTag.trim()) {
-			handleAddTag();
-		}
-	};
-
 	return (
-		<Modal visible={visible} animationType="slide" transparent={true}>
+		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
@@ -285,38 +276,35 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 						</TouchableOpacity>
 					</View>
 
-					<View style={styles.tagsContainer}>
-						{tags?.map((tag, index) => (
-							<View key={index} style={styles.tagBubble}>
-								<Text style={styles.tagText}>{tag}</Text>
-								<TouchableOpacity onPress={() => onDeleteTag(tag)}>
-									<Icon name="close-circle" size={20} color="#666" />
-								</TouchableOpacity>
-							</View>
-						))}
-					</View>
+					<View style={styles.tagsSection}>
+						<View style={styles.tagsContainer}>
+							{tags?.map((tag, index) => (
+								<View key={index} style={styles.tagBubble}>
+									<Text style={styles.tagText}>{tag}</Text>
+									<TouchableOpacity onPress={() => onDeleteTag(tag)}>
+										<Icon name="close-circle" size={20} color="#666" />
+									</TouchableOpacity>
+								</View>
+							))}
+						</View>
 
-					<View style={styles.tagInputContainer}>
-						<TextInput
-							style={styles.tagInput}
-							placeholder="Type new tag..."
-							value={newTag}
-							onChangeText={setNewTag}
-							onKeyPress={handleKeyPress}
-							onSubmitEditing={handleAddTag}
-						/>
-						<TouchableOpacity
-							style={[styles.tagButton, !newTag.trim() && styles.tagButtonDisabled]}
-							onPress={handleAddTag}
-							disabled={!newTag.trim()}
-						>
-							<Text style={styles.buttonText}>Add</Text>
+						<View style={styles.tagInputContainer}>
+							<TextInput
+								style={styles.tagInput}
+								placeholder="Type new tag..."
+								value={newTag}
+								onChangeText={setNewTag}
+								onSubmitEditing={handleAddTag}
+							/>
+							<TouchableOpacity style={styles.addTagButton} onPress={handleAddTag}>
+								<Text style={styles.buttonText}>Add</Text>
+							</TouchableOpacity>
+						</View>
+
+						<TouchableOpacity style={styles.doneButton} onPress={onClose}>
+							<Text style={styles.buttonText}>Done</Text>
 						</TouchableOpacity>
 					</View>
-
-					<TouchableOpacity style={styles.doneButton} onPress={onClose}>
-						<Text style={styles.buttonText}>Done</Text>
-					</TouchableOpacity>
 				</View>
 			</View>
 		</Modal>
@@ -340,7 +328,7 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 	}, [searchText, contacts]);
 
 	return (
-		<Modal visible={visible} animationType="slide" transparent={true}>
+		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
@@ -377,7 +365,15 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 	);
 };
 
-const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, onEdit, onSchedule }) => {
+const ContactDetailsModal = ({
+	visible,
+	contact,
+	setSelectedContact,
+	onClose,
+	onEdit,
+	onSchedule,
+	setIsDetailsVisible,
+}) => {
 	const [history, setHistory] = useState([]); // Contact history notes
 	const [notes, setNotes] = useState(''); // Contact notes
 	const [editMode, setEditMode] = useState(null); // Track editing state
@@ -428,7 +424,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 
 			// Initialize for first-time viewing
 			if (!contact.contact_history?.length) {
-				setSuggestions(['No conversation history yet. Start your first conversation!']);
+				setSuggestions(['AI suggestions will appear here after your first call.']);
 				return;
 			}
 
@@ -478,7 +474,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 			await updateContact(contact.id, { contact_history: updatedHistory });
 			setHistory(updatedHistory);
 			setEditMode(null);
-			Alert.alert('Success', 'Contact history updated');
 		} catch (error) {
 			console.error('Error editing history:', error);
 			Alert.alert('Error', 'Failed to update contact history');
@@ -489,27 +484,42 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 		try {
 			const updatedHistory = history.filter((_, i) => i !== index);
 
-			// Update both contact and contact_history in Firestore
+			// Update Firestore first
 			await updateContact(contact.id, {
 				contact_history: updatedHistory,
 			});
 
-			// Update local state
+			// Update local states
 			setHistory(updatedHistory);
-
-			// Update the contact object with new history
-			const updatedContact = {
+			setSelectedContact({
 				...contact,
 				contact_history: updatedHistory,
-			};
-			setSelectedContact(updatedContact);
+			});
 
 			// Refresh suggestions
-			delete suggestionCache.current[contact.id];
-			const topics = await generateTopicSuggestions(updatedContact, updatedHistory);
-			setSuggestions(topics);
-
-			Alert.alert('Success', 'History entry deleted');
+			setLoadingSuggestions(true);
+			try {
+				const topics = await generateTopicSuggestions(
+					{ ...contact, contact_history: updatedHistory },
+					updatedHistory
+				);
+				const newCache = {
+					...suggestionCache,
+					[contact.id]: {
+						suggestions: topics,
+						historyLength: updatedHistory.length,
+						timestamp: Date.now(),
+					},
+				};
+				setSuggestionCache(newCache);
+				setSuggestions(topics);
+				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+			} catch (error) {
+				console.error('Error updating suggestions:', error);
+				setSuggestions(['Unable to generate suggestions at this time.']);
+			} finally {
+				setLoadingSuggestions(false);
+			}
 		} catch (error) {
 			console.error('Error deleting history:', error);
 			Alert.alert('Error', 'Failed to delete history entry');
@@ -578,8 +588,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 			// Reset form
 			setCallNotes('');
 			setCallDate(new Date());
-
-			Alert.alert('Success', 'Call notes added!');
 		} catch (error) {
 			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
@@ -587,7 +595,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 	};
 
 	return (
-		<Modal visible={visible} animationType="slide" transparent={true}>
+		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
@@ -607,7 +615,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 								multiline
 								value={callNotes}
 								onChangeText={setCallNotes}
-								placeholder="What did you discuss?"
+								placeholder="Add a call here! What did you discuss?"
 								placeholderTextColor="#666666"
 							/>
 							<View style={styles.callNotesControls}>
@@ -747,7 +755,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 								<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
 								{suggestions.map((topic, index) => (
 									<Text key={index} style={styles.suggestion}>
-										• {topic}
+										{topic}
 									</Text>
 								))}
 							</View>
@@ -756,79 +764,90 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, on
 						{/* Contact History */}
 						<View style={styles.historySection}>
 							<Text style={styles.sectionTitle}>Contact History</Text>
-							{history.map((entry, index) => (
-								<View key={index} style={styles.historyEntry}>
-									<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-									{editMode === index ? (
-										<TextInput
-											style={styles.historyNotesInput}
-											value={entry.notes}
-											onChangeText={(text) => {
-												const updatedHistory = [...history];
-												updatedHistory[index].notes = text;
-												setHistory(updatedHistory);
-											}}
-										/>
-									) : (
-										<Text style={styles.historyNotes}>{entry.notes}</Text>
-									)}
-									<View style={styles.historyActions}>
-										<TouchableOpacity
-											style={styles.editButton}
-											onPress={() =>
-												editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-											}
-										>
-											<Text style={styles.buttonText}>{editMode === index ? 'Save' : 'Edit'}</Text>
-										</TouchableOpacity>
-										<TouchableOpacity
-											style={styles.deleteButton}
-											onPress={() => {
-												if (Platform.OS === 'web') {
-													if (window.confirm('Are you sure you want to delete this entry?')) {
-														handleDeleteHistory(index);
-													}
-												} else {
-													Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
-														{ text: 'Cancel', style: 'cancel' },
-														{
-															text: 'Delete',
-															style: 'destructive',
-															onPress: () => handleDeleteHistory(index),
-														},
-													]);
+							{history.length === 0 ? (
+								<Text style={styles.emptyHistoryText}>
+									Add your contact history above to view your call history...
+								</Text>
+							) : (
+								history.map((entry, index) => (
+									<View key={index} style={styles.historyEntry}>
+										<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+										{editMode === index ? (
+											<TextInput
+												style={styles.historyNotesInput}
+												value={entry.notes}
+												onChangeText={(text) => {
+													const updatedHistory = [...history];
+													updatedHistory[index].notes = text;
+													setHistory(updatedHistory);
+												}}
+											/>
+										) : (
+											<Text style={styles.historyNotes}>{entry.notes}</Text>
+										)}
+										<View style={styles.historyActions}>
+											<TouchableOpacity
+												style={styles.historyActionButton}
+												onPress={() =>
+													editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
 												}
-											}}
-										>
-											<Text style={styles.buttonText}>Delete</Text>
-										</TouchableOpacity>
+											>
+												<Icon
+													name={editMode === index ? 'checkmark-outline' : 'create-outline'}
+													size={20}
+													color="#007AFF"
+												/>
+											</TouchableOpacity>
+											<TouchableOpacity
+												style={styles.historyActionButton}
+												onPress={() => handleDeleteHistory(index)}
+											>
+												<Icon name="trash-outline" size={20} color="#FF3B30" />
+											</TouchableOpacity>
+										</View>
 									</View>
-								</View>
-							))}
+								))
+							)}
 						</View>
 					</ScrollView>
 
 					{/* Footer Buttons */}
 					<View style={styles.modalActions}>
 						<TouchableOpacity
-							style={[styles.modalButton, styles.scheduleButton]}
-							onPress={() => onSchedule(contact)}
+							style={styles.footerButton}
+							onPress={() => {
+								setIsDetailsVisible(false);
+								setTimeout(() => {
+									onSchedule(contact);
+								}, 50);
+							}}
 						>
-							<Icon name="calendar-outline" size={20} color="#fff" />
-							<Text style={styles.buttonText}>Schedule</Text>
+							<Icon name="calendar-outline" size={24} color="#4CAF50" />
+							<Text style={styles.footerButtonText} numberOfLines={1}>
+								Schedule
+							</Text>
+						</TouchableOpacity>
+
+						<TouchableOpacity style={styles.footerButton} onPress={() => setIsTagsModalVisible(true)}>
+							<Icon name="pricetag-outline" size={24} color="#007AFF" />
+							<Text style={styles.footerButtonText} numberOfLines={1}>
+								Tags
+							</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
-							style={[styles.modalButton, styles.tagsButton]}
-							onPress={() => setIsTagsModalVisible(true)}
+							style={styles.footerButton}
+							onPress={() => {
+								setIsDetailsVisible(false);
+								setTimeout(() => {
+									onEdit(contact);
+								}, 50);
+							}}
 						>
-							<Icon name="pricetag-outline" size={20} color="#fff" />
-							<Text style={styles.buttonText}>Tags</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity style={[styles.modalButton, styles.editButton]} onPress={() => onEdit(contact)}>
-							<Icon name="create-outline" size={20} color="#fff" />
-							<Text style={styles.buttonText}>Edit</Text>
+							<Icon name="create-outline" size={24} color="#666" />
+							<Text style={styles.footerButtonText} numberOfLines={1}>
+								Edit
+							</Text>
 						</TouchableOpacity>
 					</View>
 
@@ -888,7 +907,7 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadConta
 	}, [initialData, visible]);
 
 	return (
-		<Modal visible={visible} animationType="slide" transparent={true}>
+		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
@@ -898,7 +917,7 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadConta
 						</TouchableOpacity>
 					</View>
 
-					<ScrollView style={styles.modalScroll}>
+					<ScrollView style={styles.formScrollView}>
 						<TextInput
 							style={styles.input}
 							placeholder="First Name"
@@ -931,69 +950,9 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadConta
 						/>
 					</ScrollView>
 
-					<View style={styles.modalActions}>
+					<View style={styles.editModalActions}>
 						<TouchableOpacity
-							style={[styles.modalButton, styles.deleteButton]}
-							onPress={() => {
-								Alert.alert(
-									'Delete Contact',
-									'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
-									[
-										{ text: 'Cancel', style: 'cancel' },
-										{
-											text: 'Delete',
-											style: 'destructive',
-											onPress: async () => {
-												try {
-													if (initialData?.id) {
-														await deleteContact(initialData.id);
-														onClose();
-														await loadContacts();
-													}
-												} catch (error) {
-													console.error('Delete error:', error);
-													Alert.alert('Error', 'Unable to delete contact');
-												}
-											},
-										},
-									]
-								);
-							}}
-						>
-							<Text style={styles.buttonText}>Delete</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity
-							style={[styles.modalButton, styles.archiveButton]}
-							onPress={() => {
-								Alert.alert('Archive Contact', 'Archive this contact?', [
-									{ text: 'Cancel', style: 'cancel' },
-									{
-										text: 'Archive',
-										onPress: async () => {
-											try {
-												if (initialData?.id) {
-													await archiveContact(initialData.id);
-													onClose();
-													loadContacts();
-												}
-											} catch (error) {
-												Alert.alert('Error', 'Failed to archive contact');
-											}
-										},
-									},
-								]);
-							}}
-						>
-							<Text style={styles.buttonText}>Archive</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity style={[styles.modalButton, styles.cancelButton]} onPress={onClose}>
-							<Text style={styles.buttonText}>Cancel</Text>
-						</TouchableOpacity>
-
-						<TouchableOpacity
-							style={[styles.modalButton, styles.saveButton]}
+							style={styles.editActionButton}
 							onPress={() => {
 								if (!formData.first_name.trim()) {
 									Alert.alert('Error', 'First name is required');
@@ -1002,8 +961,72 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadConta
 								onSubmit(formData);
 							}}
 						>
-							<Text style={styles.buttonText}>Save</Text>
+							<Icon name="checkmark-outline" size={24} color="#4CAF50" />
+							<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
 						</TouchableOpacity>
+
+						<TouchableOpacity style={styles.editActionButton} onPress={onClose}>
+							<Icon name="close-outline" size={24} color="#666" />
+							<Text style={[styles.editActionText, { color: '#666' }]}>Cancel</Text>
+						</TouchableOpacity>
+
+						{initialData && (
+							<>
+								<TouchableOpacity
+									style={styles.editActionButton}
+									onPress={() => {
+										Alert.alert('Archive Contact', 'Archive this contact?', [
+											{ text: 'Cancel', style: 'cancel' },
+											{
+												text: 'Archive',
+												onPress: async () => {
+													try {
+														await archiveContact(initialData.id);
+														onClose();
+														loadContacts();
+													} catch (error) {
+														Alert.alert('Error', 'Failed to archive contact');
+													}
+												},
+											},
+										]);
+									}}
+								>
+									<Icon name="archive-outline" size={24} color="#007AFF" />
+									<Text style={[styles.editActionText, { color: '#007AFF' }]}>Archive</Text>
+								</TouchableOpacity>
+
+								<TouchableOpacity
+									style={styles.editActionButton}
+									onPress={() => {
+										Alert.alert(
+											'Delete Contact',
+											'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
+											[
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Delete',
+													style: 'destructive',
+													onPress: async () => {
+														try {
+															await deleteContact(initialData.id);
+															onClose();
+															await loadContacts();
+														} catch (error) {
+															console.error('Delete error:', error);
+															Alert.alert('Error', 'Unable to delete contact');
+														}
+													},
+												},
+											]
+										);
+									}}
+								>
+									<Icon name="trash-outline" size={24} color="#FF3B30" />
+									<Text style={[styles.editActionText, { color: '#FF3B30' }]}>Delete</Text>
+								</TouchableOpacity>
+							</>
+						)}
 					</View>
 				</View>
 			</View>
@@ -1344,9 +1367,11 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const handleStartEdit = (contact) => {
-		setEditingContact(contact);
-		setIsDetailsVisible(false);
-		setIsFormVisible(true);
+		setIsDetailsVisible(false); // Hide details first
+		setTimeout(() => {
+			setEditingContact(contact);
+			setIsFormVisible(true);
+		}, 50); // Small delay for transition
 	};
 
 	if (!user) {
@@ -1453,6 +1478,7 @@ export default function ContactsScreen({ navigation }) {
 					setIsDetailsVisible(false);
 					setIsScheduleModalVisible(true);
 				}}
+				setIsDetailsVisible={setIsDetailsVisible}
 			/>
 
 			<ScheduleModal
@@ -1480,7 +1506,10 @@ export default function ContactsScreen({ navigation }) {
 						Alert.alert('Error', 'Failed to schedule contact');
 					}
 				}}
+				setIsDetailsVisible={setIsDetailsVisible}
+				loadContacts={loadContacts}
 			/>
+
 			<ContactSearchModal
 				visible={isSearchModalVisible}
 				contacts={deviceContacts}
@@ -1584,13 +1613,17 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 		justifyContent: 'center',
-		padding: 20,
+		padding: 10,
 	},
 	modalContent: {
 		backgroundColor: 'white',
 		borderRadius: 20,
 		padding: 20,
-		maxHeight: '80%',
+		maxHeight: Platform.OS === 'ios' ? '85%' : '90%', // Spacing for Dynamic Island
+		marginTop: Platform.OS === 'ios' ? 55 : 20, // Spacing for Dynamic Island
+		marginBottom: 20,
+		marginHorizontal: 10,
+		flex: 1,
 	},
 	modalHeader: {
 		flexDirection: 'row',
@@ -1599,11 +1632,12 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 	},
 	modalTitle: {
-		fontSize: 20,
+		fontSize: 24,
 		fontWeight: 'bold',
+		marginBottom: 0,
 	},
 	modalScroll: {
-		maxHeight: '80%',
+		flex: 1,
 	},
 	contactInfo: {
 		marginBottom: 20,
@@ -1643,8 +1677,11 @@ const styles = StyleSheet.create({
 	},
 	modalActions: {
 		flexDirection: 'row',
-		justifyContent: 'space-between',
+		justifyContent: 'space-around',
 		marginTop: 20,
+		borderTopWidth: 1,
+		borderTopColor: '#eee',
+		paddingTop: 15,
 	},
 	modalButton: {
 		flex: 1,
@@ -1688,7 +1725,8 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 	},
 	suggestionsContainer: {
-		marginTop: 10,
+		marginTop: 0,
+		marginBottom: 15,
 		padding: 10,
 		backgroundColor: '#f9f9f9',
 		borderRadius: 8,
@@ -1707,7 +1745,8 @@ const styles = StyleSheet.create({
 	suggestion: {
 		fontSize: 14,
 		color: '#333',
-		marginBottom: 5,
+		marginBottom: 8,
+		paddingLeft: 0,
 	},
 	callNotesButton: {
 		backgroundColor: '#FFA500', // Orange button
@@ -1767,7 +1806,6 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		justifyContent: 'flex-end',
 		marginTop: 10,
-		gap: 10,
 	},
 	// Button for Edit/Save
 	editButton: {
@@ -1794,14 +1832,14 @@ const styles = StyleSheet.create({
 	},
 	// Call Notes Section
 	callNotesSection: {
-		marginBottom: 20,
+		marginBottom: 15,
 		padding: 15,
 	},
 	callNotesInput: {
 		borderWidth: 1,
 		borderColor: '#ddd',
 		borderRadius: 10,
-		padding: 15,
+		padding: 10,
 		minHeight: 100,
 		marginBottom: 10,
 		fontSize: 16,
@@ -1849,15 +1887,16 @@ const styles = StyleSheet.create({
 	},
 	tagInputContainer: {
 		flexDirection: 'row',
-		padding: 10,
-		gap: 10,
+		marginBottom: 10,
 	},
 	tagInput: {
 		flex: 1,
 		borderWidth: 1,
 		borderColor: '#ddd',
 		borderRadius: 8,
-		padding: 10,
+		padding: 12,
+		marginRight: 10,
+		fontSize: 16,
 	},
 	tagButton: {
 		backgroundColor: '#007AFF',
@@ -1869,12 +1908,34 @@ const styles = StyleSheet.create({
 	tagButtonDisabled: {
 		backgroundColor: '#ccc',
 	},
+	tagsScrollView: {
+		flexGrow: 0,
+		maxHeight: '40%',
+	},
+	tagInputWrapper: {
+		marginTop: 'auto',
+		padding: 15,
+		backgroundColor: '#fff',
+		borderTopWidth: 1,
+		borderTopColor: '#eee',
+	},
+	addTagButton: {
+		backgroundColor: '#007AFF',
+		paddingHorizontal: 20,
+		paddingVertical: 12,
+		borderRadius: 8,
+		justifyContent: 'center',
+	},
+	addTagButtonText: {
+		color: '#fff',
+		fontSize: 16,
+		fontWeight: '500',
+	},
 	doneButton: {
 		backgroundColor: '#4CAF50',
 		padding: 15,
 		borderRadius: 8,
 		alignItems: 'center',
-		margin: 10,
 	},
 	tagsButton: {
 		backgroundColor: '#007AFF',
@@ -1957,16 +2018,52 @@ const styles = StyleSheet.create({
 	},
 	cardActions: {
 		position: 'absolute',
-		top: 5,
-		right: 5,
-		flexDirection: 'row',
-		backgroundColor: 'rgba(255, 255, 255, 0.9)',
+		top: '50%',
+		transform: [{ translateY: -25 }],
+		width: 120,
+		left: '50%',
+		marginLeft: -60,
+		backgroundColor: 'rgba(255, 255, 255, 0.98)',
 		borderRadius: 15,
-		padding: 5,
+		padding: 8,
+		borderWidth: 1,
+		borderColor: '#ddd',
+		zIndex: 1,
 	},
 	cardActionButton: {
-		padding: 5,
-		marginHorizontal: 2,
+		padding: 8,
+		alignItems: 'center',
+		justifyContent: 'center',
+		width: 44,
+		height: 44,
+	},
+	actionButtonsContainer: {
+		flexDirection: 'row',
+		justifyContent: 'space-around',
+		alignItems: 'center',
+		width: '100%',
+	},
+	actionsContainer: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		zIndex: 5,
+	},
+	closeButton: {
+		position: 'absolute',
+		top: -15,
+		right: -15,
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		backgroundColor: 'white',
+		borderWidth: 2,
+		borderColor: '#000',
+		alignItems: 'center',
+		justifyContent: 'center',
+		zIndex: 5,
 	},
 	archiveButton: {
 		backgroundColor: '#007AFF',
@@ -2006,5 +2103,88 @@ const styles = StyleSheet.create({
 		fontWeight: '500',
 		textAlign: 'center',
 		color: '#000',
+	},
+	footerButton: {
+		flex: 1,
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 2,
+		borderRadius: 8,
+	},
+	footerButtonText: {
+		fontSize: 11,
+		marginTop: 2,
+		textAlign: 'center',
+	},
+	historyActionButton: {
+		padding: 8,
+		marginLeft: 8,
+	},
+	emptyHistoryText: {
+		textAlign: 'center',
+		color: '#666',
+		fontSize: 14,
+		fontStyle: 'italic',
+		padding: 20,
+		backgroundColor: '#f8f9fa',
+		borderRadius: 10,
+	},
+	scheduleContainer: {
+		alignItems: 'center',
+		marginVertical: 20,
+	},
+	scheduleLabel: {
+		fontSize: 14,
+		color: '#666',
+		marginBottom: 8,
+	},
+	selectedDate: {
+		fontSize: 24,
+		fontWeight: 'bold',
+		color: '#000',
+	},
+	confirmButton: {
+		backgroundColor: '#007AFF',
+		paddingVertical: 12,
+		paddingHorizontal: 30,
+		borderRadius: 8,
+		alignSelf: 'center',
+		marginTop: 20,
+	},
+	confirmButtonText: {
+		color: '#fff',
+		fontSize: 16,
+		fontWeight: '500',
+	},
+	formScrollView: {
+		maxHeight: '60%',
+	},
+	editModalActions: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		paddingHorizontal: 15,
+		paddingVertical: 20,
+		borderTopWidth: 1,
+		borderTopColor: '#eee',
+		marginTop: 10,
+	},
+	editActionButton: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		flex: 1,
+	},
+	editActionText: {
+		fontSize: 12,
+		marginTop: 4,
+		textAlign: 'center',
+	},
+	removeScheduleButton: {
+		marginTop: 10,
+		padding: 10,
+	},
+	removeScheduleText: {
+		color: '#FF3B30',
+		fontSize: 14,
+		textAlign: 'center',
 	},
 });

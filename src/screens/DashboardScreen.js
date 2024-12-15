@@ -8,8 +8,10 @@ import {
 	RefreshControl,
 	Alert,
 	Modal,
+	Image,
 	TextInput,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -45,7 +47,12 @@ const ContactCard = ({ contact, onPress }) => (
 		<View style={styles.cardHeader}>
 			<View style={styles.avatarContainer}>
 				{contact.photo_url ? (
-					<Image source={{ uri: contact.photo_url }} style={styles.avatar} />
+					<ExpoImage // Changed from Image to ExpoImage
+						source={{ uri: contact.photo_url }}
+						style={styles.avatar}
+						cachePolicy="memory-disk"
+						transition={200}
+					/>
 				) : (
 					<Icon name="person-outline" size={24} color="#007AFF" />
 				)}
