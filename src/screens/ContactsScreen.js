@@ -1003,28 +1003,35 @@ const ContactDetailsModal = ({
 	};
 
 	const renderTabBar = (props) => (
-		<TabBar
-			{...props}
-			renderTabBarItem={({ route, navigationState }) => (
+		<View
+			style={{
+				flexDirection: 'row',
+				backgroundColor: '#ffffff',
+				width: '100%',
+				borderBottomWidth: 1,
+				borderBottomColor: '#eee',
+			}}
+		>
+			{props.navigationState.routes.map((route, index) => (
 				<TouchableOpacity
+					key={route.key}
 					style={{
 						flex: 1,
+						minHeight: 50,
 						alignItems: 'center',
-						padding: 16,
-						backgroundColor:
-							navigationState.index === navigationState.routes.indexOf(route) ? '#e8f2ff' : '#ffffff',
+						justifyContent: 'center',
+						backgroundColor: props.navigationState.index === index ? '#e8f2ff' : '#ffffff',
 					}}
-					onPress={() => setIndex(navigationState.routes.indexOf(route))}
+					onPress={() => setIndex(index)}
 				>
 					<Icon
 						name={route.icon}
 						size={24}
-						color={navigationState.index === navigationState.routes.indexOf(route) ? '#007AFF' : '#666666'}
+						color={props.navigationState.index === index ? '#007AFF' : '#666666'}
 					/>
 				</TouchableOpacity>
-			)}
-			style={{ backgroundColor: '#ffffff' }}
-		/>
+			))}
+		</View>
 	);
 
 	// Edit a specific history note
@@ -1174,7 +1181,7 @@ const ContactDetailsModal = ({
 						renderTabBar={renderTabBar}
 						onIndexChange={setIndex}
 						initialLayout={{ width: layout.width }}
-						style={{ flex: 1 }}
+						style={{ flex: 1, width: '100%' }}
 					/>
 					{/* Tags Modal */}
 					<TagsModal
@@ -1944,8 +1951,8 @@ const styles = StyleSheet.create({
 		backgroundColor: 'white',
 		borderRadius: 20,
 		padding: 20,
-		maxHeight: Platform.OS === 'ios' ? '85%' : '90%', // Spacing for Dynamic Island
-		marginTop: Platform.OS === 'ios' ? 55 : 20, // Spacing for Dynamic Island
+		maxHeight: Platform.OS === 'ios' ? '85%' : '90%',
+		marginTop: Platform.OS === 'ios' ? 55 : 20,
 		marginBottom: 20,
 		marginHorizontal: 10,
 		flex: 1,
