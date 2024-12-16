@@ -145,8 +145,8 @@ export default function SettingsScreen() {
 					<Icon name="person-outline" size={40} color="#007AFF" />
 				</View>
 				<View style={styles.profileInfo}>
-					<Text style={styles.profileName}>{user.email}</Text>
-					<Text style={styles.profileEmail}>Active Account</Text>
+				<Text style={styles.profileEmail}>Account Info</Text>
+				<Text style={styles.profileName}>{user.email}</Text>
 				</View>
 			</View>
 

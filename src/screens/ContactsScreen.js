@@ -396,6 +396,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		contact?.next_contact ? new Date(contact.next_contact) : new Date()
 	);
 
+	// Always set contact view to Call History tab
+    useEffect(() => {
+        if (visible) {
+            setIndex(0);
+        }
+    }, [visible]);
+
 	// Fetch Contact History
 	useEffect(() => {
 		if (contact?.id) {
