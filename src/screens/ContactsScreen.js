@@ -38,6 +38,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { TabView } from 'react-native-tab-view';
 import { useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native';
+import { Keyboard } from 'react-native';
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
@@ -397,11 +399,11 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	);
 
 	// Always set contact view to Call History tab
-    useEffect(() => {
-        if (visible) {
-            setIndex(0);
-        }
-    }, [visible]);
+	useEffect(() => {
+		if (visible) {
+			setIndex(0);
+		}
+	}, [visible]);
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -979,28 +981,35 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						<TextInput
 							style={styles.input}
 							placeholder="First Name"
-							value={contact.first_name}
-							onChangeText={(text) => setSelectedContact({ ...contact, first_name: text })}
+							placeholderTextColor="#666666"
+							value={formData.first_name}
+							onChangeText={(text) => setFormData({ ...formData, first_name: text })}
 						/>
+
 						<TextInput
 							style={styles.input}
 							placeholder="Last Name"
-							value={contact.last_name}
-							onChangeText={(text) => setSelectedContact({ ...contact, last_name: text })}
+							placeholderTextColor="#666666"
+							value={formData.last_name}
+							onChangeText={(text) => setFormData({ ...formData, last_name: text })}
 						/>
+
 						<TextInput
 							style={styles.input}
 							placeholder="Email"
-							value={contact.email}
-							onChangeText={(text) => setSelectedContact({ ...contact, email: text })}
+							placeholderTextColor="#666666"
+							value={formData.email}
+							onChangeText={(text) => setFormData({ ...formData, email: text })}
 							keyboardType="email-address"
 							autoCapitalize="none"
 						/>
+
 						<TextInput
 							style={styles.input}
 							placeholder="Phone"
-							value={contact.phone}
-							onChangeText={(text) => setSelectedContact({ ...contact, phone: text })}
+							placeholderTextColor="#666666"
+							value={formData.phone}
+							onChangeText={(text) => setFormData({ ...formData, phone: text })}
 							keyboardType="phone-pad"
 						/>
 
@@ -1300,6 +1309,10 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 		photo_url: null,
 	});
 
+	const dismissKeyboard = () => {
+		Keyboard.dismiss();
+	};
+
 	const handlePhotoUpload = async () => {
 		try {
 			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1309,7 +1322,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				mediaTypes: ['images'],
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 0.5,
@@ -1350,102 +1363,109 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>Add New Contact</Text>
-						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-						</TouchableOpacity>
-					</View>
-
-					<ScrollView style={styles.formScrollView}>
-						<View style={styles.photoUploadContainer}>
-							{formData.photo_url ? (
-								<View style={styles.photoPreview}>
-									<ExpoImage
-										source={{ uri: formData.photo_url }}
-										style={styles.photoImage}
-										cachePolicy="memory-disk"
-									/>
-									<TouchableOpacity
-										style={styles.removePhotoButton}
-										onPress={() => {
-											Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
-												{ text: 'Cancel', style: 'cancel' },
-												{
-													text: 'Remove',
-													style: 'destructive',
-													onPress: () => setFormData({ ...formData, photo_url: null }),
-												},
-											]);
-										}}
-									>
-										<Icon name="close-circle" size={24} color="#FF3B30" />
-									</TouchableOpacity>
-								</View>
-							) : (
-								<TouchableOpacity style={styles.uploadButton} onPress={handlePhotoUpload}>
-									<Icon name="camera-outline" size={24} color="#007AFF" />
-									<Text style={styles.uploadButtonText}>Add Photo</Text>
-								</TouchableOpacity>
-							)}
+			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+				<TouchableOpacity style={styles.modalContainer} activeOpacity={1} onPress={dismissKeyboard}>
+					<TouchableOpacity
+						activeOpacity={1}
+						style={styles.modalContent}
+						onPress={(e) => e.stopPropagation()}
+					>
+						<View style={styles.modalHeader}>
+							<Text style={styles.modalTitle}>Add New Contact</Text>
 						</View>
 
-						<TextInput
-							style={styles.input}
-							placeholder="First Name"
-							value={formData.first_name}
-							onChangeText={(text) => setFormData({ ...formData, first_name: text })}
-						/>
+						<ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
+							<View style={styles.photoUploadContainer}>
+								{formData.photo_url ? (
+									<View style={styles.photoPreview}>
+										<ExpoImage
+											source={{ uri: formData.photo_url }}
+											style={styles.photoImage}
+											cachePolicy="memory-disk"
+										/>
+										<TouchableOpacity
+											style={styles.removePhotoButton}
+											onPress={() => {
+												Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Remove',
+														style: 'destructive',
+														onPress: () => setFormData({ ...formData, photo_url: null }),
+													},
+												]);
+											}}
+										>
+											<Icon name="close-circle" size={24} color="#FF3B30" />
+										</TouchableOpacity>
+									</View>
+								) : (
+									<TouchableOpacity style={styles.uploadButton} onPress={handlePhotoUpload}>
+										<Icon name="camera-outline" size={24} color="#007AFF" />
+										<Text style={styles.uploadButtonText}>Add Photo</Text>
+									</TouchableOpacity>
+								)}
+							</View>
 
-						<TextInput
-							style={styles.input}
-							placeholder="Last Name"
-							value={formData.last_name}
-							onChangeText={(text) => setFormData({ ...formData, last_name: text })}
-						/>
+							<TextInput
+								style={styles.formInput}
+								placeholder="First Name"
+								placeholderTextColor="#666666"
+								value={formData.first_name}
+								onChangeText={(text) => setFormData({ ...formData, first_name: text })}
+							/>
 
-						<TextInput
-							style={styles.input}
-							placeholder="Email"
-							value={formData.email}
-							onChangeText={(text) => setFormData({ ...formData, email: text })}
-							keyboardType="email-address"
-							autoCapitalize="none"
-						/>
+							<TextInput
+								style={styles.formInput}
+								placeholder="Last Name"
+								placeholderTextColor="#666666"
+								value={formData.last_name}
+								onChangeText={(text) => setFormData({ ...formData, last_name: text })}
+							/>
 
-						<TextInput
-							style={styles.input}
-							placeholder="Phone"
-							value={formData.phone}
-							onChangeText={(text) => setFormData({ ...formData, phone: text })}
-							keyboardType="phone-pad"
-						/>
-					</ScrollView>
+							<TextInput
+								style={styles.formInput}
+								placeholder="Email"
+								placeholderTextColor="#666666"
+								value={formData.email}
+								onChangeText={(text) => setFormData({ ...formData, email: text })}
+								keyboardType="email-address"
+								autoCapitalize="none"
+							/>
 
-					<View style={styles.editModalActions}>
-						<TouchableOpacity
-							style={styles.editActionButton}
-							onPress={() => {
-								if (!formData.first_name.trim()) {
-									Alert.alert('Error', 'First name is required');
-									return;
-								}
-								onSubmit(formData);
-							}}
-						>
-							<Icon name="checkmark-outline" size={24} color="#4CAF50" />
-							<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
-						</TouchableOpacity>
+							<TextInput
+								style={styles.formInput}
+								placeholder="Phone"
+								placeholderTextColor="#666666"
+								value={formData.phone}
+								onChangeText={(text) => setFormData({ ...formData, phone: text })}
+								keyboardType="phone-pad"
+							/>
+						</ScrollView>
 
-						<TouchableOpacity style={styles.editActionButton} onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-							<Text style={[styles.editActionText, { color: '#666' }]}>Cancel</Text>
-						</TouchableOpacity>
-					</View>
-				</View>
-			</View>
+						<View style={styles.editModalActions}>
+							<TouchableOpacity
+								style={[styles.actionButton, styles.saveButton]}
+								onPress={() => {
+									if (!formData.first_name.trim()) {
+										Alert.alert('Error', 'First name is required');
+										return;
+									}
+									onSubmit(formData);
+								}}
+							>
+								<Icon name="checkmark-outline" size={24} color="#fff" />
+								<Text style={styles.actionButtonText}>Save</Text>
+							</TouchableOpacity>
+
+							<TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={onClose}>
+								<Icon name="close-outline" size={24} color="#fff" />
+								<Text style={styles.actionButtonText}>Cancel</Text>
+							</TouchableOpacity>
+						</View>
+					</TouchableOpacity>
+				</TouchableOpacity>
+			</KeyboardAvoidingView>
 		</Modal>
 	);
 };
@@ -1950,23 +1970,20 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 		backgroundColor: '#4CAF50',
 	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		padding: 10,
-	},
-	modalContent: {
-		backgroundColor: 'white',
-		borderRadius: 20,
-		padding: 20,
-		maxHeight: Platform.OS === 'ios' ? '85%' : '90%',
-		marginTop: Platform.OS === 'ios' ? 55 : 20,
-		marginBottom: 20,
-		marginHorizontal: 10,
-		flex: 1,
-		paddingHorizontal: 0,
-	},
+    modalContainer: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 20,
+        width: '85%',
+        alignSelf: 'center',
+        maxHeight: '90%',
+    },
 	modalHeader: {
 		flexDirection: 'row',
 		justifyContent: 'center',
@@ -2130,8 +2147,9 @@ const styles = StyleSheet.create({
 		padding: 15,
 		marginBottom: 15,
 		fontSize: 16,
-		color: '#333',
+		color: '#000000',
 		backgroundColor: '#fff',
+		placeholderTextColor: '#666666',
 	},
 	message: {
 		textAlign: 'center',
@@ -2387,6 +2405,29 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		width: '100%',
 	},
+	closeButtonTop: {
+		position: 'absolute',
+		right: 15,
+		top: 20,
+		padding: 10,
+	},
+	actionButton: {
+		flex: 1,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'center',
+		padding: 12,
+		borderRadius: 10,
+		gap: 8,
+		margin: 5,
+		backgroundColor: '#f8f9fa',
+		borderWidth: 1,
+	},
+	actionButtonText: {
+		fontSize: 16,
+		fontWeight: '500',
+		color: '#fff',
+	},
 	actionsContainer: {
 		position: 'absolute',
 		top: 0,
@@ -2501,7 +2542,7 @@ const styles = StyleSheet.create({
 		fontWeight: '500',
 	},
 	formScrollView: {
-		maxHeight: '60%',
+		paddingHorizontal: 15,
 	},
 	editModalActions: {
 		flexDirection: 'row',
@@ -2570,4 +2611,24 @@ const styles = StyleSheet.create({
 		marginTop: 5,
 		fontSize: 12,
 	},
+	keyboardAvoidingView: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+	},
+    formContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    formInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 10,
+        padding: 15,
+        marginBottom: 15,
+        fontSize: 16,
+        color: '#000000',
+        backgroundColor: '#fff',
+        height: 50,
+    },
 });
