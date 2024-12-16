@@ -32,6 +32,7 @@ import { Platform } from 'react-native';
 import { generateTopicSuggestions } from '../utils/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Caching AI suggestions
 import * as Contacts from 'expo-contacts'; // Import Contacts API
+import * as ImagePicker from 'expo-image-picker'; // For photo uploads
 import * as ImageManipulator from 'expo-image-manipulator'; // Image resizing
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
@@ -370,6 +371,7 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	// Layout hooks
 	const layout = useWindowDimensions(); // Window dimensions for tab view
+	const { user } = useAuth();
 
 	// Tab navigation state
 	const [index, setIndex] = useState(0); // Tab index
@@ -878,8 +880,95 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 				);
 
 			case 'edit':
+				const handleEditPhotoUpload = async () => {
+					try {
+						const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+						if (status !== 'granted') {
+							Alert.alert('Permission needed', 'Please grant permission to access your photos');
+							return;
+						}
+
+						const result = await ImagePicker.launchImageLibraryAsync({
+							mediaTypes: ImagePicker.MediaTypeOptions.Images,
+							allowsEditing: true,
+							aspect: [1, 1],
+							quality: 0.5,
+						});
+
+						if (!result.canceled && result.assets[0].uri) {
+							const manipResult = await ImageManipulator.manipulateAsync(
+								result.assets[0].uri,
+								[{ resize: { width: 300, height: 300 } }],
+								{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+							);
+
+							const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+							if (photoUrl) {
+								// Update contact in Firestore first
+								await updateContact(contact.id, {
+									...contact,
+									photo_url: photoUrl,
+								});
+								// Then update local state
+								setSelectedContact((prev) => ({ ...prev, photo_url: photoUrl }));
+								loadContacts(); // Refresh contact list
+							} else {
+								Alert.alert('Error', 'Failed to upload photo');
+							}
+						}
+					} catch (error) {
+						console.error('Error uploading photo:', error);
+						Alert.alert('Error', 'Failed to upload photo');
+					}
+				};
+
 				return (
 					<ScrollView style={[styles.tabContent, styles.formScrollView]}>
+						<View style={styles.photoUploadContainer}>
+							{contact.photo_url ? (
+								<View style={styles.photoPreview}>
+									<ExpoImage
+										source={{ uri: contact.photo_url }}
+										style={styles.photoImage}
+										cachePolicy="memory-disk"
+									/>
+									<TouchableOpacity
+										style={styles.removePhotoButton}
+										onPress={() => {
+											Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Remove',
+													style: 'destructive',
+													onPress: async () => {
+														try {
+															// Update contact in Firestore first
+															await updateContact(contact.id, {
+																...contact,
+																photo_url: null,
+															});
+															// Then update local state
+															setSelectedContact({ ...contact, photo_url: null });
+															loadContacts(); // Refresh contact list
+														} catch (error) {
+															Alert.alert('Error', 'Failed to remove photo');
+														}
+													},
+												},
+											]);
+										}}
+									>
+										<Icon name="close-circle" size={24} color="#FF3B30" />
+									</TouchableOpacity>
+								</View>
+							) : (
+								<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
+									<Icon name="camera-outline" size={24} color="#007AFF" />
+									<Text style={styles.uploadButtonText}>Add Photo</Text>
+								</TouchableOpacity>
+							)}
+						</View>
+
 						<TextInput
 							style={styles.input}
 							placeholder="First Name"
@@ -918,6 +1007,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 											last_name: contact.last_name,
 											email: contact.email,
 											phone: contact.phone,
+											photo_url: contact.photo_url,
 										});
 										Alert.alert('Success', 'Contact Updated');
 										loadContacts(); // Refresh the contacts list
@@ -929,7 +1019,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								<Icon name="save-outline" size={24} color="#4CAF50" />
 								<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
 							</TouchableOpacity>
-
 							<TouchableOpacity
 								style={styles.editActionButton}
 								onPress={() => {
@@ -983,6 +1072,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						</View>
 					</ScrollView>
 				);
+
 			default:
 				return null;
 		}
@@ -1192,50 +1282,109 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 };
 
 // Add/Edit Contact Modal
-const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadContacts }) => {
+const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
+	const { user } = useAuth();
 	const [formData, setFormData] = useState({
 		first_name: '',
 		last_name: '',
 		email: '',
 		phone: '',
 		frequency: 'weekly',
+		photo_url: null,
 	});
 
-	useEffect(() => {
-		if (initialData) {
-			setFormData({
-				first_name: initialData.first_name || '',
-				last_name: initialData.last_name || '',
-				email: initialData.email || '',
-				phone: initialData.phone || '',
-				frequency: initialData.frequency || 'weekly',
-				notes: initialData.notes || '',
+	const handlePhotoUpload = async () => {
+		try {
+			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			if (status !== 'granted') {
+				Alert.alert('Permission needed', 'Please grant permission to access your photos');
+				return;
+			}
+
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 0.5,
 			});
-		} else {
-			// Reset form when modal is opened/closed
+
+			if (!result.canceled && result.assets[0].uri) {
+				const manipResult = await ImageManipulator.manipulateAsync(
+					result.assets[0].uri,
+					[{ resize: { width: 300, height: 300 } }],
+					{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+				);
+
+				const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+				if (photoUrl) {
+					setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
+				} else {
+					Alert.alert('Error', 'Failed to upload photo');
+				}
+			}
+		} catch (error) {
+			console.error('Error uploading photo:', error);
+			Alert.alert('Error', 'Failed to upload photo');
+		}
+	};
+
+	useEffect(() => {
+		if (!visible) {
 			setFormData({
 				first_name: '',
 				last_name: '',
 				email: '',
 				phone: '',
 				frequency: 'weekly',
-				notes: '',
+				photo_url: null,
 			});
 		}
-	}, [initialData, visible]);
+	}, [visible]);
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
 					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>{initialData ? 'Edit Contact' : 'Add New Contact'}</Text>
+						<Text style={styles.modalTitle}>Add New Contact</Text>
 						<TouchableOpacity onPress={onClose}>
 							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
 					</View>
 
 					<ScrollView style={styles.formScrollView}>
+						<View style={styles.photoUploadContainer}>
+							{formData.photo_url ? (
+								<View style={styles.photoPreview}>
+									<ExpoImage
+										source={{ uri: formData.photo_url }}
+										style={styles.photoImage}
+										cachePolicy="memory-disk"
+									/>
+									<TouchableOpacity
+										style={styles.removePhotoButton}
+										onPress={() => {
+											Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Remove',
+													style: 'destructive',
+													onPress: () => setFormData({ ...formData, photo_url: null }),
+												},
+											]);
+										}}
+									>
+										<Icon name="close-circle" size={24} color="#FF3B30" />
+									</TouchableOpacity>
+								</View>
+							) : (
+								<TouchableOpacity style={styles.uploadButton} onPress={handlePhotoUpload}>
+									<Icon name="camera-outline" size={24} color="#007AFF" />
+									<Text style={styles.uploadButtonText}>Add Photo</Text>
+								</TouchableOpacity>
+							)}
+						</View>
+
 						<TextInput
 							style={styles.input}
 							placeholder="First Name"
@@ -1287,64 +1436,6 @@ const ContactForm = ({ visible, onClose, onSubmit, initialData = null, loadConta
 							<Icon name="close-outline" size={24} color="#666" />
 							<Text style={[styles.editActionText, { color: '#666' }]}>Cancel</Text>
 						</TouchableOpacity>
-
-						{initialData && (
-							<>
-								<TouchableOpacity
-									style={styles.editActionButton}
-									onPress={() => {
-										Alert.alert('Archive Contact', 'Archive this contact?', [
-											{ text: 'Cancel', style: 'cancel' },
-											{
-												text: 'Archive',
-												onPress: async () => {
-													try {
-														await archiveContact(initialData.id);
-														onClose();
-														loadContacts();
-													} catch (error) {
-														Alert.alert('Error', 'Failed to archive contact');
-													}
-												},
-											},
-										]);
-									}}
-								>
-									<Icon name="archive-outline" size={24} color="#007AFF" />
-									<Text style={[styles.editActionText, { color: '#007AFF' }]}>Archive</Text>
-								</TouchableOpacity>
-
-								<TouchableOpacity
-									style={styles.editActionButton}
-									onPress={() => {
-										Alert.alert(
-											'Delete Contact',
-											'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
-											[
-												{ text: 'Cancel', style: 'cancel' },
-												{
-													text: 'Delete',
-													style: 'destructive',
-													onPress: async () => {
-														try {
-															await deleteContact(initialData.id);
-															onClose();
-															await loadContacts();
-														} catch (error) {
-															console.error('Delete error:', error);
-															Alert.alert('Error', 'Unable to delete contact');
-														}
-													},
-												},
-											]
-										);
-									}}
-								>
-									<Icon name="trash-outline" size={24} color="#FF3B30" />
-									<Text style={[styles.editActionText, { color: '#FF3B30' }]}>Delete</Text>
-								</TouchableOpacity>
-							</>
-						)}
 					</View>
 				</View>
 			</View>
@@ -1635,7 +1726,7 @@ export default function ContactsScreen({ navigation }) {
 	}
 
 	return (
-		<View style={styles.container}>
+		<SafeAreaView style={styles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
@@ -1763,7 +1854,7 @@ export default function ContactsScreen({ navigation }) {
 					handleContactSelection(contact);
 				}}
 			/>
-		</View>
+		</SafeAreaView>
 	);
 }
 
@@ -1771,7 +1862,6 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: '#fff',
-		paddingTop: Platform.OS === 'ios' ? 50 : 0,
 	},
 	header: {
 		padding: 20,
@@ -2433,5 +2523,44 @@ const styles = StyleSheet.create({
 		color: '#FF3B30',
 		fontSize: 14,
 		textAlign: 'center',
+	},
+	// Photo upload
+	photoUploadContainer: {
+		alignItems: 'center',
+		marginBottom: 15,
+	},
+	photoPreview: {
+		width: 100,
+		height: 100,
+		borderRadius: 50,
+		position: 'relative',
+	},
+	photoImage: {
+		width: '100%',
+		height: '100%',
+		borderRadius: 50,
+	},
+	removePhotoButton: {
+		position: 'absolute',
+		top: -5,
+		right: -5,
+		backgroundColor: 'white',
+		borderRadius: 12,
+	},
+	uploadButton: {
+		width: 100,
+		height: 100,
+		borderRadius: 50,
+		backgroundColor: '#f0f0f0',
+		justifyContent: 'center',
+		alignItems: 'center',
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderStyle: 'dashed',
+	},
+	uploadButtonText: {
+		color: '#007AFF',
+		marginTop: 5,
+		fontSize: 12,
 	},
 });
