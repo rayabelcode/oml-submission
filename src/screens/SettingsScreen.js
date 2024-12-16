@@ -1,20 +1,61 @@
-import React, { useState } from 'react';
-import { 
-    StyleSheet, 
-    Text, 
-    View, 
-    ScrollView, 
-    TouchableOpacity, 
-    Switch, 
-    TextInput, 
-    Alert,
-    Platform,
-    SafeAreaView 
+import React, { useState, useEffect } from 'react';
+import {
+	StyleSheet,
+	Text,
+	View,
+	ScrollView,
+	TouchableOpacity,
+	Switch,
+	TextInput,
+	Alert,
+	Platform,
+	Modal,
+	ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Image as ExpoImage } from 'expo-image';
+import * as MailComposer from 'expo-mail-composer';
+import * as FileSystem from 'expo-file-system';
+import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
+import * as Sharing from 'expo-sharing';
+import {
+	getUserProfile,
+	uploadProfilePhoto,
+	exportUserData,
+	deleteUserAccount,
+	updateUserProfile,
+} from '../utils/firestore';
 
+// Privacy Settings Modal Component
+const PrivacyModal = ({ visible, onClose, onExportData, onDeleteAccount }) => (
+	<Modal visible={visible} animationType="fade" transparent={true}>
+		<View style={styles.modalContainer}>
+			<View style={styles.modalContent}>
+				<View style={styles.modalHeader}>
+					<Text style={styles.modalTitle}>Privacy Settings</Text>
+					<TouchableOpacity onPress={onClose}>
+						<Icon name="close-outline" size={24} color="#666" />
+					</TouchableOpacity>
+				</View>
+
+				<TouchableOpacity style={styles.privacyOption} onPress={onExportData}>
+					<Icon name="download-outline" size={24} color="#007AFF" />
+					<Text style={styles.privacyOptionText}>Export My Data</Text>
+				</TouchableOpacity>
+
+				<TouchableOpacity style={[styles.privacyOption, styles.deleteOption]} onPress={onDeleteAccount}>
+					<Icon name="trash-outline" size={24} color="#FF3B30" />
+					<Text style={[styles.privacyOptionText, styles.deleteText]}>Delete Account</Text>
+				</TouchableOpacity>
+			</View>
+		</View>
+	</Modal>
+);
 
 export default function SettingsScreen() {
 	const { user, signIn, signUp, signOut } = useAuth();
@@ -22,18 +63,193 @@ export default function SettingsScreen() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [loading, setLoading] = useState(false);
-	const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+	const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+	const [userProfile, setUserProfile] = useState(null);
+	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+
+	// Load user profile and notification status
+	useEffect(() => {
+		if (user) {
+			loadUserProfile();
+			checkNotificationStatus();
+		}
+	}, [user]);
+
+	const loadUserProfile = async () => {
+		try {
+			const profile = await getUserProfile(user.uid);
+			setUserProfile(profile);
+		} catch (error) {
+			console.error('Error loading profile:', error);
+		}
+	};
+
+	const checkNotificationStatus = async () => {
+		const { status } = await Notifications.getPermissionsAsync();
+		setNotificationsEnabled(status === 'granted');
+	};
+
+	const handleNotificationToggle = async () => {
+		try {
+			if (notificationsEnabled) {
+				await Notifications.setNotificationHandler(null);
+				setNotificationsEnabled(false);
+				await updateUserProfile(user.uid, { notifications_enabled: false });
+			} else {
+				const { status } = await Notifications.requestPermissionsAsync();
+				if (status === 'granted') {
+					await Notifications.setNotificationHandler({
+						handleNotification: async () => ({
+							shouldShowAlert: true,
+							shouldPlaySound: true,
+							shouldSetBadge: true,
+						}),
+					});
+					setNotificationsEnabled(true);
+					await updateUserProfile(user.uid, { notifications_enabled: true });
+				}
+			}
+		} catch (error) {
+			console.error('Error toggling notifications:', error);
+			Alert.alert('Error', 'Failed to update notification settings');
+		}
+	};
+
+	const handleProfilePhotoUpload = async () => {
+		try {
+			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			if (status !== 'granted') {
+				Alert.alert('Permission needed', 'Please grant permission to access your photos');
+				return;
+			}
+
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaType.Images,
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 0.5,
+			});
+
+			if (!result.canceled && result.assets[0].uri) {
+				const manipResult = await ImageManipulator.manipulateAsync(
+					result.assets[0].uri,
+					[{ resize: { width: 300, height: 300 } }],
+					{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+				);
+
+				const photoUrl = await uploadProfilePhoto(user.uid, manipResult.uri);
+				if (photoUrl) {
+					await loadUserProfile();
+				} else {
+					Alert.alert('Error', 'Failed to upload photo');
+				}
+			}
+		} catch (error) {
+			console.error('Error uploading photo:', error);
+			Alert.alert('Error', 'Failed to upload photo');
+		}
+	};
+
+	const handleSupport = async () => {
+		try {
+			const deviceInfo = `
+                App Version: ${Constants.expoConfig.version}
+                Platform: ${Platform.OS}
+                Device: ${Platform.OS === 'ios' ? 'iOS' : 'Android'}
+                User ID: ${user.uid}
+            `;
+
+			const isAvailable = await MailComposer.isAvailableAsync();
+
+			if (isAvailable) {
+				await MailComposer.composeAsync({
+					recipients: ['ray.abel@gmail.com'],
+					subject: 'OnMyList Support Request',
+					body: `\n\n\n---------------\nDevice Information:\n${deviceInfo}`,
+				});
+			} else {
+				Alert.alert('Error', 'Email is not available on this device');
+			}
+		} catch (error) {
+			console.error('Error sending email:', error);
+			Alert.alert('Error', 'Failed to open email composer');
+		}
+	};
+
+	const handleExportData = async () => {
+		try {
+			setLoading(true);
+			const userData = await exportUserData(user.uid);
+
+			const fileUri = `${FileSystem.documentDirectory}onmylist_export.csv`;
+			let csvContent = 'First Name,Last Name,Email,Phone,Tags,Next Contact,Notes,Contact History\n';
+
+			userData.contacts.forEach((contact) => {
+				const historyString =
+					contact.contact_history
+						?.map((h) => `${new Date(h.date).toLocaleDateString()}: ${h.notes.replace(/"/g, '""')}`)
+						.join('; ') || '';
+
+				csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${contact.email || ''}","${
+					contact.phone || ''
+				}","${contact.tags?.join(';') || ''}","${contact.next_contact || ''}","${(
+					contact.notes || ''
+				).replace(/"/g, '""')}","${historyString}"\n`;
+			});
+
+			await FileSystem.writeAsStringAsync(fileUri, csvContent);
+
+			if (Platform.OS === 'ios') {
+				await Sharing.shareAsync(fileUri);
+			} else {
+				await Sharing.shareAsync(fileUri, {
+					mimeType: 'text/csv',
+					dialogTitle: 'Export OnMyList Data',
+				});
+			}
+		} catch (error) {
+			console.error('Error exporting data:', error);
+			Alert.alert('Error', 'Failed to export data');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleDeleteAccount = () => {
+		Alert.alert(
+			'Delete Account',
+			'Are you sure you want to delete your account? This action cannot be undone and will delete all your contacts and data.',
+			[
+				{ text: 'Cancel', style: 'cancel' },
+				{
+					text: 'Delete',
+					style: 'destructive',
+					onPress: async () => {
+						try {
+							setLoading(true);
+							await deleteUserAccount(user.uid);
+							await user.delete();
+							await signOut();
+						} catch (error) {
+							console.error('Error deleting account:', error);
+							Alert.alert('Error', 'Failed to delete account');
+						} finally {
+							setLoading(false);
+						}
+					},
+				},
+			]
+		);
+	};
 
 	async function handleAuth() {
 		if (loading) return;
 
-		// Basic validation
 		if (!email || !password) {
 			Alert.alert('Error', 'Please fill in all fields');
 			return;
 		}
 
-		// Password validation - signup
 		if (!isLogin && password.length < 6) {
 			Alert.alert('Error', 'Password must be at least 6 characters');
 			return;
@@ -141,12 +357,23 @@ export default function SettingsScreen() {
 			<StatusBar style="auto" />
 
 			<View style={styles.profileSection}>
-				<View style={styles.avatar}>
-					<Icon name="person-outline" size={40} color="#007AFF" />
-				</View>
+				<TouchableOpacity style={styles.avatar} onPress={handleProfilePhotoUpload}>
+					{userProfile?.photo_url ? (
+						<ExpoImage
+							source={{ uri: userProfile.photo_url }}
+							style={styles.avatarImage}
+							cachePolicy="memory-disk"
+						/>
+					) : (
+						<Icon name="person-outline" size={40} color="#007AFF" />
+					)}
+					<View style={styles.editOverlay}>
+						<Icon name="camera-outline" size={20} color="#fff" />
+					</View>
+				</TouchableOpacity>
 				<View style={styles.profileInfo}>
-				<Text style={styles.profileEmail}>Account Info</Text>
-				<Text style={styles.profileName}>{user.email}</Text>
+					<Text style={styles.profileEmail}>Account Info</Text>
+					<Text style={styles.profileName}>{user.email}</Text>
 				</View>
 			</View>
 
@@ -160,7 +387,7 @@ export default function SettingsScreen() {
 						</View>
 						<Switch
 							value={notificationsEnabled}
-							onValueChange={setNotificationsEnabled}
+							onValueChange={handleNotificationToggle}
 							trackColor={{ false: '#767577', true: '#81b0ff' }}
 							thumbColor={notificationsEnabled ? '#007AFF' : '#f4f3f4'}
 						/>
@@ -169,21 +396,23 @@ export default function SettingsScreen() {
 
 				<View style={styles.settingSection}>
 					<Text style={styles.sectionTitle}>Privacy</Text>
-					<TouchableOpacity style={styles.settingItem}>
+					<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="lock-closed-outline" size={20} color="#666" />
 							<Text style={styles.settingText}>Privacy Settings</Text>
 						</View>
+						<Icon name="chevron-forward-outline" size={20} color="#666" />
 					</TouchableOpacity>
 				</View>
 
 				<View style={styles.settingSection}>
 					<Text style={styles.sectionTitle}>Support</Text>
-					<TouchableOpacity style={styles.settingItem}>
+					<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="help-circle-outline" size={20} color="#666" />
 							<Text style={styles.settingText}>Help Center</Text>
 						</View>
+						<Icon name="chevron-forward-outline" size={20} color="#666" />
 					</TouchableOpacity>
 				</View>
 
@@ -192,6 +421,19 @@ export default function SettingsScreen() {
 					<Text style={styles.logoutText}>Log Out</Text>
 				</TouchableOpacity>
 			</ScrollView>
+
+			<PrivacyModal
+				visible={isPrivacyModalVisible}
+				onClose={() => setIsPrivacyModalVisible(false)}
+				onExportData={handleExportData}
+				onDeleteAccount={handleDeleteAccount}
+			/>
+
+			{loading && (
+				<View style={styles.loadingOverlay}>
+					<ActivityIndicator size="large" color="#007AFF" />
+				</View>
+			)}
 		</View>
 	);
 }
@@ -215,6 +457,20 @@ const styles = StyleSheet.create({
 		backgroundColor: '#e9ecef',
 		justifyContent: 'center',
 		alignItems: 'center',
+		position: 'relative',
+	},
+	avatarImage: {
+		width: '100%',
+		height: '100%',
+		borderRadius: 30,
+	},
+	editOverlay: {
+		position: 'absolute',
+		bottom: -5,
+		right: -5,
+		backgroundColor: '#007AFF',
+		borderRadius: 12,
+		padding: 5,
 	},
 	profileInfo: {
 		marginLeft: 15,
@@ -317,5 +573,54 @@ const styles = StyleSheet.create({
 		color: '#007AFF',
 		textAlign: 'center',
 		fontSize: 14,
+	},
+	modalContainer: {
+		flex: 1,
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
+		justifyContent: 'center',
+		padding: 20,
+	},
+	modalContent: {
+		backgroundColor: 'white',
+		borderRadius: 20,
+		padding: 20,
+	},
+	modalHeader: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		alignItems: 'center',
+		marginBottom: 20,
+	},
+	modalTitle: {
+		fontSize: 20,
+		fontWeight: 'bold',
+	},
+	privacyOption: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingVertical: 15,
+		borderBottomWidth: 1,
+		borderBottomColor: '#eee',
+	},
+	privacyOptionText: {
+		marginLeft: 15,
+		fontSize: 16,
+		color: '#007AFF',
+	},
+	deleteOption: {
+		borderBottomWidth: 0,
+	},
+	deleteText: {
+		color: '#FF3B30',
+	},
+	loadingOverlay: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: 'rgba(255, 255, 255, 0.8)',
+		justifyContent: 'center',
+		alignItems: 'center',
 	},
 });

@@ -12,6 +12,7 @@ import {
 	serverTimestamp,
 	getDoc,
 	arrayUnion,
+	writeBatch,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { storage } from '../config/firebase';
@@ -244,6 +245,117 @@ export const fetchPastContacts = async (userId) => {
 			}));
 	} catch (error) {
 		console.error('Error fetching past contacts:', error);
+		throw error;
+	}
+};
+
+// User profile functions
+export const updateUserProfile = async (userId, profileData) => {
+	try {
+		const userRef = doc(db, 'users', userId);
+		await updateDoc(userRef, {
+			...profileData,
+			last_updated: serverTimestamp(),
+		});
+	} catch (error) {
+		console.error('Error updating user profile:', error);
+		throw error;
+	}
+};
+
+export const getUserProfile = async (userId) => {
+	try {
+		const userRef = doc(db, 'users', userId);
+		const userSnap = await getDoc(userRef);
+
+		if (!userSnap.exists()) {
+			// Create default user profile if it doesn't exist
+			const defaultProfile = {
+				created_at: serverTimestamp(),
+				notifications_enabled: true,
+				email: userId, // or get from auth if needed
+				photo_url: null,
+			};
+			await setDoc(userRef, defaultProfile);
+			return defaultProfile;
+		}
+		return userSnap.data();
+	} catch (error) {
+		console.error('Error fetching user profile:', error);
+		throw error;
+	}
+};
+
+// Upload profile photo
+export const uploadProfilePhoto = async (userId, photoUri) => {
+	try {
+		if (!photoUri) return null;
+
+		const response = await fetch(photoUri);
+		const blob = await response.blob();
+
+		const filename = `profiles/${userId}/${Date.now()}.jpg`;
+		const storageRef = ref(storage, filename);
+
+		await uploadBytes(storageRef, blob);
+		const downloadURL = await getDownloadURL(storageRef);
+
+		// Update user profile with new photo URL
+		await updateUserProfile(userId, { photo_url: downloadURL });
+
+		return downloadURL;
+	} catch (error) {
+		console.error('Error uploading profile photo:', error);
+		return null;
+	}
+};
+
+// Export user data
+export const exportUserData = async (userId) => {
+	try {
+		// Get user profile
+		const userProfile = await getUserProfile(userId);
+
+		// Get all user contacts
+		const contactsRef = collection(db, 'contacts');
+		const q = query(contactsRef, where('user_id', '==', userId));
+		const querySnapshot = await getDocs(q);
+
+		const contacts = [];
+		querySnapshot.forEach((doc) => {
+			contacts.push({ id: doc.id, ...doc.data() });
+		});
+
+		return {
+			profile: userProfile,
+			contacts: contacts,
+		};
+	} catch (error) {
+		console.error('Error exporting user data:', error);
+		throw error;
+	}
+};
+
+// Delete user account and data
+export const deleteUserAccount = async (userId) => {
+	try {
+		// Delete all contacts
+		const contactsRef = collection(db, 'contacts');
+		const q = query(contactsRef, where('user_id', '==', userId));
+		const querySnapshot = await getDocs(q);
+
+		const batch = writeBatch(db);
+		querySnapshot.forEach((doc) => {
+			batch.delete(doc.ref);
+		});
+
+		// Delete user profile
+		const userRef = doc(db, 'users', userId);
+		batch.delete(userRef);
+
+		await batch.commit();
+	} catch (error) {
+		console.error('Error deleting user account:', error);
 		throw error;
 	}
 };
