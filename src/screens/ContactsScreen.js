@@ -35,7 +35,7 @@ import * as Contacts from 'expo-contacts'; // Import Contacts API
 import * as ImageManipulator from 'expo-image-manipulator'; // Image resizing
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
-import { TabView, TabBar } from 'react-native-tab-view';
+import { TabView } from 'react-native-tab-view';
 import { useWindowDimensions } from 'react-native';
 
 // Screen width for grid calculation
@@ -367,15 +367,7 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 	);
 };
 
-const ContactDetailsModal = ({
-	visible,
-	contact,
-	setSelectedContact,
-	onClose,
-	onEdit,
-	onSchedule,
-	setIsDetailsVisible,
-}) => {
+const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	// Layout hooks
 	const layout = useWindowDimensions(); // Window dimensions for tab view
 
@@ -389,7 +381,6 @@ const ContactDetailsModal = ({
 	]);
 
 	const [history, setHistory] = useState([]); // Contact history notes
-	const [notes, setNotes] = useState(''); // Contact notes
 	const [editMode, setEditMode] = useState(null); // Track editing state
 	const [callNotes, setCallNotes] = useState(''); // Call notes text
 	const [callDate, setCallDate] = useState(new Date()); // Call date
@@ -791,8 +782,13 @@ const ContactDetailsModal = ({
 										await updateContact(contact.id, {
 											next_contact: selectedDate.toISOString(),
 										});
-										Alert.alert('Success', 'Contact has been scheduled');
-										onClose();
+										// Update the local contact state
+										setSelectedContact({
+											...contact,
+											next_contact: selectedDate.toISOString(),
+										});
+										// Refresh the contacts list in the background
+										loadContacts();
 									} catch (error) {
 										console.error('Error scheduling contact:', error);
 										Alert.alert('Error', 'Failed to schedule contact');
@@ -805,28 +801,22 @@ const ContactDetailsModal = ({
 							{contact.next_contact && (
 								<TouchableOpacity
 									style={styles.removeScheduleButton}
-									onPress={() => {
-										Alert.alert(
-											'Remove Schedule',
-											'Are you sure you want to remove the next scheduled contact?',
-											[
-												{ text: 'Cancel', style: 'cancel' },
-												{
-													text: 'Remove',
-													onPress: async () => {
-														try {
-															await updateContact(contact.id, {
-																next_contact: null,
-															});
-															setSelectedDate(new Date());
-															Alert.alert('Success', 'Schedule removed');
-														} catch (error) {
-															Alert.alert('Error', 'Failed to remove schedule');
-														}
-													},
-												},
-											]
-										);
+									onPress={async () => {
+										try {
+											await updateContact(contact.id, {
+												next_contact: null,
+											});
+											// Update local state
+											setSelectedContact({
+												...contact,
+												next_contact: null,
+											});
+											setSelectedDate(new Date());
+											// Refresh contacts list in the background
+											loadContacts();
+										} catch (error) {
+											Alert.alert('Error', 'Failed to remove schedule');
+										}
 									}}
 								>
 									<Text style={styles.removeScheduleText}>Remove Schedule</Text>
@@ -836,27 +826,6 @@ const ContactDetailsModal = ({
 					</ScrollView>
 				);
 
-				return (
-					<ScrollView style={styles.tabContent}>
-						<View style={styles.scheduleContainer}>
-							<Text style={styles.scheduleLabel}>Next Contact Date</Text>
-							<Text style={styles.selectedDate}>
-								{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
-							</Text>
-							<TouchableOpacity
-								style={[styles.confirmButton, { marginTop: 20 }]}
-								onPress={() => {
-									setIsDetailsVisible(false);
-									setTimeout(() => {
-										onSchedule(contact);
-									}, 50);
-								}}
-							>
-								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
-							</TouchableOpacity>
-						</View>
-					</ScrollView>
-				);
 			case 'tags':
 				return (
 					<ScrollView style={styles.tabContent}>
@@ -940,10 +909,27 @@ const ContactDetailsModal = ({
 						/>
 
 						<View style={styles.editModalActions}>
-							<TouchableOpacity style={styles.editActionButton} onPress={() => onEdit(contact)}>
+							<TouchableOpacity
+								style={styles.editActionButton}
+								onPress={async () => {
+									try {
+										await updateContact(contact.id, {
+											first_name: contact.first_name,
+											last_name: contact.last_name,
+											email: contact.email,
+											phone: contact.phone,
+										});
+										Alert.alert('Success', 'Contact Updated');
+										loadContacts(); // Refresh the contacts list
+									} catch (error) {
+										Alert.alert('Error', 'Failed to update contact');
+									}
+								}}
+							>
 								<Icon name="save-outline" size={24} color="#4CAF50" />
 								<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
 							</TouchableOpacity>
+
 							<TouchableOpacity
 								style={styles.editActionButton}
 								onPress={() => {
@@ -1375,7 +1361,6 @@ export default function ContactsScreen({ navigation }) {
 	const [isFormVisible, setIsFormVisible] = useState(false);
 	const [isDetailsVisible, setIsDetailsVisible] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
-	const [editingContact, setEditingContact] = useState(null);
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
@@ -1636,74 +1621,9 @@ export default function ContactsScreen({ navigation }) {
 		}
 	};
 
-	const handleEditContact = async (formData) => {
-		try {
-			await updateContact(editingContact.id, formData);
-
-			// Update iOS Contact if on iOS
-			if (Platform.OS === 'ios') {
-				const { status } = await Contacts.requestPermissionsAsync();
-				if (status === 'granted') {
-					try {
-						// Find existing contact by phone number
-						const { data } = await Contacts.getContactsAsync({
-							fields: ['phoneNumbers'],
-						});
-
-						const existingContact = data.find((contact) =>
-							contact.phoneNumbers?.some(
-								(phone) => formatPhoneNumber(phone.number) === formatPhoneNumber(formData.phone)
-							)
-						);
-
-						if (existingContact) {
-							const updatedContact = {
-								[Contacts.Fields.FirstName]: formData.first_name,
-								[Contacts.Fields.LastName]: formData.last_name,
-								[Contacts.Fields.PhoneNumbers]: [
-									{
-										label: 'mobile',
-										number: formData.phone,
-									},
-								],
-								[Contacts.Fields.Emails]: formData.email
-									? [
-											{
-												label: 'work',
-												email: formData.email,
-											},
-									  ]
-									: [],
-							};
-
-							await Contacts.updateContactAsync(existingContact);
-						}
-					} catch (error) {
-						console.error('Error updating iOS contact:', error);
-					}
-				}
-			}
-
-			setIsFormVisible(false);
-			setEditingContact(null);
-			loadContacts();
-		} catch (error) {
-			console.error('Error updating contact:', error);
-			Alert.alert('Error', 'Failed to update contact');
-		}
-	};
-
 	const handleOpenDetails = (contact) => {
 		setSelectedContact(contact);
 		setIsDetailsVisible(true);
-	};
-
-	const handleStartEdit = (contact) => {
-		setIsDetailsVisible(false); // Hide details first
-		setTimeout(() => {
-			setEditingContact(contact);
-			setIsFormVisible(true);
-		}, 50); // Small delay for transition
 	};
 
 	if (!user) {
@@ -1730,7 +1650,6 @@ export default function ContactsScreen({ navigation }) {
 				<TouchableOpacity
 					style={styles.newButton}
 					onPress={() => {
-						setEditingContact(null);
 						setIsFormVisible(true);
 					}}
 				>
@@ -1790,10 +1709,8 @@ export default function ContactsScreen({ navigation }) {
 				visible={isFormVisible}
 				onClose={() => {
 					setIsFormVisible(false);
-					setEditingContact(null);
 				}}
-				onSubmit={editingContact ? handleEditContact : handleAddContact}
-				initialData={editingContact}
+				onSubmit={handleAddContact}
 				loadContacts={loadContacts}
 			/>
 
@@ -1805,12 +1722,7 @@ export default function ContactsScreen({ navigation }) {
 					setIsDetailsVisible(false);
 					setSelectedContact(null);
 				}}
-				onEdit={handleStartEdit}
-				onSchedule={() => {
-					setIsDetailsVisible(false);
-					setIsScheduleModalVisible(true);
-				}}
-				setIsDetailsVisible={setIsDetailsVisible}
+				loadContacts={loadContacts}
 			/>
 
 			<ScheduleModal
