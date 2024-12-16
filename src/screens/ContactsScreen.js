@@ -35,6 +35,8 @@ import * as Contacts from 'expo-contacts'; // Import Contacts API
 import * as ImageManipulator from 'expo-image-manipulator'; // Image resizing
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
+import { TabView, TabBar } from 'react-native-tab-view';
+import { useWindowDimensions } from 'react-native';
 
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
@@ -374,6 +376,18 @@ const ContactDetailsModal = ({
 	onSchedule,
 	setIsDetailsVisible,
 }) => {
+	// Layout hooks
+	const layout = useWindowDimensions(); // Window dimensions for tab view
+
+	// Tab navigation state
+	const [index, setIndex] = useState(0); // Tab index
+	const [routes] = useState([
+		{ key: 'notes', icon: 'document-text-outline' },
+		{ key: 'schedule', icon: 'calendar-outline' },
+		{ key: 'tags', icon: 'pricetag-outline' },
+		{ key: 'edit', icon: 'create-outline' },
+	]);
+
 	const [history, setHistory] = useState([]); // Contact history notes
 	const [notes, setNotes] = useState(''); // Contact notes
 	const [editMode, setEditMode] = useState(null); // Track editing state
@@ -384,6 +398,10 @@ const ContactDetailsModal = ({
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
 	const [suggestionCache, setSuggestionCache] = useState({}); // Cache for AI suggestions
 	const [isTagsModalVisible, setIsTagsModalVisible] = useState(false); // Tags modal state
+	const [newTag, setNewTag] = useState('');
+	const [selectedDate, setSelectedDate] = useState(
+		contact?.next_contact ? new Date(contact.next_contact) : new Date()
+	);
 
 	// Fetch Contact History
 	useEffect(() => {
@@ -465,149 +483,12 @@ const ContactDetailsModal = ({
 		return null;
 	}
 
-	// Edit a specific history note
-	const handleEditHistory = async (index, updatedNote) => {
-		try {
-			const updatedHistory = [...history];
-			updatedHistory[index].notes = updatedNote;
-
-			await updateContact(contact.id, { contact_history: updatedHistory });
-			setHistory(updatedHistory);
-			setEditMode(null);
-		} catch (error) {
-			console.error('Error editing history:', error);
-			Alert.alert('Error', 'Failed to update contact history');
-		}
-	};
-
-	const handleDeleteHistory = async (index) => {
-		try {
-			const updatedHistory = history.filter((_, i) => i !== index);
-
-			// Update Firestore first
-			await updateContact(contact.id, {
-				contact_history: updatedHistory,
-			});
-
-			// Update local states
-			setHistory(updatedHistory);
-			setSelectedContact({
-				...contact,
-				contact_history: updatedHistory,
-			});
-
-			// Refresh suggestions
-			setLoadingSuggestions(true);
-			try {
-				const topics = await generateTopicSuggestions(
-					{ ...contact, contact_history: updatedHistory },
-					updatedHistory
-				);
-				const newCache = {
-					...suggestionCache,
-					[contact.id]: {
-						suggestions: topics,
-						historyLength: updatedHistory.length,
-						timestamp: Date.now(),
-					},
-				};
-				setSuggestionCache(newCache);
-				setSuggestions(topics);
-				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
-			} catch (error) {
-				console.error('Error updating suggestions:', error);
-				setSuggestions(['Unable to generate suggestions at this time.']);
-			} finally {
-				setLoadingSuggestions(false);
-			}
-		} catch (error) {
-			console.error('Error deleting history:', error);
-			Alert.alert('Error', 'Failed to delete history entry');
-		}
-	};
-
-	const handleAddCallNotes = async (notes, date) => {
-		if (!notes.trim()) {
-			Alert.alert('Error', 'Please enter the call notes');
-			return;
-		}
-
-		try {
-			// Create local date with time set to noon to avoid timezone issues
-			const localDate = new Date(date);
-			localDate.setHours(12, 0, 0, 0);
-
-			// Format date as YYYY-MM-DD
-			const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(
-				2,
-				'0'
-			)}-${String(localDate.getDate()).padStart(2, '0')}`;
-
-			// Add new call history to Firestore
-			await addContactHistory(contact.id, {
-				notes,
-				date: dateStr,
-			});
-
-			// Refresh the history immediately
-			const updatedHistory = await fetchContactHistory(contact.id);
-			const sortedHistory = [...updatedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-			setHistory(sortedHistory);
-
-			// Update contact in state with new history
-			const updatedContact = {
-				...contact,
-				contact_history: sortedHistory,
-			};
-			setSelectedContact(updatedContact);
-
-			// Refresh suggestions after new call note
-			setLoadingSuggestions(true);
-			try {
-				const topics = await generateTopicSuggestions(updatedContact, sortedHistory);
-				const newCache = {
-					...suggestionCache,
-					[contact.id]: {
-						suggestions: topics,
-						historyLength: sortedHistory.length,
-						timestamp: Date.now(),
-					},
-				};
-				setSuggestionCache(newCache);
-				setSuggestions(topics);
-
-				// Save to AsyncStorage
-				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
-			} catch (error) {
-				console.error('Error updating suggestions:', error);
-				setSuggestions(['Unable to generate suggestions at this time.']);
-			} finally {
-				setLoadingSuggestions(false);
-			}
-
-			// Reset form
-			setCallNotes('');
-			setCallDate(new Date());
-		} catch (error) {
-			console.error('Error adding call notes:', error);
-			Alert.alert('Error', 'Failed to add call notes');
-		}
-	};
-
-	return (
-		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>
-							{contact.first_name} {contact.last_name}
-						</Text>
-						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-						</TouchableOpacity>
-					</View>
-
-					<ScrollView style={styles.modalScroll}>
+	// Render Tab Scene
+	const renderScene = ({ route }) => {
+		switch (route.key) {
+			case 'notes':
+				return (
+					<ScrollView style={styles.tabContent}>
 						{/* Call Notes Section */}
 						<View style={styles.callNotesSection}>
 							<TextInput
@@ -634,6 +515,7 @@ const ContactDetailsModal = ({
 								</TouchableOpacity>
 							</View>
 						</View>
+
 						{/* Date Picker Modal */}
 						<Modal visible={showDatePicker} transparent={true} animationType="fade">
 							<TouchableOpacity
@@ -810,47 +692,490 @@ const ContactDetailsModal = ({
 							)}
 						</View>
 					</ScrollView>
+				);
 
-					{/* Footer Buttons */}
-					<View style={styles.modalActions}>
-						<TouchableOpacity
-							style={styles.footerButton}
-							onPress={() => {
-								setIsDetailsVisible(false);
-								setTimeout(() => {
-									onSchedule(contact);
-								}, 50);
-							}}
-						>
-							<Icon name="calendar-outline" size={24} color="#4CAF50" />
-							<Text style={styles.footerButtonText} numberOfLines={1}>
-								Schedule
+			case 'schedule':
+				return (
+					<ScrollView style={styles.tabContent}>
+						<View style={styles.scheduleContainer}>
+							<Text style={styles.scheduleLabel}>Next Contact Date</Text>
+							<Text style={styles.selectedDate}>
+								{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
 							</Text>
-						</TouchableOpacity>
+						</View>
 
-						<TouchableOpacity style={styles.footerButton} onPress={() => setIsTagsModalVisible(true)}>
-							<Icon name="pricetag-outline" size={24} color="#007AFF" />
-							<Text style={styles.footerButtonText} numberOfLines={1}>
-								Tags
-							</Text>
-						</TouchableOpacity>
+						{Platform.OS === 'web' ? (
+							<DatePicker
+								selected={selectedDate || new Date()}
+								onChange={(date) => {
+									const newDate = new Date(date);
+									newDate.setHours(12, 0, 0, 0);
+									setSelectedDate(newDate);
+								}}
+								inline
+								dateFormat="MM/dd/yyyy"
+								renderCustomHeader={({
+									date,
+									decreaseMonth,
+									increaseMonth,
+									prevMonthButtonDisabled,
+									nextMonthButtonDisabled,
+								}) => (
+									<div
+										style={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											padding: '10px',
+										}}
+									>
+										<button
+											onClick={decreaseMonth}
+											disabled={prevMonthButtonDisabled}
+											style={{
+												border: 'none',
+												background: 'none',
+												cursor: 'pointer',
+											}}
+										>
+											<Icon
+												name="chevron-back-outline"
+												size={24}
+												color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
+											/>
+										</button>
+										<span style={{ fontWeight: '500', fontSize: '16px' }}>
+											{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+										</span>
+										<button
+											onClick={increaseMonth}
+											disabled={nextMonthButtonDisabled}
+											style={{
+												border: 'none',
+												background: 'none',
+												cursor: 'pointer',
+											}}
+										>
+											<Icon
+												name="chevron-forward-outline"
+												size={24}
+												color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
+											/>
+										</button>
+									</div>
+								)}
+							/>
+						) : (
+							<DateTimePicker
+								value={selectedDate || new Date()}
+								mode="date"
+								display="inline"
+								onChange={(event, date) => {
+									if (date) {
+										const newDate = new Date(date);
+										newDate.setHours(12, 0, 0, 0);
+										setSelectedDate(newDate);
+									}
+								}}
+								textColor="#000000"
+								accentColor="#007AFF"
+								themeVariant="light"
+							/>
+						)}
 
-						<TouchableOpacity
-							style={styles.footerButton}
-							onPress={() => {
-								setIsDetailsVisible(false);
-								setTimeout(() => {
-									onEdit(contact);
-								}, 50);
-							}}
-						>
-							<Icon name="create-outline" size={24} color="#666" />
-							<Text style={styles.footerButtonText} numberOfLines={1}>
-								Edit
+						<View style={styles.scheduleActions}>
+							<TouchableOpacity
+								style={styles.confirmButton}
+								onPress={async () => {
+									try {
+										await updateContact(contact.id, {
+											next_contact: selectedDate.toISOString(),
+										});
+										Alert.alert('Success', 'Contact has been scheduled');
+										onClose();
+									} catch (error) {
+										console.error('Error scheduling contact:', error);
+										Alert.alert('Error', 'Failed to schedule contact');
+									}
+								}}
+							>
+								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
+							</TouchableOpacity>
+
+							{contact.next_contact && (
+								<TouchableOpacity
+									style={styles.removeScheduleButton}
+									onPress={() => {
+										Alert.alert(
+											'Remove Schedule',
+											'Are you sure you want to remove the next scheduled contact?',
+											[
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Remove',
+													onPress: async () => {
+														try {
+															await updateContact(contact.id, {
+																next_contact: null,
+															});
+															setSelectedDate(new Date());
+															Alert.alert('Success', 'Schedule removed');
+														} catch (error) {
+															Alert.alert('Error', 'Failed to remove schedule');
+														}
+													},
+												},
+											]
+										);
+									}}
+								>
+									<Text style={styles.removeScheduleText}>Remove Schedule</Text>
+								</TouchableOpacity>
+							)}
+						</View>
+					</ScrollView>
+				);
+
+				return (
+					<ScrollView style={styles.tabContent}>
+						<View style={styles.scheduleContainer}>
+							<Text style={styles.scheduleLabel}>Next Contact Date</Text>
+							<Text style={styles.selectedDate}>
+								{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
 							</Text>
+							<TouchableOpacity
+								style={[styles.confirmButton, { marginTop: 20 }]}
+								onPress={() => {
+									setIsDetailsVisible(false);
+									setTimeout(() => {
+										onSchedule(contact);
+									}, 50);
+								}}
+							>
+								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
+							</TouchableOpacity>
+						</View>
+					</ScrollView>
+				);
+			case 'tags':
+				return (
+					<ScrollView style={styles.tabContent}>
+						<View style={styles.tagsContainer}>
+							{contact.tags?.map((tag, index) => (
+								<View key={index} style={styles.tagBubble}>
+									<Text style={styles.tagText}>{tag}</Text>
+									<TouchableOpacity
+										onPress={async () => {
+											const updatedTags = contact.tags.filter((t) => t !== tag);
+											await updateContact(contact.id, { tags: updatedTags });
+											setSelectedContact({ ...contact, tags: updatedTags });
+										}}
+									>
+										<Icon name="close-circle" size={20} color="#666" />
+									</TouchableOpacity>
+								</View>
+							))}
+						</View>
+						<View style={styles.tagInputContainer}>
+							<TextInput
+								style={styles.tagInput}
+								placeholder="Type new tag..."
+								value={newTag}
+								onChangeText={setNewTag}
+								onSubmitEditing={() => {
+									if (newTag.trim()) {
+										const updatedTags = [...(contact.tags || []), newTag.trim()];
+										updateContact(contact.id, { tags: updatedTags });
+										setSelectedContact({ ...contact, tags: updatedTags });
+										setNewTag('');
+									}
+								}}
+							/>
+							<TouchableOpacity
+								style={styles.addTagButton}
+								onPress={() => {
+									if (newTag.trim()) {
+										const updatedTags = [...(contact.tags || []), newTag.trim()];
+										updateContact(contact.id, { tags: updatedTags });
+										setSelectedContact({ ...contact, tags: updatedTags });
+										setNewTag('');
+									}
+								}}
+							>
+								<Text style={styles.buttonText}>Add</Text>
+							</TouchableOpacity>
+						</View>
+					</ScrollView>
+				);
+
+			case 'edit':
+				return (
+					<ScrollView style={[styles.tabContent, styles.formScrollView]}>
+						<TextInput
+							style={styles.input}
+							placeholder="First Name"
+							value={contact.first_name}
+							onChangeText={(text) => setSelectedContact({ ...contact, first_name: text })}
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Last Name"
+							value={contact.last_name}
+							onChangeText={(text) => setSelectedContact({ ...contact, last_name: text })}
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Email"
+							value={contact.email}
+							onChangeText={(text) => setSelectedContact({ ...contact, email: text })}
+							keyboardType="email-address"
+							autoCapitalize="none"
+						/>
+						<TextInput
+							style={styles.input}
+							placeholder="Phone"
+							value={contact.phone}
+							onChangeText={(text) => setSelectedContact({ ...contact, phone: text })}
+							keyboardType="phone-pad"
+						/>
+
+						<View style={styles.editModalActions}>
+							<TouchableOpacity style={styles.editActionButton} onPress={() => onEdit(contact)}>
+								<Icon name="save-outline" size={24} color="#4CAF50" />
+								<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.editActionButton}
+								onPress={() => {
+									Alert.alert('Archive Contact', 'Archive this contact?', [
+										{ text: 'Cancel', style: 'cancel' },
+										{
+											text: 'Archive',
+											onPress: async () => {
+												try {
+													await archiveContact(contact.id);
+													onClose();
+												} catch (error) {
+													Alert.alert('Error', 'Failed to archive contact');
+												}
+											},
+										},
+									]);
+								}}
+							>
+								<Icon name="archive-outline" size={24} color="#007AFF" />
+								<Text style={[styles.editActionText, { color: '#007AFF' }]}>Archive</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={styles.editActionButton}
+								onPress={() => {
+									Alert.alert(
+										'Delete Contact',
+										'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
+										[
+											{ text: 'Cancel', style: 'cancel' },
+											{
+												text: 'Delete',
+												style: 'destructive',
+												onPress: async () => {
+													try {
+														await deleteContact(contact.id);
+														onClose();
+													} catch (error) {
+														console.error('Delete error:', error);
+														Alert.alert('Error', 'Unable to delete contact');
+													}
+												},
+											},
+										]
+									);
+								}}
+							>
+								<Icon name="trash-outline" size={24} color="#FF3B30" />
+								<Text style={[styles.editActionText, { color: '#FF3B30' }]}>Delete</Text>
+							</TouchableOpacity>
+						</View>
+					</ScrollView>
+				);
+			default:
+				return null;
+		}
+	};
+
+	const renderTabBar = (props) => (
+		<TabBar
+			{...props}
+			renderTabBarItem={({ route, navigationState }) => (
+				<TouchableOpacity
+					style={{
+						flex: 1,
+						alignItems: 'center',
+						padding: 16,
+						backgroundColor:
+							navigationState.index === navigationState.routes.indexOf(route) ? '#e8f2ff' : '#ffffff',
+					}}
+					onPress={() => setIndex(navigationState.routes.indexOf(route))}
+				>
+					<Icon
+						name={route.icon}
+						size={24}
+						color={navigationState.index === navigationState.routes.indexOf(route) ? '#007AFF' : '#666666'}
+					/>
+				</TouchableOpacity>
+			)}
+			style={{ backgroundColor: '#ffffff' }}
+		/>
+	);
+
+	// Edit a specific history note
+	const handleEditHistory = async (index, updatedNote) => {
+		try {
+			const updatedHistory = [...history];
+			updatedHistory[index].notes = updatedNote;
+
+			await updateContact(contact.id, { contact_history: updatedHistory });
+			setHistory(updatedHistory);
+			setEditMode(null);
+		} catch (error) {
+			console.error('Error editing history:', error);
+			Alert.alert('Error', 'Failed to update contact history');
+		}
+	};
+
+	const handleDeleteHistory = async (index) => {
+		try {
+			const updatedHistory = history.filter((_, i) => i !== index);
+
+			// Update Firestore first
+			await updateContact(contact.id, {
+				contact_history: updatedHistory,
+			});
+
+			// Update local states
+			setHistory(updatedHistory);
+			setSelectedContact({
+				...contact,
+				contact_history: updatedHistory,
+			});
+
+			// Refresh suggestions
+			setLoadingSuggestions(true);
+			try {
+				const topics = await generateTopicSuggestions(
+					{ ...contact, contact_history: updatedHistory },
+					updatedHistory
+				);
+				const newCache = {
+					...suggestionCache,
+					[contact.id]: {
+						suggestions: topics,
+						historyLength: updatedHistory.length,
+						timestamp: Date.now(),
+					},
+				};
+				setSuggestionCache(newCache);
+				setSuggestions(topics);
+				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+			} catch (error) {
+				console.error('Error updating suggestions:', error);
+				setSuggestions(['Unable to generate suggestions at this time.']);
+			} finally {
+				setLoadingSuggestions(false);
+			}
+		} catch (error) {
+			console.error('Error deleting history:', error);
+			Alert.alert('Error', 'Failed to delete history entry');
+		}
+	};
+
+	const handleAddCallNotes = async (notes, date) => {
+		if (!notes.trim()) {
+			Alert.alert('Error', 'Please enter the call notes');
+			return;
+		}
+
+		try {
+			// Create local date with time set to noon to avoid timezone issues
+			const localDate = new Date(date);
+			localDate.setHours(12, 0, 0, 0);
+
+			// Format date as YYYY-MM-DD
+			const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(
+				2,
+				'0'
+			)}-${String(localDate.getDate()).padStart(2, '0')}`;
+
+			// Add new call history to Firestore
+			await addContactHistory(contact.id, {
+				notes,
+				date: dateStr,
+			});
+
+			// Refresh the history immediately
+			const updatedHistory = await fetchContactHistory(contact.id);
+			const sortedHistory = [...updatedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+			setHistory(sortedHistory);
+
+			// Update contact in state with new history
+			const updatedContact = {
+				...contact,
+				contact_history: sortedHistory,
+			};
+			setSelectedContact(updatedContact);
+
+			// Refresh suggestions after new call note
+			setLoadingSuggestions(true);
+			try {
+				const topics = await generateTopicSuggestions(updatedContact, sortedHistory);
+				const newCache = {
+					...suggestionCache,
+					[contact.id]: {
+						suggestions: topics,
+						historyLength: sortedHistory.length,
+						timestamp: Date.now(),
+					},
+				};
+				setSuggestionCache(newCache);
+				setSuggestions(topics);
+
+				// Save to AsyncStorage
+				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+			} catch (error) {
+				console.error('Error updating suggestions:', error);
+				setSuggestions(['Unable to generate suggestions at this time.']);
+			} finally {
+				setLoadingSuggestions(false);
+			}
+
+			// Reset form
+			setCallNotes('');
+			setCallDate(new Date());
+		} catch (error) {
+			console.error('Error adding call notes:', error);
+			Alert.alert('Error', 'Failed to add call notes');
+		}
+	};
+
+	return (
+		<Modal visible={visible} animationType="fade" transparent={true}>
+			<View style={styles.modalContainer}>
+				<View style={styles.modalContent}>
+					<View style={styles.modalHeader}>
+						<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+							<Icon name="close-outline" size={24} color="#666" />
 						</TouchableOpacity>
+						<Text style={styles.modalTitle}>
+							{contact.first_name} {contact.last_name}
+						</Text>
 					</View>
-
+					<TabView
+						navigationState={{ index, routes }}
+						renderScene={renderScene}
+						renderTabBar={renderTabBar}
+						onIndexChange={setIndex}
+						initialLayout={{ width: layout.width }}
+						style={{ flex: 1 }}
+					/>
 					{/* Tags Modal */}
 					<TagsModal
 						visible={isTagsModalVisible}
@@ -1624,17 +1949,20 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 		marginHorizontal: 10,
 		flex: 1,
+		paddingHorizontal: 0,
 	},
 	modalHeader: {
 		flexDirection: 'row',
-		justifyContent: 'space-between',
+		justifyContent: 'center',
 		alignItems: 'center',
 		marginBottom: 20,
+		position: 'relative',
+		paddingHorizontal: 20,
 	},
 	modalTitle: {
 		fontSize: 24,
 		fontWeight: 'bold',
-		marginBottom: 0,
+		textAlign: 'center',
 	},
 	modalScroll: {
 		flex: 1,
