@@ -1877,8 +1877,8 @@ const styles = StyleSheet.create({
 		borderBottomColor: '#eee',
 	},
 	logo: {
-		width: '80%',
-		height: 50,
+		width: '50%',
+		height: 30,
 	},
 	content: {
 		flex: 1,

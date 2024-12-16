@@ -8,10 +8,8 @@ import {
 	RefreshControl,
 	Alert,
 	Modal,
-	Image,
-	TextInput,
+	Platform,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -21,25 +19,54 @@ import {
 	addContactHistory,
 	updateContact,
 } from '../utils/firestore';
-import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Platform } from 'react-native';
-import DatePicker from 'react-datepicker';
-import '../../assets/react-datepicker.css';
-import { SafeAreaView } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 
-// Sort options
-const SORT_OPTIONS = {
-	NEXT_CONTACT: 'next_contact',
-	LAST_CONTACT: 'last_contact',
-	NAME: 'name',
-};
+const StatsView = ({ stats }) => (
+	<ScrollView style={styles.statsContainer}>
+		<View style={styles.statCard}>
+			<Text style={styles.statTitle}>This Month</Text>
+			<Text style={styles.statValue}>{stats.monthlyContacts}</Text>
+			<Text style={styles.statLabel}>Contacts Made</Text>
+		</View>
 
-// View modes
-const VIEW_MODES = {
-	UPCOMING: 'upcoming',
-	ARCHIVE: 'archive',
-};
+		<View style={styles.statCard}>
+			<Text style={styles.statTitle}>Current Streak</Text>
+			<Text style={styles.statValue}>{stats.currentStreak}</Text>
+			<Text style={styles.statLabel}>Days</Text>
+		</View>
+
+		<View style={styles.statCard}>
+			<Text style={styles.statTitle}>Most Frequent Contacts</Text>
+			{stats.frequentContacts.map((contact, index) => (
+				<Text key={index} style={styles.statListItem}>
+					{contact.name} ({contact.count} times)
+				</Text>
+			))}
+		</View>
+
+		<View style={styles.statCard}>
+			<Text style={styles.statTitle}>Needs Attention</Text>
+			{stats.needsAttention.length > 0 ? (
+				stats.needsAttention.map((contact, index) => (
+					<Text key={index} style={styles.statListItem}>
+						{contact.name} (Last:{' '}
+						{contact.lastContact === 'Never' ? 'Never' : new Date(contact.lastContact).toLocaleDateString()})
+					</Text>
+				))
+			) : (
+				<Text style={styles.congratsMessage}>
+					Congratulations! You don't have any contacts that haven't been contacted in the last 30 days.
+				</Text>
+			)}
+		</View>
+
+		<View style={styles.statCard}>
+			<Text style={styles.statTitle}>Total Active Relationships</Text>
+			<Text style={styles.statValue}>{stats.totalActive}</Text>
+			<Text style={styles.statLabel}>Contacts</Text>
+		</View>
+	</ScrollView>
+);
 
 // Contact Card Component
 const ContactCard = ({ contact, onPress }) => (
@@ -47,7 +74,7 @@ const ContactCard = ({ contact, onPress }) => (
 		<View style={styles.cardHeader}>
 			<View style={styles.avatarContainer}>
 				{contact.photo_url ? (
-					<ExpoImage // Changed from Image to ExpoImage
+					<ExpoImage
 						source={{ uri: contact.photo_url }}
 						style={styles.avatar}
 						cachePolicy="memory-disk"
@@ -68,209 +95,94 @@ const ContactCard = ({ contact, onPress }) => (
 	</TouchableOpacity>
 );
 
-// Contact Details Modal
-const ContactDetailsModal = ({ visible, contact, onClose, onComplete }) => {
-	const [notes, setNotes] = useState('');
-	const [nextDate, setNextDate] = useState(new Date());
-	const [showDatePicker, setShowDatePicker] = useState(false);
-
-	useEffect(() => {
-		if (contact) {
-			setNextDate(new Date(contact.next_contact));
-		}
-	}, [contact]);
-
-	const handleComplete = () => {
-		onClose();
-	};
-
-	if (!contact) return null;
-
-	return (
-		<Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>{contact.name}</Text>
-					</View>
-
-					<ScrollView style={styles.modalScroll}>
-						<Text style={styles.label}>Contact Notes:</Text>
-
-						<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-							<Text style={styles.dateButtonText}>Next Contact: {nextDate.toLocaleDateString()}</Text>
-						</TouchableOpacity>
-
-						{showDatePicker && (
-							<Modal visible={showDatePicker} transparent={true} animationType="fade">
-								<TouchableOpacity
-									style={styles.datePickerModalOverlay}
-									onPress={() => setShowDatePicker(false)}
-									activeOpacity={1}
-								>
-									<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
-										{Platform.OS === 'web' ? (
-											<DatePicker
-												selected={nextDate}
-												onChange={(date) => {
-													const newDate = new Date(date);
-													newDate.setHours(12, 0, 0, 0);
-													setNextDate(newDate);
-													setShowDatePicker(false);
-												}}
-												inline
-												dateFormat="MM/dd/yyyy"
-												renderCustomHeader={({
-													date,
-													decreaseMonth,
-													increaseMonth,
-													prevMonthButtonDisabled,
-													nextMonthButtonDisabled,
-												}) => (
-													<div
-														style={{
-															display: 'flex',
-															justifyContent: 'space-between',
-															alignItems: 'center',
-															padding: '10px',
-														}}
-													>
-														<button
-															onClick={decreaseMonth}
-															disabled={prevMonthButtonDisabled}
-															style={{
-																border: 'none',
-																background: 'none',
-																cursor: 'pointer',
-															}}
-														>
-															<Icon
-																name="chevron-back-outline"
-																size={24}
-																color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
-															/>
-														</button>
-														<span style={{ fontWeight: '500', fontSize: '16px' }}>
-															{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
-														</span>
-														<button
-															onClick={increaseMonth}
-															disabled={nextMonthButtonDisabled}
-															style={{
-																border: 'none',
-																background: 'none',
-																cursor: 'pointer',
-															}}
-														>
-															<Icon
-																name="chevron-forward-outline"
-																size={24}
-																color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
-															/>
-														</button>
-													</div>
-												)}
-											/>
-										) : Platform.OS === 'ios' ? (
-											<DateTimePicker
-												value={nextDate}
-												mode="date"
-												display="inline"
-												onChange={(event, date) => {
-													if (date) {
-														const newDate = new Date(date);
-														newDate.setHours(12, 0, 0, 0);
-														setNextDate(newDate);
-													}
-													if (event.type === 'set') {
-														setShowDatePicker(false);
-													}
-												}}
-												textColor="#000000"
-												accentColor="#007AFF"
-												themeVariant="light"
-												style={{
-													height: 400,
-													backgroundColor: 'white',
-												}}
-											/>
-										) : (
-											<DateTimePicker
-												value={nextDate}
-												mode="date"
-												display="default"
-												onChange={(event, date) => {
-													setShowDatePicker(false);
-													if (event.type === 'set' && date) {
-														const newDate = new Date(date);
-														newDate.setHours(12, 0, 0, 0);
-														setNextDate(newDate);
-													}
-												}}
-											/>
-										)}
-									</View>
-								</TouchableOpacity>
-							</Modal>
-						)}
-
-						<View style={styles.historySection}>
-							<Text style={styles.sectionTitle}>Contact History</Text>
-							{contact.contact_history?.map((entry, index) => (
-								<View key={index} style={styles.historyEntry}>
-									<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-									<Text style={styles.historyNotes}>{entry.notes}</Text>
-								</View>
-							))}
-						</View>
-					</ScrollView>
-
-					<View style={styles.modalActions}>
-						<TouchableOpacity style={[styles.button, styles.completeButton]} onPress={handleComplete}>
-							<Text style={styles.buttonText}>Done</Text>
-						</TouchableOpacity>
-					</View>
-				</View>
-			</View>
-		</Modal>
-	);
-};
-
-export default function DashboardScreen({ route }) {
+export default function DashboardScreen({ navigation }) {
 	const { user } = useAuth();
 	const [contacts, setContacts] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
-	const [viewMode, setViewMode] = useState(VIEW_MODES.UPCOMING);
-	const [sortBy, setSortBy] = useState(SORT_OPTIONS.NEXT_CONTACT);
-	const [selectedContact, setSelectedContact] = useState(null);
-	const [isDetailsVisible, setIsDetailsVisible] = useState(false);
+	const [viewMode, setViewMode] = useState('calendar');
+
+	const [stats, setStats] = useState({
+		monthlyContacts: 0,
+		currentStreak: 0,
+		frequentContacts: [],
+		needsAttention: [],
+		totalActive: 0,
+	});
+
+	const calculateStats = async () => {
+		try {
+			const now = new Date();
+			const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+			// Get all contacts
+			const allContacts = await fetchUpcomingContacts(user.uid);
+
+			// Monthly contacts (completed this month)
+			const monthlyCount = allContacts.reduce((count, contact) => {
+				return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
+			}, 0);
+
+			// Calculate streak (consecutive days with at least one contact)
+			let streak = 0;
+			const today = new Date().setHours(0, 0, 0, 0);
+			let checkDate = today;
+			let hasContact = true;
+
+			while (hasContact) {
+				const dateContacts = allContacts.some((contact) =>
+					contact.contact_history?.some((h) => new Date(h.date).setHours(0, 0, 0, 0) === checkDate)
+				);
+
+				if (dateContacts) {
+					streak++;
+					checkDate -= 86400000; // Subtract one day
+				} else {
+					hasContact = false;
+				}
+			}
+
+			// Most frequent contacts (last 30 days)
+			const thirtyDaysAgo = new Date(now - 30 * 86400000);
+			const frequentContacts = allContacts
+				.map((contact) => ({
+					name: `${contact.first_name} ${contact.last_name}`,
+					count: contact.contact_history?.filter((h) => new Date(h.date) >= thirtyDaysAgo).length || 0,
+				}))
+				.filter((c) => c.count > 0)
+				.sort((a, b) => b.count - a.count)
+				.slice(0, 5);
+
+			// Contacts needing attention (no contact in last 30 days)
+			const needsAttention = allContacts
+				.filter((contact) => {
+					const lastContact = contact.contact_history?.[0]?.date;
+					return !lastContact || new Date(lastContact) < thirtyDaysAgo;
+				})
+				.map((contact) => ({
+					name: `${contact.first_name} ${contact.last_name}`,
+					lastContact: contact.contact_history?.[0]?.date || 'Never',
+				}))
+				.slice(0, 5);
+
+			setStats({
+				monthlyContacts: monthlyCount,
+				currentStreak: streak,
+				frequentContacts,
+				needsAttention,
+				totalActive: allContacts.length,
+			});
+		} catch (error) {
+			console.error('Error calculating stats:', error);
+			Alert.alert('Error', 'Failed to load statistics');
+		}
+	};
 
 	async function loadContacts() {
 		try {
 			if (!user) return;
-			const loadFunction = viewMode === VIEW_MODES.UPCOMING ? fetchUpcomingContacts : fetchPastContacts;
-			const contactsList = await loadFunction(user.uid);
-
-			const sortedContacts = [...contactsList].sort((a, b) => {
-				switch (sortBy) {
-					case SORT_OPTIONS.NEXT_CONTACT:
-						return new Date(a.next_contact || 0) - new Date(b.next_contact || 0);
-					case SORT_OPTIONS.LAST_CONTACT:
-						// Get the most recent history entry date or use 0 if no history
-						const aLastDate = a.contact_history?.length ? new Date(a.contact_history[0].date) : 0;
-						const bLastDate = b.contact_history?.length ? new Date(b.contact_history[0].date) : 0;
-						return bLastDate - aLastDate;
-					case SORT_OPTIONS.NAME:
-						const aName = `${a.first_name || ''} ${a.last_name || ''}`.trim();
-						const bName = `${b.first_name || ''} ${b.last_name || ''}`.trim();
-						return aName.localeCompare(bName);
-					default:
-						return 0;
-				}
-			});
-
-			setContacts(sortedContacts);
+			const contactsList = await fetchUpcomingContacts(user.uid);
+			setContacts(contactsList.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
 		} catch (error) {
 			console.error('Error loading contacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
@@ -283,18 +195,19 @@ export default function DashboardScreen({ route }) {
 		if (user) {
 			loadContacts();
 		}
-	}, [user, viewMode, sortBy, route?.params?.refresh]);
+	}, [user]);
+
+	useEffect(() => {
+		if (user && viewMode === 'stats') {
+			calculateStats();
+		}
+	}, [user, viewMode]);
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
 		await loadContacts();
 		setRefreshing(false);
-	}, [viewMode, sortBy]);
-
-	const handleContactPress = (contact) => {
-		setSelectedContact(contact);
-		setIsDetailsVisible(true);
-	};
+	}, []);
 
 	if (!user) {
 		return (
@@ -309,111 +222,43 @@ export default function DashboardScreen({ route }) {
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
-				<Text style={styles.title}>Calendar</Text>
-				<Text style={styles.subtitle}>
-					{viewMode === VIEW_MODES.UPCOMING ? `${contacts.length} upcoming contacts` : 'Contact History'}
-				</Text>
+				<Text style={styles.title}>Calendar + Stats</Text>
 			</View>
 
-			<View style={styles.controls}>
-				<View style={styles.viewToggle}>
-					<TouchableOpacity
-						style={[styles.toggleButton, viewMode === VIEW_MODES.UPCOMING && styles.toggleButtonActive]}
-						onPress={() => setViewMode(VIEW_MODES.UPCOMING)}
-					>
-						<Icon
-							name="calendar-outline"
-							size={20}
-							color={viewMode === VIEW_MODES.UPCOMING ? '#007AFF' : '#666'}
-						/>
-						<Text style={[styles.toggleText, viewMode === VIEW_MODES.UPCOMING && styles.toggleTextActive]}>
-							Upcoming
-						</Text>
-					</TouchableOpacity>
+			<View style={styles.buttonContainer}>
+				<TouchableOpacity
+					style={[styles.toggleButton, viewMode === 'calendar' && styles.toggleButtonActive]}
+					onPress={() => setViewMode('calendar')}
+				>
+					<Icon name="calendar-clear-outline" size={24} color="#007AFF" />
+					<Text style={styles.toggleButtonText}>Upcoming</Text>
+				</TouchableOpacity>
 
-					<TouchableOpacity
-						style={[styles.toggleButton, viewMode === VIEW_MODES.ARCHIVE && styles.toggleButtonActive]}
-						onPress={() => setViewMode(VIEW_MODES.ARCHIVE)}
-					>
-						<Icon
-							name="time-outline"
-							size={20}
-							color={viewMode === VIEW_MODES.ARCHIVE ? '#007AFF' : '#666'}
-						/>
-						<Text style={[styles.toggleText, viewMode === VIEW_MODES.ARCHIVE && styles.toggleTextActive]}>
-							Archive
-						</Text>
-					</TouchableOpacity>
-				</View>
-				<View style={styles.sortContainer}>
-					<Text style={styles.sortLabel}>Sort by:</Text>
-					<View style={styles.sortButtonsContainer}>
-						<TouchableOpacity
-							style={[styles.sortButton, sortBy === SORT_OPTIONS.NEXT_CONTACT && styles.sortButtonActive]}
-							onPress={() => setSortBy(SORT_OPTIONS.NEXT_CONTACT)}
-						>
-							<Text
-								style={[
-									styles.sortButtonText,
-									sortBy === SORT_OPTIONS.NEXT_CONTACT && styles.sortButtonTextActive,
-								]}
-							>
-								Next Contact
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.sortButton, sortBy === SORT_OPTIONS.LAST_CONTACT && styles.sortButtonActive]}
-							onPress={() => setSortBy(SORT_OPTIONS.LAST_CONTACT)}
-						>
-							<Text
-								style={[
-									styles.sortButtonText,
-									sortBy === SORT_OPTIONS.LAST_CONTACT && styles.sortButtonTextActive,
-								]}
-							>
-								Last Contact
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={[styles.sortButton, sortBy === SORT_OPTIONS.NAME && styles.sortButtonActive]}
-							onPress={() => setSortBy(SORT_OPTIONS.NAME)}
-						>
-							<Text
-								style={[styles.sortButtonText, sortBy === SORT_OPTIONS.NAME && styles.sortButtonTextActive]}
-							>
-								Name
-							</Text>
-						</TouchableOpacity>
-					</View>
-				</View>
+				<TouchableOpacity
+					style={[styles.toggleButton, viewMode === 'stats' && styles.toggleButtonActive]}
+					onPress={() => setViewMode('stats')}
+				>
+					<Icon name="stats-chart-outline" size={24} color="#007AFF" />
+					<Text style={styles.toggleButtonText}>Stats</Text>
+				</TouchableOpacity>
 			</View>
 
-			<ScrollView
-				style={styles.contactsList}
-				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-			>
-				{loading ? (
-					<Text style={styles.message}>Loading contacts...</Text>
-				) : contacts.length === 0 ? (
-					<Text style={styles.message}>
-						{viewMode === VIEW_MODES.UPCOMING ? 'No upcoming contacts' : 'No contact history'}
-					</Text>
-				) : (
-					contacts.map((contact) => (
-						<ContactCard key={contact.id} contact={contact} onPress={handleContactPress} />
-					))
-				)}
-			</ScrollView>
-
-			<ContactDetailsModal
-				visible={isDetailsVisible}
-				contact={selectedContact}
-				onClose={() => {
-					setIsDetailsVisible(false);
-					setSelectedContact(null);
-				}}
-				onComplete={loadContacts}
-			/>
+			{viewMode === 'calendar' ? (
+				<ScrollView
+					style={styles.contactsList}
+					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+				>
+					{loading ? (
+						<Text style={styles.message}>Loading contacts...</Text>
+					) : contacts.length === 0 ? (
+						<Text style={styles.message}>No upcoming contacts</Text>
+					) : (
+						contacts.map((contact) => <ContactCard key={contact.id} contact={contact} onPress={() => {}} />)
+					)}
+				</ScrollView>
+			) : (
+				<StatsView stats={stats} />
+			)}
 		</View>
 	);
 }
@@ -426,94 +271,47 @@ const styles = StyleSheet.create({
 	},
 	header: {
 		padding: 20,
-		backgroundColor: '#f8f9fa',
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
+		alignItems: 'center',
 	},
 	title: {
 		fontSize: 24,
 		fontWeight: 'bold',
+		textAlign: 'center',
 	},
-	subtitle: {
-		fontSize: 16,
-		color: '#666',
-		marginTop: 5,
-	},
-	controls: {
-		padding: 15,
+	buttonContainer: {
+		flexDirection: 'row',
+		paddingHorizontal: 15,
+		paddingBottom: 15,
 		borderBottomWidth: 1,
 		borderBottomColor: '#eee',
-	},
-	viewToggle: {
-		flexDirection: 'row',
-		justifyContent: 'center',
-		marginBottom: 15,
 	},
 	toggleButton: {
+		flex: 1,
 		flexDirection: 'row',
 		alignItems: 'center',
-		paddingVertical: 8,
-		paddingHorizontal: 16,
-		borderRadius: 20,
-		marginHorizontal: 5,
+		justifyContent: 'center',
+		padding: 12,
 		backgroundColor: '#f8f9fa',
-	},
-	toggleButtonActive: {
-		backgroundColor: '#e8f2ff',
-	},
-	toggleText: {
-		marginLeft: 8,
-		color: '#666',
-		fontWeight: '500',
-	},
-	toggleTextActive: {
-		color: '#007AFF',
-	},
-	sortContainer: {
-		padding: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	sortLabel: {
-		fontSize: 16,
-		color: '#666',
-		marginBottom: 10,
-	},
-	sortButtonsContainer: {
-		flexDirection: 'row',
-		justifyContent: 'flex-start',
-		gap: 10,
-	},
-	sortPicker: {
-		flex: 1,
-		height: 40,
-		backgroundColor: '#fff',
-		marginLeft: -8,
-		color: '#333',
-	},
-	sortButton: {
-		paddingVertical: 8,
-		paddingHorizontal: 16,
-		borderRadius: 20,
-		backgroundColor: '#f8f9fa',
+		margin: 5,
+		borderRadius: 10,
 		borderWidth: 1,
-		borderColor: '#eee',
-	},
-	sortButtonActive: {
-		backgroundColor: '#e8f2ff',
 		borderColor: '#007AFF',
 	},
-	sortButtonText: {
-		color: '#666',
-		fontSize: 14,
-		fontWeight: '500',
-	},
-	sortButtonTextActive: {
+	toggleButtonText: {
+		marginLeft: 8,
+		fontSize: 16,
 		color: '#007AFF',
+		fontWeight: '500',
 	},
 	contactsList: {
 		flex: 1,
 		padding: 15,
+	},
+	message: {
+		textAlign: 'center',
+		padding: 20,
+		color: '#666',
+		fontSize: 16,
 	},
 	card: {
 		backgroundColor: '#f8f9fa',
@@ -553,123 +351,54 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		color: '#666',
 	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		padding: 20,
-	},
-	modalContent: {
-		backgroundColor: 'white',
-		borderRadius: 20,
-		padding: 20,
-		maxHeight: '80%',
-	},
-	modalHeader: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		marginBottom: 20,
-	},
-	modalTitle: {
-		fontSize: 20,
-		fontWeight: 'bold',
-	},
-	modalScroll: {
-		maxHeight: '80%',
-	},
-	label: {
-		fontSize: 16,
-		fontWeight: '500',
-		marginBottom: 8,
-		color: '#333',
-	},
-	notesInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 12,
-		minHeight: 100,
-		marginBottom: 20,
-		textAlignVertical: 'top',
-	},
-	dateButton: {
-		backgroundColor: '#f8f9fa',
-		padding: 12,
-		borderRadius: 10,
-		marginBottom: 20,
-		alignItems: 'center',
-	},
-	dateButtonText: {
-		fontSize: 16,
-		color: '#333',
-	},
-	historySection: {
-		marginTop: 20,
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: '600',
-		marginBottom: 12,
-		color: '#333',
-	},
-	historyEntry: {
-		backgroundColor: '#f8f9fa',
-		padding: 12,
-		borderRadius: 10,
-		marginBottom: 8,
-	},
-	historyDate: {
+	cardDate: {
 		fontSize: 14,
 		color: '#666',
-		marginBottom: 4,
 	},
-	historyNotes: {
+	statsContainer: {
+		flex: 1,
+		padding: 15,
+	},
+	statCard: {
+		backgroundColor: '#f8f9fa',
+		padding: 20,
+		borderRadius: 10,
+		marginBottom: 15,
+		borderWidth: 1,
+		borderColor: '#eee',
+	},
+	statTitle: {
+		fontSize: 16,
+		fontWeight: '600',
+		color: '#666',
+		marginBottom: 10,
+	},
+	statValue: {
+		fontSize: 36,
+		fontWeight: 'bold',
+		color: '#007AFF',
+		marginBottom: 5,
+	},
+	statLabel: {
+		fontSize: 14,
+		color: '#666',
+	},
+	statListItem: {
 		fontSize: 16,
 		color: '#333',
+		paddingVertical: 8,
+		borderBottomWidth: 1,
+		borderBottomColor: '#eee',
 	},
-	modalActions: {
-		marginTop: 20,
-	},
-	button: {
-		padding: 15,
-		borderRadius: 10,
-		alignItems: 'center',
-	},
-	completeButton: {
-		backgroundColor: '#007AFF',
-	},
-	buttonText: {
-		color: '#fff',
+	congratsMessage: {
 		fontSize: 16,
-		fontWeight: '500',
+		color: '#3e8b00',
+		textAlign: 'left',
+		paddingVertical: 10,
+		fontStyle: 'italic',
+		fontWeight: '600',
 	},
-	message: {
-		textAlign: 'center',
-		padding: 20,
-		color: '#666',
-		fontSize: 16,
-	},
-	// Date Picker Modal
-	datePickerModalOverlay: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		alignItems: 'center',
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-	},
-	datePickerContainer: {
-		backgroundColor: 'white',
-		borderRadius: 10,
-		padding: 0, // Remove padding
-		width: '90%', // Control width
-		maxWidth: 400,
-		alignItems: 'center',
-		justifyContent: 'center',
-		overflow: 'hidden',
+	toggleButtonActive: {
+		backgroundColor: '#e8f2ff',
 	},
 });

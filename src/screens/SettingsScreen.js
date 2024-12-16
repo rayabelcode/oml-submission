@@ -124,7 +124,7 @@ export default function SettingsScreen() {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaType.Images,
+				mediaTypes: ['images'],
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 0.5,
@@ -365,12 +365,15 @@ export default function SettingsScreen() {
 							cachePolicy="memory-disk"
 						/>
 					) : (
-						<Icon name="person-outline" size={40} color="#007AFF" />
+						<>
+							<Icon name="person-outline" size={40} color="#007AFF" />
+							<View style={styles.editOverlay}>
+								<Icon name="camera-outline" size={20} color="#fff" />
+							</View>
+						</>
 					)}
-					<View style={styles.editOverlay}>
-						<Icon name="camera-outline" size={20} color="#fff" />
-					</View>
 				</TouchableOpacity>
+
 				<View style={styles.profileInfo}>
 					<Text style={styles.profileEmail}>Account Info</Text>
 					<Text style={styles.profileName}>{user.email}</Text>
