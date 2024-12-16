@@ -397,6 +397,11 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const [selectedDate, setSelectedDate] = useState(
 		contact?.next_contact ? new Date(contact.next_contact) : new Date()
 	);
+	const [formData, setFormData] = useState({ ...contact });
+
+	const dismissKeyboard = () => {
+		Keyboard.dismiss();
+	};
 
 	// Always set contact view to Call History tab
 	useEffect(() => {
@@ -413,6 +418,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 				const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
 				setHistory(sortedHistory);
 			});
+			setFormData({ ...contact });
 		}
 	}, [contact]);
 
@@ -1019,14 +1025,15 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								onPress={async () => {
 									try {
 										await updateContact(contact.id, {
-											first_name: contact.first_name,
-											last_name: contact.last_name,
-											email: contact.email,
-											phone: contact.phone,
-											photo_url: contact.photo_url,
+											first_name: formData.first_name,
+											last_name: formData.last_name,
+											email: formData.email,
+											phone: formData.phone,
+											photo_url: formData.photo_url,
 										});
+										setSelectedContact(formData); // Update local state
 										Alert.alert('Success', 'Contact Updated');
-										loadContacts(); // Refresh the contacts list
+										await loadContacts(); // Refresh the contacts list
 									} catch (error) {
 										Alert.alert('Error', 'Failed to update contact');
 									}
@@ -1114,7 +1121,10 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						justifyContent: 'center',
 						backgroundColor: props.navigationState.index === index ? '#e8f2ff' : '#ffffff',
 					}}
-					onPress={() => setIndex(index)}
+					onPress={() => {
+						Keyboard.dismiss();
+						setIndex(index);
+					}}
 				>
 					<Icon
 						name={route.icon}
@@ -1257,42 +1267,83 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
-						</TouchableOpacity>
-						<Text style={styles.modalTitle}>
-							{contact.first_name} {contact.last_name}
-						</Text>
+			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+				{Platform.OS === 'ios' ? (
+					<TouchableOpacity activeOpacity={1} style={styles.modalContainer} onPress={dismissKeyboard}>
+						<View style={styles.modalContent}>
+							<View style={styles.modalHeader}>
+								<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+									<Icon name="close-outline" size={24} color="#666" />
+								</TouchableOpacity>
+								<Text style={styles.modalTitle}>
+									{contact.first_name} {contact.last_name}
+								</Text>
+							</View>
+							<TabView
+								navigationState={{ index, routes }}
+								renderScene={renderScene}
+								renderTabBar={renderTabBar}
+								onIndexChange={setIndex}
+								initialLayout={{ width: layout.width, height: layout.height }}
+								style={{ flex: 1, width: '100%' }}
+							/>
+							{/* Tags Modal */}
+							<TagsModal
+								visible={isTagsModalVisible}
+								onClose={() => setIsTagsModalVisible(false)}
+								tags={contact.tags || []}
+								onAddTag={async (tag) => {
+									const updatedTags = [...(contact.tags || []), tag];
+									await updateContact(contact.id, { tags: updatedTags });
+									setSelectedContact({ ...contact, tags: updatedTags });
+								}}
+								onDeleteTag={async (tagToDelete) => {
+									const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+									await updateContact(contact.id, { tags: updatedTags });
+									setSelectedContact({ ...contact, tags: updatedTags });
+								}}
+							/>
+						</View>
+					</TouchableOpacity>
+				) : (
+					<View style={styles.modalContainer}>
+						<View style={styles.modalContent}>
+							<View style={styles.modalHeader}>
+								<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+									<Icon name="close-outline" size={24} color="#666" />
+								</TouchableOpacity>
+								<Text style={styles.modalTitle}>
+									{contact.first_name} {contact.last_name}
+								</Text>
+							</View>
+							<TabView
+								navigationState={{ index, routes }}
+								renderScene={renderScene}
+								renderTabBar={renderTabBar}
+								onIndexChange={setIndex}
+								initialLayout={{ width: layout.width, height: layout.height }}
+								style={{ flex: 1, width: '100%' }}
+							/>
+							{/* Tags Modal */}
+							<TagsModal
+								visible={isTagsModalVisible}
+								onClose={() => setIsTagsModalVisible(false)}
+								tags={contact.tags || []}
+								onAddTag={async (tag) => {
+									const updatedTags = [...(contact.tags || []), tag];
+									await updateContact(contact.id, { tags: updatedTags });
+									setSelectedContact({ ...contact, tags: updatedTags });
+								}}
+								onDeleteTag={async (tagToDelete) => {
+									const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+									await updateContact(contact.id, { tags: updatedTags });
+									setSelectedContact({ ...contact, tags: updatedTags });
+								}}
+							/>
+						</View>
 					</View>
-					<TabView
-						navigationState={{ index, routes }}
-						renderScene={renderScene}
-						renderTabBar={renderTabBar}
-						onIndexChange={setIndex}
-						initialLayout={{ width: layout.width }}
-						style={{ flex: 1, width: '100%' }}
-					/>
-					{/* Tags Modal */}
-					<TagsModal
-						visible={isTagsModalVisible}
-						onClose={() => setIsTagsModalVisible(false)}
-						tags={contact.tags || []}
-						onAddTag={async (tag) => {
-							const updatedTags = [...(contact.tags || []), tag];
-							await updateContact(contact.id, { tags: updatedTags });
-							setSelectedContact({ ...contact, tags: updatedTags });
-						}}
-						onDeleteTag={async (tagToDelete) => {
-							const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
-							await updateContact(contact.id, { tags: updatedTags });
-							setSelectedContact({ ...contact, tags: updatedTags });
-						}}
-					/>
-				</View>
-			</View>
+				)}
+			</KeyboardAvoidingView>
 		</Modal>
 	);
 };
@@ -1970,20 +2021,26 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 		backgroundColor: '#4CAF50',
 	},
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 20,
-        width: '85%',
-        alignSelf: 'center',
-        maxHeight: '90%',
-    },
+	modalContainer: {
+		flex: 1,
+		backgroundColor: 'rgba(0, 0, 0, 0.5)',
+		justifyContent: 'center',
+		alignItems: 'center',
+		width: '100%',
+	},
+	modalContent: {
+		backgroundColor: 'white',
+		borderRadius: 20,
+		padding: 20,
+		width: Platform.OS === 'web' ? '50%' : '85%',
+		alignSelf: 'center',
+		maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
+		...(Platform.OS === 'ios'
+			? {
+					height: '75%',
+			  }
+			: {}),
+	},
 	modalHeader: {
 		flexDirection: 'row',
 		justifyContent: 'center',
@@ -2616,19 +2673,19 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
-    formContainer: {
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-    },
-    formInput: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 10,
-        padding: 15,
-        marginBottom: 15,
-        fontSize: 16,
-        color: '#000000',
-        backgroundColor: '#fff',
-        height: 50,
-    },
+	formContainer: {
+		paddingHorizontal: 20,
+		paddingBottom: 20,
+	},
+	formInput: {
+		borderWidth: 1,
+		borderColor: '#ddd',
+		borderRadius: 10,
+		padding: 15,
+		marginBottom: 15,
+		fontSize: 16,
+		color: '#000000',
+		backgroundColor: '#fff',
+		height: 50,
+	},
 });
