@@ -27,8 +27,7 @@
 				"backgroundColor": "#ffffff"
 			},
 			"package": "com.rayabel.onmylistapp",
-			"permissions": ["RECEIVE_BOOT_COMPLETED", "READ_CONTACTS", "WRITE_CONTACTS"],
-			"googleServicesFile": "./google-services.json"
+			"permissions": ["RECEIVE_BOOT_COMPLETED", "READ_CONTACTS", "WRITE_CONTACTS"]
 		},
 		"web": {
 			"favicon": "./assets/favicon.png"
@@ -40,6 +39,12 @@
 				"projectId": "a2b79805-c750-4012-92e8-fee850d83b9c"
 			},
 			"SENTRY_DSN": "https://ae4044a257736a2b94a57c097af1fef3@o4508427691491328.ingest.us.sentry.io/4508427722817536"
+		},
+		"runtimeVersion": {
+			"policy": "appVersion"
+		},
+		"updates": {
+			"url": "https://u.expo.dev/a2b79805-c750-4012-92e8-fee850d83b9c"
 		}
 	}
 }
