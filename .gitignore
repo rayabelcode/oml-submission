@@ -23,6 +23,8 @@ npm-debug.*
 # Environment
 .env
 eas.json
+google-services.json
+GoogleService-Info.plist
 
 # macOS
 .DS_Store
