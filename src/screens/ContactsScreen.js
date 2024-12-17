@@ -1268,81 +1268,42 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-				{Platform.OS === 'ios' ? (
-					<TouchableOpacity activeOpacity={1} style={styles.modalContainer} onPress={dismissKeyboard}>
-						<View style={styles.modalContent}>
-							<View style={styles.modalHeader}>
-								<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-									<Icon name="close-outline" size={24} color="#666" />
-								</TouchableOpacity>
-								<Text style={styles.modalTitle}>
-									{contact.first_name} {contact.last_name}
-								</Text>
-							</View>
-							<TabView
-								navigationState={{ index, routes }}
-								renderScene={renderScene}
-								renderTabBar={renderTabBar}
-								onIndexChange={setIndex}
-								initialLayout={{ width: layout.width, height: layout.height }}
-								style={{ flex: 1, width: '100%' }}
-							/>
-							{/* Tags Modal */}
-							<TagsModal
-								visible={isTagsModalVisible}
-								onClose={() => setIsTagsModalVisible(false)}
-								tags={contact.tags || []}
-								onAddTag={async (tag) => {
-									const updatedTags = [...(contact.tags || []), tag];
-									await updateContact(contact.id, { tags: updatedTags });
-									setSelectedContact({ ...contact, tags: updatedTags });
-								}}
-								onDeleteTag={async (tagToDelete) => {
-									const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
-									await updateContact(contact.id, { tags: updatedTags });
-									setSelectedContact({ ...contact, tags: updatedTags });
-								}}
-							/>
+				<View style={styles.modalContainer}>
+					<View style={styles.modalContent}>
+						<View style={styles.modalHeader}>
+							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+								<Icon name="close-outline" size={24} color="#666" />
+							</TouchableOpacity>
+							<Text style={styles.modalTitle}>
+								{contact.first_name} {contact.last_name}
+							</Text>
 						</View>
-					</TouchableOpacity>
-				) : (
-					<View style={styles.modalContainer}>
-						<View style={styles.modalContent}>
-							<View style={styles.modalHeader}>
-								<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-									<Icon name="close-outline" size={24} color="#666" />
-								</TouchableOpacity>
-								<Text style={styles.modalTitle}>
-									{contact.first_name} {contact.last_name}
-								</Text>
-							</View>
-							<TabView
-								navigationState={{ index, routes }}
-								renderScene={renderScene}
-								renderTabBar={renderTabBar}
-								onIndexChange={setIndex}
-								initialLayout={{ width: layout.width, height: layout.height }}
-								style={{ flex: 1, width: '100%' }}
-							/>
-							{/* Tags Modal */}
-							<TagsModal
-								visible={isTagsModalVisible}
-								onClose={() => setIsTagsModalVisible(false)}
-								tags={contact.tags || []}
-								onAddTag={async (tag) => {
-									const updatedTags = [...(contact.tags || []), tag];
-									await updateContact(contact.id, { tags: updatedTags });
-									setSelectedContact({ ...contact, tags: updatedTags });
-								}}
-								onDeleteTag={async (tagToDelete) => {
-									const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
-									await updateContact(contact.id, { tags: updatedTags });
-									setSelectedContact({ ...contact, tags: updatedTags });
-								}}
-							/>
-						</View>
+						<TabView
+							navigationState={{ index, routes }}
+							renderScene={renderScene}
+							renderTabBar={renderTabBar}
+							onIndexChange={setIndex}
+							initialLayout={{ width: layout.width, height: layout.height }}
+							style={{ flex: 1, width: '100%' }}
+						/>
+						{/* Tags Modal */}
+						<TagsModal
+							visible={isTagsModalVisible}
+							onClose={() => setIsTagsModalVisible(false)}
+							tags={contact.tags || []}
+							onAddTag={async (tag) => {
+								const updatedTags = [...(contact.tags || []), tag];
+								await updateContact(contact.id, { tags: updatedTags });
+								setSelectedContact({ ...contact, tags: updatedTags });
+							}}
+							onDeleteTag={async (tagToDelete) => {
+								const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+								await updateContact(contact.id, { tags: updatedTags });
+								setSelectedContact({ ...contact, tags: updatedTags });
+							}}
+						/>
 					</View>
-				)}
+				</View>
 			</KeyboardAvoidingView>
 		</Modal>
 	);
