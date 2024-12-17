@@ -41,6 +41,86 @@ import { useWindowDimensions } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native';
 import { Keyboard } from 'react-native';
 
+// Shared DatePicker Modal Component
+const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, containerStyle }) => {
+	return (
+		<Modal visible={visible} transparent={true} animationType="fade">
+			<TouchableOpacity style={styles.datePickerModalOverlay} onPress={onClose} activeOpacity={1}>
+				<View style={[styles.datePickerContainer, containerStyle]} onClick={(e) => e.stopPropagation()}>
+					{Platform.OS === 'web' ? (
+						<DatePicker
+							selected={selectedDate}
+							onChange={onDateSelect}
+							inline
+							dateFormat="MM/dd/yyyy"
+							renderCustomHeader={({
+								date,
+								decreaseMonth,
+								increaseMonth,
+								prevMonthButtonDisabled,
+								nextMonthButtonDisabled,
+							}) => (
+								<div
+									style={{
+										display: 'flex',
+										justifyContent: 'space-between',
+										alignItems: 'center',
+										padding: '10px',
+									}}
+								>
+									<button
+										onClick={decreaseMonth}
+										disabled={prevMonthButtonDisabled}
+										style={{
+											border: 'none',
+											background: 'none',
+											cursor: 'pointer',
+										}}
+									>
+										<Icon
+											name="chevron-back-outline"
+											size={24}
+											color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
+										/>
+									</button>
+									<span style={{ fontWeight: '500', fontSize: '16px' }}>
+										{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+									</span>
+									<button
+										onClick={increaseMonth}
+										disabled={nextMonthButtonDisabled}
+										style={{
+											border: 'none',
+											background: 'none',
+											cursor: 'pointer',
+										}}
+									>
+										<Icon
+											name="chevron-forward-outline"
+											size={24}
+											color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
+										/>
+									</button>
+								</div>
+							)}
+						/>
+					) : (
+						<DateTimePicker
+							value={selectedDate}
+							mode="date"
+							display="inline"
+							onChange={onDateSelect}
+							textColor="#000000"
+							accentColor="#007AFF"
+							themeVariant="light"
+						/>
+					)}
+				</View>
+			</TouchableOpacity>
+		</Modal>
+	);
+};
+
 // Screen width for grid calculation
 const windowWidth = Dimensions.get('window').width;
 
@@ -525,118 +605,24 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 							</View>
 						</View>
 
-						{/* Date Picker Modal */}
-						<Modal visible={showDatePicker} transparent={true} animationType="fade">
-							<TouchableOpacity
-								style={styles.datePickerModalOverlay}
-								onPress={() => setShowDatePicker(false)}
-								activeOpacity={1}
-							>
-								<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
-									{Platform.OS === 'web' ? (
-										<DatePicker
-											selected={callDate}
-											onChange={(date) => {
-												const newDate = new Date(date);
-												newDate.setHours(12, 0, 0, 0);
-												setCallDate(newDate);
-												setShowDatePicker(false);
-											}}
-											inline
-											dateFormat="MM/dd/yyyy"
-											renderCustomHeader={({
-												date,
-												decreaseMonth,
-												increaseMonth,
-												prevMonthButtonDisabled,
-												nextMonthButtonDisabled,
-											}) => (
-												<div
-													style={{
-														display: 'flex',
-														justifyContent: 'space-between',
-														alignItems: 'center',
-														padding: '10px',
-													}}
-												>
-													<button
-														onClick={decreaseMonth}
-														disabled={prevMonthButtonDisabled}
-														style={{
-															border: 'none',
-															background: 'none',
-															cursor: 'pointer',
-														}}
-													>
-														<Icon
-															name="chevron-back-outline"
-															size={24}
-															color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
-														/>
-													</button>
-													<span style={{ fontWeight: '500', fontSize: '16px' }}>
-														{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
-													</span>
-													<button
-														onClick={increaseMonth}
-														disabled={nextMonthButtonDisabled}
-														style={{
-															border: 'none',
-															background: 'none',
-															cursor: 'pointer',
-														}}
-													>
-														<Icon
-															name="chevron-forward-outline"
-															size={24}
-															color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
-														/>
-													</button>
-												</div>
-											)}
-										/>
-									) : Platform.OS === 'ios' ? (
-										<DateTimePicker
-											value={callDate}
-											mode="date"
-											display="inline"
-											onChange={(event, date) => {
-												if (date) {
-													const newDate = new Date(date);
-													newDate.setHours(12, 0, 0, 0);
-													setCallDate(newDate);
-												}
-												if (event.type === 'set') {
-													setShowDatePicker(false);
-												}
-											}}
-											textColor="#000000"
-											accentColor="#007AFF"
-											themeVariant="light"
-											style={{
-												height: 400,
-												width: '100%',
-												backgroundColor: 'white',
-											}}
-										/>
-									) : (
-										<DateTimePicker
-											value={callDate}
-											mode="date"
-											display="default"
-											onChange={(event, date) => {
-												setShowDatePicker(false);
-												if (event.type === 'set' && date) {
-													const newDate = new Date(date);
-													newDate.setHours(12, 0, 0, 0);
-													setCallDate(newDate);
-												}
-											}}
-										/>
-									)}
-								</View>
-							</TouchableOpacity>
-						</Modal>
+						<DatePickerModal
+							visible={showDatePicker}
+							onClose={() => setShowDatePicker(false)}
+							selectedDate={callDate}
+							onDateSelect={(event, date) => {
+								if (Platform.OS === 'web') {
+									const newDate = new Date(event);
+									newDate.setHours(12, 0, 0, 0);
+									setCallDate(newDate);
+									setShowDatePicker(false);
+								} else if (date && event.type === 'set') {
+									const newDate = new Date(date);
+									newDate.setHours(12, 0, 0, 0);
+									setCallDate(newDate);
+									setShowDatePicker(false);
+								}
+							}}
+						/>
 
 						{/* AI Suggestions */}
 						{loadingSuggestions ? (
@@ -703,121 +689,91 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					</ScrollView>
 				);
 
-				
-				case 'schedule':
-					return (
-						<ScrollView style={styles.tabContent}>
-							<View style={styles.scheduleContainer}>
-								<Text style={styles.scheduleLabel}>Next Contact Date</Text>
-								<Text style={styles.selectedDate}>
-									{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
-								</Text>
-							</View>
-				
-							{/* Date Picker Modal */}
-							<Modal visible={showScheduleDatePicker} transparent={true} animationType="fade">
+			case 'schedule':
+				return (
+					<ScrollView style={styles.tabContent}>
+						<View style={styles.scheduleContainer}>
+							<Text style={styles.scheduleLabel}>Next Contact Date</Text>
+							<Text style={styles.selectedDate}>
+								{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
+							</Text>
+						</View>
+
+						<DatePickerModal
+							visible={showScheduleDatePicker}
+							onClose={() => setShowScheduleDatePicker(false)}
+							selectedDate={selectedDate}
+							onDateSelect={async (event, date) => {
+								if (Platform.OS === 'web') {
+									const newDate = new Date(event);
+									newDate.setHours(12, 0, 0, 0);
+									try {
+										await updateContact(contact.id, {
+											next_contact: newDate.toISOString(),
+										});
+										setSelectedContact({
+											...contact,
+											next_contact: newDate.toISOString(),
+										});
+										setSelectedDate(newDate);
+										loadContacts();
+										setShowScheduleDatePicker(false);
+									} catch (error) {
+										console.error('Error scheduling contact:', error);
+										Alert.alert('Error', 'Failed to schedule contact');
+									}
+								} else if (date && event.type === 'set') {
+									const newDate = new Date(date);
+									newDate.setHours(12, 0, 0, 0);
+									try {
+										await updateContact(contact.id, {
+											next_contact: newDate.toISOString(),
+										});
+										setSelectedContact({
+											...contact,
+											next_contact: newDate.toISOString(),
+										});
+										setSelectedDate(newDate);
+										loadContacts();
+										setShowScheduleDatePicker(false);
+									} catch (error) {
+										console.error('Error scheduling contact:', error);
+										Alert.alert('Error', 'Failed to schedule contact');
+									}
+								}
+							}}
+						/>
+
+						<View style={styles.scheduleActions}>
+							<TouchableOpacity style={styles.confirmButton} onPress={() => setShowScheduleDatePicker(true)}>
+								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
+							</TouchableOpacity>
+
+							{contact.next_contact && (
 								<TouchableOpacity
-									style={styles.datePickerModalOverlay}
-									onPress={() => setShowScheduleDatePicker(false)}
-									activeOpacity={1}
+									style={styles.removeScheduleButton}
+									onPress={async () => {
+										try {
+											await updateContact(contact.id, {
+												next_contact: null,
+											});
+											setSelectedContact({
+												...contact,
+												next_contact: null,
+											});
+											setSelectedDate(new Date());
+											loadContacts();
+										} catch (error) {
+											Alert.alert('Error', 'Failed to remove schedule');
+										}
+									}}
 								>
-									<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
-										{Platform.OS === 'ios' ? (
-											<DateTimePicker
-												value={selectedDate}
-												mode="date"
-												display="inline"
-												onChange={async (event, date) => {
-													if (date && event.type === 'set') {
-														const newDate = new Date(date);
-														newDate.setHours(12, 0, 0, 0);
-														setSelectedDate(newDate);
-														try {
-															await updateContact(contact.id, {
-																next_contact: newDate.toISOString(),
-															});
-															setSelectedContact({
-																...contact,
-																next_contact: newDate.toISOString(),
-															});
-															loadContacts();
-															setShowScheduleDatePicker(false);
-														} catch (error) {
-															console.error('Error scheduling contact:', error);
-															Alert.alert('Error', 'Failed to schedule contact');
-														}
-													}
-												}}
-												textColor="#000000"
-												accentColor="#007AFF"
-												themeVariant="light"
-											/>
-										) : (
-											<DateTimePicker
-												value={selectedDate}
-												mode="date"
-												display="default"
-												onChange={async (event, date) => {
-													if (date && event.type === 'set') {
-														const newDate = new Date(date);
-														newDate.setHours(12, 0, 0, 0);
-														setSelectedDate(newDate);
-														try {
-															await updateContact(contact.id, {
-																next_contact: newDate.toISOString(),
-															});
-															setSelectedContact({
-																...contact,
-																next_contact: newDate.toISOString(),
-															});
-															loadContacts();
-														} catch (error) {
-															console.error('Error scheduling contact:', error);
-															Alert.alert('Error', 'Failed to schedule contact');
-														}
-													}
-													setShowScheduleDatePicker(false);
-												}}
-											/>
-										)}
-									</View>
+									<Text style={styles.removeScheduleText}>Remove Schedule</Text>
 								</TouchableOpacity>
-							</Modal>
-				
-							<View style={styles.scheduleActions}>
-								<TouchableOpacity
-									style={styles.confirmButton}
-									onPress={() => setShowScheduleDatePicker(true)}
-								>
-									<Text style={styles.confirmButtonText}>Schedule Contact</Text>
-								</TouchableOpacity>
-				
-								{contact.next_contact && (
-									<TouchableOpacity
-										style={styles.removeScheduleButton}
-										onPress={async () => {
-											try {
-												await updateContact(contact.id, {
-													next_contact: null,
-												});
-												setSelectedContact({
-													...contact,
-													next_contact: null,
-												});
-												setSelectedDate(new Date());
-												loadContacts();
-											} catch (error) {
-												Alert.alert('Error', 'Failed to remove schedule');
-											}
-										}}
-									>
-										<Text style={styles.removeScheduleText}>Remove Schedule</Text>
-									</TouchableOpacity>
-								)}
-							</View>
-						</ScrollView>
-					);
-				
+							)}
+						</View>
+					</ScrollView>
+				);
 
 			case 'tags':
 				return (
