@@ -389,6 +389,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const [callNotes, setCallNotes] = useState(''); // Call notes text
 	const [callDate, setCallDate] = useState(new Date()); // Call date
 	const [showDatePicker, setShowDatePicker] = useState(false); //Date picker for call notes
+	const [showScheduleDatePicker, setShowScheduleDatePicker] = useState(false); // Date picker for next contact
 	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
 	const [suggestionCache, setSuggestionCache] = useState({}); // Cache for AI suggestions
@@ -702,146 +703,121 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					</ScrollView>
 				);
 
-			case 'schedule':
-				return (
-					<ScrollView style={styles.tabContent}>
-						<View style={styles.scheduleContainer}>
-							<Text style={styles.scheduleLabel}>Next Contact Date</Text>
-							<Text style={styles.selectedDate}>
-								{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
-							</Text>
-						</View>
-
-						{Platform.OS === 'web' ? (
-							<DatePicker
-								selected={selectedDate || new Date()}
-								onChange={(date) => {
-									const newDate = new Date(date);
-									newDate.setHours(12, 0, 0, 0);
-									setSelectedDate(newDate);
-								}}
-								inline
-								dateFormat="MM/dd/yyyy"
-								renderCustomHeader={({
-									date,
-									decreaseMonth,
-									increaseMonth,
-									prevMonthButtonDisabled,
-									nextMonthButtonDisabled,
-								}) => (
-									<div
-										style={{
-											display: 'flex',
-											justifyContent: 'space-between',
-											alignItems: 'center',
-											padding: '10px',
+				
+				case 'schedule':
+					return (
+						<ScrollView style={styles.tabContent}>
+							<View style={styles.scheduleContainer}>
+								<Text style={styles.scheduleLabel}>Next Contact Date</Text>
+								<Text style={styles.selectedDate}>
+									{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Not Scheduled'}
+								</Text>
+							</View>
+				
+							{/* Date Picker Modal */}
+							<Modal visible={showScheduleDatePicker} transparent={true} animationType="fade">
+								<TouchableOpacity
+									style={styles.datePickerModalOverlay}
+									onPress={() => setShowScheduleDatePicker(false)}
+									activeOpacity={1}
+								>
+									<View style={styles.datePickerContainer} onClick={(e) => e.stopPropagation()}>
+										{Platform.OS === 'ios' ? (
+											<DateTimePicker
+												value={selectedDate}
+												mode="date"
+												display="inline"
+												onChange={async (event, date) => {
+													if (date && event.type === 'set') {
+														const newDate = new Date(date);
+														newDate.setHours(12, 0, 0, 0);
+														setSelectedDate(newDate);
+														try {
+															await updateContact(contact.id, {
+																next_contact: newDate.toISOString(),
+															});
+															setSelectedContact({
+																...contact,
+																next_contact: newDate.toISOString(),
+															});
+															loadContacts();
+															setShowScheduleDatePicker(false);
+														} catch (error) {
+															console.error('Error scheduling contact:', error);
+															Alert.alert('Error', 'Failed to schedule contact');
+														}
+													}
+												}}
+												textColor="#000000"
+												accentColor="#007AFF"
+												themeVariant="light"
+											/>
+										) : (
+											<DateTimePicker
+												value={selectedDate}
+												mode="date"
+												display="default"
+												onChange={async (event, date) => {
+													if (date && event.type === 'set') {
+														const newDate = new Date(date);
+														newDate.setHours(12, 0, 0, 0);
+														setSelectedDate(newDate);
+														try {
+															await updateContact(contact.id, {
+																next_contact: newDate.toISOString(),
+															});
+															setSelectedContact({
+																...contact,
+																next_contact: newDate.toISOString(),
+															});
+															loadContacts();
+														} catch (error) {
+															console.error('Error scheduling contact:', error);
+															Alert.alert('Error', 'Failed to schedule contact');
+														}
+													}
+													setShowScheduleDatePicker(false);
+												}}
+											/>
+										)}
+									</View>
+								</TouchableOpacity>
+							</Modal>
+				
+							<View style={styles.scheduleActions}>
+								<TouchableOpacity
+									style={styles.confirmButton}
+									onPress={() => setShowScheduleDatePicker(true)}
+								>
+									<Text style={styles.confirmButtonText}>Schedule Contact</Text>
+								</TouchableOpacity>
+				
+								{contact.next_contact && (
+									<TouchableOpacity
+										style={styles.removeScheduleButton}
+										onPress={async () => {
+											try {
+												await updateContact(contact.id, {
+													next_contact: null,
+												});
+												setSelectedContact({
+													...contact,
+													next_contact: null,
+												});
+												setSelectedDate(new Date());
+												loadContacts();
+											} catch (error) {
+												Alert.alert('Error', 'Failed to remove schedule');
+											}
 										}}
 									>
-										<button
-											onClick={decreaseMonth}
-											disabled={prevMonthButtonDisabled}
-											style={{
-												border: 'none',
-												background: 'none',
-												cursor: 'pointer',
-											}}
-										>
-											<Icon
-												name="chevron-back-outline"
-												size={24}
-												color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
-											/>
-										</button>
-										<span style={{ fontWeight: '500', fontSize: '16px' }}>
-											{date.toLocaleString('default', { month: 'long', year: 'numeric' })}
-										</span>
-										<button
-											onClick={increaseMonth}
-											disabled={nextMonthButtonDisabled}
-											style={{
-												border: 'none',
-												background: 'none',
-												cursor: 'pointer',
-											}}
-										>
-											<Icon
-												name="chevron-forward-outline"
-												size={24}
-												color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
-											/>
-										</button>
-									</div>
+										<Text style={styles.removeScheduleText}>Remove Schedule</Text>
+									</TouchableOpacity>
 								)}
-							/>
-						) : (
-							<DateTimePicker
-								value={selectedDate || new Date()}
-								mode="date"
-								display="inline"
-								onChange={(event, date) => {
-									if (date) {
-										const newDate = new Date(date);
-										newDate.setHours(12, 0, 0, 0);
-										setSelectedDate(newDate);
-									}
-								}}
-								textColor="#000000"
-								accentColor="#007AFF"
-								themeVariant="light"
-							/>
-						)}
-
-						<View style={styles.scheduleActions}>
-							<TouchableOpacity
-								style={styles.confirmButton}
-								onPress={async () => {
-									try {
-										await updateContact(contact.id, {
-											next_contact: selectedDate.toISOString(),
-										});
-										// Update the local contact state
-										setSelectedContact({
-											...contact,
-											next_contact: selectedDate.toISOString(),
-										});
-										// Refresh the contacts list in the background
-										loadContacts();
-									} catch (error) {
-										console.error('Error scheduling contact:', error);
-										Alert.alert('Error', 'Failed to schedule contact');
-									}
-								}}
-							>
-								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
-							</TouchableOpacity>
-
-							{contact.next_contact && (
-								<TouchableOpacity
-									style={styles.removeScheduleButton}
-									onPress={async () => {
-										try {
-											await updateContact(contact.id, {
-												next_contact: null,
-											});
-											// Update local state
-											setSelectedContact({
-												...contact,
-												next_contact: null,
-											});
-											setSelectedDate(new Date());
-											// Refresh contacts list in the background
-											loadContacts();
-										} catch (error) {
-											Alert.alert('Error', 'Failed to remove schedule');
-										}
-									}}
-								>
-									<Text style={styles.removeScheduleText}>Remove Schedule</Text>
-								</TouchableOpacity>
-							)}
-						</View>
-					</ScrollView>
-				);
+							</View>
+						</ScrollView>
+					);
+				
 
 			case 'tags':
 				return (
