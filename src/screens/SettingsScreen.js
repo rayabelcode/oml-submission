@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import {
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	Switch,
-	TextInput,
-	Alert,
-	Platform,
-	Modal,
-	ActivityIndicator,
-} from 'react-native';
+import { View, Alert, ActivityIndicator, Platform } from 'react-native';
 import styles from '../styles/screens/settings';
-import commonStyles from '../styles/common';
 import { colors } from '../styles/theme';
 import { StatusBar } from 'expo-status-bar';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image as ExpoImage } from 'expo-image';
 import * as MailComposer from 'expo-mail-composer';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
@@ -32,32 +18,10 @@ import {
 	deleteUserAccount,
 	updateUserProfile,
 } from '../utils/firestore';
-
-// Privacy Settings Modal Component
-const PrivacyModal = ({ visible, onClose, onExportData, onDeleteAccount }) => (
-	<Modal visible={visible} animationType="fade" transparent={true}>
-		<View style={commonStyles.modalContainer}>
-			<View style={commonStyles.modalContent}>
-				<View style={commonStyles.modalHeader}>
-					<Text style={commonStyles.modalTitle}>Privacy Settings</Text>
-					<TouchableOpacity onPress={onClose}>
-						<Icon name="close-outline" size={24} color={colors.text.secondary} />
-					</TouchableOpacity>
-				</View>
-
-				<TouchableOpacity style={styles.privacyOption} onPress={onExportData}>
-					<Icon name="download-outline" size={24} color={colors.primary} />
-					<Text style={styles.privacyOptionText}>Export My Data</Text>
-				</TouchableOpacity>
-
-				<TouchableOpacity style={[styles.privacyOption, styles.deleteOption]} onPress={onDeleteAccount}>
-					<Icon name="trash-outline" size={24} color={colors.danger} />
-					<Text style={[styles.privacyOptionText, styles.deleteText]}>Delete Account</Text>
-				</TouchableOpacity>
-			</View>
-		</View>
-	</Modal>
-);
+import PrivacyModal from '../components/settings/PrivacyModal';
+import AuthSection from '../components/settings/AuthSection';
+import ProfileSection from '../components/settings/ProfileSection';
+import SettingsList from '../components/settings/SettingsList';
 
 export default function SettingsScreen() {
 	const { user, signIn, signUp, signOut } = useAuth();
@@ -69,7 +33,6 @@ export default function SettingsScreen() {
 	const [userProfile, setUserProfile] = useState(null);
 	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
 
-	// Load user profile and notification status
 	useEffect(() => {
 		if (user) {
 			loadUserProfile();
@@ -310,47 +273,16 @@ export default function SettingsScreen() {
 
 	if (!user) {
 		return (
-			<View style={styles.container}>
-				<StatusBar style="auto" />
-				<View style={styles.loginContainer}>
-					<Text style={styles.loginTitle}>{isLogin ? 'Login to OnMyList' : 'Create Account'}</Text>
-
-					<View style={styles.inputContainer}>
-						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
-						<TextInput
-							style={styles.input}
-							placeholder="Email"
-							value={email}
-							onChangeText={setEmail}
-							autoCapitalize="none"
-							keyboardType="email-address"
-						/>
-					</View>
-
-					<View style={styles.inputContainer}>
-						<Icon name="key-outline" size={20} color={colors.text.secondary} />
-						<TextInput
-							style={styles.input}
-							placeholder="Password"
-							value={password}
-							onChangeText={setPassword}
-							secureTextEntry
-						/>
-					</View>
-
-					<TouchableOpacity style={styles.loginButton} onPress={handleAuth} disabled={loading}>
-						<Text style={styles.loginButtonText}>
-							{loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
-						</Text>
-					</TouchableOpacity>
-
-					<TouchableOpacity style={styles.switchButton} onPress={() => setIsLogin(!isLogin)}>
-						<Text style={styles.switchButtonText}>
-							{isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-						</Text>
-					</TouchableOpacity>
-				</View>
-			</View>
+			<AuthSection
+				isLogin={isLogin}
+				setIsLogin={setIsLogin}
+				email={email}
+				setEmail={setEmail}
+				password={password}
+				setPassword={setPassword}
+				handleAuth={handleAuth}
+				loading={loading}
+			/>
 		);
 	}
 
@@ -358,74 +290,19 @@ export default function SettingsScreen() {
 		<View style={styles.container}>
 			<StatusBar style="auto" />
 
-			<View style={styles.profileSection}>
-				<TouchableOpacity style={styles.avatar} onPress={handleProfilePhotoUpload}>
-					{userProfile?.photo_url ? (
-						<ExpoImage
-							source={{ uri: userProfile.photo_url }}
-							style={styles.avatarImage}
-							cachePolicy="memory-disk"
-						/>
-					) : (
-						<>
-							<Icon name="person-outline" size={40} color={colors.primary} />
-							<View style={styles.editOverlay}>
-								<Icon name="camera-outline" size={20} color={colors.background.primary} />
-							</View>
-						</>
-					)}
-				</TouchableOpacity>
+			<ProfileSection
+				userProfile={userProfile}
+				user={user}
+				handleProfilePhotoUpload={handleProfilePhotoUpload}
+			/>
 
-				<View style={styles.profileInfo}>
-					<Text style={styles.profileEmail}>Account Info</Text>
-					<Text style={styles.profileName}>{user.email}</Text>
-				</View>
-			</View>
-
-			<ScrollView style={styles.settingsList}>
-				<View style={styles.settingSection}>
-					<Text style={styles.sectionTitle}>Notifications</Text>
-					<View style={styles.settingItem}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
-							<Text style={styles.settingText}>Push Notifications</Text>
-						</View>
-						<Switch
-							value={notificationsEnabled}
-							onValueChange={handleNotificationToggle}
-							trackColor={{ false: '#767577', true: '#81b0ff' }}
-							thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
-						/>
-					</View>
-				</View>
-
-				<View style={styles.settingSection}>
-					<Text style={styles.sectionTitle}>Privacy</Text>
-					<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
-							<Text style={styles.settingText}>Privacy Settings</Text>
-						</View>
-						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
-					</TouchableOpacity>
-				</View>
-
-				<View style={styles.settingSection}>
-					<Text style={styles.sectionTitle}>Support</Text>
-					<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="help-circle-outline" size={20} color={colors.text.secondary} />
-							<Text style={styles.settingText}>Help Center</Text>
-						</View>
-						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
-					</TouchableOpacity>
-				</View>
-
-				<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-					<Icon name="log-out-outline" size={20} color={colors.danger} />
-					<Text style={styles.logoutText}>Log Out</Text>
-				</TouchableOpacity>
-			</ScrollView>
+			<SettingsList
+				notificationsEnabled={notificationsEnabled}
+				handleNotificationToggle={handleNotificationToggle}
+				setIsPrivacyModalVisible={setIsPrivacyModalVisible}
+				handleSupport={handleSupport}
+				handleLogout={handleLogout}
+			/>
 
 			<PrivacyModal
 				visible={isPrivacyModalVisible}

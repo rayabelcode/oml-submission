@@ -1,101 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	RefreshControl,
-	Alert,
-	Modal,
-	Platform,
-} from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import styles from '../styles/screens/dashboard';
 import commonStyles from '../styles/common';
 import { colors } from '../styles/theme';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
-import {
-	fetchUpcomingContacts,
-	fetchPastContacts,
-	addContactHistory,
-	updateContact,
-} from '../utils/firestore';
-import { Image as ExpoImage } from 'expo-image';
-
-const StatsView = ({ stats }) => (
-	<ScrollView style={styles.statsContainer}>
-		<View style={commonStyles.card}>
-			<Text style={styles.statTitle}>This Month</Text>
-			<Text style={styles.statValue}>{stats.monthlyContacts}</Text>
-			<Text style={styles.statLabel}>Contacts Made</Text>
-		</View>
-
-		<View style={commonStyles.card}>
-			<Text style={styles.statTitle}>Current Streak</Text>
-			<Text style={styles.statValue}>{stats.currentStreak}</Text>
-			<Text style={styles.statLabel}>Days</Text>
-		</View>
-
-		<View style={commonStyles.card}>
-			<Text style={styles.statTitle}>Most Frequent Contacts</Text>
-			{stats.frequentContacts.map((contact, index) => (
-				<Text key={index} style={styles.statListItem}>
-					{contact.name} ({contact.count} times)
-				</Text>
-			))}
-		</View>
-
-		<View style={commonStyles.card}>
-			<Text style={styles.statTitle}>Needs Attention</Text>
-			{stats.needsAttention.length > 0 ? (
-				stats.needsAttention.map((contact, index) => (
-					<Text key={index} style={styles.statListItem}>
-						{contact.name} (Last:{' '}
-						{contact.lastContact === 'Never' ? 'Never' : new Date(contact.lastContact).toLocaleDateString()})
-					</Text>
-				))
-			) : (
-				<Text style={styles.congratsMessage}>
-					Congratulations! You don't have any contacts that haven't been contacted in the last 30 days.
-				</Text>
-			)}
-		</View>
-
-		<View style={commonStyles.card}>
-			<Text style={styles.statTitle}>Total Active Relationships</Text>
-			<Text style={styles.statValue}>{stats.totalActive}</Text>
-			<Text style={styles.statLabel}>Contacts</Text>
-		</View>
-	</ScrollView>
-);
-
-// Contact Card Component
-const ContactCard = ({ contact, onPress }) => (
-	<TouchableOpacity style={commonStyles.card} onPress={() => onPress(contact)}>
-		<View style={styles.cardHeader}>
-			<View style={styles.avatarContainer}>
-				{contact.photo_url ? (
-					<ExpoImage
-						source={{ uri: contact.photo_url }}
-						style={styles.avatar}
-						cachePolicy="memory-disk"
-						transition={200}
-					/>
-				) : (
-					<Icon name="person-outline" size={24} color={colors.primary} />
-				)}
-			</View>
-			<View style={styles.cardInfo}>
-				<Text style={styles.cardName}>{`${contact.first_name} ${contact.last_name || ''}`}</Text>
-				<Text style={styles.cardDate}>
-					Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
-				</Text>
-			</View>
-			<Icon name="time-outline" size={16} color={colors.text.secondary} />
-		</View>
-	</TouchableOpacity>
-);
+import { fetchUpcomingContacts } from '../utils/firestore';
+import StatsView from '../components/dashboard/StatsView'; // Import StatsView component
+import ContactCard from '../components/dashboard/ContactCard'; // Import ContactCard component
 
 export default function DashboardScreen({ navigation }) {
 	const { user } = useAuth();
