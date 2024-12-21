@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-	StyleSheet,
 	Text,
 	View,
 	ScrollView,
@@ -12,6 +11,9 @@ import {
 	Modal,
 	ActivityIndicator,
 } from 'react-native';
+import styles from '../styles/screens/settings';
+import commonStyles from '../styles/common';
+import { colors } from '../styles/theme';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -34,22 +36,22 @@ import {
 // Privacy Settings Modal Component
 const PrivacyModal = ({ visible, onClose, onExportData, onDeleteAccount }) => (
 	<Modal visible={visible} animationType="fade" transparent={true}>
-		<View style={styles.modalContainer}>
-			<View style={styles.modalContent}>
-				<View style={styles.modalHeader}>
-					<Text style={styles.modalTitle}>Privacy Settings</Text>
+		<View style={commonStyles.modalContainer}>
+			<View style={commonStyles.modalContent}>
+				<View style={commonStyles.modalHeader}>
+					<Text style={commonStyles.modalTitle}>Privacy Settings</Text>
 					<TouchableOpacity onPress={onClose}>
-						<Icon name="close-outline" size={24} color="#666" />
+						<Icon name="close-outline" size={24} color={colors.text.secondary} />
 					</TouchableOpacity>
 				</View>
 
 				<TouchableOpacity style={styles.privacyOption} onPress={onExportData}>
-					<Icon name="download-outline" size={24} color="#007AFF" />
+					<Icon name="download-outline" size={24} color={colors.primary} />
 					<Text style={styles.privacyOptionText}>Export My Data</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity style={[styles.privacyOption, styles.deleteOption]} onPress={onDeleteAccount}>
-					<Icon name="trash-outline" size={24} color="#FF3B30" />
+					<Icon name="trash-outline" size={24} color={colors.danger} />
 					<Text style={[styles.privacyOptionText, styles.deleteText]}>Delete Account</Text>
 				</TouchableOpacity>
 			</View>
@@ -314,7 +316,7 @@ export default function SettingsScreen() {
 					<Text style={styles.loginTitle}>{isLogin ? 'Login to OnMyList' : 'Create Account'}</Text>
 
 					<View style={styles.inputContainer}>
-						<Icon name="mail-outline" size={20} color="#666" />
+						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
 						<TextInput
 							style={styles.input}
 							placeholder="Email"
@@ -326,7 +328,7 @@ export default function SettingsScreen() {
 					</View>
 
 					<View style={styles.inputContainer}>
-						<Icon name="key-outline" size={20} color="#666" />
+						<Icon name="key-outline" size={20} color={colors.text.secondary} />
 						<TextInput
 							style={styles.input}
 							placeholder="Password"
@@ -366,9 +368,9 @@ export default function SettingsScreen() {
 						/>
 					) : (
 						<>
-							<Icon name="person-outline" size={40} color="#007AFF" />
+							<Icon name="person-outline" size={40} color={colors.primary} />
 							<View style={styles.editOverlay}>
-								<Icon name="camera-outline" size={20} color="#fff" />
+								<Icon name="camera-outline" size={20} color={colors.background.primary} />
 							</View>
 						</>
 					)}
@@ -385,14 +387,14 @@ export default function SettingsScreen() {
 					<Text style={styles.sectionTitle}>Notifications</Text>
 					<View style={styles.settingItem}>
 						<View style={styles.settingItemLeft}>
-							<Icon name="notifications-outline" size={20} color="#666" />
+							<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
 							<Text style={styles.settingText}>Push Notifications</Text>
 						</View>
 						<Switch
 							value={notificationsEnabled}
 							onValueChange={handleNotificationToggle}
 							trackColor={{ false: '#767577', true: '#81b0ff' }}
-							thumbColor={notificationsEnabled ? '#007AFF' : '#f4f3f4'}
+							thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
 						/>
 					</View>
 				</View>
@@ -401,10 +403,10 @@ export default function SettingsScreen() {
 					<Text style={styles.sectionTitle}>Privacy</Text>
 					<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
 						<View style={styles.settingItemLeft}>
-							<Icon name="lock-closed-outline" size={20} color="#666" />
+							<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
 							<Text style={styles.settingText}>Privacy Settings</Text>
 						</View>
-						<Icon name="chevron-forward-outline" size={20} color="#666" />
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 					</TouchableOpacity>
 				</View>
 
@@ -412,15 +414,15 @@ export default function SettingsScreen() {
 					<Text style={styles.sectionTitle}>Support</Text>
 					<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 						<View style={styles.settingItemLeft}>
-							<Icon name="help-circle-outline" size={20} color="#666" />
+							<Icon name="help-circle-outline" size={20} color={colors.text.secondary} />
 							<Text style={styles.settingText}>Help Center</Text>
 						</View>
-						<Icon name="chevron-forward-outline" size={20} color="#666" />
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 					</TouchableOpacity>
 				</View>
 
 				<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-					<Icon name="log-out-outline" size={20} color="#FF3B30" />
+					<Icon name="log-out-outline" size={20} color={colors.danger} />
 					<Text style={styles.logoutText}>Log Out</Text>
 				</TouchableOpacity>
 			</ScrollView>
@@ -434,196 +436,9 @@ export default function SettingsScreen() {
 
 			{loading && (
 				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size="large" color="#007AFF" />
+					<ActivityIndicator size="large" color={colors.primary} />
 				</View>
 			)}
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: '#fff',
-		paddingTop: Platform.OS === 'ios' ? 50 : 0,
-	},
-	profileSection: {
-		flexDirection: 'row',
-		padding: 20,
-		backgroundColor: '#f8f9fa',
-		alignItems: 'center',
-	},
-	avatar: {
-		width: 60,
-		height: 60,
-		borderRadius: 30,
-		backgroundColor: '#e9ecef',
-		justifyContent: 'center',
-		alignItems: 'center',
-		position: 'relative',
-	},
-	avatarImage: {
-		width: '100%',
-		height: '100%',
-		borderRadius: 30,
-	},
-	editOverlay: {
-		position: 'absolute',
-		bottom: -5,
-		right: -5,
-		backgroundColor: '#007AFF',
-		borderRadius: 12,
-		padding: 5,
-	},
-	profileInfo: {
-		marginLeft: 15,
-	},
-	profileName: {
-		fontSize: 18,
-		fontWeight: 'bold',
-	},
-	profileEmail: {
-		color: '#666',
-	},
-	settingsList: {
-		flex: 1,
-	},
-	settingSection: {
-		padding: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	sectionTitle: {
-		fontSize: 16,
-		fontWeight: '500',
-		marginBottom: 10,
-		color: '#666',
-	},
-	settingItem: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		paddingVertical: 10,
-	},
-	settingItemLeft: {
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	settingText: {
-		marginLeft: 15,
-		fontSize: 16,
-	},
-	logoutButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 15,
-		margin: 15,
-		backgroundColor: '#fff',
-		borderRadius: 10,
-		borderWidth: 1,
-		borderColor: '#FF3B30',
-	},
-	logoutText: {
-		color: '#FF3B30',
-		marginLeft: 10,
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	loginContainer: {
-		flex: 1,
-		padding: 20,
-		justifyContent: 'center',
-	},
-	loginTitle: {
-		fontSize: 24,
-		fontWeight: 'bold',
-		marginBottom: 30,
-		textAlign: 'center',
-	},
-	inputContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		paddingHorizontal: 15,
-		marginBottom: 15,
-	},
-	input: {
-		flex: 1,
-		padding: 15,
-		marginLeft: 10,
-		fontSize: 16,
-	},
-	loginButton: {
-		backgroundColor: '#007AFF',
-		padding: 15,
-		borderRadius: 10,
-		marginTop: 15,
-	},
-	loginButtonText: {
-		color: '#fff',
-		textAlign: 'center',
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	switchButton: {
-		marginTop: 15,
-		padding: 10,
-	},
-	switchButtonText: {
-		color: '#007AFF',
-		textAlign: 'center',
-		fontSize: 14,
-	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		padding: 20,
-	},
-	modalContent: {
-		backgroundColor: 'white',
-		borderRadius: 20,
-		padding: 20,
-	},
-	modalHeader: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		marginBottom: 20,
-	},
-	modalTitle: {
-		fontSize: 20,
-		fontWeight: 'bold',
-	},
-	privacyOption: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		paddingVertical: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	privacyOptionText: {
-		marginLeft: 15,
-		fontSize: 16,
-		color: '#007AFF',
-	},
-	deleteOption: {
-		borderBottomWidth: 0,
-	},
-	deleteText: {
-		color: '#FF3B30',
-	},
-	loadingOverlay: {
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: 'rgba(255, 255, 255, 0.8)',
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
-});

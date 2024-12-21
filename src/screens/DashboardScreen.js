@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-	StyleSheet,
 	Text,
 	View,
 	ScrollView,
@@ -10,6 +9,9 @@ import {
 	Modal,
 	Platform,
 } from 'react-native';
+import styles from '../styles/screens/dashboard';
+import commonStyles from '../styles/common';
+import { colors } from '../styles/theme';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -23,19 +25,19 @@ import { Image as ExpoImage } from 'expo-image';
 
 const StatsView = ({ stats }) => (
 	<ScrollView style={styles.statsContainer}>
-		<View style={styles.statCard}>
+		<View style={commonStyles.card}>
 			<Text style={styles.statTitle}>This Month</Text>
 			<Text style={styles.statValue}>{stats.monthlyContacts}</Text>
 			<Text style={styles.statLabel}>Contacts Made</Text>
 		</View>
 
-		<View style={styles.statCard}>
+		<View style={commonStyles.card}>
 			<Text style={styles.statTitle}>Current Streak</Text>
 			<Text style={styles.statValue}>{stats.currentStreak}</Text>
 			<Text style={styles.statLabel}>Days</Text>
 		</View>
 
-		<View style={styles.statCard}>
+		<View style={commonStyles.card}>
 			<Text style={styles.statTitle}>Most Frequent Contacts</Text>
 			{stats.frequentContacts.map((contact, index) => (
 				<Text key={index} style={styles.statListItem}>
@@ -44,7 +46,7 @@ const StatsView = ({ stats }) => (
 			))}
 		</View>
 
-		<View style={styles.statCard}>
+		<View style={commonStyles.card}>
 			<Text style={styles.statTitle}>Needs Attention</Text>
 			{stats.needsAttention.length > 0 ? (
 				stats.needsAttention.map((contact, index) => (
@@ -60,7 +62,7 @@ const StatsView = ({ stats }) => (
 			)}
 		</View>
 
-		<View style={styles.statCard}>
+		<View style={commonStyles.card}>
 			<Text style={styles.statTitle}>Total Active Relationships</Text>
 			<Text style={styles.statValue}>{stats.totalActive}</Text>
 			<Text style={styles.statLabel}>Contacts</Text>
@@ -70,7 +72,7 @@ const StatsView = ({ stats }) => (
 
 // Contact Card Component
 const ContactCard = ({ contact, onPress }) => (
-	<TouchableOpacity style={styles.card} onPress={() => onPress(contact)}>
+	<TouchableOpacity style={commonStyles.card} onPress={() => onPress(contact)}>
 		<View style={styles.cardHeader}>
 			<View style={styles.avatarContainer}>
 				{contact.photo_url ? (
@@ -81,7 +83,7 @@ const ContactCard = ({ contact, onPress }) => (
 						transition={200}
 					/>
 				) : (
-					<Icon name="person-outline" size={24} color="#007AFF" />
+					<Icon name="person-outline" size={24} color={colors.primary} />
 				)}
 			</View>
 			<View style={styles.cardInfo}>
@@ -90,7 +92,7 @@ const ContactCard = ({ contact, onPress }) => (
 					Next Contact: {new Date(contact.next_contact).toLocaleDateString()}
 				</Text>
 			</View>
-			<Icon name="time-outline" size={16} color="#666" />
+			<Icon name="time-outline" size={16} color={colors.text.secondary} />
 		</View>
 	</TouchableOpacity>
 );
@@ -211,14 +213,14 @@ export default function DashboardScreen({ navigation }) {
 
 	if (!user) {
 		return (
-			<View style={styles.container}>
-				<Text style={styles.message}>Please log in to view your calendar</Text>
+			<View style={commonStyles.container}>
+				<Text style={commonStyles.message}>Please log in to view your calendar</Text>
 			</View>
 		);
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={commonStyles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
@@ -227,18 +229,18 @@ export default function DashboardScreen({ navigation }) {
 
 			<View style={styles.buttonContainer}>
 				<TouchableOpacity
-					style={[styles.toggleButton, viewMode === 'calendar' && styles.toggleButtonActive]}
+					style={[commonStyles.toggleButton, viewMode === 'calendar' && styles.toggleButtonActive]}
 					onPress={() => setViewMode('calendar')}
 				>
-					<Icon name="calendar-clear-outline" size={24} color="#007AFF" />
+					<Icon name="calendar-clear-outline" size={24} color={colors.primary} />
 					<Text style={styles.toggleButtonText}>Upcoming</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity
-					style={[styles.toggleButton, viewMode === 'stats' && styles.toggleButtonActive]}
+					style={[commonStyles.toggleButton, viewMode === 'stats' && styles.toggleButtonActive]}
 					onPress={() => setViewMode('stats')}
 				>
-					<Icon name="stats-chart-outline" size={24} color="#007AFF" />
+					<Icon name="stats-chart-outline" size={24} color={colors.primary} />
 					<Text style={styles.toggleButtonText}>Stats</Text>
 				</TouchableOpacity>
 			</View>
@@ -249,9 +251,9 @@ export default function DashboardScreen({ navigation }) {
 					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 				>
 					{loading ? (
-						<Text style={styles.message}>Loading contacts...</Text>
+						<Text style={commonStyles.message}>Loading contacts...</Text>
 					) : contacts.length === 0 ? (
-						<Text style={styles.message}>No upcoming contacts</Text>
+						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
 						contacts.map((contact) => <ContactCard key={contact.id} contact={contact} onPress={() => {}} />)
 					)}
@@ -262,143 +264,3 @@ export default function DashboardScreen({ navigation }) {
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: '#fff',
-		paddingTop: Platform.OS === 'ios' ? 50 : 0,
-	},
-	header: {
-		padding: 20,
-		alignItems: 'center',
-	},
-	title: {
-		fontSize: 24,
-		fontWeight: 'bold',
-		textAlign: 'center',
-	},
-	buttonContainer: {
-		flexDirection: 'row',
-		paddingHorizontal: 15,
-		paddingBottom: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	toggleButton: {
-		flex: 1,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 12,
-		backgroundColor: '#f8f9fa',
-		margin: 5,
-		borderRadius: 10,
-		borderWidth: 1,
-		borderColor: '#007AFF',
-	},
-	toggleButtonText: {
-		marginLeft: 8,
-		fontSize: 16,
-		color: '#007AFF',
-		fontWeight: '500',
-	},
-	contactsList: {
-		flex: 1,
-		padding: 15,
-	},
-	message: {
-		textAlign: 'center',
-		padding: 20,
-		color: '#666',
-		fontSize: 16,
-	},
-	card: {
-		backgroundColor: '#f8f9fa',
-		padding: 15,
-		borderRadius: 10,
-		marginBottom: 10,
-		borderWidth: 1,
-		borderColor: '#eee',
-	},
-	cardHeader: {
-		flexDirection: 'row',
-		alignItems: 'center',
-	},
-	avatarContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: '#e8f2ff',
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginRight: 12,
-	},
-	avatar: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-	},
-	cardInfo: {
-		flex: 1,
-	},
-	cardName: {
-		fontSize: 16,
-		fontWeight: '500',
-		marginBottom: 4,
-	},
-	cardDate: {
-		fontSize: 14,
-		color: '#666',
-	},
-	cardDate: {
-		fontSize: 14,
-		color: '#666',
-	},
-	statsContainer: {
-		flex: 1,
-		padding: 15,
-	},
-	statCard: {
-		backgroundColor: '#f8f9fa',
-		padding: 20,
-		borderRadius: 10,
-		marginBottom: 15,
-		borderWidth: 1,
-		borderColor: '#eee',
-	},
-	statTitle: {
-		fontSize: 16,
-		fontWeight: '600',
-		color: '#666',
-		marginBottom: 10,
-	},
-	statValue: {
-		fontSize: 36,
-		fontWeight: 'bold',
-		color: '#007AFF',
-		marginBottom: 5,
-	},
-	statLabel: {
-		fontSize: 14,
-		color: '#666',
-	},
-	statListItem: {
-		fontSize: 16,
-		color: '#333',
-		paddingVertical: 8,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	congratsMessage: {
-		fontSize: 16,
-		color: '#3e8b00',
-		textAlign: 'left',
-		paddingVertical: 10,
-		fontStyle: 'italic',
-		fontWeight: '600',
-	},
-	toggleButtonActive: {
-		backgroundColor: '#e8f2ff',
-	},
-});

@@ -3,16 +3,10 @@ import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
 import '../../assets/css/react-datepicker.css';
-import {
-	StyleSheet,
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	TextInput,
-	RefreshControl,
-	Alert,
-} from 'react-native';
+import { Text, View, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import styles from '../styles/screens/contacts';
+import commonStyles from '../styles/common';
+import { colors } from '../styles/theme';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -30,10 +24,10 @@ import Logo from '../../assets/full-logo-color.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
 import { generateTopicSuggestions } from '../utils/ai';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Caching AI suggestions
-import * as Contacts from 'expo-contacts'; // Import Contacts API
-import * as ImagePicker from 'expo-image-picker'; // For photo uploads
-import * as ImageManipulator from 'expo-image-manipulator'; // Image resizing
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Contacts from 'expo-contacts';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { TabView } from 'react-native-tab-view';
@@ -45,8 +39,8 @@ import { Keyboard } from 'react-native';
 const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, containerStyle }) => {
 	return (
 		<Modal visible={visible} transparent={true} animationType="fade">
-			<TouchableOpacity style={styles.datePickerModalOverlay} onPress={onClose} activeOpacity={1}>
-				<View style={[styles.datePickerContainer, containerStyle]} onClick={(e) => e.stopPropagation()}>
+			<TouchableOpacity style={commonStyles.modalContainer} onPress={onClose} activeOpacity={1}>
+				<View style={[commonStyles.modalContent, containerStyle]} onClick={(e) => e.stopPropagation()}>
 					{Platform.OS === 'web' ? (
 						<DatePicker
 							selected={selectedDate}
@@ -80,7 +74,7 @@ const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, contain
 										<Icon
 											name="chevron-back-outline"
 											size={24}
-											color={prevMonthButtonDisabled ? '#ccc' : '#007AFF'}
+											color={prevMonthButtonDisabled ? '#ccc' : colors.primary}
 										/>
 									</button>
 									<span style={{ fontWeight: '500', fontSize: '16px' }}>
@@ -98,7 +92,7 @@ const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, contain
 										<Icon
 											name="chevron-forward-outline"
 											size={24}
-											color={nextMonthButtonDisabled ? '#ccc' : '#007AFF'}
+											color={nextMonthButtonDisabled ? '#ccc' : colors.primary}
 										/>
 									</button>
 								</div>
@@ -110,8 +104,8 @@ const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, contain
 							mode="date"
 							display="inline"
 							onChange={onDateSelect}
-							textColor="#000000"
-							accentColor="#007AFF"
+							textColor={colors.text.primary}
+							accentColor={colors.primary}
 							themeVariant="light"
 						/>
 					)}
@@ -142,12 +136,12 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisibl
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>Schedule Contact</Text>
+			<View style={commonStyles.modalContainer}>
+				<View style={commonStyles.modalContent}>
+					<View style={commonStyles.modalHeader}>
+						<Text style={commonStyles.modalTitle}>Schedule Contact</Text>
 						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
+							<Icon name="close-outline" size={24} color={colors.text.secondary} />
 						</TouchableOpacity>
 					</View>
 
@@ -180,14 +174,14 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisibl
 									setSelectedDate(newDate);
 								}
 							}}
-							textColor="#000000"
-							accentColor="#007AFF"
+							textColor={colors.text.primary}
+							accentColor={colors.primary}
 							themeVariant="light"
 						/>
 					)}
 
-					<TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-						<Text style={styles.confirmButtonText}>Confirm</Text>
+					<TouchableOpacity style={commonStyles.primaryButton} onPress={handleConfirm}>
+						<Text style={commonStyles.primaryButtonText}>Confirm</Text>
 					</TouchableOpacity>
 
 					<TouchableOpacity
@@ -202,7 +196,7 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisibl
 											await updateContact(contact.id, {
 												next_contact: null,
 											});
-											await loadContacts(); // Refresh contacts
+											await loadContacts();
 											onClose();
 											setIsDetailsVisible(true);
 										} catch (error) {
@@ -275,7 +269,7 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 			{showActions && (
 				<View style={styles.actionsContainer}>
 					<TouchableOpacity style={styles.closeButton} onPress={() => setShowActions(false)}>
-						<Icon name="close" size={24} color="#000" />
+						<Icon name="close" size={24} color={colors.text.primary} />
 					</TouchableOpacity>
 
 					<View style={styles.cardActions}>
@@ -330,7 +324,7 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 									]);
 								}}
 							>
-								<Icon name="archive" size={32} color="rgba(0, 122, 255, 0.8)" />
+								<Icon name="archive" size={32} color={colors.primary} />
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -352,12 +346,12 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>Current Tags</Text>
+			<View style={commonStyles.modalContainer}>
+				<View style={commonStyles.modalContent}>
+					<View style={commonStyles.modalHeader}>
+						<Text style={commonStyles.modalTitle}>Current Tags</Text>
 						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
+							<Icon name="close-outline" size={24} color={colors.text.secondary} />
 						</TouchableOpacity>
 					</View>
 
@@ -367,7 +361,7 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 								<View key={index} style={styles.tagBubble}>
 									<Text style={styles.tagText}>{tag}</Text>
 									<TouchableOpacity onPress={() => onDeleteTag(tag)}>
-										<Icon name="close-circle" size={20} color="#666" />
+										<Icon name="close-circle" size={20} color={colors.text.secondary} />
 									</TouchableOpacity>
 								</View>
 							))}
@@ -382,12 +376,12 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 								onSubmitEditing={handleAddTag}
 							/>
 							<TouchableOpacity style={styles.addTagButton} onPress={handleAddTag}>
-								<Text style={styles.buttonText}>Add</Text>
+								<Text style={commonStyles.primaryButtonText}>Add</Text>
 							</TouchableOpacity>
 						</View>
 
 						<TouchableOpacity style={styles.doneButton} onPress={onClose}>
-							<Text style={styles.buttonText}>Done</Text>
+							<Text style={commonStyles.primaryButtonText}>Done</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
@@ -414,17 +408,17 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<View style={styles.modalContainer}>
-				<View style={styles.modalContent}>
-					<View style={styles.modalHeader}>
-						<Text style={styles.modalTitle}>Search Contacts</Text>
+			<View style={commonStyles.modalContainer}>
+				<View style={commonStyles.modalContent}>
+					<View style={commonStyles.modalHeader}>
+						<Text style={commonStyles.modalTitle}>Search Contacts</Text>
 						<TouchableOpacity onPress={onClose}>
-							<Icon name="close-outline" size={24} color="#666" />
+							<Icon name="close-outline" size={24} color={colors.text.secondary} />
 						</TouchableOpacity>
 					</View>
 
 					<TextInput
-						style={styles.searchInput}
+						style={commonStyles.input}
 						placeholder="Search by name..."
 						value={searchText}
 						onChangeText={setSearchText}
@@ -452,11 +446,11 @@ const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => 
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	// Layout hooks
-	const layout = useWindowDimensions(); // Window dimensions for tab view
+	const layout = useWindowDimensions();
 	const { user } = useAuth();
 
 	// Tab navigation state
-	const [index, setIndex] = useState(0); // Tab index
+	const [index, setIndex] = useState(0);
 	const [routes] = useState([
 		{ key: 'notes', icon: 'document-text-outline' },
 		{ key: 'schedule', icon: 'calendar-outline' },
@@ -464,16 +458,16 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		{ key: 'edit', icon: 'create-outline' },
 	]);
 
-	const [history, setHistory] = useState([]); // Contact history notes
-	const [editMode, setEditMode] = useState(null); // Track editing state
-	const [callNotes, setCallNotes] = useState(''); // Call notes text
-	const [callDate, setCallDate] = useState(new Date()); // Call date
-	const [showDatePicker, setShowDatePicker] = useState(false); //Date picker for call notes
-	const [showScheduleDatePicker, setShowScheduleDatePicker] = useState(false); // Date picker for next contact
-	const [suggestions, setSuggestions] = useState([]); // Holds AI-generated topic suggestions
-	const [loadingSuggestions, setLoadingSuggestions] = useState(false); // Tracks loading state for suggestions
-	const [suggestionCache, setSuggestionCache] = useState({}); // Cache for AI suggestions
-	const [isTagsModalVisible, setIsTagsModalVisible] = useState(false); // Tags modal state
+	const [history, setHistory] = useState([]);
+	const [editMode, setEditMode] = useState(null);
+	const [callNotes, setCallNotes] = useState('');
+	const [callDate, setCallDate] = useState(new Date());
+	const [showDatePicker, setShowDatePicker] = useState(false);
+	const [showScheduleDatePicker, setShowScheduleDatePicker] = useState(false);
+	const [suggestions, setSuggestions] = useState([]);
+	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+	const [suggestionCache, setSuggestionCache] = useState({});
+	const [isTagsModalVisible, setIsTagsModalVisible] = useState(false);
 	const [newTag, setNewTag] = useState('');
 	const [selectedDate, setSelectedDate] = useState(
 		contact?.next_contact ? new Date(contact.next_contact) : new Date()
@@ -495,7 +489,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	useEffect(() => {
 		if (contact?.id) {
 			fetchContactHistory(contact?.id).then((history) => {
-				// Sort history with newest first
 				const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
 				setHistory(sortedHistory);
 			});
@@ -523,19 +516,16 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		if (visible && contact?.id) {
 			const cached = suggestionCache[contact.id];
 
-			// Use cached suggestions if available
 			if (cached) {
 				setSuggestions(cached.suggestions);
 				return;
 			}
 
-			// Initialize for first-time viewing
 			if (!contact.contact_history?.length) {
 				setSuggestions(['AI suggestions will appear here after your first call.']);
 				return;
 			}
 
-			// Only fetch if no cache exists
 			setLoadingSuggestions(true);
 			generateTopicSuggestions(contact, contact.contact_history)
 				.then(async (topics) => {
@@ -550,7 +540,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					setSuggestionCache(newCache);
 					setSuggestions(topics);
 
-					// Save to AsyncStorage
 					try {
 						await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 					} catch (error) {
@@ -567,7 +556,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		}
 	}, [visible, contact?.id, suggestionCache]);
 
-	// If contact does not exist, return nothing
 	if (!contact) {
 		return null;
 	}
@@ -586,7 +574,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								value={callNotes}
 								onChangeText={setCallNotes}
 								placeholder="Add a call here! What did you discuss?"
-								placeholderTextColor="#666666"
+								placeholderTextColor={colors.text.secondary}
 							/>
 							<View style={styles.callNotesControls}>
 								<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -600,7 +588,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 									style={styles.submitCallButton}
 									onPress={() => handleAddCallNotes(callNotes, callDate)}
 								>
-									<Text style={styles.buttonText}>Submit</Text>
+									<Text style={commonStyles.primaryButtonText}>Submit</Text>
 								</TouchableOpacity>
 							</View>
 						</View>
@@ -672,14 +660,14 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 												<Icon
 													name={editMode === index ? 'checkmark-outline' : 'create-outline'}
 													size={20}
-													color="#007AFF"
+													color={colors.primary}
 												/>
 											</TouchableOpacity>
 											<TouchableOpacity
 												style={styles.historyActionButton}
 												onPress={() => handleDeleteHistory(index)}
 											>
-												<Icon name="trash-outline" size={20} color="#FF3B30" />
+												<Icon name="trash-outline" size={20} color={colors.danger} />
 											</TouchableOpacity>
 										</View>
 									</View>
@@ -745,8 +733,11 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						/>
 
 						<View style={styles.scheduleActions}>
-							<TouchableOpacity style={styles.confirmButton} onPress={() => setShowScheduleDatePicker(true)}>
-								<Text style={styles.confirmButtonText}>Schedule Contact</Text>
+							<TouchableOpacity
+								style={commonStyles.primaryButton}
+								onPress={() => setShowScheduleDatePicker(true)}
+							>
+								<Text style={commonStyles.primaryButtonText}>Schedule Contact</Text>
 							</TouchableOpacity>
 
 							{contact.next_contact && (
@@ -789,7 +780,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 											setSelectedContact({ ...contact, tags: updatedTags });
 										}}
 									>
-										<Icon name="close-circle" size={20} color="#666" />
+										<Icon name="close-circle" size={20} color={colors.text.secondary} />
 									</TouchableOpacity>
 								</View>
 							))}
@@ -820,7 +811,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 									}
 								}}
 							>
-								<Text style={styles.buttonText}>Add</Text>
+								<Text style={commonStyles.primaryButtonText}>Add</Text>
 							</TouchableOpacity>
 						</View>
 					</ScrollView>
@@ -851,14 +842,12 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 
 							const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
 							if (photoUrl) {
-								// Update contact in Firestore first
 								await updateContact(contact.id, {
 									...contact,
 									photo_url: photoUrl,
 								});
-								// Then update local state
 								setSelectedContact((prev) => ({ ...prev, photo_url: photoUrl }));
-								loadContacts(); // Refresh contact list
+								loadContacts();
 							} else {
 								Alert.alert('Error', 'Failed to upload photo');
 							}
@@ -889,14 +878,12 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 													style: 'destructive',
 													onPress: async () => {
 														try {
-															// Update contact in Firestore first
 															await updateContact(contact.id, {
 																...contact,
 																photo_url: null,
 															});
-															// Then update local state
 															setSelectedContact({ ...contact, photo_url: null });
-															loadContacts(); // Refresh contact list
+															loadContacts();
 														} catch (error) {
 															Alert.alert('Error', 'Failed to remove photo');
 														}
@@ -905,37 +892,37 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 											]);
 										}}
 									>
-										<Icon name="close-circle" size={24} color="#FF3B30" />
+										<Icon name="close-circle" size={24} color={colors.danger} />
 									</TouchableOpacity>
 								</View>
 							) : (
 								<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
-									<Icon name="camera-outline" size={24} color="#007AFF" />
+									<Icon name="camera-outline" size={24} color={colors.primary} />
 									<Text style={styles.uploadButtonText}>Add Photo</Text>
 								</TouchableOpacity>
 							)}
 						</View>
 
 						<TextInput
-							style={styles.input}
+							style={commonStyles.input}
 							placeholder="First Name"
-							placeholderTextColor="#666666"
+							placeholderTextColor={colors.text.secondary}
 							value={formData.first_name}
 							onChangeText={(text) => setFormData({ ...formData, first_name: text })}
 						/>
 
 						<TextInput
-							style={styles.input}
+							style={commonStyles.input}
 							placeholder="Last Name"
-							placeholderTextColor="#666666"
+							placeholderTextColor={colors.text.secondary}
 							value={formData.last_name}
 							onChangeText={(text) => setFormData({ ...formData, last_name: text })}
 						/>
 
 						<TextInput
-							style={styles.input}
+							style={commonStyles.input}
 							placeholder="Email"
-							placeholderTextColor="#666666"
+							placeholderTextColor={colors.text.secondary}
 							value={formData.email}
 							onChangeText={(text) => setFormData({ ...formData, email: text })}
 							keyboardType="email-address"
@@ -943,9 +930,9 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						/>
 
 						<TextInput
-							style={styles.input}
+							style={commonStyles.input}
 							placeholder="Phone"
-							placeholderTextColor="#666666"
+							placeholderTextColor={colors.text.secondary}
 							value={formData.phone}
 							onChangeText={(text) => setFormData({ ...formData, phone: text })}
 							keyboardType="phone-pad"
@@ -963,16 +950,16 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 											phone: formData.phone,
 											photo_url: formData.photo_url,
 										});
-										setSelectedContact(formData); // Update local state
+										setSelectedContact(formData);
 										Alert.alert('Success', 'Contact Updated');
-										await loadContacts(); // Refresh the contacts list
+										await loadContacts();
 									} catch (error) {
 										Alert.alert('Error', 'Failed to update contact');
 									}
 								}}
 							>
-								<Icon name="save-outline" size={24} color="#4CAF50" />
-								<Text style={[styles.editActionText, { color: '#4CAF50' }]}>Save</Text>
+								<Icon name="save-outline" size={24} color={colors.secondary} />
+								<Text style={[styles.editActionText, { color: colors.secondary }]}>Save</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
 								style={styles.editActionButton}
@@ -993,8 +980,8 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 									]);
 								}}
 							>
-								<Icon name="archive-outline" size={24} color="#007AFF" />
-								<Text style={[styles.editActionText, { color: '#007AFF' }]}>Archive</Text>
+								<Icon name="archive-outline" size={24} color={colors.primary} />
+								<Text style={[styles.editActionText, { color: colors.primary }]}>Archive</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
 								style={styles.editActionButton}
@@ -1021,8 +1008,8 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 									);
 								}}
 							>
-								<Icon name="trash-outline" size={24} color="#FF3B30" />
-								<Text style={[styles.editActionText, { color: '#FF3B30' }]}>Delete</Text>
+								<Icon name="trash-outline" size={24} color={colors.danger} />
+								<Text style={[styles.editActionText, { color: colors.danger }]}>Delete</Text>
 							</TouchableOpacity>
 						</View>
 					</ScrollView>
@@ -1037,10 +1024,10 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		<View
 			style={{
 				flexDirection: 'row',
-				backgroundColor: '#ffffff',
+				backgroundColor: colors.background.primary,
 				width: '100%',
 				borderBottomWidth: 1,
-				borderBottomColor: '#eee',
+				borderBottomColor: colors.border,
 			}}
 		>
 			{props.navigationState.routes.map((route, index) => (
@@ -1051,7 +1038,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						minHeight: 50,
 						alignItems: 'center',
 						justifyContent: 'center',
-						backgroundColor: props.navigationState.index === index ? '#e8f2ff' : '#ffffff',
+						backgroundColor: props.navigationState.index === index ? '#e8f2ff' : colors.background.primary,
 					}}
 					onPress={() => {
 						Keyboard.dismiss();
@@ -1061,14 +1048,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					<Icon
 						name={route.icon}
 						size={24}
-						color={props.navigationState.index === index ? '#007AFF' : '#666666'}
+						color={props.navigationState.index === index ? colors.primary : colors.text.secondary}
 					/>
 				</TouchableOpacity>
 			))}
 		</View>
 	);
 
-	// Edit a specific history note
 	const handleEditHistory = async (index, updatedNote) => {
 		try {
 			const updatedHistory = [...history];
@@ -1087,19 +1073,16 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		try {
 			const updatedHistory = history.filter((_, i) => i !== index);
 
-			// Update Firestore first
 			await updateContact(contact.id, {
 				contact_history: updatedHistory,
 			});
 
-			// Update local states
 			setHistory(updatedHistory);
 			setSelectedContact({
 				...contact,
 				contact_history: updatedHistory,
 			});
 
-			// Refresh suggestions
 			setLoadingSuggestions(true);
 			try {
 				const topics = await generateTopicSuggestions(
@@ -1136,35 +1119,29 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		}
 
 		try {
-			// Create local date with time set to noon to avoid timezone issues
 			const localDate = new Date(date);
 			localDate.setHours(12, 0, 0, 0);
 
-			// Format date as YYYY-MM-DD
 			const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(
 				2,
 				'0'
 			)}-${String(localDate.getDate()).padStart(2, '0')}`;
 
-			// Add new call history to Firestore
 			await addContactHistory(contact.id, {
 				notes,
 				date: dateStr,
 			});
 
-			// Refresh the history immediately
 			const updatedHistory = await fetchContactHistory(contact.id);
 			const sortedHistory = [...updatedHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
 			setHistory(sortedHistory);
 
-			// Update contact in state with new history
 			const updatedContact = {
 				...contact,
 				contact_history: sortedHistory,
 			};
 			setSelectedContact(updatedContact);
 
-			// Refresh suggestions after new call note
 			setLoadingSuggestions(true);
 			try {
 				const topics = await generateTopicSuggestions(updatedContact, sortedHistory);
@@ -1178,8 +1155,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 				};
 				setSuggestionCache(newCache);
 				setSuggestions(topics);
-
-				// Save to AsyncStorage
 				await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 			} catch (error) {
 				console.error('Error updating suggestions:', error);
@@ -1188,7 +1163,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 				setLoadingSuggestions(false);
 			}
 
-			// Reset form
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
@@ -1200,13 +1174,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-				<View style={styles.modalContainer}>
-					<View style={styles.modalContent}>
-						<View style={styles.modalHeader}>
+				<View style={commonStyles.modalContainer}>
+					<View style={commonStyles.modalContent}>
+						<View style={commonStyles.modalHeader}>
 							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-								<Icon name="close-outline" size={24} color="#666" />
+								<Icon name="close-outline" size={24} color={colors.text.secondary} />
 							</TouchableOpacity>
-							<Text style={styles.modalTitle}>
+							<Text style={commonStyles.modalTitle}>
 								{contact.first_name} {contact.last_name}
 							</Text>
 						</View>
@@ -1218,7 +1192,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 							initialLayout={{ width: layout.width, height: layout.height }}
 							style={{ flex: 1, width: '100%' }}
 						/>
-						{/* Tags Modal */}
 						<TagsModal
 							visible={isTagsModalVisible}
 							onClose={() => setIsTagsModalVisible(false)}
@@ -1308,14 +1281,14 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-				<TouchableOpacity style={styles.modalContainer} activeOpacity={1} onPress={dismissKeyboard}>
+				<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={dismissKeyboard}>
 					<TouchableOpacity
 						activeOpacity={1}
-						style={styles.modalContent}
+						style={commonStyles.modalContent}
 						onPress={(e) => e.stopPropagation()}
 					>
-						<View style={styles.modalHeader}>
-							<Text style={styles.modalTitle}>Add New Contact</Text>
+						<View style={commonStyles.modalHeader}>
+							<Text style={commonStyles.modalTitle}>Add New Contact</Text>
 						</View>
 
 						<ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
@@ -1340,37 +1313,37 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 												]);
 											}}
 										>
-											<Icon name="close-circle" size={24} color="#FF3B30" />
+											<Icon name="close-circle" size={24} color={colors.danger} />
 										</TouchableOpacity>
 									</View>
 								) : (
 									<TouchableOpacity style={styles.uploadButton} onPress={handlePhotoUpload}>
-										<Icon name="camera-outline" size={24} color="#007AFF" />
+										<Icon name="camera-outline" size={24} color={colors.primary} />
 										<Text style={styles.uploadButtonText}>Add Photo</Text>
 									</TouchableOpacity>
 								)}
 							</View>
 
 							<TextInput
-								style={styles.formInput}
+								style={commonStyles.input}
 								placeholder="First Name"
-								placeholderTextColor="#666666"
+								placeholderTextColor={colors.text.secondary}
 								value={formData.first_name}
 								onChangeText={(text) => setFormData({ ...formData, first_name: text })}
 							/>
 
 							<TextInput
-								style={styles.formInput}
+								style={commonStyles.input}
 								placeholder="Last Name"
-								placeholderTextColor="#666666"
+								placeholderTextColor={colors.text.secondary}
 								value={formData.last_name}
 								onChangeText={(text) => setFormData({ ...formData, last_name: text })}
 							/>
 
 							<TextInput
-								style={styles.formInput}
+								style={commonStyles.input}
 								placeholder="Email"
-								placeholderTextColor="#666666"
+								placeholderTextColor={colors.text.secondary}
 								value={formData.email}
 								onChangeText={(text) => setFormData({ ...formData, email: text })}
 								keyboardType="email-address"
@@ -1378,9 +1351,9 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 							/>
 
 							<TextInput
-								style={styles.formInput}
+								style={commonStyles.input}
 								placeholder="Phone"
-								placeholderTextColor="#666666"
+								placeholderTextColor={colors.text.secondary}
 								value={formData.phone}
 								onChangeText={(text) => setFormData({ ...formData, phone: text })}
 								keyboardType="phone-pad"
@@ -1389,7 +1362,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 
 						<View style={styles.editModalActions}>
 							<TouchableOpacity
-								style={[styles.actionButton, styles.saveButton]}
+								style={[commonStyles.primaryButton, styles.saveButton]}
 								onPress={() => {
 									if (!formData.first_name.trim()) {
 										Alert.alert('Error', 'First name is required');
@@ -1398,13 +1371,13 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 									onSubmit(formData);
 								}}
 							>
-								<Icon name="checkmark-outline" size={24} color="#fff" />
-								<Text style={styles.actionButtonText}>Save</Text>
+								<Icon name="checkmark-outline" size={24} color={colors.background.primary} />
+								<Text style={commonStyles.primaryButtonText}>Save</Text>
 							</TouchableOpacity>
 
-							<TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={onClose}>
-								<Icon name="close-outline" size={24} color="#fff" />
-								<Text style={styles.actionButtonText}>Cancel</Text>
+							<TouchableOpacity style={[commonStyles.secondaryButton, styles.cancelButton]} onPress={onClose}>
+								<Icon name="close-outline" size={24} color={colors.danger} />
+								<Text style={[commonStyles.secondaryButtonText, { color: colors.danger }]}>Cancel</Text>
 							</TouchableOpacity>
 						</View>
 					</TouchableOpacity>
@@ -1440,23 +1413,16 @@ export default function ContactsScreen({ navigation }) {
 		}
 	}
 
-	// Format phone number to E.164 standard
 	const formatPhoneNumber = (phoneNumber) => {
-		// Remove all non-numeric characters
 		const cleaned = phoneNumber.replace(/\D/g, '');
-
-		// Handle US/Canada numbers
 		if (cleaned.length === 10) {
 			return `+1${cleaned}`;
 		} else if (cleaned.length === 11 && cleaned.startsWith('1')) {
 			return `+${cleaned}`;
 		}
-
-		// Return international numbers as-is with + prefix
 		return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
 	};
 
-	// Check for existing contact by phone number
 	const checkForExistingContact = async (phoneNumber) => {
 		try {
 			const allContacts = [...contacts.scheduledContacts, ...contacts.unscheduledContacts];
@@ -1469,18 +1435,6 @@ export default function ContactsScreen({ navigation }) {
 		}
 	};
 
-	// Validate phone number
-	const isValidPhoneNumber = (phoneNumber) => {
-		const cleaned = phoneNumber.replace(/\D/g, '');
-		// Basic validation for US/Canada numbers
-		if (cleaned.length === 10 || (cleaned.length === 11 && cleaned.startsWith('1'))) {
-			return true;
-		}
-		// Basic validation for international numbers (>= 10 digits)
-		return cleaned.length >= 10;
-	};
-
-	// Handle contact import
 	const handleImportContacts = async () => {
 		try {
 			const { status } = await Contacts.requestPermissionsAsync();
@@ -1504,8 +1458,6 @@ export default function ContactsScreen({ navigation }) {
 				if (result) {
 					await handleContactSelection(result);
 				}
-			} else {
-				// Android fallback code...
 			}
 		} catch (error) {
 			console.error('Error in handleImportContacts:', error);
@@ -1513,47 +1465,6 @@ export default function ContactsScreen({ navigation }) {
 		}
 	};
 
-	// Show contact picker
-	const showContactPicker = async (contacts) => {
-		// Sort contacts by first name
-		const sortedContacts = contacts
-			.filter((contact) => contact.firstName || contact.lastName)
-			.sort((a, b) => {
-				const nameA = `${a.firstName || ''} ${a.lastName || ''}`.trim();
-				const nameB = `${b.firstName || ''} ${b.lastName || ''}`.trim();
-				return nameA.localeCompare(nameB);
-			});
-
-		if (sortedContacts.length === 0) {
-			Alert.alert('No Contacts', 'No valid contacts found');
-			return;
-		}
-
-		// Create items for picker
-		const items = sortedContacts.map((contact) => ({
-			label: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
-			value: contact,
-		}));
-
-		// Show picker
-		Alert.alert(
-			'Select Contact',
-			'Choose a contact to import:',
-			items
-				.map((item) => ({
-					text: item.label,
-					onPress: () => handleContactSelection(item.value),
-				}))
-				.concat([
-					{
-						text: 'Cancel',
-						style: 'cancel',
-					},
-				])
-		);
-	};
-
-	// Handle contact selection
 	const handleContactSelection = async (contact) => {
 		try {
 			const fullContact = await Contacts.getContactByIdAsync(contact.id, [
@@ -1589,7 +1500,6 @@ export default function ContactsScreen({ navigation }) {
 
 					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
 					if (!photoUrl || photoUrl.startsWith('file://')) {
-						console.error('Invalid photo URL returned:', photoUrl);
 						photoUrl = null;
 					}
 				} catch (photoError) {
@@ -1612,13 +1522,8 @@ export default function ContactsScreen({ navigation }) {
 				user_id: user.uid,
 			};
 
-			// Add contact to Firebase
 			const newContact = await addContact(user.uid, contactData);
-
-			// Refresh contacts list
 			await loadContacts();
-
-			// Show contact details modal
 			setSelectedContact(newContact);
 			setIsDetailsVisible(true);
 		} catch (error) {
@@ -1639,10 +1544,8 @@ export default function ContactsScreen({ navigation }) {
 
 	const handleAddContact = async (formData) => {
 		try {
-			// Add to OnMyList
 			await addContact(user.uid, formData);
 
-			// Add to iOS Contacts if on iOS
 			if (Platform.OS === 'ios') {
 				const { status } = await Contacts.requestPermissionsAsync();
 				if (status === 'granted') {
@@ -1690,14 +1593,14 @@ export default function ContactsScreen({ navigation }) {
 
 	if (!user) {
 		return (
-			<View style={styles.container}>
-				<Text style={styles.message}>Please log in to view your contacts</Text>
+			<View style={commonStyles.container}>
+				<Text style={commonStyles.message}>Please log in to view your contacts</Text>
 			</View>
 		);
 	}
 
 	return (
-		<SafeAreaView style={styles.container}>
+		<SafeAreaView style={commonStyles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
@@ -1705,9 +1608,12 @@ export default function ContactsScreen({ navigation }) {
 			</View>
 
 			<View style={styles.buttonContainer}>
-				<TouchableOpacity style={styles.importButton} onPress={handleImportContacts}>
-					<Icon name="people-outline" size={20} color="#fff" />
-					<Text style={styles.importButtonText}>Add Contact</Text>
+				<TouchableOpacity
+					style={[commonStyles.primaryButton, styles.importButton]}
+					onPress={handleImportContacts}
+				>
+					<Icon name="people-outline" size={20} color={colors.background.primary} />
+					<Text style={commonStyles.primaryButtonText}>Add Contact</Text>
 				</TouchableOpacity>
 				<TouchableOpacity
 					style={styles.newButton}
@@ -1715,7 +1621,7 @@ export default function ContactsScreen({ navigation }) {
 						setIsFormVisible(true);
 					}}
 				>
-					<Icon name="add-outline" size={20} color="#007AFF" />
+					<Icon name="add-outline" size={20} color={colors.primary} />
 					<Text style={styles.newButtonText}>New</Text>
 				</TouchableOpacity>
 			</View>
@@ -1725,7 +1631,7 @@ export default function ContactsScreen({ navigation }) {
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 			>
 				{loading ? (
-					<Text style={styles.message}>Loading contacts...</Text>
+					<Text style={commonStyles.message}>Loading contacts...</Text>
 				) : (
 					<>
 						{contacts.scheduledContacts.length > 0 && (
@@ -1761,7 +1667,7 @@ export default function ContactsScreen({ navigation }) {
 						)}
 
 						{contacts.scheduledContacts.length === 0 && contacts.unscheduledContacts.length === 0 && (
-							<Text style={styles.message}>No contacts yet</Text>
+							<Text style={commonStyles.message}>No contacts yet</Text>
 						)}
 					</>
 				)}
@@ -1828,757 +1734,3 @@ export default function ContactsScreen({ navigation }) {
 		</SafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: '#fff',
-	},
-	header: {
-		padding: 20,
-		alignItems: 'center',
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	logo: {
-		width: '50%',
-		height: 30,
-	},
-	content: {
-		flex: 1,
-	},
-	section: {
-		padding: 15,
-		paddingHorizontal: 10,
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: '600',
-		marginBottom: 15,
-		color: '#333',
-	},
-	grid: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingHorizontal: 0,
-		justifyContent: 'flex-start',
-	},
-	card: {
-		width: '31%',
-		margin: '1%',
-		backgroundColor: '#f8f9fa',
-		borderRadius: 12,
-		padding: 15,
-		alignItems: 'center',
-		borderWidth: 1,
-		borderColor: '#eee',
-	},
-	cardAvatar: {
-		width: 60,
-		height: 60,
-		borderRadius: 30,
-		backgroundColor: '#e8f2ff',
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginBottom: 10,
-	},
-	avatarImage: {
-		width: 60,
-		height: 60,
-		borderRadius: 30,
-	},
-	avatarText: {
-		fontSize: 24,
-		fontWeight: '600',
-		color: '#007AFF',
-	},
-	cardName: {
-		fontSize: 16,
-		fontWeight: '500',
-		textAlign: 'center',
-	},
-	scheduleBadge: {
-		position: 'absolute',
-		top: 10,
-		right: 10,
-		width: 12,
-		height: 12,
-		borderRadius: 6,
-		backgroundColor: '#fff',
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	scheduleDot: {
-		width: 8,
-		height: 8,
-		borderRadius: 4,
-		backgroundColor: '#4CAF50',
-	},
-	modalContainer: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		alignItems: 'center',
-		width: '100%',
-	},
-	modalContent: {
-		backgroundColor: 'white',
-		borderRadius: 20,
-		padding: 20,
-		width: Platform.OS === 'web' ? '50%' : '85%',
-		alignSelf: 'center',
-		maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
-		...(Platform.OS === 'ios'
-			? {
-					height: '75%',
-			  }
-			: {}),
-	},
-	modalHeader: {
-		flexDirection: 'row',
-		justifyContent: 'center',
-		alignItems: 'center',
-		marginBottom: 20,
-		position: 'relative',
-		paddingHorizontal: 20,
-	},
-	modalTitle: {
-		fontSize: 24,
-		fontWeight: 'bold',
-		textAlign: 'center',
-	},
-	modalScroll: {
-		flex: 1,
-	},
-	contactInfo: {
-		marginBottom: 20,
-	},
-	contactDetail: {
-		fontSize: 16,
-		marginBottom: 5,
-		color: '#666',
-	},
-	notesSection: {
-		marginBottom: 20,
-	},
-	notesInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 10,
-		minHeight: 100,
-		textAlignVertical: 'top',
-	},
-	historySection: {
-		marginBottom: 20,
-	},
-	historyEntry: {
-		marginBottom: 10,
-		padding: 10,
-		backgroundColor: '#f8f9fa',
-		borderRadius: 10,
-	},
-	historyDate: {
-		fontSize: 14,
-		color: '#666',
-		marginBottom: 5,
-	},
-	historyNotes: {
-		fontSize: 16,
-	},
-	modalActions: {
-		flexDirection: 'row',
-		justifyContent: 'space-around',
-		marginTop: 20,
-		borderTopWidth: 1,
-		borderTopColor: '#eee',
-		paddingTop: 15,
-	},
-	modalButton: {
-		flex: 1,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 15,
-		borderRadius: 10,
-		marginHorizontal: 5,
-	},
-	// History Notes Input
-	historyNotesInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 5,
-		padding: 8,
-		marginTop: 5,
-		backgroundColor: '#f9f9f9',
-	},
-	// Complete Button for Unscheduled Contacts
-	completeButton: {
-		backgroundColor: '#007AFF',
-		marginTop: 15,
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 10,
-		alignItems: 'center',
-	},
-	// Edit Footer Button
-	editFooterButton: {
-		backgroundColor: '#007AFF',
-		flexDirection: 'row',
-		padding: 15,
-		borderRadius: 10,
-	},
-	// Schedule Footer Button
-	scheduleFooterButton: {
-		backgroundColor: '#4CAF50',
-		flexDirection: 'row',
-		padding: 15,
-		borderRadius: 10,
-	},
-	suggestionsContainer: {
-		marginTop: 0,
-		marginBottom: 15,
-		padding: 10,
-		backgroundColor: '#f9f9f9',
-		borderRadius: 8,
-	},
-	suggestionsTitle: {
-		fontSize: 16,
-		fontWeight: '600',
-		color: '#333',
-		marginBottom: 5,
-	},
-	suggestionsText: {
-		fontSize: 14,
-		color: '#666',
-		textAlign: 'center',
-	},
-	suggestion: {
-		fontSize: 14,
-		color: '#333',
-		marginBottom: 8,
-		paddingLeft: 0,
-	},
-	callNotesButton: {
-		backgroundColor: '#FFA500', // Orange button
-		flexDirection: 'row',
-		padding: 15,
-		borderRadius: 10,
-		alignItems: 'center',
-		justifyContent: 'center',
-		marginHorizontal: 5,
-	},
-	dateButtonText: {
-		fontSize: 16,
-		color: '#333',
-		fontWeight: '500',
-	},
-	unscheduledSection: {
-		marginTop: 20,
-	},
-	scheduleButton: {
-		backgroundColor: '#4CAF50',
-	},
-	cancelButton: {
-		backgroundColor: '#FF3B30',
-	},
-	saveButton: {
-		backgroundColor: '#007AFF',
-	},
-	buttonText: {
-		color: '#fff',
-		fontSize: 14,
-		fontWeight: '500',
-	},
-	input: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 15,
-		marginBottom: 15,
-		fontSize: 16,
-		color: '#000000',
-		backgroundColor: '#fff',
-		placeholderTextColor: '#666666',
-	},
-	message: {
-		textAlign: 'center',
-		padding: 20,
-		color: '#666',
-		fontSize: 16,
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: '600',
-		marginBottom: 15,
-		paddingHorizontal: 15,
-		color: '#333',
-	},
-	historyActions: {
-		flexDirection: 'row',
-		justifyContent: 'flex-end',
-		marginTop: 10,
-	},
-	// Button for Edit/Save
-	editButton: {
-		backgroundColor: '#007AFF',
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		borderRadius: 6,
-		minWidth: 60,
-		alignItems: 'center',
-	},
-	editButtonText: {
-		color: '#fff',
-		fontSize: 14,
-		fontWeight: '500',
-	},
-	// Button for Delete
-	deleteButton: {
-		backgroundColor: '#FF3B30',
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		borderRadius: 6,
-		minWidth: 60,
-		alignItems: 'center',
-	},
-	// Call Notes Section
-	callNotesSection: {
-		marginBottom: 15,
-		padding: 15,
-	},
-	callNotesInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 10,
-		minHeight: 100,
-		marginBottom: 10,
-		fontSize: 16,
-		color: '#000000',
-		backgroundColor: '#ffffff',
-		placeholderTextColor: '#666666',
-	},
-	callNotesControls: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-	},
-	dateButton: {
-		backgroundColor: '#f0f0f0',
-		padding: 10,
-		borderRadius: 8,
-		flex: 1,
-		marginRight: 10,
-	},
-	submitCallButton: {
-		backgroundColor: '#4CAF50',
-		padding: 10,
-		borderRadius: 8,
-		width: 100,
-		alignItems: 'center',
-	},
-	// Tags Styles
-	tagsContainer: {
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		padding: 10,
-		gap: 8,
-	},
-	tagBubble: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#e8f2ff',
-		borderRadius: 15,
-		paddingVertical: 5,
-		paddingHorizontal: 10,
-	},
-	tagText: {
-		color: '#007AFF',
-		marginRight: 5,
-	},
-	tagInputContainer: {
-		flexDirection: 'row',
-		marginBottom: 10,
-	},
-	tagInput: {
-		flex: 1,
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 8,
-		padding: 12,
-		marginRight: 10,
-		fontSize: 16,
-	},
-	tagButton: {
-		backgroundColor: '#007AFF',
-		padding: 10,
-		borderRadius: 8,
-		width: 80,
-		alignItems: 'center',
-	},
-	tagButtonDisabled: {
-		backgroundColor: '#ccc',
-	},
-	tagsScrollView: {
-		flexGrow: 0,
-		maxHeight: '40%',
-	},
-	tagInputWrapper: {
-		marginTop: 'auto',
-		padding: 15,
-		backgroundColor: '#fff',
-		borderTopWidth: 1,
-		borderTopColor: '#eee',
-	},
-	addTagButton: {
-		backgroundColor: '#007AFF',
-		paddingHorizontal: 20,
-		paddingVertical: 12,
-		borderRadius: 8,
-		justifyContent: 'center',
-	},
-	addTagButtonText: {
-		color: '#fff',
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	doneButton: {
-		backgroundColor: '#4CAF50',
-		padding: 15,
-		borderRadius: 8,
-		alignItems: 'center',
-	},
-	tagsButton: {
-		backgroundColor: '#007AFF',
-	},
-	// Date Picker Modal
-	datePickerModalOverlay: {
-		flex: 1,
-		backgroundColor: 'rgba(0, 0, 0, 0.5)',
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
-	datePickerContainer: {
-		backgroundColor: 'white',
-		padding: 20,
-		borderRadius: 10,
-		minWidth: 300,
-	},
-	buttonContainer: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		alignItems: 'center',
-		padding: 15,
-		gap: 10,
-	},
-	// Import Button
-	importButton: {
-		flex: 1,
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#007AFF',
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 10,
-		justifyContent: 'center',
-	},
-	importButtonText: {
-		color: '#fff',
-		marginLeft: 10,
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	secondaryButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#f8f9fa',
-		paddingVertical: 12,
-		paddingHorizontal: 20,
-		borderRadius: 10,
-		justifyContent: 'center',
-		borderWidth: 1,
-		borderColor: '#007AFF',
-	},
-	secondaryButtonText: {
-		color: '#007AFF',
-		marginLeft: 10,
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	// Contacts Search Modal
-	searchInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 15,
-		marginBottom: 15,
-		fontSize: 16,
-		backgroundColor: '#fff',
-	},
-	searchResults: {
-		maxHeight: '80%',
-	},
-	searchResultItem: {
-		padding: 15,
-		borderBottomWidth: 1,
-		borderBottomColor: '#eee',
-	},
-	searchResultText: {
-		fontSize: 16,
-		color: '#333',
-	},
-	cardActions: {
-		position: 'absolute',
-		top: '50%',
-		transform: [{ translateY: -25 }],
-		width: 120,
-		left: '50%',
-		marginLeft: -60,
-		backgroundColor: 'rgba(255, 255, 255, 0.98)',
-		borderRadius: 15,
-		padding: 8,
-		borderWidth: 1,
-		borderColor: '#ddd',
-		zIndex: 1,
-	},
-	cardActionButton: {
-		padding: 8,
-		alignItems: 'center',
-		justifyContent: 'center',
-		width: 44,
-		height: 44,
-	},
-	actionButtonsContainer: {
-		flexDirection: 'row',
-		justifyContent: 'space-around',
-		alignItems: 'center',
-		width: '100%',
-	},
-	closeButtonTop: {
-		position: 'absolute',
-		right: 15,
-		top: 20,
-		padding: 10,
-	},
-	actionButton: {
-		flex: 1,
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 12,
-		borderRadius: 10,
-		gap: 8,
-		margin: 5,
-		backgroundColor: '#f8f9fa',
-		borderWidth: 1,
-	},
-	actionButtonText: {
-		fontSize: 16,
-		fontWeight: '500',
-		color: '#fff',
-	},
-	actionsContainer: {
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		zIndex: 5,
-	},
-	closeButton: {
-		position: 'absolute',
-		top: -15,
-		right: -15,
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: 'white',
-		borderWidth: 2,
-		borderColor: '#000',
-		alignItems: 'center',
-		justifyContent: 'center',
-		zIndex: 5,
-	},
-	archiveButton: {
-		backgroundColor: '#007AFF',
-	},
-	deleteButton: {
-		backgroundColor: '#FF3B30',
-	},
-	newButton: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		backgroundColor: '#f8f9fa',
-		paddingVertical: 11, //height
-		paddingHorizontal: 14,
-		borderRadius: 10,
-		justifyContent: 'center',
-		borderWidth: 1.1,
-		borderColor: '#007AFF',
-	},
-	newButtonText: {
-		color: '#007AFF',
-		marginLeft: 5,
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	nameContainer: {
-		width: '100%',
-		alignItems: 'center',
-	},
-	firstName: {
-		fontSize: 14,
-		fontWeight: '500',
-		textAlign: 'center',
-		marginTop: 8,
-	},
-	lastName: {
-		fontSize: 14,
-		fontWeight: '500',
-		textAlign: 'center',
-		color: '#000',
-	},
-	footerButton: {
-		flex: 1,
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 2,
-		borderRadius: 8,
-	},
-	footerButtonText: {
-		fontSize: 11,
-		marginTop: 2,
-		textAlign: 'center',
-	},
-	historyActionButton: {
-		padding: 8,
-		marginLeft: 8,
-	},
-	emptyHistoryText: {
-		textAlign: 'center',
-		color: '#666',
-		fontSize: 14,
-		fontStyle: 'italic',
-		padding: 20,
-		backgroundColor: '#f8f9fa',
-		borderRadius: 10,
-	},
-	scheduleContainer: {
-		alignItems: 'center',
-		marginVertical: 20,
-	},
-	scheduleLabel: {
-		fontSize: 14,
-		color: '#666',
-		marginBottom: 8,
-	},
-	selectedDate: {
-		fontSize: 24,
-		fontWeight: 'bold',
-		color: '#000',
-	},
-	confirmButton: {
-		backgroundColor: '#007AFF',
-		paddingVertical: 12,
-		paddingHorizontal: 30,
-		borderRadius: 8,
-		alignSelf: 'center',
-		marginTop: 20,
-	},
-	confirmButtonText: {
-		color: '#fff',
-		fontSize: 16,
-		fontWeight: '500',
-	},
-	formScrollView: {
-		paddingHorizontal: 15,
-	},
-	editModalActions: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
-		paddingHorizontal: 15,
-		paddingVertical: 20,
-		borderTopWidth: 1,
-		borderTopColor: '#eee',
-		marginTop: 10,
-	},
-	editActionButton: {
-		alignItems: 'center',
-		justifyContent: 'center',
-		flex: 1,
-	},
-	editActionText: {
-		fontSize: 12,
-		marginTop: 4,
-		textAlign: 'center',
-	},
-	removeScheduleButton: {
-		marginTop: 10,
-		padding: 10,
-	},
-	removeScheduleText: {
-		color: '#FF3B30',
-		fontSize: 14,
-		textAlign: 'center',
-	},
-	// Photo upload
-	photoUploadContainer: {
-		alignItems: 'center',
-		marginBottom: 15,
-	},
-	photoPreview: {
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		position: 'relative',
-	},
-	photoImage: {
-		width: '100%',
-		height: '100%',
-		borderRadius: 50,
-	},
-	removePhotoButton: {
-		position: 'absolute',
-		top: -5,
-		right: -5,
-		backgroundColor: 'white',
-		borderRadius: 12,
-	},
-	uploadButton: {
-		width: 100,
-		height: 100,
-		borderRadius: 50,
-		backgroundColor: '#f0f0f0',
-		justifyContent: 'center',
-		alignItems: 'center',
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderStyle: 'dashed',
-	},
-	uploadButtonText: {
-		color: '#007AFF',
-		marginTop: 5,
-		fontSize: 12,
-	},
-	keyboardAvoidingView: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
-	},
-	formContainer: {
-		paddingHorizontal: 20,
-		paddingBottom: 20,
-	},
-	formInput: {
-		borderWidth: 1,
-		borderColor: '#ddd',
-		borderRadius: 10,
-		padding: 15,
-		marginBottom: 15,
-		fontSize: 16,
-		color: '#000000',
-		backgroundColor: '#fff',
-		height: 50,
-	},
-});
