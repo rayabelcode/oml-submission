@@ -226,6 +226,23 @@ export default StyleSheet.create({
 		zIndex: 5,
 	},
 
+	// Edit buttons
+	editModalActions: {
+		flexDirection: 'row',
+		justifyContent: 'space-around',
+		alignItems: 'center',
+		width: '100%',
+		marginTop: spacing.md,
+	},
+	editActionButton: {
+		alignItems: 'center',
+		padding: spacing.sm,
+	},
+	editActionText: {
+		marginTop: 4,
+		fontSize: 12,
+	},
+
 	// Form styles
 	formContainer: {
 		paddingHorizontal: spacing.md,

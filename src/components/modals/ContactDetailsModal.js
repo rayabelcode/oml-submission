@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Modal,
-    View,
-    Text,
-    TouchableOpacity,
-    TextInput,
-    ScrollView,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Keyboard 
+import {
+	Modal,
+	View,
+	Text,
+	TouchableOpacity,
+	TextInput,
+	ScrollView,
+	Alert,
+	KeyboardAvoidingView,
+	Platform,
+	Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +27,8 @@ import {
 	addContactHistory,
 	fetchContactHistory,
 	uploadContactPhoto,
+	deleteContact,
+	archiveContact,
 } from '../../utils/firestore';
 import { generateTopicSuggestions } from '../../utils/ai';
 import TagsModal from './TagsModal';
@@ -561,9 +563,11 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 											onPress: async () => {
 												try {
 													await archiveContact(contact.id);
+													await loadContacts();
 													onClose();
 												} catch (error) {
-													Alert.alert('Error', 'Failed to archive contact');
+													console.error('Archive error:', error);
+													Alert.alert('Error', 'Unable to archive contact');
 												}
 											},
 										},
@@ -587,6 +591,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 												onPress: async () => {
 													try {
 														await deleteContact(contact.id);
+														await loadContacts();
 														onClose();
 													} catch (error) {
 														console.error('Delete error:', error);
