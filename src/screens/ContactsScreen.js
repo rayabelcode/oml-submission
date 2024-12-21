@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
-import '../../assets/react-datepicker.css';
+import '../../assets/css/react-datepicker.css';
 import {
 	StyleSheet,
 	Text,
