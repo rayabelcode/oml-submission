@@ -3,6 +3,7 @@ import {
 	Modal,
 	View,
 	Text,
+	Keyboard,
 	TouchableOpacity,
 	TextInput,
 	ScrollView,
@@ -18,8 +19,11 @@ import { colors } from '../../styles/theme';
 import commonStyles from '../../styles/common';
 import styles from '../../styles/screens/contacts';
 import { uploadContactPhoto } from '../../utils/firestore';
+import { useAuth } from '../../context/AuthContext';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
+	const { user } = useAuth();
+
 	const [formData, setFormData] = useState({
 		first_name: '',
 		last_name: '',
@@ -42,29 +46,35 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ['images'],
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 0.5,
+				selectionLimit: 1,
 			});
 
-			if (!result.canceled && result.assets[0].uri) {
-				const manipResult = await ImageManipulator.manipulateAsync(
-					result.assets[0].uri,
-					[{ resize: { width: 300, height: 300 } }],
-					{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-				);
+			if (!result.canceled && result.assets && result.assets[0]) {
+				try {
+					const manipResult = await ImageManipulator.manipulateAsync(
+						result.assets[0].uri,
+						[{ resize: { width: 300, height: 300 } }],
+						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+					);
 
-				const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
-				if (photoUrl) {
-					setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
-				} else {
-					Alert.alert('Error', 'Failed to upload photo');
+					const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+					if (photoUrl) {
+						setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
+					} else {
+						Alert.alert('Error', 'Failed to upload photo');
+					}
+				} catch (manipError) {
+					console.error('Error manipulating image:', manipError);
+					Alert.alert('Error', 'Failed to process the selected image');
 				}
 			}
 		} catch (error) {
 			console.error('Error uploading photo:', error);
-			Alert.alert('Error', 'Failed to upload photo');
+			Alert.alert('Error', 'Failed to upload photo. Please try again.');
 		}
 	};
 
