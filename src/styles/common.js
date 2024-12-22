@@ -37,12 +37,15 @@ export const useCommonStyles = () => {
 			width: Platform.OS === 'web' ? '50%' : '85%',
 			alignSelf: 'center',
 			maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
+			borderWidth: 1,
+			borderColor: colors.border,
 			...(Platform.OS === 'ios'
 				? {
 						height: '75%',
 				  }
 				: {}),
 		},
+
 		modalHeader: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',

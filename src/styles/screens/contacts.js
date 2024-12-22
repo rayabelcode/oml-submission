@@ -252,10 +252,12 @@ const useStyles = () => {
 		},
 		formScrollView: {
 			paddingHorizontal: spacing.md,
+			paddingTop: spacing.sm, // Add top padding
 		},
 		photoUploadContainer: {
 			alignItems: 'center',
 			marginBottom: spacing.md,
+			paddingTop: spacing.xs || 5, // Add top padding
 		},
 		photoPreview: {
 			width: 100,

@@ -636,7 +636,8 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						minHeight: 50,
 						alignItems: 'center',
 						justifyContent: 'center',
-						backgroundColor: props.navigationState.index === index ? '#e8f2ff' : colors.background.primary,
+						backgroundColor:
+							props.navigationState.index === index ? colors.background.tertiary : colors.background.primary,
 					}}
 					onPress={() => {
 						if (Platform.OS !== 'web') {

@@ -8,7 +8,7 @@ const lightTheme = {
 		primary: '#FFFFFF',
 		secondary: '#F2F2F7',
 		tertiary: '#E5E5EA',
-		overlay: 'rgba(0, 0, 0, 0.5)',
+		overlay: 'rgba(0, 0, 0, 0.75)',
 	},
 	text: {
 		primary: '#000000',
@@ -27,7 +27,7 @@ const darkTheme = {
 		primary: '#000000',
 		secondary: '#1C1C1E',
 		tertiary: '#2C2C2E',
-		overlay: 'rgba(0, 0, 0, 0.5)',
+		overlay: 'rgba(0, 0, 0, 0.9)',
 	},
 	text: {
 		primary: '#FFFFFF',
