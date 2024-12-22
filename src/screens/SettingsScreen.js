@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert, ActivityIndicator, Platform } from 'react-native';
-import styles from '../styles/screens/settings';
-import { colors } from '../styles/theme';
+import { useStyles } from '../styles/screens/settings';
+import { useTheme } from '../context/ThemeContext'; // Dark mode
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,11 +12,11 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Sharing from 'expo-sharing';
 import {
-	getUserProfile,
-	uploadProfilePhoto,
-	exportUserData,
-	deleteUserAccount,
-	updateUserProfile,
+    getUserProfile,
+    uploadProfilePhoto,
+    exportUserData,
+    deleteUserAccount,
+    updateUserProfile,
 } from '../utils/firestore';
 import PrivacyModal from '../components/settings/PrivacyModal';
 import AuthSection from '../components/settings/AuthSection';
@@ -24,14 +24,17 @@ import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
 
 export default function SettingsScreen() {
-	const { user, signIn, signUp, signOut } = useAuth();
-	const [isLogin, setIsLogin] = useState(true);
-	const [email, setEmail] = useState('');
-	const [password, setPassword] = useState('');
-	const [loading, setLoading] = useState(false);
-	const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-	const [userProfile, setUserProfile] = useState(null);
-	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+    const styles = useStyles();
+    const { user, signIn, signUp, signOut } = useAuth();
+    const [isLogin, setIsLogin] = useState(true);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [userProfile, setUserProfile] = useState(null);
+    const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+    const { theme, toggleTheme, colors } = useTheme();
+    const isDarkMode = theme === 'dark';
 
 	useEffect(() => {
 		if (user) {
@@ -302,6 +305,8 @@ export default function SettingsScreen() {
 				setIsPrivacyModalVisible={setIsPrivacyModalVisible}
 				handleSupport={handleSupport}
 				handleLogout={handleLogout}
+				isDarkMode={isDarkMode}
+				handleThemeToggle={toggleTheme}
 			/>
 
 			<PrivacyModal

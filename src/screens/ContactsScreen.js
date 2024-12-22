@@ -3,9 +3,9 @@ import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
 import { Text, View, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
-import styles from '../styles/screens/contacts';
-import commonStyles from '../styles/common';
-import { colors } from '../styles/theme';
+import { useStyles } from '../styles/screens/contacts';
+import { useCommonStyles } from '../styles/common';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -38,9 +38,11 @@ const getInitials = (firstName, lastName) => {
 	return (firstInitial + lastInitial).toUpperCase();
 };
 
-// Contact Card Component
+// ContactCard component
 const ContactCard = ({ contact, onPress, loadContacts }) => {
 	const [showActions, setShowActions] = useState(false);
+	const { colors } = useTheme();
+	const styles = useStyles();
 
 	return (
 		<TouchableOpacity
@@ -160,6 +162,9 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 // Main Component
 export default function ContactsScreen({ navigation }) {
 	const { user } = useAuth();
+	const { colors } = useTheme();
+	const styles = useStyles();
+	const commonStyles = useCommonStyles();
 	const [contacts, setContacts] = useState({ scheduledContacts: [], unscheduledContacts: [] });
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);

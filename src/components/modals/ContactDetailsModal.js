@@ -19,9 +19,9 @@ import { useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
-import styles from '../../styles/screens/contacts';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
+import { useStyles } from '../../styles/screens/contacts';
 import {
 	updateContact,
 	addContactHistory,
@@ -35,6 +35,9 @@ import TagsModal from './TagsModal';
 import DatePickerModal from './DatePickerModal';
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
+	const styles = useStyles();
 	// Layout hooks
 	const layout = useWindowDimensions();
 	const { user } = useAuth();

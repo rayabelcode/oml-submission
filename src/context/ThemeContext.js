@@ -81,20 +81,3 @@ export function useTheme() {
 	}
 	return context;
 }
-
-export const spacing = {
-	xs: 5,
-	sm: 10,
-	md: 15,
-	lg: 20,
-	xl: 30,
-};
-
-export const layout = {
-	borderRadius: {
-		sm: 8,
-		md: 10,
-		lg: 15,
-		circle: 50,
-	},
-};

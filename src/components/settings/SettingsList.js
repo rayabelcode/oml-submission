@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../styles/theme';
-import styles from '../../styles/screens/settings';
+import { useTheme } from '../../context/ThemeContext';
+import { useStyles } from '../../styles/screens/settings';
 
 const SettingsList = ({
 	notificationsEnabled,
@@ -10,51 +10,70 @@ const SettingsList = ({
 	setIsPrivacyModalVisible,
 	handleSupport,
 	handleLogout,
-}) => (
-	<ScrollView style={styles.settingsList}>
-		<View style={styles.settingSection}>
-			<Text style={styles.sectionTitle}>Notifications</Text>
-			<View style={styles.settingItem}>
-				<View style={styles.settingItemLeft}>
-					<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
-					<Text style={styles.settingText}>Push Notifications</Text>
+	isDarkMode,
+	handleThemeToggle,
+}) => {
+	const { colors } = useTheme();
+	const styles = useStyles();
+
+	return (
+		<ScrollView style={styles.settingsList}>
+			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>Notifications</Text>
+				<View style={styles.settingItem}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Push Notifications</Text>
+					</View>
+					<Switch
+						value={notificationsEnabled}
+						onValueChange={handleNotificationToggle}
+						trackColor={{ false: '#767577', true: '#81b0ff' }}
+						thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
+					/>
 				</View>
-				<Switch
-					value={notificationsEnabled}
-					onValueChange={handleNotificationToggle}
-					trackColor={{ false: '#767577', true: '#81b0ff' }}
-					thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
-				/>
+				<View style={styles.settingItem}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="moon-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Dark Mode</Text>
+					</View>
+					<Switch
+						value={isDarkMode}
+						onValueChange={handleThemeToggle}
+						trackColor={{ false: '#767577', true: '#81b0ff' }}
+						thumbColor={isDarkMode ? colors.primary : '#f4f3f4'}
+					/>
+				</View>
 			</View>
-		</View>
 
-		<View style={styles.settingSection}>
-			<Text style={styles.sectionTitle}>Privacy</Text>
-			<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
-				<View style={styles.settingItemLeft}>
-					<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
-					<Text style={styles.settingText}>Privacy Settings</Text>
-				</View>
-				<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>Privacy</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Privacy Settings</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+			</View>
+
+			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>Support</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="help-circle-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Help Center</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+			</View>
+
+			<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+				<Icon name="log-out-outline" size={20} color={colors.danger} />
+				<Text style={styles.logoutText}>Log Out</Text>
 			</TouchableOpacity>
-		</View>
-
-		<View style={styles.settingSection}>
-			<Text style={styles.sectionTitle}>Support</Text>
-			<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
-				<View style={styles.settingItemLeft}>
-					<Icon name="help-circle-outline" size={20} color={colors.text.secondary} />
-					<Text style={styles.settingText}>Help Center</Text>
-				</View>
-				<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
-			</TouchableOpacity>
-		</View>
-
-		<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-			<Icon name="log-out-outline" size={20} color={colors.danger} />
-			<Text style={styles.logoutText}>Log Out</Text>
-		</TouchableOpacity>
-	</ScrollView>
-);
+		</ScrollView>
+	);
+};
 
 export default SettingsList;

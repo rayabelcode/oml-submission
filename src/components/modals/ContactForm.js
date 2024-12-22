@@ -16,14 +16,17 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
-import styles from '../../styles/screens/contacts';
+import { useStyles } from '../../styles/screens/contacts';
+import { useCommonStyles } from '../../styles/common';
+import { useTheme } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
+	const { colors } = useTheme();
+	const styles = useStyles();
+	const commonStyles = useCommonStyles();
 
 	const [formData, setFormData] = useState({
 		first_name: '',

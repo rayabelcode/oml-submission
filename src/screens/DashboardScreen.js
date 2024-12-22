@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Text, View, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import styles from '../styles/screens/dashboard';
-import commonStyles from '../styles/common';
-import { colors } from '../styles/theme';
+import { useStyles } from '../styles/screens/dashboard';
+import { useCommonStyles } from '../styles/common';
+import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,9 @@ import ContactCard from '../components/dashboard/ContactCard'; // Import Contact
 
 export default function DashboardScreen({ navigation }) {
 	const { user } = useAuth();
+	const { colors } = useTheme();
+	const styles = useStyles();
+	const commonStyles = useCommonStyles();
 	const [contacts, setContacts] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);

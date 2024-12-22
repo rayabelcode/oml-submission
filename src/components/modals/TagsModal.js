@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
-import styles from '../../styles/screens/contacts';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
+import { useStyles } from '../../styles/screens/contacts';
 
 const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
+	const styles = useStyles();
 	const [newTag, setNewTag] = useState('');
 
 	const handleAddTag = () => {
@@ -43,6 +46,7 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 								<TextInput
 									style={styles.tagInput}
 									placeholder="Type new tag..."
+									placeholderTextColor={colors.text.secondary}
 									value={newTag}
 									onChangeText={setNewTag}
 									onSubmitEditing={handleAddTag}
@@ -52,7 +56,7 @@ const TagsModal = ({ visible, onClose, tags, onAddTag, onDeleteTag }) => {
 								</TouchableOpacity>
 							</View>
 
-							<TouchableOpacity style={styles.doneButton} onPress={onClose}>
+							<TouchableOpacity style={[commonStyles.primaryButton, styles.doneButton]} onPress={onClose}>
 								<Text style={commonStyles.primaryButtonText}>Done</Text>
 							</TouchableOpacity>
 						</View>

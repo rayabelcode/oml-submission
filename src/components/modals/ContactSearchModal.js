@@ -10,11 +10,14 @@ import {
 	Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
-import styles from '../../styles/screens/contacts';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
+import { useStyles } from '../../styles/screens/contacts';
 
 const ContactSearchModal = ({ visible, onClose, contacts, onSelectContact }) => {
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
+	const styles = useStyles();
 	const [searchText, setSearchText] = useState('');
 	const [filteredContacts, setFilteredContacts] = useState([]);
 

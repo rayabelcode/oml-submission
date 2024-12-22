@@ -1,10 +1,13 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
 
 const AddReminderModal = ({ visible, onClose, reminderNote, setReminderNote, onSave }) => {
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
+
 	return (
 		<Modal visible={visible} transparent={true} animationType="fade">
 			<View style={commonStyles.modalContainer}>
@@ -22,6 +25,7 @@ const AddReminderModal = ({ visible, onClose, reminderNote, setReminderNote, onS
 						placeholder="Enter reminder note"
 						value={reminderNote}
 						onChangeText={setReminderNote}
+						placeholderTextColor={colors.text.secondary}
 					/>
 
 					<TouchableOpacity style={commonStyles.primaryButton} onPress={onSave}>

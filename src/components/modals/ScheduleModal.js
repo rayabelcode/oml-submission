@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Platform } from 'react-native';
 import DatePicker from 'react-datepicker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
-import styles from '../../styles/screens/contacts';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
+import { useStyles } from '../../styles/screens/contacts';
 import { updateContact } from '../../utils/firestore';
 
 const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisible, loadContacts }) => {
+    const { colors } = useTheme();
+    const commonStyles = useCommonStyles();
+    const styles = useStyles();
 	const [selectedDate, setSelectedDate] = useState(new Date());
 	const [showPicker, setShowPicker] = useState(false);
 

@@ -1,14 +1,16 @@
 import React from 'react';
-import { Modal, View, TouchableOpacity } from 'react-native';
+import { Modal, View, TouchableOpacity, Platform } from 'react-native';
 import DatePicker from 'react-datepicker';
 import '../../../assets/css/react-datepicker.css';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { colors } from '../../styles/theme';
-import commonStyles from '../../styles/common';
+import { useTheme } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
 
+// Update component
 const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, containerStyle }) => {
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
 	return (
 		<Modal visible={visible} transparent={true} animationType="fade">
 			<TouchableOpacity style={commonStyles.modalContainer} onPress={onClose} activeOpacity={1}>
