@@ -19,7 +19,6 @@ import {
 	fetchContactHistory,
 	uploadContactPhoto,
 } from '../utils/firestore';
-import Logo from '../../assets/full-logo-color.png';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import * as ImagePicker from 'expo-image-picker';
@@ -162,9 +161,13 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 // Main Component
 export default function ContactsScreen({ navigation }) {
 	const { user } = useAuth();
-	const { colors } = useTheme();
+    const { colors, theme } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
+	const logoSource =
+		theme === 'dark'
+			? require('../../assets/full-logo-darkmode.png')
+			: require('../../assets/full-logo-color.png');
 	const [contacts, setContacts] = useState({ scheduledContacts: [], unscheduledContacts: [] });
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
@@ -379,7 +382,7 @@ export default function ContactsScreen({ navigation }) {
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
-				<Image source={Logo} style={styles.logo} resizeMode="contain" />
+				<Image source={logoSource} style={styles.logo} resizeMode="contain" />
 			</View>
 
 			<View style={styles.buttonContainer}>
