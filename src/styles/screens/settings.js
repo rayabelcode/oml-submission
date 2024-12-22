@@ -1,6 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
-import { spacing, layout } from '../theme';
-import { useTheme } from '../../context/ThemeContext';
+import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
 const createStyles = (colors) =>
 	StyleSheet.create({

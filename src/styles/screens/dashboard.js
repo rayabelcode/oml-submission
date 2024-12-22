@@ -1,7 +1,6 @@
 // src/styles/screens/dashboard.js
 import { StyleSheet, Platform } from 'react-native';
-import { spacing, layout } from '../../styles/theme';
-import { useTheme } from '../../context/ThemeContext';
+import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
 const useStyles = () => {
 	const { colors } = useTheme();

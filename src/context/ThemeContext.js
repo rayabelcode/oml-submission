@@ -3,6 +3,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ThemeContext = createContext();
 
+// Object Spacing
+export const spacing = {
+	xs: 5,
+	sm: 10,
+	md: 15,
+	lg: 20,
+	xl: 30,
+};
+
+export const layout = {
+	borderRadius: {
+		sm: 8,
+		md: 10,
+		lg: 15,
+		circle: 50,
+	},
+};
+
+//Light Color Theme
 const lightTheme = {
 	background: {
 		primary: '#FFFFFF',
@@ -19,9 +38,10 @@ const lightTheme = {
 	danger: '#FF3B30',
 	warning: '#FFCC00',
 	success: '#34C759',
-	border: '#C6C6C8',
+	border: '#FFFFFF',
 };
 
+//Dark Color Theme
 const darkTheme = {
 	background: {
 		primary: '#000000',

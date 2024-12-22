@@ -1,7 +1,6 @@
 // src/styles/common.js
 import { StyleSheet, Platform } from 'react-native';
-import { spacing, layout } from './theme';
-import { useTheme } from '../context/ThemeContext';
+import { spacing, layout, useTheme } from '../context/ThemeContext';
 
 export const useCommonStyles = () => {
 	const { colors } = useTheme();
@@ -37,12 +36,12 @@ export const useCommonStyles = () => {
 			width: Platform.OS === 'web' ? '50%' : '85%',
 			alignSelf: 'center',
 			maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
-			borderWidth: 1,
+			borderWidth: 2,
 			borderColor: colors.border,
 			...(Platform.OS === 'ios'
 				? {
-						height: '75%',
-				  }
+					height: '75%',
+				}
 				: {}),
 		},
 
