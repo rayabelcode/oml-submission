@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../context/AuthContext';
-import { TabView, SceneMap } from 'react-native-tab-view';
 import { useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
@@ -23,13 +22,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const layout = useWindowDimensions();
 	const { user } = useAuth();
 
-	const [index, setIndex] = useState(0);
-	const [routes] = useState([
-		{ key: 'notes', icon: 'document-text-outline' },
-		{ key: 'schedule', icon: 'calendar-outline' },
-		{ key: 'tags', icon: 'pricetag-outline' },
-		{ key: 'edit', icon: 'create-outline' },
-	]);
+	const [activeTab, setActiveTab] = useState('notes');
 
 	const [history, setHistory] = useState([]);
 	const [suggestionCache, setSuggestionCache] = useState({});
@@ -38,7 +31,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 
 	useEffect(() => {
 		if (visible) {
-			setIndex(0);
+			setActiveTab('notes');
 		}
 	}, [visible]);
 
@@ -69,46 +62,40 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		return null;
 	}
 
-	const renderScene = SceneMap({
-		notes: () => (
-			<CallNotesTab
-				contact={contact}
-				history={history}
-				setHistory={setHistory}
-				suggestionCache={suggestionCache}
-				setSuggestionCache={setSuggestionCache}
-				suggestions={suggestions}
-				setSuggestions={setSuggestions}
-				loadingSuggestions={loadingSuggestions}
-				setLoadingSuggestions={setLoadingSuggestions}
-				setSelectedContact={setSelectedContact}
-			/>
-		),
-		schedule: () => <ScheduleTab contact={contact} setSelectedContact={setSelectedContact} />,
-		tags: () => <TagsTab contact={contact} setSelectedContact={setSelectedContact} />,
-		edit: () => (
-			<EditContactTab
-				contact={contact}
-				setSelectedContact={setSelectedContact}
-				loadContacts={loadContacts}
-				onClose={onClose}
-			/>
-		),
-	});
-
-	const renderTabBar = (props) => (
-		<View style={styles.tabBar}>
-			{props.navigationState.routes.map((route, i) => (
-				<TouchableOpacity
-					key={route.key}
-					style={[styles.tabItem, index === i && styles.activeTab]}
-					onPress={() => setIndex(i)}
-				>
-					<Icon name={route.icon} size={24} color={index === i ? colors.primary : colors.text.secondary} />
-				</TouchableOpacity>
-			))}
-		</View>
-	);
+	const renderTab = () => {
+		switch (activeTab) {
+			case 'notes':
+				return (
+					<CallNotesTab
+						contact={contact}
+						history={history}
+						setHistory={setHistory}
+						suggestionCache={suggestionCache}
+						setSuggestionCache={setSuggestionCache}
+						suggestions={suggestions}
+						setSuggestions={setSuggestions}
+						loadingSuggestions={loadingSuggestions}
+						setLoadingSuggestions={setLoadingSuggestions}
+						setSelectedContact={setSelectedContact}
+					/>
+				);
+			case 'schedule':
+				return <ScheduleTab contact={contact} setSelectedContact={setSelectedContact} />;
+			case 'tags':
+				return <TagsTab contact={contact} setSelectedContact={setSelectedContact} />;
+			case 'edit':
+				return (
+					<EditContactTab
+						contact={contact}
+						setSelectedContact={setSelectedContact}
+						loadContacts={loadContacts}
+						onClose={onClose}
+					/>
+				);
+			default:
+				return null;
+		}
+	};
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
@@ -126,13 +113,55 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 							{contact.first_name} {contact.last_name}
 						</Text>
 					</View>
-					<TabView
-						navigationState={{ index, routes }}
-						renderScene={renderScene}
-						onIndexChange={setIndex}
-						initialLayout={{ width: layout.width }}
-						renderTabBar={renderTabBar}
-					/>
+					<View style={styles.tabBar}>
+						<TouchableOpacity
+							style={[styles.tabItem, activeTab === 'notes' && styles.activeTab]}
+							onPress={() => setActiveTab('notes')}
+						>
+							<Icon
+								name="document-text-outline"
+								size={24}
+								color={activeTab === 'notes' ? colors.primary : colors.text.secondary}
+							/>
+							<Text style={[styles.tabLabel, activeTab === 'notes' && styles.activeTabLabel]}>Notes</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.tabItem, activeTab === 'schedule' && styles.activeTab]}
+							onPress={() => setActiveTab('schedule')}
+						>
+							<Icon
+								name="calendar-outline"
+								size={24}
+								color={activeTab === 'schedule' ? colors.primary : colors.text.secondary}
+							/>
+							<Text style={[styles.tabLabel, activeTab === 'schedule' && styles.activeTabLabel]}>
+								Schedule
+							</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.tabItem, activeTab === 'tags' && styles.activeTab]}
+							onPress={() => setActiveTab('tags')}
+						>
+							<Icon
+								name="pricetag-outline"
+								size={24}
+								color={activeTab === 'tags' ? colors.primary : colors.text.secondary}
+							/>
+							<Text style={[styles.tabLabel, activeTab === 'tags' && styles.activeTabLabel]}>Tags</Text>
+						</TouchableOpacity>
+						<TouchableOpacity
+							style={[styles.tabItem, activeTab === 'edit' && styles.activeTab]}
+							onPress={() => setActiveTab('edit')}
+						>
+							<Icon
+								name="create-outline"
+								size={24}
+								color={activeTab === 'edit' ? colors.primary : colors.text.secondary}
+							/>
+							<Text style={[styles.tabLabel, activeTab === 'edit' && styles.activeTabLabel]}>Edit</Text>
+						</TouchableOpacity>
+					</View>
+					<ScrollView style={styles.tabContent}>{renderTab()}</ScrollView>
 				</TouchableOpacity>
 			</TouchableOpacity>
 		</Modal>

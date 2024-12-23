@@ -72,6 +72,44 @@ const useStyles = () => {
 			fontSize: 16,
 			fontWeight: '500',
 		},
+		// Tabs
+		tabBar: {
+			flexDirection: 'row',
+			backgroundColor: colors.background.primary,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		tabIndicator: {
+			backgroundColor: colors.primary,
+			height: 2,
+		},
+		tabLabel: {
+			fontWeight: 'bold',
+			fontSize: 12,
+			textTransform: 'uppercase',
+			paddingVertical: spacing.sm,
+		},
+		tabItem: {
+			flex: 1,
+			alignItems: 'center',
+			paddingVertical: spacing.md,
+		},
+		activeTab: {
+			borderBottomWidth: 2,
+			borderBottomColor: colors.primary,
+		},
+		tabLabel: {
+			fontSize: 12,
+			marginTop: spacing.xs,
+			color: colors.text.secondary,
+		},
+		activeTabLabel: {
+			color: colors.primary,
+		},
+		tabContent: {
+			flex: 1,
+			padding: spacing.md,
+		},
 		card: {
 			width: '31%',
 			margin: '1%',
@@ -294,7 +332,6 @@ const useStyles = () => {
 		},
 		callNotesSection: {
 			marginBottom: spacing.md,
-			padding: spacing.md,
 		},
 		callNotesInput: {
 			borderWidth: 1,
@@ -333,6 +370,7 @@ const useStyles = () => {
 		},
 		historySection: {
 			marginBottom: spacing.md,
+			paddingHorizontal: spacing.md,
 		},
 		historyEntry: {
 			marginBottom: spacing.sm,
@@ -458,7 +496,7 @@ const useStyles = () => {
 		suggestionsContainer: {
 			marginTop: 0,
 			marginBottom: spacing.md,
-			padding: spacing.sm,
+			padding: spacing.md,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.sm,
 		},
