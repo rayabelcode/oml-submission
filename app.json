@@ -2,14 +2,14 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.22",
+		"version": "1.0.23",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"userInterfaceStyle": "light",
 		"splash": {
 			"image": "./assets/splash.png",
 			"resizeMode": "contain",
-			"backgroundColor": "#ffffff"
+			"backgroundColor": "#000000"
 		},
 		"assetBundlePatterns": ["**/*"],
 		"ios": {
@@ -24,7 +24,7 @@
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/adaptive-icon.png",
-				"backgroundColor": "#ffffff"
+				"backgroundColor": "#000000"
 			},
 			"package": "com.rayabel.onmylistapp",
 			"permissions": ["RECEIVE_BOOT_COMPLETED", "READ_CONTACTS", "WRITE_CONTACTS"]
