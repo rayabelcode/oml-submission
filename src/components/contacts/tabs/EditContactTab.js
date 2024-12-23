@@ -193,7 +193,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 					<View style={styles.separator} />
 					<View style={styles.actionButtons}>
 						<TouchableOpacity style={[styles.actionButton]} onPress={() => setIsEditing(true)}>
-							<Icon name="create-outline" size={26} color={colors.primary} />
+							<Icon name="create-outline" size={32} color={colors.primary} />
 							<Text style={[styles.actionButtonText, { color: colors.primary }]}>Edit</Text>
 						</TouchableOpacity>
 
@@ -217,7 +217,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 								]);
 							}}
 						>
-							<Icon name="archive-outline" size={26} color={colors.text.secondary} />
+							<Icon name="archive-outline" size={32} color={colors.text.secondary} />
 							<Text style={[styles.actionButtonText, { color: colors.text.secondary }]}>Archive</Text>
 						</TouchableOpacity>
 
@@ -246,7 +246,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 								);
 							}}
 						>
-							<Icon name="trash-outline" size={26} color={colors.danger} />
+							<Icon name="trash-outline" size={32} color={colors.danger} />
 							<Text style={[styles.actionButtonText, { color: colors.danger }]}>Delete</Text>
 						</TouchableOpacity>
 					</View>

@@ -481,14 +481,20 @@ const useStyles = () => {
 		tagBubble: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			backgroundColor: colors.theme === 'light' ? '#EBF5FF' : '#2C3E50', // Light blue for light mode, dark blue-grey for dark mode
+			backgroundColor:
+				colors.background.primary === '#FFFFFF'
+					? '#EDF3F8' // Light blue-gray for light mode
+					: '#2C3E50', // Keep current dark mode color
 			borderRadius: 20,
 			paddingVertical: 9,
 			paddingHorizontal: 16,
 			marginBottom: 8,
 			elevation: 2,
 			borderWidth: 1,
-			borderColor: colors.theme === 'light' ? '#4A90E2' : '#536878', // Matching border colors for each mode
+			borderColor:
+				colors.background.primary === '#FFFFFF'
+					? '#E0E8EF' // Light border for light mode
+					: '#536878', // Keep current dark mode border
 		},
 		tagText: {
 			fontSize: 14,
@@ -535,11 +541,9 @@ const useStyles = () => {
 			justifyContent: 'center',
 		},
 		suggestionsContainer: {
-			marginTop: 0,
-			marginBottom: spacing.sm,
-			padding: spacing.sm,
-			backgroundColor: colors.background.secondary,
-			borderRadius: layout.borderRadius.sm,
+			gap: spacing.md,
+			padding: spacing.md,
+			flex: 1,
 		},
 		suggestionsTitle: {
 			fontSize: 16,
@@ -553,10 +557,10 @@ const useStyles = () => {
 			textAlign: 'center',
 		},
 		suggestion: {
-			fontSize: 14,
+			fontSize: 16,
 			color: colors.text.primary,
-			marginBottom: 8,
-			paddingLeft: 0,
+			lineHeight: 22,
+			paddingHorizontal: spacing.md,
 		},
 		datePickerModalOverlay: {
 			flex: 1,
@@ -724,6 +728,69 @@ const useStyles = () => {
 		},
 		viewFields: {
 			flex: 1,
+		},
+		aiButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			backgroundColor: colors.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginTop: spacing.sm,
+			marginBottom: spacing.lg,
+			gap: spacing.sm,
+			elevation: 2,
+			shadowColor: '#000',
+			shadowOffset: { width: 0, height: 2 },
+			shadowOpacity: 0.2,
+			shadowRadius: 2,
+		},
+		aiButtonText: {
+			color: colors.background.primary,
+			fontSize: 18,
+			fontWeight: '600',
+		},
+		aiModalContainer: {
+			position: 'absolute',
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			backgroundColor: 'rgba(0,0,0,1)',
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
+			height: '100%',
+			zIndex: 9999,
+		},
+		modalTitleContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+		},
+		aiSubtitle: {
+			fontSize: 16,
+			fontStyle: 'italic',
+			color: colors.text.primary,
+			textAlign: 'center',
+			backgroundColor:
+				colors.background.primary === '#FFFFFF'
+					? '#F0F7FF' // Light mode
+					: '#2A2A2A', // Dark mode
+			padding: spacing.md,
+			width: '100%',
+		},
+		aiModalContent: {
+			backgroundColor: colors.background.primary,
+			borderRadius: layout.borderRadius.lg,
+			padding: 0,
+			width: Platform.OS === 'web' ? '50%' : '85%',
+			maxHeight: '80%',
+			paddingTop: spacing.md,
+		},
+		aiModalScrollContent: {
+			padding: spacing.md,
+			flexGrow: 1,
 		},
 	});
 };

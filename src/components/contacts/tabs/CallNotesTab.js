@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -27,6 +27,8 @@ const CallNotesTab = ({
 	const [callDate, setCallDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [editMode, setEditMode] = useState(null);
+
+	const [showAISuggestions, setShowAISuggestions] = useState(false);
 
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
@@ -108,19 +110,9 @@ const CallNotesTab = ({
 				</View>
 			</View>
 
-			<TouchableOpacity activeOpacity={1}>
-				{loadingSuggestions ? (
-					<Text style={styles.suggestionsText}>Loading suggestions...</Text>
-				) : (
-					<View style={styles.suggestionsContainer}>
-						<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
-						{suggestions.map((topic, index) => (
-							<Text key={index} style={styles.suggestion}>
-								{topic}
-							</Text>
-						))}
-					</View>
-				)}
+			<TouchableOpacity style={styles.aiButton} onPress={() => setShowAISuggestions(true)}>
+				<Icon name="hardware-chip-outline" size={28} color={colors.background.primary} />
+				<Text style={styles.aiButtonText}>AI Call Notes</Text>
 			</TouchableOpacity>
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
@@ -171,6 +163,41 @@ const CallNotesTab = ({
 					))
 				)}
 			</TouchableOpacity>
+
+			<Modal
+				visible={showAISuggestions}
+				transparent={true}
+				animationType="fade"
+				onRequestClose={() => setShowAISuggestions(false)}
+			>
+				<View style={styles.aiModalContainer}>
+					<View style={styles.aiModalContent}>
+						<View style={styles.modalHeader}>
+							<View style={styles.modalTitleContainer}>
+								<Icon name="hardware-chip-outline" size={28} color={colors.text.primary} />
+								<Text style={styles.modalTitle}>AI Suggestions</Text>
+							</View>
+							<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+								<Icon name="close" size={24} color={colors.text.primary} />
+							</TouchableOpacity>
+						</View>
+						<Text style={styles.aiSubtitle}>Based on your recent calls.</Text>
+						<ScrollView contentContainerStyle={styles.aiModalScrollContent}>
+							{loadingSuggestions ? (
+								<Text style={styles.suggestionsText}>Loading suggestions...</Text>
+							) : (
+								<View style={styles.suggestionsContainer}>
+									{suggestions.map((topic, index) => (
+										<Text key={index} style={styles.suggestion}>
+											{topic}
+										</Text>
+									))}
+								</View>
+							)}
+						</ScrollView>
+					</View>
+				</View>
+			</Modal>
 
 			<DatePickerModal
 				visible={showDatePicker}
