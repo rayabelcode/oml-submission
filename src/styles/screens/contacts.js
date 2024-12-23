@@ -117,6 +117,7 @@ const useStyles = () => {
 		tabContent: {
 			flex: 1,
 			padding: spacing.sm,
+			width: '100%',
 		},
 		card: {
 			width: '31%',
@@ -664,16 +665,18 @@ const useStyles = () => {
 		headerButtons: {
 			flexDirection: 'row',
 			gap: spacing.sm,
-			marginLeft: spacing.xl,
+			marginLeft: spacing.sm,
+			flex: 10,
 		},
 		headerButton: {
 			paddingHorizontal: spacing.md,
 			paddingVertical: spacing.sm,
 			borderRadius: layout.borderRadius.sm,
+			minWidth: 70,
 		},
 		saveButtonText: {
 			color: colors.background.primary,
-			fontWeight: '500',
+			fontWeight: '600',
 		},
 		cancelButtonText: {
 			fontWeight: '500',
@@ -703,16 +706,21 @@ const useStyles = () => {
 		},
 		saveButton: {
 			backgroundColor: colors.primary,
+			marginRight: spacing.xs,
 		},
 		cancelButton: {
 			backgroundColor: colors.background.primary,
-			borderWidth: 1,
+			borderWidth: 2,
 			borderColor: colors.border,
 		},
 		buttonText: {
 			color: colors.background.primary,
 			fontSize: 14,
 			fontWeight: '500',
+		},
+		contentContainer: {
+			flexGrow: 1,
+			width: '100%',
 		},
 		viewFields: {
 			flex: 1,
