@@ -9,6 +9,14 @@ const useStyles = () => {
 			flex: 1,
 			backgroundColor: colors.background.primary,
 		},
+		mainContainer: {
+			flex: 1,
+			width: '100%',
+		},
+		scrollContent: {
+			flexGrow: 1,
+			paddingBottom: 20,
+		},
 		content: {
 			flex: 1,
 		},

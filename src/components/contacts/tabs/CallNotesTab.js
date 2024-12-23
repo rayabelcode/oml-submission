@@ -76,114 +76,120 @@ const CallNotesTab = ({
 	};
 
 	return (
-		<ScrollView>
-			<View style={styles.tabContent}>
-				<View style={styles.callNotesSection}>
-					<TextInput
-						style={styles.callNotesInput}
-						multiline
-						value={callNotes}
-						onChangeText={setCallNotes}
-						placeholder="Add a call here! What did you discuss?"
-						placeholderTextColor={colors.text.secondary}
-					/>
-					<View style={styles.callNotesControls}>
-						<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-							<Text style={styles.dateButtonText}>
-								{callDate.toDateString() === new Date().toDateString()
-									? 'Today'
-									: callDate.toLocaleDateString()}
-							</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={styles.submitCallButton}
-							onPress={() => handleAddCallNotes(callNotes, callDate)}
-						>
-							<Text style={commonStyles.primaryButtonText}>Submit</Text>
-						</TouchableOpacity>
-					</View>
-				</View>
-
-				<DatePickerModal
-					visible={showDatePicker}
-					onClose={() => setShowDatePicker(false)}
-					selectedDate={callDate}
-					onDateSelect={(event, date) => {
-						if (Platform.OS === 'web') {
-							const newDate = new Date(event);
-							newDate.setHours(12, 0, 0, 0);
-							setCallDate(newDate);
-							setShowDatePicker(false);
-						} else if (date && event.type === 'set') {
-							const newDate = new Date(date);
-							newDate.setHours(12, 0, 0, 0);
-							setCallDate(newDate);
-							setShowDatePicker(false);
-						}
-					}}
+		<ScrollView
+			style={[styles.tabContent, { flex: 1 }]}
+			contentContainerStyle={{ paddingBottom: 20 }}
+			scrollEnabled={true}
+			showsVerticalScrollIndicator={true}
+		>
+			<View style={styles.callNotesSection}>
+				<TextInput
+					style={styles.callNotesInput}
+					multiline
+					value={callNotes}
+					onChangeText={setCallNotes}
+					placeholder="Add a call here! What did you discuss?"
+					placeholderTextColor={colors.text.secondary}
 				/>
+				<View style={styles.callNotesControls}>
+					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+						<Text style={styles.dateButtonText}>
+							{callDate.toDateString() === new Date().toDateString()
+								? 'Today'
+								: callDate.toLocaleDateString()}
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={styles.submitCallButton}
+						onPress={() => handleAddCallNotes(callNotes, callDate)}
+					>
+						<Text style={commonStyles.primaryButtonText}>Submit</Text>
+					</TouchableOpacity>
+				</View>
+			</View>
 
+			<TouchableOpacity activeOpacity={1}>
 				{loadingSuggestions ? (
 					<Text style={styles.suggestionsText}>Loading suggestions...</Text>
 				) : (
-					<TouchableOpacity style={styles.suggestionsContainer} onPress={() => {}}>
+					<View style={styles.suggestionsContainer}>
 						<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
 						{suggestions.map((topic, index) => (
 							<Text key={index} style={styles.suggestion}>
 								{topic}
 							</Text>
 						))}
-					</TouchableOpacity>
+					</View>
 				)}
+			</TouchableOpacity>
 
-				<View style={styles.historySection}>
-					<Text style={styles.sectionTitle}>Contact History</Text>
-					{history.length === 0 ? (
-						<Text style={styles.emptyHistoryText}>
-							Add your contact history above to view your call history...
-						</Text>
-					) : (
-						history.map((entry, index) => (
-							<View key={index} style={styles.historyEntry}>
-								<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-								{editMode === index ? (
-									<TextInput
-										style={styles.historyNotesInput}
-										value={entry.notes}
-										onChangeText={(text) => {
-											const updatedHistory = [...history];
-											updatedHistory[index].notes = text;
-											setHistory(updatedHistory);
-										}}
+			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
+				<Text style={styles.sectionTitle}>Contact History</Text>
+				{history.length === 0 ? (
+					<Text style={styles.emptyHistoryText}>
+						Add your contact history above to view your call history...
+					</Text>
+				) : (
+					history.map((entry, index) => (
+						<View key={index} style={styles.historyEntry}>
+							<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+							{editMode === index ? (
+								<TextInput
+									style={[styles.historyNotesInput, { color: colors.text.primary }]}
+									value={entry.notes}
+									onChangeText={(text) => {
+										const updatedHistory = [...history];
+										updatedHistory[index].notes = text;
+										setHistory(updatedHistory);
+									}}
+									multiline
+								/>
+							) : (
+								<Text style={styles.historyNotes}>{entry.notes}</Text>
+							)}
+							<View style={styles.historyActions}>
+								<TouchableOpacity
+									style={styles.historyActionButton}
+									onPress={() =>
+										editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
+									}
+								>
+									<Icon
+										name={editMode === index ? 'checkmark-outline' : 'create-outline'}
+										size={20}
+										color={colors.primary}
 									/>
-								) : (
-									<Text style={styles.historyNotes}>{entry.notes}</Text>
-								)}
-								<View style={styles.historyActions}>
-									<TouchableOpacity
-										style={styles.historyActionButton}
-										onPress={() =>
-											editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-										}
-									>
-										<Icon
-											name={editMode === index ? 'checkmark-outline' : 'create-outline'}
-											size={20}
-											color={colors.primary}
-										/>
-									</TouchableOpacity>
-									<TouchableOpacity
-										style={styles.historyActionButton}
-										onPress={() => handleDeleteHistory(index)}
-									>
-										<Icon name="trash-outline" size={20} color={colors.danger} />
-									</TouchableOpacity>
-								</View>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={styles.historyActionButton}
+									onPress={() => handleDeleteHistory(index)}
+								>
+									<Icon name="trash-outline" size={20} color={colors.danger} />
+								</TouchableOpacity>
 							</View>
-						))
-					)}
-				</View>
-			</View>
+						</View>
+					))
+				)}
+			</TouchableOpacity>
+
+			<DatePickerModal
+				visible={showDatePicker}
+				onClose={() => setShowDatePicker(false)}
+				selectedDate={callDate}
+				onDateSelect={(event, date) => {
+					if (Platform.OS === 'web') {
+						const newDate = new Date(event);
+						newDate.setHours(12, 0, 0, 0);
+						setCallDate(newDate);
+						setShowDatePicker(false);
+					} else if (date && event.type === 'set') {
+						const newDate = new Date(date);
+						newDate.setHours(12, 0, 0, 0);
+						setCallDate(newDate);
+						setShowDatePicker(false);
+					}
+				}}
+			/>
 		</ScrollView>
 	);
 };
