@@ -496,6 +496,8 @@ const useStyles = () => {
 			marginRight: spacing.sm,
 			fontSize: 16,
 			color: colors.text.primary,
+			backgroundColor: colors.background.primary,
+			height: 50,
 		},
 		tagInputContainer: {
 			flexDirection: 'row',

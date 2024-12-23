@@ -57,7 +57,7 @@ const TagsTab = ({ contact, setSelectedContact }) => {
 			<View style={styles.tagInputContainer}>
 				<TextInput
 					style={styles.tagInput}
-					placeholder="Type new tag..."
+					placeholder="Type a new tag..."
 					value={newTag}
 					onChangeText={setNewTag}
 					onSubmitEditing={handleAddTag}
