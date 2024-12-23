@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../context/ThemeContext';
+import { Platform } from 'react-native';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ContactsScreen from '../screens/ContactsScreen';
@@ -14,21 +15,23 @@ export default function TabNavigator() {
 	return (
 		<Tab.Navigator
 			screenOptions={({ route }) => ({
-				tabBarIcon: ({ color, size }) => {
-					const iconName = {
-						Contacts: 'people-outline',
-						Calendar: 'calendar-outline',
-						Settings: 'settings-outline',
+				tabBarIcon: ({ focused, color, size }) => {
+					const iconNames = {
+						Contacts: focused ? 'people' : 'people-outline',
+						Calendar: focused ? 'calendar' : 'calendar-outline',
+						Settings: focused ? 'settings' : 'settings-outline',
 					}[route.name];
-					return <Icon name={iconName} size={size} color={color} />;
+					return <Icon name={iconNames} size={size} color={color} />;
 				},
 				tabBarActiveTintColor: colors.primary,
 				tabBarInactiveTintColor: colors.text.secondary,
 				tabBarStyle: {
 					backgroundColor: colors.background.primary,
 					borderTopColor: colors.border,
+					paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+					height: Platform.OS === 'ios' ? 85 : 60,
 				},
-				headerShown: false, // Remove header from all screens
+				headerShown: false,
 				tabBarLabelStyle: {
 					color: colors.text.primary,
 				},
