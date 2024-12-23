@@ -7,36 +7,29 @@ import {
 	ScrollView,
 	KeyboardAvoidingView,
 	Platform,
-	Keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuth } from '../../context/AuthContext';
-import { useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
 import { useStyles } from '../../styles/screens/contacts';
-import { updateContact, fetchContactHistory, deleteContact, archiveContact } from '../../utils/firestore';
+import { fetchContactHistory } from '../../utils/firestore';
 import { generateTopicSuggestions } from '../../utils/ai';
 import CallNotesTab from './tabs/CallNotesTab';
 import ScheduleTab from './tabs/ScheduleTab';
 import TagsTab from './tabs/TagsTab';
 import EditContactTab from './tabs/EditContactTab';
-import DatePickerModal from '../modals/DatePickerModal';
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
-	const layout = useWindowDimensions();
-	const { user } = useAuth();
 
 	const [activeTab, setActiveTab] = useState('notes');
 	const [history, setHistory] = useState([]);
 	const [suggestionCache, setSuggestionCache] = useState({});
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-	const [keyboardVisible, setKeyboardVisible] = useState(false);
 
 	// Reset tab when modal becomes visible
 	useEffect(() => {
@@ -44,21 +37,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 			setActiveTab('notes');
 		}
 	}, [visible]);
-
-	// Keyboard listeners
-	useEffect(() => {
-		const keyboardWillShow = Keyboard.addListener('keyboardWillShow', () => {
-			setKeyboardVisible(true);
-		});
-		const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
-			setKeyboardVisible(false);
-		});
-
-		return () => {
-			keyboardWillShow.remove();
-			keyboardWillHide.remove();
-		};
-	}, []);
 
 	// Load contact history
 	useEffect(() => {
