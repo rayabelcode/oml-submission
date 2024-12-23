@@ -438,7 +438,7 @@ const useStyles = () => {
 			color: colors.text.primary,
 		},
 		scheduleActions: {
-			flexDirection: 'row',
+			flexDirection: 'column',
 			justifyContent: 'center',
 			marginTop: spacing.md,
 		},
@@ -458,6 +458,11 @@ const useStyles = () => {
 		removeScheduleButton: {
 			marginTop: spacing.sm,
 			padding: spacing.sm,
+			borderWidth: 1,
+			borderColor: colors.danger,
+			borderRadius: layout.borderRadius.sm,
+			width: '100%',
+			alignItems: 'center',
 		},
 		removeScheduleText: {
 			color: colors.danger,

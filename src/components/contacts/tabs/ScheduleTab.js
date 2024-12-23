@@ -69,7 +69,7 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 
 			<View style={styles.scheduleActions}>
 				<TouchableOpacity
-					style={useCommonStyles().primaryButton}
+					style={[useCommonStyles().primaryButton, { width: '100%' }]}
 					onPress={() => setShowScheduleDatePicker(true)}
 				>
 					<Text style={useCommonStyles().primaryButtonText}>Schedule Contact</Text>
@@ -78,19 +78,28 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 				{contact.next_contact && (
 					<TouchableOpacity
 						style={styles.removeScheduleButton}
-						onPress={async () => {
-							try {
-								await updateContact(contact.id, {
-									next_contact: null,
-								});
-								setSelectedContact({
-									...contact,
-									next_contact: null,
-								});
-								setSelectedDate(new Date());
-							} catch (error) {
-								Alert.alert('Error', 'Failed to remove schedule');
-							}
+						onPress={() => {
+							Alert.alert('Remove Schedule', 'Are you sure you want to remove this schedule?', [
+								{ text: 'Cancel', style: 'cancel' },
+								{
+									text: 'Remove',
+									style: 'destructive',
+									onPress: async () => {
+										try {
+											await updateContact(contact.id, {
+												next_contact: null,
+											});
+											setSelectedContact({
+												...contact,
+												next_contact: null,
+											});
+											setSelectedDate(new Date());
+										} catch (error) {
+											Alert.alert('Error', 'Failed to remove schedule');
+										}
+									},
+								},
+							]);
 						}}
 					>
 						<Text style={styles.removeScheduleText}>Remove Schedule</Text>
