@@ -480,14 +480,14 @@ const useStyles = () => {
 		tagBubble: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			backgroundColor: colors.background.secondary,
+			backgroundColor: colors.theme === 'light' ? '#EBF5FF' : '#2C3E50', // Light blue for light mode, dark blue-grey for dark mode
 			borderRadius: 20,
 			paddingVertical: 9,
 			paddingHorizontal: 16,
 			marginBottom: 8,
 			elevation: 2,
 			borderWidth: 1,
-			borderColor: colors.border,
+			borderColor: colors.theme === 'light' ? '#4A90E2' : '#536878', // Matching border colors for each mode
 		},
 		tagText: {
 			fontSize: 14,
