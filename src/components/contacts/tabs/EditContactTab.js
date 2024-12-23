@@ -14,6 +14,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
 
+	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState({ ...contact });
 
 	const handleEditPhotoUpload = async () => {
@@ -44,163 +45,204 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 		}
 	};
 
+	const handleSave = async () => {
+		try {
+			await updateContact(contact.id, {
+				first_name: formData.first_name,
+				last_name: formData.last_name,
+				email: formData.email,
+				phone: formData.phone,
+				photo_url: formData.photo_url,
+			});
+			setSelectedContact(formData);
+			setIsEditing(false);
+			Alert.alert('Success', 'Contact Updated');
+			await loadContacts();
+		} catch (error) {
+			Alert.alert('Error', 'Failed to update contact');
+		}
+	};
+
 	return (
 		<ScrollView style={[styles.tabContent, styles.formScrollView]}>
-			<View style={styles.photoUploadContainer}>
-				{formData.photo_url ? (
-					<View style={styles.photoPreview}>
-						<ExpoImage
-							source={{ uri: formData.photo_url }}
-							style={styles.photoImage}
-							cachePolicy="memory-disk"
-						/>
+			<View style={styles.contactHeader}>
+				<View style={styles.photoContainer}>
+					{formData.photo_url ? (
+						<View style={styles.photoPreview}>
+							<ExpoImage
+								source={{ uri: formData.photo_url }}
+								style={styles.photoImage}
+								cachePolicy="memory-disk"
+							/>
+							{isEditing && (
+								<TouchableOpacity
+									style={styles.removePhotoButton}
+									onPress={() => {
+										Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+											{ text: 'Cancel', style: 'cancel' },
+											{
+												text: 'Remove',
+												style: 'destructive',
+												onPress: async () => {
+													try {
+														await updateContact(contact.id, {
+															...contact,
+															photo_url: null,
+														});
+														setSelectedContact({ ...contact, photo_url: null });
+														loadContacts();
+													} catch (error) {
+														Alert.alert('Error', 'Failed to remove photo');
+													}
+												},
+											},
+										]);
+									}}
+								>
+									<Icon name="close-circle" size={24} color={colors.danger} />
+								</TouchableOpacity>
+							)}
+						</View>
+					) : (
 						<TouchableOpacity
-							style={styles.removePhotoButton}
-							onPress={() => {
-								Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
-									{ text: 'Cancel', style: 'cancel' },
-									{
-										text: 'Remove',
-										style: 'destructive',
-										onPress: async () => {
-											try {
-												await updateContact(contact.id, {
-													...contact,
-													photo_url: null,
-												});
-												setSelectedContact({ ...contact, photo_url: null });
-												loadContacts();
-											} catch (error) {
-												Alert.alert('Error', 'Failed to remove photo');
-											}
-										},
-									},
-								]);
-							}}
+							style={styles.uploadButton}
+							onPress={handleEditPhotoUpload}
+							disabled={!isEditing}
 						>
-							<Icon name="close-circle" size={24} color={colors.danger} />
+							<Icon name="camera-outline" size={24} color={colors.primary} />
+							<Text style={styles.uploadButtonText}>Add Photo</Text>
 						</TouchableOpacity>
+					)}
+				</View>
+
+				<View style={styles.headerButtons}>
+					{isEditing && (
+						<>
+							<TouchableOpacity style={[styles.headerButton, styles.saveButton]} onPress={handleSave}>
+								<Text style={styles.saveButtonText}>Save</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={[styles.headerButton, styles.cancelButton]}
+								onPress={() => {
+									setFormData({ ...contact });
+									setIsEditing(false);
+								}}
+							>
+								<Text style={[styles.cancelButtonText, { color: colors.text.primary }]}>Cancel</Text>
+							</TouchableOpacity>
+						</>
+					)}
+				</View>
+			</View>
+
+			<View style={styles.contactDetails}>
+				{isEditing ? (
+					<View style={styles.editFields}>
+						<TextInput
+							style={styles.editInput}
+							value={formData.first_name}
+							onChangeText={(text) => setFormData({ ...formData, first_name: text })}
+							placeholder="First Name"
+							placeholderTextColor={colors.text.secondary}
+						/>
+						<TextInput
+							style={styles.editInput}
+							value={formData.last_name}
+							onChangeText={(text) => setFormData({ ...formData, last_name: text })}
+							placeholder="Last Name"
+							placeholderTextColor={colors.text.secondary}
+						/>
+						<TextInput
+							style={styles.editInput}
+							value={formData.email}
+							onChangeText={(text) => setFormData({ ...formData, email: text })}
+							placeholder="Email"
+							placeholderTextColor={colors.text.secondary}
+							keyboardType="email-address"
+							autoCapitalize="none"
+						/>
+						<TextInput
+							style={styles.editInput}
+							value={formData.phone}
+							onChangeText={(text) => setFormData({ ...formData, phone: text })}
+							placeholder="Phone"
+							placeholderTextColor={colors.text.secondary}
+							keyboardType="phone-pad"
+						/>
 					</View>
 				) : (
-					<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
-						<Icon name="camera-outline" size={24} color={colors.primary} />
-						<Text style={styles.uploadButtonText}>Add Photo</Text>
-					</TouchableOpacity>
+					<View style={styles.viewFields}>
+						<Text style={styles.fullName}>{`${formData.first_name} ${formData.last_name}`}</Text>
+						{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
+						{formData.phone && <Text style={styles.contactDetail}>{formData.phone}</Text>}
+					</View>
 				)}
 			</View>
 
-			<TextInput
-				style={commonStyles.input}
-				placeholder="First Name"
-				placeholderTextColor={colors.text.secondary}
-				value={formData.first_name}
-				onChangeText={(text) => setFormData({ ...formData, first_name: text })}
-			/>
+			{!isEditing && (
+    <>
+        <View style={styles.separator} />
+        <View style={styles.actionButtons}>
+					<TouchableOpacity style={[styles.actionButton]} onPress={() => setIsEditing(true)}>
+						<Icon name="create-outline" size={26} color={colors.primary} />
+						<Text style={[styles.actionButtonText, { color: colors.primary }]}>Edit</Text>
+					</TouchableOpacity>
 
-			<TextInput
-				style={commonStyles.input}
-				placeholder="Last Name"
-				placeholderTextColor={colors.text.secondary}
-				value={formData.last_name}
-				onChangeText={(text) => setFormData({ ...formData, last_name: text })}
-			/>
-
-			<TextInput
-				style={commonStyles.input}
-				placeholder="Email"
-				placeholderTextColor={colors.text.secondary}
-				value={formData.email}
-				onChangeText={(text) => setFormData({ ...formData, email: text })}
-				keyboardType="email-address"
-				autoCapitalize="none"
-			/>
-
-			<TextInput
-				style={commonStyles.input}
-				placeholder="Phone"
-				placeholderTextColor={colors.text.secondary}
-				value={formData.phone}
-				onChangeText={(text) => setFormData({ ...formData, phone: text })}
-				keyboardType="phone-pad"
-			/>
-
-			<View style={styles.editModalActions}>
-				<TouchableOpacity
-					style={styles.editActionButton}
-					onPress={async () => {
-						try {
-							await updateContact(contact.id, {
-								first_name: formData.first_name,
-								last_name: formData.last_name,
-								email: formData.email,
-								phone: formData.phone,
-								photo_url: formData.photo_url,
-							});
-							setSelectedContact(formData);
-							Alert.alert('Success', 'Contact Updated');
-							await loadContacts();
-						} catch (error) {
-							Alert.alert('Error', 'Failed to update contact');
-						}
-					}}
-				>
-					<Icon name="save-outline" size={24} color={colors.secondary} />
-					<Text style={[styles.editActionText, { color: colors.secondary }]}>Save</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={styles.editActionButton}
-					onPress={() => {
-						Alert.alert('Archive Contact', 'Archive this contact?', [
-							{ text: 'Cancel', style: 'cancel' },
-							{
-								text: 'Archive',
-								onPress: async () => {
-									try {
-										await archiveContact(contact.id);
-										await loadContacts();
-										onClose();
-									} catch (error) {
-										console.error('Archive error:', error);
-										Alert.alert('Error', 'Unable to archive contact');
-									}
-								},
-							},
-						]);
-					}}
-				>
-					<Icon name="archive-outline" size={24} color={colors.primary} />
-					<Text style={[styles.editActionText, { color: colors.primary }]}>Archive</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={styles.editActionButton}
-					onPress={() => {
-						Alert.alert(
-							'Delete Contact',
-							'Are you sure you want to delete this contact? This action cannot be undone.',
-							[
+					<TouchableOpacity
+						style={[styles.actionButton]}
+						onPress={() => {
+							Alert.alert('Archive Contact', 'Archive this contact?', [
 								{ text: 'Cancel', style: 'cancel' },
 								{
-									text: 'Delete',
-									style: 'destructive',
+									text: 'Archive',
 									onPress: async () => {
 										try {
-											await deleteContact(contact.id);
+											await archiveContact(contact.id);
 											await loadContacts();
 											onClose();
 										} catch (error) {
-											console.error('Delete error:', error);
-											Alert.alert('Error', 'Unable to delete contact');
+											Alert.alert('Error', 'Unable to archive contact');
 										}
 									},
 								},
-							]
-						);
-					}}
-				>
-					<Icon name="trash-outline" size={24} color={colors.danger} />
-					<Text style={[styles.editActionText, { color: colors.danger }]}>Delete</Text>
-				</TouchableOpacity>
-			</View>
+							]);
+						}}
+					>
+						<Icon name="archive-outline" size={26} color={colors.text.secondary} />
+						<Text style={[styles.actionButtonText, { color: colors.text.secondary }]}>Archive</Text>
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						style={[styles.actionButton]}
+						onPress={() => {
+							Alert.alert(
+								'Delete Contact',
+								'Are you sure you want to delete this contact? This action cannot be undone.',
+								[
+									{ text: 'Cancel', style: 'cancel' },
+									{
+										text: 'Delete',
+										style: 'destructive',
+										onPress: async () => {
+											try {
+												await deleteContact(contact.id);
+												await loadContacts();
+												onClose();
+											} catch (error) {
+												Alert.alert('Error', 'Unable to delete contact');
+											}
+										},
+									},
+								]
+							);
+						}}
+					>
+						<Icon name="trash-outline" size={26} color={colors.danger} />
+						<Text style={[styles.actionButtonText, { color: colors.danger }]}>Delete</Text>
+					</TouchableOpacity>
+				</View>
+				</>
+			)}
 		</ScrollView>
 	);
 };

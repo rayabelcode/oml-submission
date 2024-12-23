@@ -205,7 +205,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 									size={24}
 									color={activeTab === 'edit' ? colors.primary : colors.text.secondary}
 								/>
-								<Text style={[styles.tabLabel, activeTab === 'edit' && styles.activeTabLabel]}>Edit</Text>
+								<Text style={[styles.tabLabel, activeTab === 'edit' && styles.activeTabLabel]}>Profile</Text>
 							</TouchableOpacity>
 						</View>
 						<ScrollView style={styles.tabContent}>{renderTab()}</ScrollView>

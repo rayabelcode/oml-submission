@@ -205,9 +205,9 @@ const useStyles = () => {
 		},
 		actionButtonsContainer: {
 			flexDirection: 'row',
-			justifyContent: 'space-around',
-			alignItems: 'center',
-			width: '100%',
+			justifyContent: 'center',
+			gap: spacing.xl,
+			paddingVertical: spacing.md,
 		},
 		cardActionButton: {
 			padding: 8,
@@ -602,6 +602,120 @@ const useStyles = () => {
 			fontWeight: '500',
 			marginBottom: spacing.sm,
 			color: colors.text.primary,
+		},
+		// Edit tab
+		contactHeader: {
+			flexDirection: 'row',
+			padding: spacing.md,
+			alignItems: 'center',
+			justifyContent: 'space-between',
+		},
+		photoContainer: {
+			width: 100,
+		},
+		contactInfo: {
+			flex: 1,
+			paddingTop: spacing.sm,
+		},
+		fullName: {
+			fontSize: 24,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.md,
+		},
+		contactDetail: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.sm,
+		},
+		editFields: {
+			width: '100%',
+		},
+		editInput: {
+			fontSize: 16,
+			color: colors.text.primary,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			paddingVertical: spacing.sm,
+			marginBottom: spacing.md,
+		},
+		editActions: {
+			flexDirection: 'row',
+			justifyContent: 'flex-end',
+			gap: spacing.sm,
+			marginTop: spacing.md,
+		},
+		actionButtons: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+			gap: spacing.xl,
+			paddingVertical: spacing.lg,
+			marginTop: spacing.xl,
+		},
+		actionButton: {
+			alignItems: 'center',
+			padding: spacing.sm,
+			minWidth: 80,
+		},
+		actionButtonText: {
+			fontSize: 12,
+			marginTop: spacing.xs,
+		},
+		headerButtons: {
+			flexDirection: 'row',
+			gap: spacing.sm,
+			marginLeft: spacing.xl,
+		},
+		headerButton: {
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+		},
+		saveButtonText: {
+			color: colors.background.primary,
+			fontWeight: '500',
+		},
+		cancelButtonText: {
+			fontWeight: '500',
+		},
+		editButtonText: {
+			color: colors.background.primary,
+			fontWeight: '500',
+		},
+		contactDetails: {
+			padding: spacing.md,
+			marginTop: spacing.xs,
+		},
+		separator: {
+			height: 1,
+			backgroundColor: colors.border,
+			marginTop: spacing.md,
+			marginBottom: spacing.xs,
+		},
+		editButton: {
+			backgroundColor: colors.primary,
+		},
+		archiveButton: {
+			backgroundColor: colors.background.primary,
+		},
+		deleteButton: {
+			backgroundColor: colors.background.primary,
+		},
+		saveButton: {
+			backgroundColor: colors.primary,
+		},
+		cancelButton: {
+			backgroundColor: colors.background.primary,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		buttonText: {
+			color: colors.background.primary,
+			fontSize: 14,
+			fontWeight: '500',
+		},
+		viewFields: {
+			flex: 1,
 		},
 	});
 };
