@@ -18,10 +18,10 @@ import { useCommonStyles } from '../../styles/common';
 import { useStyles } from '../../styles/screens/contacts';
 import { updateContact, fetchContactHistory, deleteContact, archiveContact } from '../../utils/firestore';
 import { generateTopicSuggestions } from '../../utils/ai';
-import CallNotesTab from '../contacts/tabs/CallNotesTab';
-import ScheduleTab from '../contacts/tabs/ScheduleTab';
-import TagsTab from '../contacts/tabs/TagsTab';
-import EditContactTab from '../contacts/tabs/EditContactTab';
+import CallNotesTab from './tabs/CallNotesTab';
+import ScheduleTab from './tabs/ScheduleTab';
+import TagsTab from './tabs/TagsTab';
+import EditContactTab from './tabs/EditContactTab';
 import DatePickerModal from '../modals/DatePickerModal';
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {

@@ -29,7 +29,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
 import ContactForm from '../components/modals/ContactForm'; // Add/Edit Contact Modal
-import ContactDetailsModal from '../components/modals/ContactDetailsModal'; // View Contact Details Modal
+import ContactDetailsModal from '../components/contacts/ContactDetailsModal'; // View Contact Details Modal
 // Get initials for image avatar
 const getInitials = (firstName, lastName) => {
 	const firstInitial = firstName ? firstName[0] : '';
