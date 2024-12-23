@@ -23,27 +23,29 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const { user } = useAuth();
 
 	const [activeTab, setActiveTab] = useState('notes');
-
 	const [history, setHistory] = useState([]);
 	const [suggestionCache, setSuggestionCache] = useState({});
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
+	// Reset tab when modal becomes visible
 	useEffect(() => {
 		if (visible) {
 			setActiveTab('notes');
 		}
 	}, [visible]);
 
+	// Load contact history
 	useEffect(() => {
 		if (contact?.id) {
-			fetchContactHistory(contact?.id).then((history) => {
+			fetchContactHistory(contact.id).then((history) => {
 				const sortedHistory = [...history].sort((a, b) => new Date(b.date) - new Date(a.date));
 				setHistory(sortedHistory);
 			});
 		}
 	}, [contact]);
 
+	// Load suggestion cache
 	useEffect(() => {
 		const loadCache = async () => {
 			try {
@@ -57,6 +59,43 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		};
 		loadCache();
 	}, []);
+
+	// Load suggestions when contact changes
+	useEffect(() => {
+		const loadSuggestions = async () => {
+			if (!contact) return;
+
+			setLoadingSuggestions(true);
+			try {
+				// Check cache first
+				const cacheKey = `${contact.id}-suggestions`;
+				const cachedSuggestions = suggestionCache[cacheKey];
+
+				if (cachedSuggestions) {
+					setSuggestions(cachedSuggestions);
+				} else {
+					// Generate new suggestions
+					const newSuggestions = await generateTopicSuggestions(contact, history);
+					setSuggestions(newSuggestions);
+
+					// Update cache
+					const newCache = {
+						...suggestionCache,
+						[cacheKey]: newSuggestions,
+					};
+					setSuggestionCache(newCache);
+					await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+				}
+			} catch (error) {
+				console.error('Error loading suggestions:', error);
+				setSuggestions(['Unable to load suggestions at this time.']);
+			} finally {
+				setLoadingSuggestions(false);
+			}
+		};
+
+		loadSuggestions();
+	}, [contact, history]);
 
 	if (!contact) {
 		return null;
