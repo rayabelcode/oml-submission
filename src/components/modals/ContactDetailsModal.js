@@ -206,19 +206,18 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								}
 							}}
 						/>
-
 						{/* AI Suggestions */}
 						{loadingSuggestions ? (
 							<Text style={styles.suggestionsText}>Loading suggestions...</Text>
 						) : (
-							<View style={styles.suggestionsContainer}>
+							<TouchableOpacity style={styles.suggestionsContainer} activeOpacity={1}>
 								<Text style={styles.suggestionsTitle}>Suggested Topics:</Text>
 								{suggestions.map((topic, index) => (
 									<Text key={index} style={styles.suggestion}>
 										{topic}
 									</Text>
 								))}
-							</View>
+							</TouchableOpacity>
 						)}
 
 						{/* Contact History */}
@@ -363,16 +362,28 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 
 			case 'tags':
 				return (
-					<ScrollView style={styles.tabContent}>
+					<ScrollView style={styles.tabContent} keyboardShouldPersistTaps="handled">
 						<View style={styles.tagsContainer}>
 							{contact.tags?.map((tag, index) => (
 								<View key={index} style={styles.tagBubble}>
 									<Text style={styles.tagText}>{tag}</Text>
 									<TouchableOpacity
-										onPress={async () => {
-											const updatedTags = contact.tags.filter((t) => t !== tag);
-											await updateContact(contact.id, { tags: updatedTags });
-											setSelectedContact({ ...contact, tags: updatedTags });
+										onPress={() => {
+											Alert.alert('Delete Tag', `Are you sure you want to delete "${tag}"?`, [
+												{ text: 'Cancel', style: 'cancel' },
+												{
+													text: 'Delete',
+													style: 'destructive',
+													onPress: async () => {
+														const updatedTags = contact.tags.filter((t) => t !== tag);
+														await updateContact(contact.id, { tags: updatedTags });
+														setSelectedContact((prev) => ({
+															...prev,
+															tags: updatedTags,
+														}));
+													},
+												},
+											]);
 										}}
 									>
 										<Icon name="close-circle" size={20} color={colors.text.secondary} />
@@ -386,22 +397,30 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								placeholder="Type new tag..."
 								value={newTag}
 								onChangeText={setNewTag}
-								onSubmitEditing={() => {
+								onSubmitEditing={async () => {
 									if (newTag.trim()) {
 										const updatedTags = [...(contact.tags || []), newTag.trim()];
-										updateContact(contact.id, { tags: updatedTags });
-										setSelectedContact({ ...contact, tags: updatedTags });
+										await updateContact(contact.id, { tags: updatedTags });
+										setSelectedContact((prev) => ({
+											...prev,
+											tags: updatedTags,
+										}));
 										setNewTag('');
 									}
 								}}
+								returnKeyType="done"
+								blurOnSubmit={false}
 							/>
 							<TouchableOpacity
 								style={styles.addTagButton}
-								onPress={() => {
+								onPress={async () => {
 									if (newTag.trim()) {
 										const updatedTags = [...(contact.tags || []), newTag.trim()];
-										updateContact(contact.id, { tags: updatedTags });
-										setSelectedContact({ ...contact, tags: updatedTags });
+										await updateContact(contact.id, { tags: updatedTags });
+										setSelectedContact((prev) => ({
+											...prev,
+											tags: updatedTags,
+										}));
 										setNewTag('');
 									}
 								}}
@@ -639,12 +658,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						backgroundColor:
 							props.navigationState.index === index ? colors.background.tertiary : colors.background.primary,
 					}}
-					onPress={() => {
-						if (Platform.OS !== 'web') {
-							Keyboard.dismiss();
-						}
-						setIndex(index);
-					}}
+					onPress={() => setIndex(index)}
 				>
 					<Icon
 						name={route.icon}
@@ -774,43 +788,51 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-				<View style={commonStyles.modalContainer}>
-					<View style={commonStyles.modalContent}>
-						<View style={commonStyles.modalHeader}>
-							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-								<Icon name="close-outline" size={24} color={colors.text.secondary} />
-							</TouchableOpacity>
-							<Text style={commonStyles.modalTitle}>
-								{contact.first_name} {contact.last_name}
-							</Text>
-						</View>
-						<TabView
-							navigationState={{ index, routes }}
-							renderScene={renderScene}
-							renderTabBar={renderTabBar}
-							onIndexChange={setIndex}
-							initialLayout={{ width: layout.width, height: layout.height }}
-							style={{ flex: 1, width: '100%' }}
-						/>
-						<TagsModal
-							visible={isTagsModalVisible}
-							onClose={() => setIsTagsModalVisible(false)}
-							tags={contact.tags || []}
-							onAddTag={async (tag) => {
-								const updatedTags = [...(contact.tags || []), tag];
-								await updateContact(contact.id, { tags: updatedTags });
-								setSelectedContact({ ...contact, tags: updatedTags });
-							}}
-							onDeleteTag={async (tagToDelete) => {
-								const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
-								await updateContact(contact.id, { tags: updatedTags });
-								setSelectedContact({ ...contact, tags: updatedTags });
-							}}
-						/>
+			<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={onClose}>
+				<TouchableOpacity
+					style={commonStyles.modalContent}
+					activeOpacity={1}
+					onPress={(e) => e.stopPropagation()}
+				>
+					<View style={commonStyles.modalHeader}>
+						<TouchableOpacity style={styles.closeButton} onPress={onClose}>
+							<Icon name="close-outline" size={24} color={colors.text.secondary} />
+						</TouchableOpacity>
+						<Text style={commonStyles.modalTitle}>
+							{contact.first_name} {contact.last_name}
+						</Text>
 					</View>
-				</View>
-			</KeyboardAvoidingView>
+					<TabView
+						navigationState={{ index, routes }}
+						renderScene={renderScene}
+						renderTabBar={renderTabBar}
+						onIndexChange={(newIndex) => {
+							if (index === 2 && newIndex !== 2 && Platform.OS !== 'web') {
+								Keyboard.dismiss();
+							}
+							setIndex(newIndex);
+						}}
+						initialLayout={{ width: layout.width, height: layout.height }}
+						style={{ flex: 1, width: '100%' }}
+					/>
+
+					<TagsModal
+						visible={isTagsModalVisible}
+						onClose={() => setIsTagsModalVisible(false)}
+						tags={contact.tags || []}
+						onAddTag={async (tag) => {
+							const updatedTags = [...(contact.tags || []), tag];
+							await updateContact(contact.id, { tags: updatedTags });
+							setSelectedContact({ ...contact, tags: updatedTags });
+						}}
+						onDeleteTag={async (tagToDelete) => {
+							const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+							await updateContact(contact.id, { tags: updatedTags });
+							setSelectedContact({ ...contact, tags: updatedTags });
+						}}
+					/>
+				</TouchableOpacity>
+			</TouchableOpacity>
 		</Modal>
 	);
 };
