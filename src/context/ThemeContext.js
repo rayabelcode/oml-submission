@@ -38,7 +38,7 @@ const lightTheme = {
 	danger: '#FF3B30',
 	warning: '#FFCC00',
 	success: '#34C759',
-	border: '#FFFFFF',
+	border: '#E5E5EA',
 };
 
 //Dark Color Theme

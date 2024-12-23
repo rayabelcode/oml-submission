@@ -9,6 +9,14 @@ const useStyles = () => {
 			flex: 1,
 			backgroundColor: colors.background.primary,
 		},
+		mainContainer: {
+			flex: 1,
+			width: '100%',
+		},
+		scrollContent: {
+			flexGrow: 1,
+			paddingBottom: 20,
+		},
 		content: {
 			flex: 1,
 		},
@@ -71,6 +79,45 @@ const useStyles = () => {
 			marginLeft: 5,
 			fontSize: 16,
 			fontWeight: '500',
+		},
+		// Tabs
+		tabBar: {
+			flexDirection: 'row',
+			backgroundColor: colors.background.primary,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		tabIndicator: {
+			backgroundColor: colors.primary,
+			height: 2,
+		},
+		tabLabel: {
+			fontWeight: 'bold',
+			fontSize: 12,
+			textTransform: 'uppercase',
+			paddingVertical: spacing.sm,
+		},
+		tabItem: {
+			flex: 1,
+			alignItems: 'center',
+			paddingVertical: spacing.md,
+		},
+		activeTab: {
+			borderBottomWidth: 2,
+			borderBottomColor: colors.primary,
+		},
+		tabLabel: {
+			fontSize: 12,
+			marginTop: spacing.xs,
+			color: colors.text.secondary,
+		},
+		activeTabLabel: {
+			color: colors.primary,
+		},
+		tabContent: {
+			flex: 1,
+			padding: spacing.sm,
+			width: '100%',
 		},
 		card: {
 			width: '31%',
@@ -159,9 +206,9 @@ const useStyles = () => {
 		},
 		actionButtonsContainer: {
 			flexDirection: 'row',
-			justifyContent: 'space-around',
-			alignItems: 'center',
-			width: '100%',
+			justifyContent: 'center',
+			gap: spacing.xl,
+			paddingVertical: spacing.md,
 		},
 		cardActionButton: {
 			padding: 8,
@@ -194,9 +241,9 @@ const useStyles = () => {
 			flexDirection: 'row',
 			justifyContent: 'center',
 			alignItems: 'center',
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 			position: 'relative',
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.sm,
 		},
 		modalTitle: {
 			fontSize: 24,
@@ -250,7 +297,7 @@ const useStyles = () => {
 			height: 50,
 		},
 		formScrollView: {
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.sm,
 			paddingTop: spacing.sm, // Add top padding
 		},
 		photoUploadContainer: {
@@ -294,7 +341,6 @@ const useStyles = () => {
 		},
 		callNotesSection: {
 			marginBottom: spacing.md,
-			padding: spacing.md,
 		},
 		callNotesInput: {
 			borderWidth: 1,
@@ -333,12 +379,14 @@ const useStyles = () => {
 		},
 		historySection: {
 			marginBottom: spacing.md,
+			paddingHorizontal: 0,
 		},
 		historyEntry: {
 			marginBottom: spacing.sm,
 			padding: spacing.sm,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
+			marginHorizontal: 0, // Full width
 		},
 		historyDate: {
 			fontSize: 14,
@@ -371,9 +419,10 @@ const useStyles = () => {
 			color: colors.text.secondary,
 			fontSize: 14,
 			fontStyle: 'italic',
-			padding: spacing.md,
+			padding: spacing.sm,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
+			marginHorizontal: 0, // Full width
 		},
 		scheduleContainer: {
 			alignItems: 'center',
@@ -390,7 +439,7 @@ const useStyles = () => {
 			color: colors.text.primary,
 		},
 		scheduleActions: {
-			flexDirection: 'row',
+			flexDirection: 'column',
 			justifyContent: 'center',
 			marginTop: spacing.md,
 		},
@@ -410,6 +459,11 @@ const useStyles = () => {
 		removeScheduleButton: {
 			marginTop: spacing.sm,
 			padding: spacing.sm,
+			borderWidth: 1,
+			borderColor: colors.danger,
+			borderRadius: layout.borderRadius.sm,
+			width: '100%',
+			alignItems: 'center',
 		},
 		removeScheduleText: {
 			color: colors.danger,
@@ -419,34 +473,65 @@ const useStyles = () => {
 		tagsContainer: {
 			flexDirection: 'row',
 			flexWrap: 'wrap',
-			padding: spacing.sm,
+			justifyContent: 'center',
+			alignItems: 'center',
+			paddingHorizontal: 15,
 			gap: 8,
 		},
 		tagBubble: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			backgroundColor: colors.background.secondary,
-			borderRadius: 15,
-			paddingVertical: 5,
-			paddingHorizontal: spacing.sm,
+			backgroundColor:
+				colors.background.primary === '#FFFFFF'
+					? '#EDF3F8' // Light blue-gray for light mode
+					: '#2C3E50', // Keep current dark mode color
+			borderRadius: 20,
+			paddingVertical: 9,
+			paddingHorizontal: 16,
+			marginBottom: 8,
+			elevation: 2,
+			borderWidth: 1,
+			borderColor:
+				colors.background.primary === '#FFFFFF'
+					? '#E0E8EF' // Light border for light mode
+					: '#536878', // Keep current dark mode border
 		},
 		tagText: {
-			color: colors.primary,
-			marginRight: 5,
+			fontSize: 14,
+			marginRight: 4,
+			color: colors.text.primary,
+			fontWeight: '500',
+			letterSpacing: 0.3,
 		},
 		tagInput: {
-			flex: 1,
-			borderWidth: 1,
+			height: 44,
+			borderWidth: 2,
 			borderColor: colors.border,
-			borderRadius: layout.borderRadius.sm,
-			padding: 12,
-			marginRight: spacing.sm,
+			borderRadius: layout.borderRadius.md,
 			fontSize: 16,
+			textAlign: 'center',
 			color: colors.text.primary,
+			marginBottom: 8,
+			width: '100%',
+			backgroundColor: colors.background.primary,
 		},
 		tagInputContainer: {
 			flexDirection: 'row',
 			marginBottom: spacing.sm,
+		},
+		tagInputWrapper: {
+			marginVertical: 20,
+			paddingHorizontal: 20,
+		},
+		tagInputHelper: {
+			textAlign: 'center',
+			color: colors.text.secondary,
+			fontSize: 14,
+			marginTop: 8,
+			fontStyle: 'italic',
+		},
+		tagDeleteIcon: {
+			marginLeft: 2,
 		},
 		addTagButton: {
 			backgroundColor: colors.primary,
@@ -456,11 +541,9 @@ const useStyles = () => {
 			justifyContent: 'center',
 		},
 		suggestionsContainer: {
-			marginTop: 0,
-			marginBottom: spacing.md,
-			padding: spacing.sm,
-			backgroundColor: colors.background.secondary,
-			borderRadius: layout.borderRadius.sm,
+			gap: spacing.md,
+			padding: spacing.md,
+			flex: 1,
 		},
 		suggestionsTitle: {
 			fontSize: 16,
@@ -474,10 +557,10 @@ const useStyles = () => {
 			textAlign: 'center',
 		},
 		suggestion: {
-			fontSize: 14,
+			fontSize: 16,
 			color: colors.text.primary,
-			marginBottom: 8,
-			paddingLeft: 0,
+			lineHeight: 22,
+			paddingHorizontal: spacing.md,
 		},
 		datePickerModalOverlay: {
 			flex: 1,
@@ -524,6 +607,190 @@ const useStyles = () => {
 			fontWeight: '500',
 			marginBottom: spacing.sm,
 			color: colors.text.primary,
+		},
+		// Edit tab
+		contactHeader: {
+			flexDirection: 'row',
+			padding: spacing.md,
+			alignItems: 'center',
+			justifyContent: 'space-between',
+		},
+		photoContainer: {
+			width: 100,
+		},
+		contactInfo: {
+			flex: 1,
+			paddingTop: spacing.sm,
+		},
+		fullName: {
+			fontSize: 24,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.md,
+		},
+		contactDetail: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.sm,
+		},
+		editFields: {
+			width: '100%',
+		},
+		editInput: {
+			fontSize: 16,
+			color: colors.text.primary,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			paddingVertical: spacing.sm,
+			marginBottom: spacing.md,
+		},
+		editActions: {
+			flexDirection: 'row',
+			justifyContent: 'flex-end',
+			gap: spacing.sm,
+			marginTop: spacing.md,
+		},
+		actionButtons: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+			gap: spacing.xl,
+			paddingVertical: spacing.lg,
+			marginTop: spacing.xl,
+		},
+		actionButton: {
+			alignItems: 'center',
+			padding: spacing.sm,
+			minWidth: 80,
+		},
+		actionButtonText: {
+			fontSize: 12,
+			marginTop: spacing.xs,
+		},
+		headerButtons: {
+			flexDirection: 'row',
+			gap: spacing.sm,
+			marginLeft: spacing.sm,
+			flex: 10,
+		},
+		headerButton: {
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			minWidth: 70,
+		},
+		saveButtonText: {
+			color: colors.background.primary,
+			fontWeight: '600',
+		},
+		cancelButtonText: {
+			fontWeight: '500',
+		},
+		editButtonText: {
+			color: colors.background.primary,
+			fontWeight: '500',
+		},
+		contactDetails: {
+			padding: spacing.md,
+			marginTop: spacing.xs,
+		},
+		separator: {
+			height: 1,
+			backgroundColor: colors.border,
+			marginTop: spacing.md,
+			marginBottom: spacing.xs,
+		},
+		editButton: {
+			backgroundColor: colors.primary,
+		},
+		archiveButton: {
+			backgroundColor: colors.background.primary,
+		},
+		deleteButton: {
+			backgroundColor: colors.background.primary,
+		},
+		saveButton: {
+			backgroundColor: colors.primary,
+			marginRight: spacing.xs,
+		},
+		cancelButton: {
+			backgroundColor: colors.background.primary,
+			borderWidth: 2,
+			borderColor: colors.border,
+		},
+		buttonText: {
+			color: colors.background.primary,
+			fontSize: 14,
+			fontWeight: '500',
+		},
+		contentContainer: {
+			flexGrow: 1,
+			width: '100%',
+		},
+		viewFields: {
+			flex: 1,
+		},
+		aiButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			backgroundColor: colors.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginTop: spacing.sm,
+			marginBottom: spacing.lg,
+			gap: spacing.sm,
+			elevation: 2,
+			shadowColor: '#000',
+			shadowOffset: { width: 0, height: 2 },
+			shadowOpacity: 0.2,
+			shadowRadius: 2,
+		},
+		aiButtonText: {
+			color: colors.background.primary,
+			fontSize: 18,
+			fontWeight: '600',
+		},
+		aiModalContainer: {
+			position: 'absolute',
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			backgroundColor: 'rgba(0,0,0,1)',
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
+			height: '100%',
+			zIndex: 9999,
+		},
+		modalTitleContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+		},
+		aiSubtitle: {
+			fontSize: 16,
+			fontStyle: 'italic',
+			color: colors.text.primary,
+			textAlign: 'center',
+			backgroundColor:
+				colors.background.primary === '#FFFFFF'
+					? '#F0F7FF' // Light mode
+					: '#2A2A2A', // Dark mode
+			padding: spacing.md,
+			width: '100%',
+		},
+		aiModalContent: {
+			backgroundColor: colors.background.primary,
+			borderRadius: layout.borderRadius.lg,
+			padding: 0,
+			width: Platform.OS === 'web' ? '50%' : '85%',
+			maxHeight: '80%',
+			paddingTop: spacing.md,
+		},
+		aiModalScrollContent: {
+			padding: spacing.md,
+			flexGrow: 1,
 		},
 	});
 };

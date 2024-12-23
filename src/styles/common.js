@@ -33,18 +33,13 @@ export const useCommonStyles = () => {
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
 			padding: spacing.md,
-			width: Platform.OS === 'web' ? '50%' : '85%',
+			width: Platform.OS === 'web' ? '50%' : '90%',
+			height: Platform.OS === 'web' ? 'auto' : '75%',
+			maxHeight: Platform.OS === 'web' ? '90vh' : '75%',
 			alignSelf: 'center',
-			maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
 			borderWidth: 2,
 			borderColor: colors.border,
-			...(Platform.OS === 'ios'
-				? {
-					height: '75%',
-				}
-				: {}),
 		},
-
 		modalHeader: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
