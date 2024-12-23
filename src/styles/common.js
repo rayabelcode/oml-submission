@@ -32,8 +32,8 @@ export const useCommonStyles = () => {
 		modalContent: {
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
-			padding: spacing.md,
-			width: Platform.OS === 'web' ? '50%' : '85%',
+			padding: spacing.xs,
+			width: Platform.OS === 'web' ? '50%' : '88%',
 			alignSelf: 'center',
 			maxHeight: Platform.OS === 'ios' ? '75%' : '90%',
 			borderWidth: 2,

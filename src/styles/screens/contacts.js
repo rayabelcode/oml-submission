@@ -108,7 +108,7 @@ const useStyles = () => {
 		},
 		tabContent: {
 			flex: 1,
-			padding: spacing.md,
+			padding: spacing.sm,
 		},
 		card: {
 			width: '31%',
@@ -232,9 +232,9 @@ const useStyles = () => {
 			flexDirection: 'row',
 			justifyContent: 'center',
 			alignItems: 'center',
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 			position: 'relative',
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.sm,
 		},
 		modalTitle: {
 			fontSize: 24,
@@ -288,7 +288,7 @@ const useStyles = () => {
 			height: 50,
 		},
 		formScrollView: {
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.sm,
 			paddingTop: spacing.sm, // Add top padding
 		},
 		photoUploadContainer: {
@@ -370,13 +370,14 @@ const useStyles = () => {
 		},
 		historySection: {
 			marginBottom: spacing.md,
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: 0,
 		},
 		historyEntry: {
 			marginBottom: spacing.sm,
 			padding: spacing.sm,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
+			marginHorizontal: 0, // Full width
 		},
 		historyDate: {
 			fontSize: 14,
@@ -409,9 +410,10 @@ const useStyles = () => {
 			color: colors.text.secondary,
 			fontSize: 14,
 			fontStyle: 'italic',
-			padding: spacing.md,
+			padding: spacing.sm,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
+			marginHorizontal: 0, // Full width
 		},
 		scheduleContainer: {
 			alignItems: 'center',
@@ -495,8 +497,8 @@ const useStyles = () => {
 		},
 		suggestionsContainer: {
 			marginTop: 0,
-			marginBottom: spacing.md,
-			padding: spacing.md,
+			marginBottom: spacing.sm,
+			padding: spacing.sm,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.sm,
 		},
