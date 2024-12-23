@@ -8,7 +8,6 @@ import { updateContact } from '../../../utils/firestore';
 
 const ScheduleTab = ({ contact, setSelectedContact }) => {
 	const { colors } = useTheme();
-	const commonStyles = useCommonStyles();
 	const styles = useStyles();
 
 	const [showScheduleDatePicker, setShowScheduleDatePicker] = useState(false);
@@ -69,8 +68,11 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 			/>
 
 			<View style={styles.scheduleActions}>
-				<TouchableOpacity style={commonStyles.primaryButton} onPress={() => setShowScheduleDatePicker(true)}>
-					<Text style={commonStyles.primaryButtonText}>Schedule Contact</Text>
+				<TouchableOpacity
+					style={useCommonStyles().primaryButton}
+					onPress={() => setShowScheduleDatePicker(true)}
+				>
+					<Text style={useCommonStyles().primaryButtonText}>Schedule Contact</Text>
 				</TouchableOpacity>
 
 				{contact.next_contact && (

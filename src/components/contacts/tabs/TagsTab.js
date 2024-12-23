@@ -10,8 +10,19 @@ const TagsTab = ({ contact, setSelectedContact }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
-
 	const [newTag, setNewTag] = useState('');
+
+	const handleAddTag = async () => {
+		if (newTag.trim()) {
+			const updatedTags = [...(contact.tags || []), newTag.trim()];
+			await updateContact(contact.id, { tags: updatedTags });
+			setSelectedContact((prev) => ({
+				...prev,
+				tags: updatedTags,
+			}));
+			setNewTag('');
+		}
+	};
 
 	return (
 		<ScrollView style={styles.tabContent} keyboardShouldPersistTaps="handled">
@@ -49,34 +60,11 @@ const TagsTab = ({ contact, setSelectedContact }) => {
 					placeholder="Type new tag..."
 					value={newTag}
 					onChangeText={setNewTag}
-					onSubmitEditing={async () => {
-						if (newTag.trim()) {
-							const updatedTags = [...(contact.tags || []), newTag.trim()];
-							await updateContact(contact.id, { tags: updatedTags });
-							setSelectedContact((prev) => ({
-								...prev,
-								tags: updatedTags,
-							}));
-							setNewTag('');
-						}
-					}}
+					onSubmitEditing={handleAddTag}
 					returnKeyType="done"
 					blurOnSubmit={false}
 				/>
-				<TouchableOpacity
-					style={styles.addTagButton}
-					onPress={async () => {
-						if (newTag.trim()) {
-							const updatedTags = [...(contact.tags || []), newTag.trim()];
-							await updateContact(contact.id, { tags: updatedTags });
-							setSelectedContact((prev) => ({
-								...prev,
-								tags: updatedTags,
-							}));
-							setNewTag('');
-						}
-					}}
-				>
+				<TouchableOpacity style={styles.addTagButton} onPress={handleAddTag}>
 					<Text style={commonStyles.primaryButtonText}>Add</Text>
 				</TouchableOpacity>
 			</View>

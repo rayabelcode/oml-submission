@@ -5,8 +5,6 @@ import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { addContactHistory, fetchContactHistory } from '../../../utils/firestore';
-import { generateTopicSuggestions } from '../../../utils/ai';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const CallNotesTab = ({
@@ -31,15 +29,50 @@ const CallNotesTab = ({
 	const [editMode, setEditMode] = useState(null);
 
 	const handleAddCallNotes = async (notes, date) => {
-		// ... (Keep the existing code)
+		if (!notes.trim()) {
+			Alert.alert('Error', 'Please enter call notes');
+			return;
+		}
+
+		try {
+			await addContactHistory(contact.id, notes, date);
+			const updatedHistory = await fetchContactHistory(contact.id);
+			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+			setCallNotes('');
+			setCallDate(new Date());
+		} catch (error) {
+			Alert.alert('Error', 'Failed to add call notes');
+		}
 	};
 
 	const handleEditHistory = async (index, updatedNote) => {
-		// ... (Keep the existing code)
+		try {
+			const updatedHistory = [...history];
+			updatedHistory[index].notes = updatedNote;
+			setHistory(updatedHistory);
+			setEditMode(null);
+		} catch (error) {
+			Alert.alert('Error', 'Failed to edit history');
+		}
 	};
 
 	const handleDeleteHistory = async (index) => {
-		// ... (Keep the existing code)
+		Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
+			{ text: 'Cancel', style: 'cancel' },
+			{
+				text: 'Delete',
+				style: 'destructive',
+				onPress: async () => {
+					try {
+						const updatedHistory = [...history];
+						updatedHistory.splice(index, 1);
+						setHistory(updatedHistory);
+					} catch (error) {
+						Alert.alert('Error', 'Failed to delete history entry');
+					}
+				},
+			},
+		]);
 	};
 
 	return (
