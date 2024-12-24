@@ -44,17 +44,18 @@ const ProfileScreen = ({ navigation }) => {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: [ImagePicker.MediaType.Images],
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 0.5,
 			});
 
-			if (!result.canceled && result.assets[0].uri) {
+			if (!result.canceled && result.assets && result.assets[0]) {
 				const photoUrl = await uploadProfilePhoto(user.uid, result.assets[0].uri);
 				if (photoUrl) {
 					setProfilePhoto(photoUrl);
 					await updateUserProfile(user.uid, { photo_url: photoUrl });
+				} else {
+					throw new Error('Failed to get download URL');
 				}
 			}
 		} catch (error) {
