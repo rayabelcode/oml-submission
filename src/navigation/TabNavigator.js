@@ -6,26 +6,13 @@ import { useAuth } from '../context/AuthContext';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ContactsScreen from '../screens/ContactsScreen';
-import SettingsStack from './SettingsStack'; // Update this import
+import SettingsStack from './SettingsStack';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
 	const { colors, theme } = useTheme();
 	const { user } = useAuth();
-
-	if (!user) {
-		return (
-			<Tab.Navigator
-				screenOptions={{
-					headerShown: false,
-					tabBarStyle: { display: 'none' },
-				}}
-			>
-				<Tab.Screen name="Settings" component={SettingsStack} />
-			</Tab.Navigator>
-		);
-	}
 
 	return (
 		<Tab.Navigator
@@ -52,9 +39,15 @@ export default function TabNavigator() {
 				},
 			})}
 		>
-			<Tab.Screen name="Contacts" component={ContactsScreen} />
-			<Tab.Screen name="Calendar" component={DashboardScreen} />
-			<Tab.Screen name="Settings" component={SettingsStack} />
+			{!user ? (
+				<Tab.Screen name="Settings" component={SettingsStack} />
+			) : (
+				<>
+					<Tab.Screen name="Contacts" component={ContactsScreen} />
+					<Tab.Screen name="Calendar" component={DashboardScreen} />
+					<Tab.Screen name="Settings" component={SettingsStack} />
+				</>
+			)}
 		</Tab.Navigator>
 	);
 }

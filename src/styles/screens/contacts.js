@@ -1,5 +1,6 @@
-import { StyleSheet, Platform, Dimensions } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
+
 
 const useStyles = () => {
 	const { colors } = useTheme();
@@ -8,6 +9,7 @@ const useStyles = () => {
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
+			paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,
 		},
 		mainContainer: {
 			flex: 1,

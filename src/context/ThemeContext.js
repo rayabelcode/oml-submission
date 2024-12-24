@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'react-native';
 
 const ThemeContext = createContext();
 
@@ -28,6 +29,7 @@ const lightTheme = {
 		secondary: '#F2F2F7',
 		tertiary: '#E5E5EA',
 		overlay: 'rgba(0, 0, 0, 0.75)',
+		statusBar: 'transparent',
 	},
 	text: {
 		primary: '#000000',
@@ -48,6 +50,7 @@ const darkTheme = {
 		secondary: '#1C1C1E',
 		tertiary: '#2C2C2E',
 		overlay: 'rgba(0, 0, 0, 0.9)',
+		statusBar: 'transparent',
 	},
 	text: {
 		primary: '#FFFFFF',
@@ -65,7 +68,6 @@ export function ThemeProvider({ children }) {
 	const [theme, setTheme] = useState('light');
 
 	useEffect(() => {
-		// Load saved theme preference
 		const loadTheme = async () => {
 			try {
 				const savedTheme = await AsyncStorage.getItem('theme');
@@ -78,6 +80,10 @@ export function ThemeProvider({ children }) {
 		};
 		loadTheme();
 	}, []);
+
+    useEffect(() => {
+        StatusBar.setBarStyle(theme === 'dark' ? 'light-content' : 'dark-content', true);
+    }, [theme]);
 
 	const toggleTheme = async () => {
 		const newTheme = theme === 'light' ? 'dark' : 'light';
