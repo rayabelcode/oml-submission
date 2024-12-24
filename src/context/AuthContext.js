@@ -84,6 +84,11 @@ export const AuthProvider = ({ children }) => {
 		}
 	};
 
+	const isAppleUser = () => {
+		if (!user) return false;
+		return user.providerData.some((provider) => provider.providerId === 'apple.com');
+	};
+
 	const value = {
 		user,
 		signUp,
@@ -92,6 +97,7 @@ export const AuthProvider = ({ children }) => {
 		resetPassword,
 		signInWithApple,
 		loading,
+		isAppleUser,
 	};
 
 	return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

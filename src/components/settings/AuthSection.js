@@ -15,6 +15,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
+import { useAuth } from '../../context/AuthContext';
 
 const AuthSection = ({
 	isLogin,
@@ -31,6 +32,7 @@ const AuthSection = ({
 	const { colors, theme } = useTheme();
 	const styles = useStyles();
 	const passwordInputRef = useRef(null);
+	const { isAppleUser } = useAuth();
 
 	const logoSource =
 		theme === 'dark'
@@ -71,9 +73,20 @@ const AuthSection = ({
 
 						<View style={styles.card}>
 							<View style={styles.authInputContainer}>
-								<Icon name="mail-outline" size={20} color={colors.text.secondary} style={{ marginRight: 8 }} />
+								<Icon
+									name="mail-outline"
+									size={20}
+									color={colors.text.secondary}
+									style={{ marginRight: 8 }}
+								/>
 								<TextInput
-									style={styles.authInput}
+									style={[
+										styles.authInput,
+										isAppleUser() && {
+											backgroundColor: colors.background.secondary,
+											color: colors.text.secondary,
+										},
+									]}
 									placeholder="Email"
 									value={email}
 									onChangeText={setEmail}
@@ -83,6 +96,7 @@ const AuthSection = ({
 									returnKeyType="next"
 									onSubmitEditing={() => passwordInputRef.current?.focus()}
 									blurOnSubmit={false}
+									editable={!isAppleUser()}
 								/>
 							</View>
 
