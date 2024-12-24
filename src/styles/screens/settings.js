@@ -20,7 +20,11 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.md,
 		},
 		profileSection: {
-			paddingHorizontal: spacing.lg,
+			paddingLeft: spacing.xs,
+			paddingRight: spacing.xs,
+						flexDirection: 'row',
+			alignItems: 'center',
+			width: '100%',
 		},
 		profileInfo: {
 			marginLeft: spacing.md,
@@ -30,12 +34,17 @@ const createStyles = (colors) =>
 		profileContent: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			gap: spacing.md,
+			paddingHorizontal: spacing.md,
+			width: '100%',
+			justifyContent: 'flex-start',
 		},
 		profileName: {
-			fontSize: 20,
+			fontSize: 18,
+			fontWeight: '500',
 			color: colors.text.primary,
-			flex: 1,
+			marginLeft: spacing.sm,
+			flexShrink: 1,
+			maxWidth: '80%',
 		},
 		profileEmail: {
 			color: colors.text.secondary,
@@ -47,6 +56,7 @@ const createStyles = (colors) =>
 			overflow: 'hidden',
 			justifyContent: 'center',
 			alignItems: 'center',
+			marginLeft: 0,
 		},
 		avatarImage: {
 			width: '100%',
