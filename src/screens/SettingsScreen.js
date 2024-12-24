@@ -22,6 +22,7 @@ import PrivacyModal from '../components/settings/PrivacyModal';
 import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function SettingsScreen({ navigation }) {
 	const styles = useStyles();
@@ -42,6 +43,14 @@ export default function SettingsScreen({ navigation }) {
 			checkNotificationStatus();
 		}
 	}, [user]);
+
+	useFocusEffect(
+		React.useCallback(() => {
+			if (user) {
+				loadUserProfile();
+			}
+		}, [user])
+	);
 
 	const loadUserProfile = async () => {
 		try {
