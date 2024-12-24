@@ -20,11 +20,16 @@ const createStyles = (colors) =>
 		},
 		profileInfo: {
 			marginLeft: spacing.md,
+			flex: 1,
+			justifyContent: 'center',
 		},
 		profileName: {
 			fontSize: 18,
+			marginLeft: spacing.md,
 			fontWeight: 'bold',
 			color: colors.text.primary,
+			flexWrap: 'wrap',
+			flex: 1,
 		},
 		profileEmail: {
 			color: colors.text.secondary,

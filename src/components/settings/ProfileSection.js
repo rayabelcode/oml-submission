@@ -19,19 +19,11 @@ const ProfileSection = ({ userProfile, user, handleProfilePhotoUpload }) => {
 						cachePolicy="memory-disk"
 					/>
 				) : (
-					<>
-						<Icon name="person-outline" size={40} color={colors.primary} />
-						<View style={styles.editOverlay}>
-							<Icon name="camera-outline" size={20} color={colors.background.primary} />
-						</View>
-					</>
+					<Icon name="person-circle-outline" size={60} color={colors.primary} />
 				)}
 			</TouchableOpacity>
 
-			<View style={styles.profileInfo}>
-				<Text style={styles.profileEmail}>Account Info</Text>
-				<Text style={styles.profileName}>{user.email}</Text>
-			</View>
+			<Text style={styles.profileName}>{user.email}</Text>
 		</View>
 	);
 };
