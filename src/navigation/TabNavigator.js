@@ -2,6 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../context/ThemeContext';
 import { Platform } from 'react-native';
+import { useAuth } from '../context/AuthContext'; // Add this import
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ContactsScreen from '../screens/ContactsScreen';
@@ -11,6 +12,20 @@ const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
 	const { colors, theme } = useTheme();
+	const { user } = useAuth(); // Add this line
+
+	if (!user) {
+		return (
+			<Tab.Navigator
+				screenOptions={{
+					headerShown: false,
+					tabBarStyle: { display: 'none' },
+				}}
+			>
+				<Tab.Screen name="Settings" component={SettingsScreen} />
+			</Tab.Navigator>
+		);
+	}
 
 	return (
 		<Tab.Navigator
