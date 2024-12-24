@@ -23,7 +23,7 @@ import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }) {
 	const styles = useStyles();
 	const { user, signIn, signUp, signOut, resetPassword, signInWithApple } = useAuth();
 	const [isLogin, setIsLogin] = useState(true);
@@ -55,6 +55,10 @@ export default function SettingsScreen() {
 	const checkNotificationStatus = async () => {
 		const { status } = await Notifications.getPermissionsAsync();
 		setNotificationsEnabled(status === 'granted');
+	};
+
+	const handleProfilePress = () => {
+		navigation.navigate('Profile');
 	};
 
 	const handleNotificationToggle = async () => {
@@ -358,6 +362,7 @@ export default function SettingsScreen() {
 				handleLogout={handleLogout}
 				isDarkMode={isDarkMode}
 				handleThemeToggle={toggleTheme}
+				onProfilePress={handleProfilePress}
 			/>
 
 			<PrivacyModal

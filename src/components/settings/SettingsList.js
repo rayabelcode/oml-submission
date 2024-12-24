@@ -12,12 +12,24 @@ const SettingsList = ({
 	handleLogout,
 	isDarkMode,
 	handleThemeToggle,
+	onProfilePress,
 }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
 
 	return (
 		<ScrollView style={styles.settingsList}>
+			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>Account</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={onProfilePress}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="person-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Profile</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+			</View>
+
 			<View style={styles.settingSection}>
 				<Text style={styles.sectionTitle}>Notifications</Text>
 				<View style={styles.settingItem}>

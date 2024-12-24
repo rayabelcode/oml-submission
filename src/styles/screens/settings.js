@@ -300,6 +300,75 @@ const createStyles = (colors) =>
 			color: colors.primary,
 			fontSize: 14,
 		},
+		// Profile Page
+		headerContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			padding: spacing.md,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			backgroundColor: colors.background.secondary,
+		},
+		backButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			paddingVertical: spacing.sm,
+		},
+		headerTitle: {
+			fontSize: 20,
+			fontWeight: 'bold',
+			color: colors.text.primary,
+			marginLeft: spacing.sm,
+		},
+		profileImageSection: {
+			alignItems: 'center',
+			paddingVertical: spacing.xl,
+		},
+		profileImageContainer: {
+			position: 'relative',
+		},
+		profileImage: {
+			width: 120,
+			height: 120,
+			borderRadius: 60,
+			backgroundColor: colors.background.secondary,
+		},
+		editImageButton: {
+			position: 'absolute',
+			right: 0,
+			bottom: 0,
+			backgroundColor: colors.primary,
+			padding: spacing.sm,
+			borderRadius: 20,
+			borderWidth: 3,
+			borderColor: colors.background.primary,
+		},
+		formSection: {
+			padding: spacing.md,
+		},
+		inputGroup: {
+			marginBottom: spacing.md,
+		},
+		label: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.xs,
+		},
+		input: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: 8,
+			padding: spacing.md,
+		},
+		inputText: {
+			fontSize: 16,
+			color: colors.text.primary,
+		},
+		defaultAvatarContainer: {
+			width: 120,
+			height: 120,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},		
 	});
 
 export const useStyles = () => {
