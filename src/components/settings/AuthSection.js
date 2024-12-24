@@ -34,6 +34,7 @@ const AuthSection = ({
 						autoCapitalize="none"
 						keyboardType="email-address"
 						placeholderTextColor={colors.text.secondary}
+						returnKeyType="next"
 					/>
 				</View>
 
@@ -45,7 +46,10 @@ const AuthSection = ({
 						value={password}
 						onChangeText={setPassword}
 						secureTextEntry
+						autoCapitalize="none"
 						placeholderTextColor={colors.text.secondary}
+						returnKeyType="done"
+						onSubmitEditing={handleAuth}
 					/>
 				</View>
 
