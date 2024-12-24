@@ -104,11 +104,12 @@ const createStyles = (colors) =>
 			paddingHorizontal: spacing.md,
 			marginBottom: spacing.md,
 			backgroundColor: colors.background.secondary,
+			height: 50,
 		},
 		input: {
 			flex: 1,
-			padding: spacing.md,
-			marginLeft: spacing.sm,
+			height: '100%',
+			paddingVertical: spacing.md,
 			fontSize: 16,
 			color: colors.text.primary,
 		},
@@ -388,6 +389,25 @@ const createStyles = (colors) =>
 		},
 		saveButtonTextDisabled: {
 			opacity: 1, // Force full opacity for text
+		},
+		authInputContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			borderWidth: 1,
+			borderColor: colors.border,
+			borderRadius: layout.borderRadius.md,
+			paddingHorizontal: spacing.md,
+			marginBottom: spacing.md,
+			backgroundColor: colors.background.secondary,
+			height: 50,
+			width: '100%',
+		},
+		authInput: {
+			flex: 1,
+			height: '100%',
+			fontSize: 16,
+			color: colors.text.primary,
+			paddingRight: spacing.md,
 		},
 	});
 

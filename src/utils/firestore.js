@@ -263,6 +263,21 @@ export const updateUserProfile = async (userId, profileData) => {
 	}
 };
 
+// Username check
+export const checkUsernameExists = async (username, currentUserId) => {
+	try {
+		const usersRef = collection(db, 'users');
+		const q = query(usersRef, where('username', '==', username.toLowerCase()));
+		const querySnapshot = await getDocs(q);
+
+		// Check if any user other than the current user has this username
+		return querySnapshot.docs.some((doc) => doc.id !== currentUserId);
+	} catch (error) {
+		console.error('Error checking username:', error);
+		throw error;
+	}
+};
+
 export const getUserProfile = async (userId) => {
 	try {
 		const userRef = doc(db, 'users', userId);

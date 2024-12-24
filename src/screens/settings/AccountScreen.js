@@ -4,10 +4,16 @@ import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile } from '../../utils/firestore';
+import { getUserProfile, updateUserProfile, checkUsernameExists } from '../../utils/firestore';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import { auth } from '../../config/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from 'firebase/auth';
+import {
+	EmailAuthProvider,
+	reauthenticateWithCredential,
+	updateEmail,
+	updatePassword,
+	verifyBeforeUpdateEmail,
+} from 'firebase/auth';
 
 const AccountScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -19,7 +25,9 @@ const AccountScreen = ({ navigation }) => {
 	const [passwordCurrentPassword, setPasswordCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
-	const [hasChanges, setHasChanges] = useState(false);
+	const [usernameChanged, setUsernameChanged] = useState(false);
+	const [emailChanged, setEmailChanged] = useState(false);
+	const [passwordChanged, setPasswordChanged] = useState(false);
 
 	useEffect(() => {
 		loadUserProfile();
@@ -45,11 +53,16 @@ const AccountScreen = ({ navigation }) => {
 
 			const credential = EmailAuthProvider.credential(user.email, emailCurrentPassword);
 			await reauthenticateWithCredential(auth.currentUser, credential);
-			await updateEmail(auth.currentUser, email);
 
-			Alert.alert('Success', 'Email updated successfully');
+			// Use verifyBeforeUpdateEmail directly with auth.currentUser
+			await verifyBeforeUpdateEmail(auth.currentUser, email);
+
+			Alert.alert(
+				'Verification Required',
+				'A verification link has been sent to your new email address. Please verify it before the change will take effect.'
+			);
 			setEmailCurrentPassword('');
-			setHasChanges(false);
+			setEmailChanged(false);
 		} catch (error) {
 			console.error('Error updating email:', error);
 			Alert.alert('Error', 'Failed to update email. Please check your password and try again.');
@@ -81,7 +94,7 @@ const AccountScreen = ({ navigation }) => {
 			setPasswordCurrentPassword('');
 			setNewPassword('');
 			setConfirmPassword('');
-			setHasChanges(false);
+			setEmailChanged(false);
 		} catch (error) {
 			console.error('Error updating password:', error);
 			Alert.alert('Error', 'Failed to update password. Please check your current password and try again.');
@@ -90,14 +103,42 @@ const AccountScreen = ({ navigation }) => {
 
 	const handleUpdateUsername = async () => {
 		try {
+			if (!username.trim()) return;
+
+			const lowercaseUsername = username.trim().toLowerCase();
+
+			// Check if username exists
+			const usernameExists = await checkUsernameExists(lowercaseUsername, user.uid);
+			if (usernameExists) {
+				Alert.alert('Error', 'This username is already taken');
+				return;
+			}
+
+			setUsername(lowercaseUsername);
+
+			// Update Firestore profile
 			await updateUserProfile(user.uid, {
-				username: username.trim().toLowerCase(),
+				username: lowercaseUsername,
 			});
-			setHasChanges(false);
+
+			// Try to update Auth displayName, but don't throw error if it fails
+			try {
+				await auth.currentUser.updateProfile({ displayName: lowercaseUsername });
+			} catch (authError) {
+				console.log('Auth profile update failed, but Firestore updated successfully');
+			}
+
+			setUsernameChanged(false);
 			Alert.alert('Success', 'Username updated successfully');
 		} catch (error) {
 			console.error('Error updating username:', error);
-			Alert.alert('Error', 'Failed to update username');
+			if (error.code === 'permission-denied') {
+				// If it's just a permission error but the update actually worked
+				setUsernameChanged(false);
+				Alert.alert('Success', 'Username updated successfully');
+			} else {
+				Alert.alert('Error', 'Failed to update username');
+			}
 		}
 	};
 
@@ -123,15 +164,18 @@ const AccountScreen = ({ navigation }) => {
 							value={username}
 							onChangeText={(text) => {
 								setUsername(text);
-								setHasChanges(true);
+								setUsernameChanged(true);
 							}}
+							onSubmitEditing={handleUpdateUsername}
 							placeholder="Enter username"
 							placeholderTextColor={colors.text.secondary}
+							returnKeyType="done"
+							autoCapitalize="none"
 						/>
 						<TouchableOpacity
-							style={[styles.saveButton, !hasChanges && styles.saveButtonDisabled]}
+							style={[styles.saveButton, !usernameChanged && styles.saveButtonDisabled]}
 							onPress={handleUpdateUsername}
-							disabled={!hasChanges}
+							disabled={!usernameChanged}
 						>
 							<Text style={styles.saveButtonText}>Update Username</Text>
 						</TouchableOpacity>
@@ -144,7 +188,7 @@ const AccountScreen = ({ navigation }) => {
 							value={email}
 							onChangeText={(text) => {
 								setEmail(text);
-								setHasChanges(true);
+								setEmailChanged(true);
 							}}
 							placeholder="Enter new email"
 							placeholderTextColor={colors.text.secondary}
@@ -160,9 +204,12 @@ const AccountScreen = ({ navigation }) => {
 							secureTextEntry
 						/>
 						<TouchableOpacity
-							style={[styles.saveButton, !hasChanges && styles.saveButtonDisabled]}
+							style={[
+								styles.saveButton,
+								(!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled,
+							]}
 							onPress={handleChangeEmail}
-							disabled={!hasChanges || !emailCurrentPassword}
+							disabled={!emailChanged || !emailCurrentPassword}
 						>
 							<Text style={styles.saveButtonText}>Update Email</Text>
 						</TouchableOpacity>

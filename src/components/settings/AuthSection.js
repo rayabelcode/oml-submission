@@ -70,10 +70,10 @@ const AuthSection = ({
 						</View>
 
 						<View style={styles.card}>
-							<View style={styles.inputContainer}>
-								<Icon name="mail-outline" size={20} color={colors.text.secondary} />
+							<View style={styles.authInputContainer}>
+								<Icon name="mail-outline" size={20} color={colors.text.secondary} style={{ marginRight: 8 }} />
 								<TextInput
-									style={styles.input}
+									style={styles.authInput}
 									placeholder="Email"
 									value={email}
 									onChangeText={setEmail}
@@ -86,11 +86,11 @@ const AuthSection = ({
 								/>
 							</View>
 
-							<View style={styles.inputContainer}>
-								<Icon name="key-outline" size={20} color={colors.text.secondary} />
+							<View style={styles.authInputContainer}>
+								<Icon name="key-outline" size={20} color={colors.text.secondary} style={{ marginRight: 8 }} />
 								<TextInput
 									ref={passwordInputRef}
-									style={styles.input}
+									style={styles.authInput}
 									placeholder="Password"
 									value={password}
 									onChangeText={setPassword}
