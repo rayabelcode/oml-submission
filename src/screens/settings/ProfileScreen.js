@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { getUserProfile, updateUserProfile, uploadProfilePhoto } from '../../utils/firestore';
+import { useCommonStyles } from '../../styles/common';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -14,8 +15,9 @@ const ProfileScreen = ({ navigation }) => {
 	const { user } = useAuth();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
-	const [isEditing, setIsEditing] = useState(false);
 	const [profilePhoto, setProfilePhoto] = useState(null);
+	const [hasChanges, setHasChanges] = useState(false);
+	const commonStyles = useCommonStyles();
 
 	useEffect(() => {
 		loadUserProfile();
@@ -43,7 +45,7 @@ const ProfileScreen = ({ navigation }) => {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				mediaTypes: [ImagePicker.MediaType.Images],
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 0.5,
@@ -65,15 +67,24 @@ const ProfileScreen = ({ navigation }) => {
 	const handleSaveProfile = async () => {
 		try {
 			await updateUserProfile(user.uid, {
-				first_name: firstName,
-				last_name: lastName,
+				first_name: firstName.trim(),
+				last_name: lastName.trim(),
 			});
-			setIsEditing(false);
+			setHasChanges(false);
 			Alert.alert('Success', 'Profile updated successfully');
 		} catch (error) {
 			console.error('Error updating profile:', error);
 			Alert.alert('Error', 'Failed to update profile');
 		}
+	};
+
+	const handleTextChange = (text, field) => {
+		if (field === 'firstName') {
+			setFirstName(text);
+		} else {
+			setLastName(text);
+		}
+		setHasChanges(true);
 	};
 
 	return (
@@ -83,22 +94,18 @@ const ProfileScreen = ({ navigation }) => {
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
 					<Text style={styles.profileName}>Profile</Text>
 				</TouchableOpacity>
-				{isEditing ? (
-					<TouchableOpacity onPress={handleSaveProfile}>
-						<Text style={[styles.settingText, { color: colors.primary }]}>Save</Text>
-					</TouchableOpacity>
-				) : (
-					<TouchableOpacity onPress={() => setIsEditing(true)}>
-						<Text style={[styles.settingText, { color: colors.primary }]}>Edit</Text>
-					</TouchableOpacity>
-				)}
 			</View>
 
 			<ScrollView style={styles.settingsList}>
 				<View style={styles.profileImageSection}>
 					<View style={styles.profileImageContainer}>
 						{profilePhoto ? (
-							<Image source={{ uri: profilePhoto }} style={styles.profileImage} contentFit="cover" />
+							<Image
+								source={{ uri: profilePhoto }}
+								style={styles.profileImage}
+								contentFit="cover"
+								cachePolicy="memory-disk"
+							/>
 						) : (
 							<View style={styles.defaultAvatarContainer}>
 								<Icon name="person-circle-outline" size={120} color={colors.text.secondary} />
@@ -113,36 +120,38 @@ const ProfileScreen = ({ navigation }) => {
 				<View style={styles.formSection}>
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>First Name</Text>
-						{isEditing ? (
-							<TextInput
-								style={[styles.input, styles.inputText]}
-								value={firstName}
-								onChangeText={setFirstName}
-								placeholder="Enter first name"
-								placeholderTextColor={colors.text.secondary}
-							/>
-						) : (
-							<View style={styles.input}>
-								<Text style={styles.inputText}>{firstName || 'Not set'}</Text>
-							</View>
-						)}
+						<TextInput
+							style={[styles.input, styles.inputText]}
+							value={firstName}
+							onChangeText={(text) => handleTextChange(text, 'firstName')}
+							placeholder="Enter first name"
+							placeholderTextColor={colors.text.secondary}
+						/>
 					</View>
 
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Last Name</Text>
-						{isEditing ? (
-							<TextInput
-								style={[styles.input, styles.inputText]}
-								value={lastName}
-								onChangeText={setLastName}
-								placeholder="Enter last name"
-								placeholderTextColor={colors.text.secondary}
-							/>
-						) : (
-							<View style={styles.input}>
-								<Text style={styles.inputText}>{lastName || 'Not set'}</Text>
-							</View>
-						)}
+						<TextInput
+							style={[styles.input, styles.inputText]}
+							value={lastName}
+							onChangeText={(text) => handleTextChange(text, 'lastName')}
+							placeholder="Enter last name"
+							placeholderTextColor={colors.text.secondary}
+						/>
+					</View>
+
+					<View style={{ alignItems: 'center' }}>
+						<TouchableOpacity
+							style={[
+								styles.saveButton,
+								!hasChanges && styles.saveButtonDisabled,
+								{ width: 'auto', minWidth: 200 },
+							]}
+							onPress={handleSaveProfile}
+							disabled={!hasChanges}
+						>
+							<Text style={styles.saveButtonText}>Save Changes</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 			</ScrollView>

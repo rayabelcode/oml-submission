@@ -368,7 +368,27 @@ const createStyles = (colors) =>
 			height: 120,
 			justifyContent: 'center',
 			alignItems: 'center',
-		},		
+		},
+		saveButton: {
+			backgroundColor: colors.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginTop: spacing.md,
+			alignItems: 'center',
+		},
+		saveButtonText: {
+			color: colors.text.primary,
+			fontSize: 16,
+			fontWeight: '500',
+			textAlign: 'center',
+		},
+		saveButtonDisabled: {
+			backgroundColor: colors.primary,
+			opacity: 0.5, // Only apply opacity to the background
+		},
+		saveButtonTextDisabled: {
+			opacity: 1, // Force full opacity for text
+		},
 	});
 
 export const useStyles = () => {
