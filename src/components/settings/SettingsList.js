@@ -13,6 +13,7 @@ const SettingsList = ({
 	isDarkMode,
 	handleThemeToggle,
 	onProfilePress,
+	onAccountPress,
 }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
@@ -20,7 +21,7 @@ const SettingsList = ({
 	return (
 		<ScrollView style={styles.settingsList}>
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Account</Text>
+				<Text style={styles.sectionTitle}>User Settings</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={onProfilePress}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="person-outline" size={20} color={colors.text.secondary} />
@@ -28,10 +29,17 @@ const SettingsList = ({
 					</View>
 					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
+				<TouchableOpacity style={styles.settingItem} onPress={onAccountPress}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Account</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Notifications</Text>
+				<Text style={styles.sectionTitle}>App Settings</Text>
 				<View style={styles.settingItem}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="notifications-outline" size={20} color={colors.text.secondary} />

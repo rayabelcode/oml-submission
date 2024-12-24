@@ -61,6 +61,10 @@ export default function SettingsScreen({ navigation }) {
 		navigation.navigate('Profile');
 	};
 
+	const handleAccountPress = () => {
+		navigation.navigate('Account');
+	};
+
 	const handleNotificationToggle = async () => {
 		try {
 			if (notificationsEnabled) {
@@ -363,6 +367,7 @@ export default function SettingsScreen({ navigation }) {
 				isDarkMode={isDarkMode}
 				handleThemeToggle={toggleTheme}
 				onProfilePress={handleProfilePress}
+				onAccountPress={handleAccountPress}
 			/>
 
 			<PrivacyModal
