@@ -18,30 +18,52 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const [formData, setFormData] = useState({ ...contact });
 
 	const handleEditPhotoUpload = async () => {
-		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-		if (status !== 'granted') {
-			Alert.alert('Permission Denied', 'Permission to access media library is required!');
-			return;
-		}
+		try {
+			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			if (status !== 'granted') {
+				Alert.alert('Permission Denied', 'Permission to access media library is required!');
+				return;
+			}
 
-		const result = await ImagePicker.launchImageLibraryAsync({
-			mediaTypes: ImagePicker.MediaTypeOptions.Images,
-			allowsEditing: true,
-			aspect: [1, 1],
-			quality: 1,
-		});
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 1,
+			});
 
-		if (!result.canceled) {
-			const manipResult = await ImageManipulator.manipulateAsync(
-				result.assets[0].uri,
-				[{ resize: { width: 500 } }],
-				{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-			);
-			const photoURL = await uploadContactPhoto(contact.id, manipResult.uri);
-			setFormData((prevFormData) => ({
-				...prevFormData,
-				photo_url: photoURL,
-			}));
+			if (!result.canceled) {
+				const manipResult = await ImageManipulator.manipulateAsync(
+					result.assets[0].uri,
+					[{ resize: { width: 500 } }],
+					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+				);
+				const photoURL = await uploadContactPhoto(contact.id, manipResult.uri);
+
+				// Update the contact immediately with the new photo
+				await updateContact(contact.id, {
+					...contact,
+					photo_url: photoURL,
+				});
+
+				// Update local state
+				setFormData((prevFormData) => ({
+					...prevFormData,
+					photo_url: photoURL,
+				}));
+
+				// Update selected contact
+				setSelectedContact((prev) => ({
+					...prev,
+					photo_url: photoURL,
+				}));
+
+				// Refresh contacts list
+				await loadContacts();
+			}
+		} catch (error) {
+			console.error('Error uploading photo:', error);
+			Alert.alert('Error', 'Failed to upload photo');
 		}
 	};
 
@@ -95,6 +117,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 																...contact,
 																photo_url: null,
 															});
+															setFormData((prev) => ({ ...prev, photo_url: null }));
 															setSelectedContact({ ...contact, photo_url: null });
 															loadContacts();
 														} catch (error) {
@@ -110,11 +133,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 								)}
 							</View>
 						) : (
-							<TouchableOpacity
-								style={styles.uploadButton}
-								onPress={handleEditPhotoUpload}
-								disabled={!isEditing}
-							>
+							<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
 								<Icon name="camera-outline" size={24} color={colors.primary} />
 								<Text style={styles.uploadButtonText}>Add Photo</Text>
 							</TouchableOpacity>
