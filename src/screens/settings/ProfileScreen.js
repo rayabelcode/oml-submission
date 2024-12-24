@@ -1,14 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-	View,
-	Text,
-	TouchableOpacity,
-	ScrollView,
-	TextInput,
-	Alert,
-	KeyboardAvoidingView,
-	Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -16,7 +7,6 @@ import { Image } from 'expo-image';
 import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { getUserProfile, updateUserProfile, uploadProfilePhoto } from '../../utils/firestore';
-import { useCommonStyles } from '../../styles/common';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -26,7 +16,6 @@ const ProfileScreen = ({ navigation }) => {
 	const [lastName, setLastName] = useState('');
 	const [profilePhoto, setProfilePhoto] = useState(null);
 	const [hasChanges, setHasChanges] = useState(false);
-	const commonStyles = useCommonStyles();
 	const lastNameInputRef = useRef(null);
 
 	useEffect(() => {

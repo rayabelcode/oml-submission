@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { spacing } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../context/AuthContext';
 import { getUserProfile, updateUserProfile, checkUsernameExists } from '../../utils/firestore';
-import { KeyboardAvoidingView, Platform } from 'react-native';
 import { auth } from '../../config/firebase';
 import {
 	EmailAuthProvider,
@@ -28,12 +27,6 @@ const AccountScreen = ({ navigation }) => {
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [usernameChanged, setUsernameChanged] = useState(false);
 	const [emailChanged, setEmailChanged] = useState(false);
-	const [passwordChanged, setPasswordChanged] = useState(false);
-	console.log('Container Background:', colors.background.primary);
-	console.log('Render Dimensions:', {
-		screenHeight: Dimensions.get('window').height,
-		screenWidth: Dimensions.get('window').width,
-	});
 
 	useEffect(() => {
 		loadUserProfile();
@@ -148,8 +141,6 @@ const AccountScreen = ({ navigation }) => {
 		}
 	};
 
-	
-
 	return (
 		<View style={styles.container}>
 			<View style={styles.profileSection}>
@@ -158,8 +149,8 @@ const AccountScreen = ({ navigation }) => {
 					<Text style={styles.profileName}>Account</Text>
 				</TouchableOpacity>
 			</View>
-	
-			<ScrollView 
+
+			<ScrollView
 				style={styles.settingsList}
 				keyboardShouldPersistTaps="handled"
 				keyboardDismissMode="interactive"
@@ -186,7 +177,7 @@ const AccountScreen = ({ navigation }) => {
 							<Text style={styles.saveButtonText}>Update Username</Text>
 						</TouchableOpacity>
 					</View>
-	
+
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Email</Text>
 						<TextInput
@@ -220,7 +211,7 @@ const AccountScreen = ({ navigation }) => {
 							<Text style={styles.saveButtonText}>Update Email</Text>
 						</TouchableOpacity>
 					</View>
-	
+
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Change Password</Text>
 						<TextInput
@@ -262,8 +253,6 @@ const AccountScreen = ({ navigation }) => {
 			</ScrollView>
 		</View>
 	);
-	
-
 };
 
 export default AccountScreen;

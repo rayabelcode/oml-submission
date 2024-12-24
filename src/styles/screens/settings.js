@@ -11,23 +11,30 @@ const createStyles = (colors) =>
 		settingsList: {
 			flex: 1,
 		},
-		profileSection: {
-			flexDirection: 'row',
-			padding: spacing.md,
+		profileBackground: {
 			backgroundColor: colors.background.secondary,
-			alignItems: 'center',
+			marginTop: -50,
+			paddingTop: 50,
+		},
+		profileSectionContainer: {
+			paddingVertical: spacing.md,
+		},
+		profileSection: {
+			paddingHorizontal: spacing.lg,
 		},
 		profileInfo: {
 			marginLeft: spacing.md,
 			flex: 1,
 			justifyContent: 'center',
 		},
+		profileContent: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.md,
+		},
 		profileName: {
-			fontSize: 18,
-			marginLeft: spacing.md,
-			fontWeight: 'bold',
+			fontSize: 20,
 			color: colors.text.primary,
-			flexWrap: 'wrap',
 			flex: 1,
 		},
 		profileEmail: {
@@ -37,15 +44,13 @@ const createStyles = (colors) =>
 			width: 60,
 			height: 60,
 			borderRadius: 30,
-			backgroundColor: colors.background.secondary,
+			overflow: 'hidden',
 			justifyContent: 'center',
 			alignItems: 'center',
-			position: 'relative',
 		},
 		avatarImage: {
 			width: '100%',
 			height: '100%',
-			borderRadius: 30,
 		},
 		editOverlay: {
 			position: 'absolute',
