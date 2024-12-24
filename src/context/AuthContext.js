@@ -1,75 +1,106 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged
+	createUserWithEmailAndPassword,
+	signInWithEmailAndPassword,
+	signOut as firebaseSignOut,
+	onAuthStateChanged,
+	sendPasswordResetEmail,
+	signInWithCredential,
+	OAuthProvider,
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+	const [user, setUser] = useState(null);
+	const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
+	useEffect(() => {
+		const unsubscribe = onAuthStateChanged(auth, (user) => {
+			setUser(user);
+			setLoading(false);
+		});
 
-    // Cleanup subscription on unmount
-    return unsubscribe;
-  }, []);
+		return unsubscribe;
+	}, []);
 
-  const signUp = async ({ email, password }) => {
-    try {
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
-      return { data: user, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  };
+	const signInWithApple = async () => {
+		try {
+			const credential = await AppleAuthentication.signInAsync({
+				requestedScopes: [
+					AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+					AppleAuthentication.AppleAuthenticationScope.EMAIL,
+				],
+			});
 
-  const signIn = async ({ email, password }) => {
-    try {
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-      return { data: user, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  };
+			const provider = new OAuthProvider('apple.com');
+			const authCredential = provider.credential({
+				idToken: credential.identityToken,
+				rawNonce: credential.nonce,
+			});
 
-  const signOut = async () => {
-    try {
-      await firebaseSignOut(auth);
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  };
+			const { user } = await signInWithCredential(auth, authCredential);
+			return { data: user, error: null };
+		} catch (error) {
+			return { data: null, error };
+		}
+	};
 
-  const value = {
-    user,
-    signUp,
-    signIn,
-    signOut,
-    loading,
-  };
+	const signUp = async ({ email, password }) => {
+		try {
+			const { user } = await createUserWithEmailAndPassword(auth, email, password);
+			return { data: user, error: null };
+		} catch (error) {
+			return { data: null, error };
+		}
+	};
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+	const signIn = async ({ email, password }) => {
+		try {
+			const { user } = await signInWithEmailAndPassword(auth, email, password);
+			return { data: user, error: null };
+		} catch (error) {
+			return { data: null, error };
+		}
+	};
+
+	const signOut = async () => {
+		try {
+			await firebaseSignOut(auth);
+			return { error: null };
+		} catch (error) {
+			return { error };
+		}
+	};
+
+	const resetPassword = async (email) => {
+		try {
+			await sendPasswordResetEmail(auth, email);
+			return { error: null };
+		} catch (error) {
+			return { error };
+		}
+	};
+
+	const value = {
+		user,
+		signUp,
+		signIn,
+		signOut,
+		resetPassword,
+		signInWithApple,
+		loading,
+	};
+
+	return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+	const context = useContext(AuthContext);
+	if (!context) {
+		throw new Error('useAuth must be used within an AuthProvider');
+	}
+	return context;
 };

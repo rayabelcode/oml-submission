@@ -195,6 +195,106 @@ const createStyles = (colors) =>
 			justifyContent: 'center',
 			alignItems: 'center',
 		},
+		safeArea: {
+			flex: 1,
+			backgroundColor: colors.background.primary,
+		},
+		logoContainer: {
+			alignItems: 'center',
+			marginBottom: spacing.lg,
+			marginTop: spacing.xl,
+		},
+		logo: {
+			width: 250,
+			height: 36,
+			marginBottom: spacing.xs,
+		},
+		authContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			paddingHorizontal: spacing.md,
+			backgroundColor: colors.background.primary,
+		},
+		formContainer: {
+			width: '100%',
+			maxWidth: 400,
+			alignSelf: 'center',
+		},
+		mascotContainer: {
+			alignItems: 'center',
+			marginBottom: spacing.lg,
+		},
+		mascot: {
+			width: 120,
+			height: 120,
+			marginBottom: spacing.md,
+		},
+		welcomeText: {
+			fontSize: 24,
+			fontWeight: 'bold',
+			color: colors.text.primary,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
+		},
+		subtitleText: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.xl,
+			textAlign: 'center',
+		},
+		card: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.lg,
+			padding: spacing.lg,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 2,
+			},
+			shadowOpacity: 0.1,
+			shadowRadius: 3.84,
+			elevation: 5,
+		},
+		socialButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			backgroundColor: colors.background.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginTop: spacing.md,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		socialButtonText: {
+			color: colors.text.primary,
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '500',
+		},
+		dividerContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginVertical: spacing.md,
+		},
+		dividerLine: {
+			flex: 1,
+			height: 1,
+			backgroundColor: colors.border,
+		},
+		dividerText: {
+			color: colors.text.secondary,
+			paddingHorizontal: spacing.md,
+		},
+		forgotPasswordButton: {
+			alignSelf: 'flex-end',
+			marginBottom: spacing.md,
+			marginTop: -spacing.sm,
+		},
+		forgotPasswordText: {
+			color: colors.primary,
+			fontSize: 14,
+		},
 	});
 
 export const useStyles = () => {

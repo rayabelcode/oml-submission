@@ -63,7 +63,8 @@
     "react-native-tab-view": "^4.0.5",
     "react-native-url-polyfill": "^2.0.0",
     "react-native-vector-icons": "^10.2.0",
-    "react-native-web": "^0.19.13"
+    "react-native-web": "^0.19.13",
+    "expo-apple-authentication": "~7.1.2"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
