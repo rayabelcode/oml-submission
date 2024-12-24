@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StatusBar } from 'react-native';
 
 const ThemeContext = createContext();
 
@@ -80,10 +79,6 @@ export function ThemeProvider({ children }) {
 		};
 		loadTheme();
 	}, []);
-
-    useEffect(() => {
-        StatusBar.setBarStyle(theme === 'dark' ? 'light-content' : 'dark-content', true);
-    }, [theme]);
 
 	const toggleTheme = async () => {
 		const newTheme = theme === 'light' ? 'dark' : 'light';
