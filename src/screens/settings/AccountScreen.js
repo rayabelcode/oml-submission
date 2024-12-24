@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Dimensions } from 'react-native';
+import { spacing } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -28,6 +29,11 @@ const AccountScreen = ({ navigation }) => {
 	const [usernameChanged, setUsernameChanged] = useState(false);
 	const [emailChanged, setEmailChanged] = useState(false);
 	const [passwordChanged, setPasswordChanged] = useState(false);
+	console.log('Container Background:', colors.background.primary);
+	console.log('Render Dimensions:', {
+		screenHeight: Dimensions.get('window').height,
+		screenWidth: Dimensions.get('window').width,
+	});
 
 	useEffect(() => {
 		loadUserProfile();
@@ -142,20 +148,23 @@ const AccountScreen = ({ navigation }) => {
 		}
 	};
 
+	
+
 	return (
-		<KeyboardAvoidingView
-			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-			style={styles.container}
-			keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-		>
+		<View style={styles.container}>
 			<View style={styles.profileSection}>
 				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
 					<Text style={styles.profileName}>Account</Text>
 				</TouchableOpacity>
 			</View>
-
-			<ScrollView style={styles.settingsList} keyboardShouldPersistTaps="handled">
+	
+			<ScrollView 
+				style={styles.settingsList}
+				keyboardShouldPersistTaps="handled"
+				keyboardDismissMode="interactive"
+				automaticallyAdjustKeyboardInsets={true}
+			>
 				<View style={styles.formSection}>
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Username (Optional)</Text>
@@ -166,11 +175,8 @@ const AccountScreen = ({ navigation }) => {
 								setUsername(text);
 								setUsernameChanged(true);
 							}}
-							onSubmitEditing={handleUpdateUsername}
 							placeholder="Enter username"
 							placeholderTextColor={colors.text.secondary}
-							returnKeyType="done"
-							autoCapitalize="none"
 						/>
 						<TouchableOpacity
 							style={[styles.saveButton, !usernameChanged && styles.saveButtonDisabled]}
@@ -180,7 +186,7 @@ const AccountScreen = ({ navigation }) => {
 							<Text style={styles.saveButtonText}>Update Username</Text>
 						</TouchableOpacity>
 					</View>
-
+	
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Email</Text>
 						<TextInput
@@ -196,7 +202,7 @@ const AccountScreen = ({ navigation }) => {
 							autoCapitalize="none"
 						/>
 						<TextInput
-							style={[styles.input, styles.inputText]}
+							style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
 							value={emailCurrentPassword}
 							onChangeText={setEmailCurrentPassword}
 							placeholder="Enter current password"
@@ -214,7 +220,7 @@ const AccountScreen = ({ navigation }) => {
 							<Text style={styles.saveButtonText}>Update Email</Text>
 						</TouchableOpacity>
 					</View>
-
+	
 					<View style={styles.inputGroup}>
 						<Text style={styles.label}>Change Password</Text>
 						<TextInput
@@ -226,7 +232,7 @@ const AccountScreen = ({ navigation }) => {
 							secureTextEntry
 						/>
 						<TextInput
-							style={[styles.input, styles.inputText]}
+							style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
 							value={newPassword}
 							onChangeText={setNewPassword}
 							placeholder="New password"
@@ -234,7 +240,7 @@ const AccountScreen = ({ navigation }) => {
 							secureTextEntry
 						/>
 						<TextInput
-							style={[styles.input, styles.inputText]}
+							style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
 							value={confirmPassword}
 							onChangeText={setConfirmPassword}
 							placeholder="Confirm new password"
@@ -254,8 +260,10 @@ const AccountScreen = ({ navigation }) => {
 					</View>
 				</View>
 			</ScrollView>
-		</KeyboardAvoidingView>
+		</View>
 	);
+	
+
 };
 
 export default AccountScreen;

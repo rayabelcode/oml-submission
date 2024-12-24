@@ -10,7 +10,6 @@ const createStyles = (colors) =>
 		},
 		settingsList: {
 			flex: 1,
-			backgroundColor: colors.background.primary,
 		},
 		profileSection: {
 			flexDirection: 'row',
