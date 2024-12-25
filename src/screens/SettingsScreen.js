@@ -18,7 +18,6 @@ import {
 	deleteUserAccount,
 	updateUserProfile,
 } from '../utils/firestore';
-import PrivacyModal from '../components/settings/PrivacyModal';
 import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
@@ -161,25 +160,33 @@ export default function SettingsScreen({ navigation }) {
 		}
 	};
 
-	const handleExportData = async () => {
+	const handleExportData = async (contactsOnly = false) => {
 		try {
 			setLoading(true);
 			const userData = await exportUserData(user.uid);
 
 			const fileUri = `${FileSystem.documentDirectory}onmylist_export.csv`;
-			let csvContent = 'First Name,Last Name,Email,Phone,Tags,Next Contact,Notes,Contact History\n';
+			let csvContent = contactsOnly
+				? 'First Name,Last Name,Phone\n'
+				: 'First Name,Last Name,Email,Phone,Tags,Next Contact,Notes,Contact History\n';
 
 			userData.contacts.forEach((contact) => {
-				const historyString =
-					contact.contact_history
-						?.map((h) => `${new Date(h.date).toLocaleDateString()}: ${h.notes.replace(/"/g, '""')}`)
-						.join('; ') || '';
+				if (contactsOnly) {
+					csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${
+						contact.phone || ''
+					}"\n`;
+				} else {
+					const historyString =
+						contact.contact_history
+							?.map((h) => `${new Date(h.date).toLocaleDateString()}: ${h.notes.replace(/"/g, '""')}`)
+							.join('; ') || '';
 
-				csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${contact.email || ''}","${
-					contact.phone || ''
-				}","${contact.tags?.join(';') || ''}","${contact.next_contact || ''}","${(
-					contact.notes || ''
-				).replace(/"/g, '""')}","${historyString}"\n`;
+					csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${
+						contact.email || ''
+					}","${contact.phone || ''}","${contact.tags?.join(';') || ''}","${contact.next_contact || ''}","${(
+						contact.notes || ''
+					).replace(/"/g, '""')}","${historyString}"\n`;
+				}
 			});
 
 			await FileSystem.writeAsStringAsync(fileUri, csvContent);
@@ -377,13 +384,9 @@ export default function SettingsScreen({ navigation }) {
 				handleThemeToggle={toggleTheme}
 				onProfilePress={handleProfilePress}
 				onAccountPress={handleAccountPress}
-			/>
-
-			<PrivacyModal
-				visible={isPrivacyModalVisible}
-				onClose={() => setIsPrivacyModalVisible(false)}
-				onExportData={handleExportData}
-				onDeleteAccount={handleDeleteAccount}
+				navigation={navigation}
+				handleExportData={handleExportData}
+				handleDeleteAccount={handleDeleteAccount}
 			/>
 
 			{loading && (
