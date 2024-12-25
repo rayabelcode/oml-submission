@@ -1,5 +1,6 @@
-import { StyleSheet, Platform, Dimensions } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
+
 
 const useStyles = () => {
 	const { colors } = useTheme();
@@ -8,6 +9,7 @@ const useStyles = () => {
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
+			paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,
 		},
 		mainContainer: {
 			flex: 1,
@@ -56,12 +58,13 @@ const useStyles = () => {
 			paddingHorizontal: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			justifyContent: 'center',
+			gap: 8,
 		},
 		importButtonText: {
 			color: colors.background.primary,
 			marginLeft: spacing.sm,
 			fontSize: 16,
-			fontWeight: '500',
+			fontWeight: '600',
 		},
 		newButton: {
 			flexDirection: 'row',

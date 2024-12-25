@@ -1,36 +1,47 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import Icon from 'react-native-vector-icons/Ionicons';
+import React, { useEffect, useState } from 'react';
+import { View, Text } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useTheme } from '../../context/ThemeContext';
 
-const ProfileSection = ({ userProfile, user, handleProfilePhotoUpload }) => {
+const ProfileSection = ({ userProfile, user }) => {
 	const styles = useStyles();
 	const { colors } = useTheme();
+	const [displayName, setDisplayName] = useState('');
+
+	useEffect(() => {
+		updateDisplayName();
+	}, [userProfile]);
+
+	const updateDisplayName = () => {
+		if (userProfile?.first_name && userProfile?.last_name) {
+			setDisplayName(`${userProfile.first_name} ${userProfile.last_name}`);
+		} else {
+			setDisplayName(user?.email || 'Set up your profile');
+		}
+	};
 
 	return (
-		<View style={styles.profileSection}>
-			<TouchableOpacity style={styles.avatar} onPress={handleProfilePhotoUpload}>
-				{userProfile?.photo_url ? (
-					<ExpoImage
-						source={{ uri: userProfile.photo_url }}
-						style={styles.avatarImage}
-						cachePolicy="memory-disk"
-					/>
-				) : (
-					<>
-						<Icon name="person-outline" size={40} color={colors.primary} />
-						<View style={styles.editOverlay}>
-							<Icon name="camera-outline" size={20} color={colors.background.primary} />
-						</View>
-					</>
-				)}
-			</TouchableOpacity>
-
-			<View style={styles.profileInfo}>
-				<Text style={styles.profileEmail}>Account Info</Text>
-				<Text style={styles.profileName}>{user.email}</Text>
+		<View style={styles.profileBackground}>
+			<View style={[styles.profileSection, { marginTop: 20, marginBottom: 20 }]}>
+				<View style={styles.profileContent}>
+					<View style={styles.avatar}>
+						{userProfile?.photo_url ? (
+							<Image
+								source={{ uri: userProfile.photo_url }}
+								style={styles.avatarImage}
+								contentFit="cover"
+								cachePolicy="memory-disk"
+							/>
+						) : (
+							<Icon name="person-circle-outline" size={60} color={colors.text.secondary} />
+						)}
+					</View>
+					<Text style={[styles.profileName, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+						{displayName}
+					</Text>
+				</View>
 			</View>
 		</View>
 	);

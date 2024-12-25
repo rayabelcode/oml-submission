@@ -23,11 +23,11 @@ export const createUserDocument = async (userId, userData) => {
 	try {
 		await setDoc(doc(db, 'users', userId), {
 			...userData,
+			first_name: userData.first_name || '',
+			last_name: userData.last_name || '',
 			created_at: serverTimestamp(),
-			settings: {
-				notifications_enabled: true,
-				reminder_frequency_default: 'weekly',
-			},
+			notifications_enabled: true,
+			photo_url: null,
 		});
 	} catch (error) {
 		console.error('Error creating user document:', error);
@@ -263,6 +263,21 @@ export const updateUserProfile = async (userId, profileData) => {
 	}
 };
 
+// Username check
+export const checkUsernameExists = async (username, currentUserId) => {
+	try {
+		const usersRef = collection(db, 'users');
+		const q = query(usersRef, where('username', '==', username.toLowerCase()));
+		const querySnapshot = await getDocs(q);
+
+		// Check if any user other than the current user has this username
+		return querySnapshot.docs.some((doc) => doc.id !== currentUserId);
+	} catch (error) {
+		console.error('Error checking username:', error);
+		throw error;
+	}
+};
+
 export const getUserProfile = async (userId) => {
 	try {
 		const userRef = doc(db, 'users', userId);
@@ -273,8 +288,10 @@ export const getUserProfile = async (userId) => {
 			const defaultProfile = {
 				created_at: serverTimestamp(),
 				notifications_enabled: true,
-				email: userId, // or get from auth if needed
+				email: userId,
 				photo_url: null,
+				first_name: '',
+				last_name: '',
 			};
 			await setDoc(userRef, defaultProfile);
 			return defaultProfile;

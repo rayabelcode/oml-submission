@@ -7,11 +7,13 @@ import { useStyles } from '../../styles/screens/settings';
 const SettingsList = ({
 	notificationsEnabled,
 	handleNotificationToggle,
-	setIsPrivacyModalVisible,
 	handleSupport,
 	handleLogout,
 	isDarkMode,
 	handleThemeToggle,
+	onProfilePress,
+	onAccountPress,
+	navigation,
 }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
@@ -19,7 +21,25 @@ const SettingsList = ({
 	return (
 		<ScrollView style={styles.settingsList}>
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Notifications</Text>
+				<Text style={styles.sectionTitle}>User Settings</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={onProfilePress}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="person-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Profile</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+				<TouchableOpacity style={styles.settingItem} onPress={onAccountPress}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Account</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+			</View>
+
+			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>App Settings</Text>
 				<View style={styles.settingItem}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
@@ -47,8 +67,8 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Privacy</Text>
-				<TouchableOpacity style={styles.settingItem} onPress={() => setIsPrivacyModalVisible(true)}>
+				<Text style={styles.sectionTitle}>Data | Privacy</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Privacy')}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Privacy Settings</Text>
@@ -61,10 +81,9 @@ const SettingsList = ({
 				<Text style={styles.sectionTitle}>Support</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 					<View style={styles.settingItemLeft}>
-						<Icon name="help-circle-outline" size={20} color={colors.text.secondary} />
+						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Help Center</Text>
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 

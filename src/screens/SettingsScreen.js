@@ -12,29 +12,29 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Sharing from 'expo-sharing';
 import {
-    getUserProfile,
-    uploadProfilePhoto,
-    exportUserData,
-    deleteUserAccount,
-    updateUserProfile,
+	getUserProfile,
+	uploadProfilePhoto,
+	exportUserData,
+	deleteUserAccount,
+	updateUserProfile,
 } from '../utils/firestore';
-import PrivacyModal from '../components/settings/PrivacyModal';
 import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function SettingsScreen() {
-    const styles = useStyles();
-    const { user, signIn, signUp, signOut } = useAuth();
-    const [isLogin, setIsLogin] = useState(true);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-    const [userProfile, setUserProfile] = useState(null);
-    const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
-    const { theme, toggleTheme, colors } = useTheme();
-    const isDarkMode = theme === 'dark';
+export default function SettingsScreen({ navigation }) {
+	const styles = useStyles();
+	const { user, signIn, signUp, signOut, resetPassword, signInWithApple } = useAuth();
+	const [isLogin, setIsLogin] = useState(true);
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [loading, setLoading] = useState(false);
+	const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+	const [userProfile, setUserProfile] = useState(null);
+	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+	const { theme, toggleTheme, colors } = useTheme();
+	const isDarkMode = theme === 'dark';
 
 	useEffect(() => {
 		if (user) {
@@ -42,6 +42,14 @@ export default function SettingsScreen() {
 			checkNotificationStatus();
 		}
 	}, [user]);
+
+	useFocusEffect(
+		React.useCallback(() => {
+			if (user) {
+				loadUserProfile();
+			}
+		}, [user])
+	);
 
 	const loadUserProfile = async () => {
 		try {
@@ -55,6 +63,14 @@ export default function SettingsScreen() {
 	const checkNotificationStatus = async () => {
 		const { status } = await Notifications.getPermissionsAsync();
 		setNotificationsEnabled(status === 'granted');
+	};
+
+	const handleProfilePress = () => {
+		navigation.navigate('Profile');
+	};
+
+	const handleAccountPress = () => {
+		navigation.navigate('Account');
 	};
 
 	const handleNotificationToggle = async () => {
@@ -144,25 +160,33 @@ export default function SettingsScreen() {
 		}
 	};
 
-	const handleExportData = async () => {
+	const handleExportData = async (contactsOnly = false) => {
 		try {
 			setLoading(true);
 			const userData = await exportUserData(user.uid);
 
 			const fileUri = `${FileSystem.documentDirectory}onmylist_export.csv`;
-			let csvContent = 'First Name,Last Name,Email,Phone,Tags,Next Contact,Notes,Contact History\n';
+			let csvContent = contactsOnly
+				? 'First Name,Last Name,Phone\n'
+				: 'First Name,Last Name,Email,Phone,Tags,Next Contact,Notes,Contact History\n';
 
 			userData.contacts.forEach((contact) => {
-				const historyString =
-					contact.contact_history
-						?.map((h) => `${new Date(h.date).toLocaleDateString()}: ${h.notes.replace(/"/g, '""')}`)
-						.join('; ') || '';
+				if (contactsOnly) {
+					csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${
+						contact.phone || ''
+					}"\n`;
+				} else {
+					const historyString =
+						contact.contact_history
+							?.map((h) => `${new Date(h.date).toLocaleDateString()}: ${h.notes.replace(/"/g, '""')}`)
+							.join('; ') || '';
 
-				csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${contact.email || ''}","${
-					contact.phone || ''
-				}","${contact.tags?.join(';') || ''}","${contact.next_contact || ''}","${(
-					contact.notes || ''
-				).replace(/"/g, '""')}","${historyString}"\n`;
+					csvContent += `"${contact.first_name || ''}","${contact.last_name || ''}","${
+						contact.email || ''
+					}","${contact.phone || ''}","${contact.tags?.join(';') || ''}","${contact.next_contact || ''}","${(
+						contact.notes || ''
+					).replace(/"/g, '""')}","${historyString}"\n`;
+				}
 			});
 
 			await FileSystem.writeAsStringAsync(fileUri, csvContent);
@@ -251,19 +275,68 @@ export default function SettingsScreen() {
 			}
 		} catch (error) {
 			console.error('Auth error:', error);
-			let errorMessage = error.message;
-			if (error.code === 'auth/email-already-in-use') {
-				errorMessage = 'This email is already registered.';
-			} else if (error.code === 'auth/invalid-email') {
-				errorMessage = 'Please enter a valid email address.';
-			} else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-				errorMessage = 'Invalid email or password.';
+			let errorMessage;
+			switch (error.code) {
+				case 'auth/email-already-in-use':
+					errorMessage = 'This email is already registered';
+					break;
+				case 'auth/invalid-email':
+					errorMessage = 'Please enter a valid email address';
+					break;
+				case 'auth/wrong-password':
+				case 'auth/user-not-found':
+				case 'auth/invalid-credential':
+					errorMessage = 'Invalid email or password';
+					break;
+				case 'auth/too-many-requests':
+					errorMessage = 'Too many failed attempts. Please try again later';
+					break;
+				case 'auth/network-request-failed':
+					errorMessage = 'Network error. Please check your connection';
+					break;
+				default:
+					errorMessage = 'An error occurred. Please try again';
 			}
 			Alert.alert('Error', errorMessage);
 		} finally {
 			setLoading(false);
 		}
 	}
+
+	const handleForgotPassword = async () => {
+		if (!email.trim()) {
+			Alert.alert('Error', 'Please enter your email address');
+			return;
+		}
+
+		setLoading(true);
+		try {
+			const { error } = await resetPassword(email.trim());
+			if (error) throw error;
+
+			Alert.alert(
+				'Password Reset Email Sent',
+				"Check your email for a link to reset your password. If you don't see it, check your spam folder.",
+				[{ text: 'OK' }]
+			);
+		} catch (error) {
+			console.error('Reset password error:', error);
+			let errorMessage;
+			switch (error.code) {
+				case 'auth/invalid-email':
+					errorMessage = 'Please enter a valid email address';
+					break;
+				case 'auth/user-not-found':
+					errorMessage = 'No account found with this email';
+					break;
+				default:
+					errorMessage = 'Unable to send reset password email. Please try again.';
+			}
+			Alert.alert('Error', errorMessage);
+		} finally {
+			setLoading(false);
+		}
+	};
 
 	async function handleLogout() {
 		try {
@@ -285,6 +358,8 @@ export default function SettingsScreen() {
 				setPassword={setPassword}
 				handleAuth={handleAuth}
 				loading={loading}
+				onForgotPassword={handleForgotPassword}
+				signInWithApple={signInWithApple}
 			/>
 		);
 	}
@@ -307,13 +382,11 @@ export default function SettingsScreen() {
 				handleLogout={handleLogout}
 				isDarkMode={isDarkMode}
 				handleThemeToggle={toggleTheme}
-			/>
-
-			<PrivacyModal
-				visible={isPrivacyModalVisible}
-				onClose={() => setIsPrivacyModalVisible(false)}
-				onExportData={handleExportData}
-				onDeleteAccount={handleDeleteAccount}
+				onProfilePress={handleProfilePress}
+				onAccountPress={handleAccountPress}
+				navigation={navigation}
+				handleExportData={handleExportData}
+				handleDeleteAccount={handleDeleteAccount}
 			/>
 
 			{loading && (

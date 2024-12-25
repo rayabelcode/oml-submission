@@ -2,9 +2,10 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.24",
+		"version": "1.0.27",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
+		"scheme": "onmylist",
 		"userInterfaceStyle": "light",
 		"splash": {
 			"image": "./assets/splash.png",
@@ -19,7 +20,8 @@
 				"UIBackgroundModes": ["remote-notification"],
 				"NSContactsUsageDescription": "Allow OnMyList to access your contacts to import them into the app.",
 				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app."
-			}
+			},
+			"usesAppleSignIn": true
 		},
 		"android": {
 			"adaptiveIcon": {

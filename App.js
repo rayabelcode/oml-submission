@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { Alert, LogBox, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import SafeAreaWrapper from './src/components/general/SafeAreaView';
 
 Sentry.init({
 	dsn: Constants.expoConfig?.extra?.SENTRY_DSN || Constants.manifest?.extra?.SENTRY_DSN,
@@ -67,7 +68,9 @@ function App() {
 		<ThemeProvider>
 			<AuthProvider>
 				<NavigationContainer>
-					<TabNavigator />
+					<SafeAreaWrapper>
+						<TabNavigator />
+					</SafeAreaWrapper>
 				</NavigationContainer>
 			</AuthProvider>
 		</ThemeProvider>

@@ -20,10 +20,14 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
     }
 
-    
-    // Other rules
+    // Updated user rules to allow username checks
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      // Allow checking usernames
+      allow list: if isAuthenticated() 
+        && request.query.limit <= 10 
+        && ('username' in request.query.filters);
     }
     
     match /reminders/{reminderId} {
