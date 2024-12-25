@@ -2,7 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
 import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
-import { Text, View, ScrollView, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import {
+	Text,
+	View,
+	ScrollView,
+	TouchableOpacity,
+	TextInput,
+	RefreshControl,
+	Alert,
+	StyleSheet,
+} from 'react-native';
 import { useStyles } from '../styles/screens/contacts';
 import { useCommonStyles } from '../styles/common';
 import { useTheme } from '../context/ThemeContext';
@@ -30,6 +39,8 @@ import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab 
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
 import ContactForm from '../components/modals/ContactForm'; // Add/Edit Contact Modal
 import ContactDetailsModal from '../components/contacts/ContactDetailsModal'; // View Contact Details Modal
+import WobbleEffect from '../components/general/WobbleEffect'; // Wobble effect for contact cards
+
 // Get initials for image avatar
 const getInitials = (firstName, lastName) => {
 	const firstInitial = firstName ? firstName[0] : '';
@@ -38,17 +49,82 @@ const getInitials = (firstName, lastName) => {
 };
 
 // ContactCard component
-const ContactCard = ({ contact, onPress, loadContacts }) => {
-	const [showActions, setShowActions] = useState(false);
+const ContactCard = ({
+	contact,
+	onPress,
+	loadContacts,
+	setIsAnyEditing,
+	isAnyEditing,
+	setDeleteButtonPosition,
+	setEditingContact,
+}) => {
+	const [isEditing, setIsEditing] = useState(false);
 	const { colors } = useTheme();
 	const styles = useStyles();
 
+	// Sync with global editing state
+	useEffect(() => {
+		if (!isAnyEditing) {
+			setIsEditing(false);
+		}
+	}, [isAnyEditing]);
+
+	const handleDeletePress = () => {
+		Alert.alert('Contact Options', 'What would you like to do with this contact?', [
+			{
+				text: 'Archive',
+				onPress: async () => {
+					try {
+						await archiveContact(contact.id);
+						setIsEditing(false);
+						setIsAnyEditing(false);
+						await loadContacts();
+					} catch (error) {
+						console.error('Archive error:', error);
+						Alert.alert('Error', 'Unable to archive contact');
+					}
+				},
+			},
+			{
+				text: 'Delete',
+				style: 'destructive',
+				onPress: async () => {
+					try {
+						await deleteContact(contact.id);
+						setIsEditing(false);
+						setIsAnyEditing(false);
+						await loadContacts();
+					} catch (error) {
+						console.error('Delete error:', error);
+						Alert.alert('Error', 'Unable to delete contact');
+					}
+				},
+			},
+			{
+				text: 'Cancel',
+				style: 'cancel',
+				onPress: () => {
+					setIsEditing(false);
+					setIsAnyEditing(false);
+				},
+			},
+		]);
+	};
+
 	return (
-		<TouchableOpacity
-			style={styles.card}
-			onPress={() => onPress(contact)}
-			onLongPress={() => setShowActions(true)}
-			delayLongPress={500}
+		<WobbleEffect
+			isEditing={isEditing}
+			onLongPress={() => {
+				setIsEditing(true);
+				setIsAnyEditing(true);
+				setEditingContact(contact);
+			}}
+			onPress={() => {
+				!isEditing && onPress(contact);
+			}}
+			onDeletePress={handleDeletePress}
+			onMeasureDeleteButton={setDeleteButtonPosition}
+			style={[styles.card, { alignItems: 'center' }]}
 		>
 			<View style={styles.cardAvatar}>
 				{contact.photo_url ? (
@@ -84,86 +160,27 @@ const ContactCard = ({ contact, onPress, loadContacts }) => {
 					{contact.last_name || ''}
 				</Text>
 			</View>
+
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
 					<View style={styles.scheduleDot} />
 				</View>
 			)}
-
-			{showActions && (
-				<View style={styles.actionsContainer}>
-					<TouchableOpacity style={styles.closeButton} onPress={() => setShowActions(false)}>
-						<Icon name="close" size={24} color={colors.text.primary} />
-					</TouchableOpacity>
-
-					<View style={styles.cardActions}>
-						<View style={styles.actionButtonsContainer}>
-							<TouchableOpacity
-								style={styles.cardActionButton}
-								onPress={() => {
-									Alert.alert(
-										'Delete Contact',
-										'Are you sure you want to delete this contact? This deletes all call history and cannot be undone.',
-										[
-											{ text: 'Cancel', style: 'cancel' },
-											{
-												text: 'Delete',
-												style: 'destructive',
-												onPress: async () => {
-													try {
-														await deleteContact(contact.id);
-														setShowActions(false);
-														await loadContacts();
-													} catch (error) {
-														console.error('Delete error:', error);
-														Alert.alert('Error', 'Unable to delete contact');
-													}
-												},
-											},
-										]
-									);
-								}}
-							>
-								<Icon name="trash-outline" size={32} color="rgba(255, 0, 0, 0.8)" />
-							</TouchableOpacity>
-
-							<TouchableOpacity
-								style={styles.cardActionButton}
-								onPress={() => {
-									Alert.alert('Archive Contact', 'Archive this contact?', [
-										{ text: 'Cancel', style: 'cancel' },
-										{
-											text: 'Archive',
-											onPress: async () => {
-												try {
-													await archiveContact(contact.id);
-													setShowActions(false);
-													await loadContacts();
-												} catch (error) {
-													console.error('Archive error:', error);
-													Alert.alert('Error', 'Unable to archive contact');
-												}
-											},
-										},
-									]);
-								}}
-							>
-								<Icon name="archive" size={32} color={colors.primary} />
-							</TouchableOpacity>
-						</View>
-					</View>
-				</View>
-			)}
-		</TouchableOpacity>
+		</WobbleEffect>
 	);
 };
 
 // Main Component
 export default function ContactsScreen({ navigation }) {
 	const { user } = useAuth();
-    const { colors, theme } = useTheme();
+	const { colors, theme } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
+
+	const [editingContact, setEditingContact] = useState(null);
+	const [isAnyEditing, setIsAnyEditing] = useState(false);
+	const [deleteButtonPosition, setDeleteButtonPosition] = useState(null);
+
 	const logoSource =
 		theme === 'dark'
 			? require('../../assets/full-logo-darkmode.png')
@@ -314,6 +331,15 @@ export default function ContactsScreen({ navigation }) {
 		loadContacts();
 	}, [user]);
 
+	// Reset editing state when leaving the screen
+	useEffect(() => {
+		const unsubscribe = navigation.addListener('blur', () => {
+			setIsAnyEditing(false);
+		});
+
+		return unsubscribe;
+	}, [navigation]);
+
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
 		await loadContacts();
@@ -422,6 +448,10 @@ export default function ContactsScreen({ navigation }) {
 											contact={contact}
 											onPress={handleOpenDetails}
 											loadContacts={loadContacts}
+											setIsAnyEditing={setIsAnyEditing}
+											isAnyEditing={isAnyEditing}
+											setDeleteButtonPosition={setDeleteButtonPosition}
+											setEditingContact={setEditingContact}
 										/>
 									))}
 								</View>
@@ -438,6 +468,10 @@ export default function ContactsScreen({ navigation }) {
 											contact={contact}
 											onPress={handleOpenDetails}
 											loadContacts={loadContacts}
+											setIsAnyEditing={setIsAnyEditing}
+											isAnyEditing={isAnyEditing}
+											setDeleteButtonPosition={setDeleteButtonPosition}
+											setEditingContact={setEditingContact}
 										/>
 									))}
 								</View>
@@ -450,6 +484,70 @@ export default function ContactsScreen({ navigation }) {
 					</>
 				)}
 			</ScrollView>
+			{isAnyEditing && (
+				<TouchableOpacity
+					style={{
+						...StyleSheet.absoluteFillObject,
+						backgroundColor: 'transparent',
+						zIndex: 900,
+					}}
+					onPress={(e) => {
+						if (
+							deleteButtonPosition &&
+							e.nativeEvent.pageX > deleteButtonPosition.x - 20 &&
+							e.nativeEvent.pageX < deleteButtonPosition.x + deleteButtonPosition.width + 20 &&
+							e.nativeEvent.pageY > deleteButtonPosition.y - 20 &&
+							e.nativeEvent.pageY < deleteButtonPosition.y + deleteButtonPosition.height + 20
+						) {
+							if (editingContact) {
+								Alert.alert('Contact Options', 'What would you like to do with this contact?', [
+									{
+										text: 'Archive',
+										onPress: async () => {
+											try {
+												await archiveContact(editingContact.id);
+												setIsAnyEditing(false);
+												setEditingContact(null);
+												await loadContacts();
+											} catch (error) {
+												console.error('Archive error:', error);
+												Alert.alert('Error', 'Unable to archive contact');
+											}
+										},
+									},
+									{
+										text: 'Delete',
+										style: 'destructive',
+										onPress: async () => {
+											try {
+												await deleteContact(editingContact.id);
+												setIsAnyEditing(false);
+												setEditingContact(null);
+												await loadContacts();
+											} catch (error) {
+												console.error('Delete error:', error);
+												Alert.alert('Error', 'Unable to delete contact');
+											}
+										},
+									},
+									{
+										text: 'Cancel',
+										style: 'cancel',
+										onPress: () => {
+											setIsAnyEditing(false);
+											setEditingContact(null);
+										},
+									},
+								]);
+							}
+							return;
+						}
+						setIsAnyEditing(false);
+						setEditingContact(null);
+					}}
+					activeOpacity={1}
+				/>
+			)}
 
 			<ContactForm
 				visible={isFormVisible}
