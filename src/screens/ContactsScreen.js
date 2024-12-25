@@ -112,25 +112,40 @@ const ContactCard = ({
 	};
 
 	return (
-		<WobbleEffect
-			isEditing={isEditing}
-			onLongPress={() => {
-				setIsEditing(true);
-				setIsAnyEditing(true);
-				setEditingContact(contact);
-			}}
-			onPress={() => {
-				!isEditing && onPress(contact);
-			}}
-			onDeletePress={handleDeletePress}
-			onMeasureDeleteButton={setDeleteButtonPosition}
-			style={[styles.card, { alignItems: 'center' }]}
-		>
-			<View style={styles.cardAvatar}>
-				{contact.photo_url ? (
-					Platform.OS === 'web' ? (
-						contact.photo_url.startsWith('file://') ? (
-							<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+		<View style={[styles.card, { alignItems: 'center' }]}>
+			{contact.next_contact && (
+				<View style={styles.scheduleBadge}>
+					<View style={styles.scheduleDot} />
+				</View>
+			)}
+
+			<WobbleEffect
+				isEditing={isEditing}
+				onLongPress={() => {
+					setIsEditing(true);
+					setIsAnyEditing(true);
+					setEditingContact(contact);
+				}}
+				onPress={() => {
+					!isEditing && onPress(contact);
+				}}
+				onDeletePress={handleDeletePress}
+				onMeasureDeleteButton={setDeleteButtonPosition}
+				style={{ alignItems: 'center' }}
+			>
+				<View style={styles.cardAvatar}>
+					{contact.photo_url ? (
+						Platform.OS === 'web' ? (
+							contact.photo_url.startsWith('file://') ? (
+								<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+							) : (
+								<ExpoImage
+									source={{ uri: contact.photo_url }}
+									style={styles.avatarImage}
+									cachePolicy="memory-disk"
+									transition={200}
+								/>
+							)
 						) : (
 							<ExpoImage
 								source={{ uri: contact.photo_url }}
@@ -140,33 +155,20 @@ const ContactCard = ({
 							/>
 						)
 					) : (
-						<ExpoImage
-							source={{ uri: contact.photo_url }}
-							style={styles.avatarImage}
-							cachePolicy="memory-disk"
-							transition={200}
-						/>
-					)
-				) : (
-					<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
-				)}
-			</View>
-
-			<View style={styles.nameContainer}>
-				<Text style={styles.firstName} numberOfLines={1}>
-					{contact.first_name}
-				</Text>
-				<Text style={styles.lastName} numberOfLines={1}>
-					{contact.last_name || ''}
-				</Text>
-			</View>
-
-			{contact.next_contact && (
-				<View style={styles.scheduleBadge}>
-					<View style={styles.scheduleDot} />
+						<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+					)}
 				</View>
-			)}
-		</WobbleEffect>
+
+				<View style={styles.nameContainer}>
+					<Text style={styles.firstName} numberOfLines={1}>
+						{contact.first_name}
+					</Text>
+					<Text style={styles.lastName} numberOfLines={1}>
+						{contact.last_name || ''}
+					</Text>
+				</View>
+			</WobbleEffect>
+		</View>
 	);
 };
 
