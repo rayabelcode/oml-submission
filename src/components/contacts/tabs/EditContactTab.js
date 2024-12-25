@@ -78,8 +78,9 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			setSelectedContact(formData);
 			setIsEditing(false);
 			await loadContacts();
-			setShowSuccess(true);
-			setTimeout(() => setShowSuccess(false), 1200); // 1.2 seconds total for the animation
+			Alert.alert('Success', 'Contact updated successfully', [
+				{ text: 'OK', onPress: () => setIsEditing(false) },
+			]);
 		} catch (error) {
 			Alert.alert('Error', 'Failed to update contact');
 		}

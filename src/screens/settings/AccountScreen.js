@@ -168,6 +168,8 @@ const AccountScreen = ({ navigation }) => {
 							}}
 							placeholder="Enter username"
 							placeholderTextColor={colors.text.secondary}
+							autoCorrect={false}
+							autoCapitalize="none"
 						/>
 						<TouchableOpacity
 							style={[styles.saveButton, !usernameChanged && styles.saveButtonDisabled]}
@@ -190,6 +192,7 @@ const AccountScreen = ({ navigation }) => {
 							placeholder="Enter new email"
 							placeholderTextColor={colors.text.secondary}
 							keyboardType="email-address"
+							autoCorrect={false}
 							autoCapitalize="none"
 						/>
 						<TextInput

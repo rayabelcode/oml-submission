@@ -91,6 +91,7 @@ const AuthSection = ({
 									value={email}
 									onChangeText={setEmail}
 									autoCapitalize="none"
+									autoCorrect={false}
 									keyboardType="email-address"
 									placeholderTextColor={colors.text.secondary}
 									returnKeyType="next"

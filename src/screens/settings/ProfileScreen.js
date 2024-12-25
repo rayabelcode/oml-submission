@@ -136,6 +136,8 @@ const ProfileScreen = ({ navigation }) => {
 								lastNameInputRef.current.focus();
 							}}
 							blurOnSubmit={false}
+							autoCorrect={false}
+							autoCapitalize="none"
 						/>
 					</View>
 
@@ -150,6 +152,8 @@ const ProfileScreen = ({ navigation }) => {
 							placeholderTextColor={colors.text.secondary}
 							returnKeyType="done"
 							onSubmitEditing={handleSaveProfile}
+							autoCorrect={false}
+							autoCapitalize="none"
 						/>
 					</View>
 
