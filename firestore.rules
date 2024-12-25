@@ -20,7 +20,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
     }
 
-    // Updated user rules to allow username checks
+    // Updated user rules to include scheduling preferences
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;
@@ -28,6 +28,30 @@ service cloud.firestore {
       allow list: if isAuthenticated() 
         && request.query.limit <= 10 
         && ('username' in request.query.filters);
+        
+      // Validate scheduling preferences structure when updating
+      function isValidSchedulingPreferences() {
+        let prefs = request.resource.data.scheduling_preferences;
+        return prefs == null || (
+          prefs.relationship_types is map &&
+          prefs.global_excluded_times is list &&
+          prefs.max_reminders_per_day is number &&
+          prefs.timezone is string
+        );
+      }
+
+      // Additional validation for relationship type updates
+      function isValidRelationshipType() {
+        let types = ['work', 'personal', 'family', 'friend'];
+        return request.resource.data.scheduling_preferences.relationship_types.keys()
+          .hasAll(types);
+      }
+
+      // Add validation to write operations
+      allow update: if isAuthenticated() && 
+        request.auth.uid == userId && 
+        isValidSchedulingPreferences() &&
+        isValidRelationshipType();
     }
     
     match /reminders/{reminderId} {
