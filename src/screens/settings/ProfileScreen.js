@@ -89,7 +89,7 @@ const ProfileScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.profileSection}>
+			<View style={styles.headerSettingsPages}>
 				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
 					<Text style={styles.profileName}>Profile</Text>

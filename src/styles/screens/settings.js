@@ -22,7 +22,7 @@ const createStyles = (colors) =>
 		profileSection: {
 			paddingLeft: spacing.xs,
 			paddingRight: spacing.xs,
-						flexDirection: 'row',
+			flexDirection: 'row',
 			alignItems: 'center',
 			width: '100%',
 		},
@@ -422,6 +422,17 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			color: colors.text.primary,
 			paddingRight: spacing.md,
+		},
+		// Headers for each page under settings
+		headerSettingsPages: {
+			paddingLeft: spacing.xs,
+			paddingRight: spacing.xs,
+			flexDirection: 'row',
+			alignItems: 'center',
+			width: '100%',
+			paddingTop: spacing.lg,
+			paddingBlockEnd: spacing.xs,
+			marginTop: 0,
 		},
 	});
 
