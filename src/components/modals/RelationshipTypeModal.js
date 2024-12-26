@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
@@ -11,6 +11,12 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 	const commonStyles = useCommonStyles();
 	const [selectedIndex, setSelectedIndex] = React.useState(0);
 	const relationshipTypes = ['Friend', 'Family', 'Personal', 'Work'];
+
+	useEffect(() => {
+		if (visible) {
+			setSelectedIndex(0);
+		}
+	}, [visible]);
 
 	const handleConfirm = () => {
 		onSelect(relationshipTypes[selectedIndex].toLowerCase());
