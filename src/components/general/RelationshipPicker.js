@@ -35,6 +35,8 @@ const RelationshipPicker = ({ value, onChange, showLabel = true, style = {} }) =
 				}}
 				tintColor={colors.primary}
 				backgroundColor={colors.background.primary}
+				fontStyle={{ color: colors.text.primary }}  // Add this line
+				activeFontStyle={{ color: colors.background.primary }}  // Add this line
 				style={{
 					height: 45,
 					marginBottom: spacing.xl,

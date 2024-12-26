@@ -82,7 +82,7 @@ const CallNotesTab = ({
 			style={[styles.tabContent, { flex: 1 }]}
 			contentContainerStyle={{ paddingBottom: 20 }}
 			scrollEnabled={true}
-			showsVerticalScrollIndicator={true}
+			showsVerticalScrollIndicator={false}
 		>
 			<View style={styles.callNotesSection}>
 				<TextInput

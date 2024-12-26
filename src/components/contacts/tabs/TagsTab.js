@@ -68,7 +68,7 @@ const TagsTab = ({ contact, setSelectedContact }) => {
 				keyboardShouldPersistTaps="handled"
 				contentContainerStyle={{ flexGrow: 1 }}
 				scrollEventThrottle={16}
-				showsVerticalScrollIndicator={true}
+				showsVerticalScrollIndicator={false}
 				style={{ width: '100%' }}
 			>
 				<TouchableOpacity activeOpacity={1} style={{ flex: 1 }}>

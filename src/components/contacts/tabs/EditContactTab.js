@@ -10,6 +10,7 @@ import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import AutoDismissModalContainer from '../../../components/general/AutoDismissModalContainer';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
+import RelationshipPicker from '../../general/RelationshipPicker';
 
 const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) => {
 	const { colors } = useTheme();
@@ -17,7 +18,10 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const styles = useStyles();
 
 	const [isEditing, setIsEditing] = useState(false);
-	const [formData, setFormData] = useState({ ...contact });
+	const [formData, setFormData] = useState({
+		...contact,
+		relationship_type: contact.relationship_type || 'friend',
+	});
 	const [showSuccess, setShowSuccess] = useState(false);
 
 	const handleEditPhotoUpload = async () => {
@@ -74,6 +78,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 				email: formData.email,
 				phone: formData.phone,
 				photo_url: formData.photo_url,
+				relationship_type: formData.relationship_type,
 			});
 			setSelectedContact(formData);
 			setIsEditing(false);
@@ -91,9 +96,9 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			<View style={{ flex: 1 }}>
 				<ScrollView
 					style={[styles.tabContent, { flex: 1 }]}
-					contentContainerStyle={{ paddingBottom: 20 }}
+					contentContainerStyle={styles.scrollContent}
 					scrollEnabled={true}
-					showsVerticalScrollIndicator={true}
+					showsVerticalScrollIndicator={false}
 				>
 					<TouchableOpacity activeOpacity={1}>
 						<View style={styles.contactHeader}>
@@ -205,12 +210,48 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 										placeholderTextColor={colors.text.secondary}
 										keyboardType="phone-pad"
 									/>
+									<View style={{ marginTop: 1 }}>
+										<View
+											style={{
+												backgroundColor:
+													colors.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.05)',
+												paddingHorizontal: 122,
+												paddingTop: 8,
+												paddingBottom: 0,
+												marginBottom: 8,
+											}}
+										>
+											<Text
+												style={[
+													styles.contactDetail,
+													{
+														color: colors.text.primary,
+														fontWeight: '500',
+													},
+												]}
+											>
+												Relationship Type
+											</Text>
+										</View>
+										<RelationshipPicker
+											value={formData.relationship_type}
+											onChange={(type) => setFormData({ ...formData, relationship_type: type })}
+											showLabel={false}
+										/>
+									</View>
 								</View>
 							) : (
 								<View style={styles.viewFields}>
 									<Text style={styles.fullName}>{`${formData.first_name} ${formData.last_name}`}</Text>
 									{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
 									{formData.phone && <Text style={styles.contactDetail}>{formData.phone}</Text>}
+									{formData.relationship_type && (
+										<Text style={styles.contactDetail}>
+											Relationship:{' '}
+											{formData.relationship_type.charAt(0).toUpperCase() +
+												formData.relationship_type.slice(1)}
+										</Text>
+									)}
 								</View>
 							)}
 						</View>
