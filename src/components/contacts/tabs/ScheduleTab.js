@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme, spacing } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
@@ -28,6 +28,9 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 	);
 	const [frequency, setFrequency] = useState(contact?.scheduling?.frequency || 'weekly');
 	const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+	const [selectedDays, setSelectedDays] = useState(
+		contact?.scheduling?.custom_preferences?.preferred_days || []
+	);
 
 	const handleFrequencyChange = async (newFrequency) => {
 		try {
@@ -125,12 +128,148 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 					</TouchableOpacity>
 
 					{showAdvancedSettings && (
-						<TouchableOpacity activeOpacity={1}>
-							<View style={styles.advancedSettings}>
-								{/* Advanced settings UI to be implemented */}
-								<Text style={styles.settingsNote}>Advanced scheduling options coming soon...</Text>
+						<View style={styles.advancedSettings}>
+							<Text style={[styles.sectionTitle, { marginBottom: spacing.md }]}>Preferred Days</Text>
+							<View style={styles.frequencyPicker}>
+								{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+									const isSelected = selectedDays.includes(day.toLowerCase());
+									return (
+										<TouchableOpacity
+											key={day}
+											style={[styles.frequencyOption, isSelected && styles.frequencyOptionSelected]}
+											onPress={async () => {
+												try {
+													const updatedDays = isSelected
+														? selectedDays.filter((d) => d !== day.toLowerCase())
+														: [...selectedDays, day.toLowerCase()];
+
+													// Update local state first
+													setSelectedDays(updatedDays);
+
+													// Update Firestore
+													await updateContactScheduling(contact.id, {
+														...contact.scheduling,
+														custom_schedule: true,
+														custom_preferences: {
+															...(contact?.scheduling?.custom_preferences || {}),
+															preferred_days: updatedDays,
+														},
+													});
+
+													// Update parent component state
+													setSelectedContact({
+														...contact,
+														scheduling: {
+															...(contact.scheduling || {}),
+															custom_schedule: true,
+															custom_preferences: {
+																...(contact?.scheduling?.custom_preferences || {}),
+																preferred_days: updatedDays,
+															},
+														},
+													});
+												} catch (error) {
+													console.error('Error updating preferred days:', error);
+													Alert.alert('Error', 'Failed to update preferred days');
+													// Revert local state on error
+													setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
+												}
+											}}
+										>
+											<Text style={[styles.frequencyText, isSelected && styles.frequencyTextSelected]}>
+												{day.substring(0, 3)}
+											</Text>
+										</TouchableOpacity>
+									);
+								})}
 							</View>
-						</TouchableOpacity>
+
+							<Text style={[styles.sectionTitle, { marginTop: spacing.lg, marginBottom: spacing.sm }]}>
+								Active Hours
+							</Text>
+							<View
+								style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md }}
+							>
+								<TouchableOpacity
+									style={[styles.frequencyOption, { flex: 1, marginRight: spacing.sm }]}
+									onPress={() => {
+										Alert.alert('Coming Soon', 'Time picker will be added in the next update');
+									}}
+								>
+									<Text style={styles.frequencyText}>
+										Start: {contact?.scheduling?.custom_preferences?.active_hours?.start || '09:00'}
+									</Text>
+								</TouchableOpacity>
+								<TouchableOpacity
+									style={[styles.frequencyOption, { flex: 1 }]}
+									onPress={() => {
+										Alert.alert('Coming Soon', 'Time picker will be added in the next update');
+									}}
+								>
+									<Text style={styles.frequencyText}>
+										End: {contact?.scheduling?.custom_preferences?.active_hours?.end || '17:00'}
+									</Text>
+								</TouchableOpacity>
+							</View>
+
+							<Text style={[styles.sectionTitle, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
+								Schedule Settings
+							</Text>
+							<View style={styles.settingRow}>
+								<Text style={styles.scheduleLabel}>Minimum Gap Between Calls</Text>
+								<TouchableOpacity
+									style={[styles.frequencyOption]}
+									onPress={() => {
+										Alert.alert('Coming Soon', 'Gap adjustment will be added in the next update');
+									}}
+								>
+									<Text style={styles.frequencyText}>{contact?.scheduling?.minimum_gap || 30} minutes</Text>
+								</TouchableOpacity>
+							</View>
+
+							<TouchableOpacity
+								style={[styles.advancedSettingsButton, { marginTop: spacing.lg }]}
+								onPress={() => {
+									Alert.alert(
+										'Reset Preferences',
+										'Are you sure you want to reset scheduling preferences to default?',
+										[
+											{ text: 'Cancel', style: 'cancel' },
+											{
+												text: 'Reset',
+												style: 'destructive',
+												onPress: async () => {
+													try {
+														await updateContactScheduling(contact.id, {
+															frequency,
+															custom_schedule: false,
+															custom_preferences: null,
+														});
+														// Reset selected days
+														setSelectedDays([]);
+														// Update parent component state
+														setSelectedContact({
+															...contact,
+															scheduling: {
+																frequency,
+																custom_schedule: false,
+																custom_preferences: null,
+															},
+														});
+													} catch (error) {
+														console.error('Error resetting preferences:', error);
+														Alert.alert('Error', 'Failed to reset preferences');
+													}
+												},
+											},
+										]
+									);
+								}}
+							>
+								<Icon name="refresh-outline" size={20} color={colors.text.secondary} />
+								<Text style={styles.advancedSettingsText}>Reset to Default</Text>
+							</TouchableOpacity>
+						</View>
 					)}
 
 					{contact.next_contact && (

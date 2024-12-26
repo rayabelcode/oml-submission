@@ -434,6 +434,14 @@ const createStyles = (colors) =>
 			paddingBlockEnd: spacing.xs,
 			marginTop: 0,
 		},
+		// Scheduling
+		settingRow: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			alignItems: 'center',
+			marginBottom: spacing.sm,
+			paddingVertical: spacing.xs,
+		},
 	});
 
 export const useStyles = () => {
