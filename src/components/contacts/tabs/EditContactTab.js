@@ -11,6 +11,7 @@ import { useStyles } from '../../../styles/screens/contacts';
 import AutoDismissModalContainer from '../../../components/general/AutoDismissModalContainer';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
 import RelationshipPicker from '../../general/RelationshipPicker';
+import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
 
 const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) => {
 	const { colors } = useTheme();
@@ -224,12 +225,16 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 									<TextInput
 										style={styles.editInput}
-										value={formData.phone}
-										onChangeText={(text) => setFormData({ ...formData, phone: text })}
+										value={formatPhoneNumber(formData.phone)}
+										onChangeText={(text) => {
+											const cleaned = text.replace(/\D/g, '');
+											setFormData({ ...formData, phone: cleaned });
+										}}
 										placeholder="Phone"
 										placeholderTextColor={colors.text.secondary}
 										keyboardType="phone-pad"
 									/>
+
 									<View style={{ marginTop: 1 }}>
 										<View
 											style={{
@@ -271,8 +276,13 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 							) : (
 								<View style={styles.viewFields}>
 									<Text style={styles.fullName}>{`${formData.first_name} ${formData.last_name}`}</Text>
+
 									{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
-									{formData.phone && <Text style={styles.contactDetail}>{formData.phone}</Text>}
+
+									{formData.phone && (
+										<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
+									)}
+
 									{formData.scheduling?.relationship_type && (
 										<Text style={styles.contactDetail}>
 											Relationship:{' '}

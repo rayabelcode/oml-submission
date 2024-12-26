@@ -35,6 +35,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
+import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
+
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
@@ -214,22 +216,14 @@ export default function ContactsScreen({ navigation }) {
 		}
 	}
 
-	const formatPhoneNumber = (phoneNumber) => {
-		const cleaned = phoneNumber.replace(/\D/g, '');
-		if (cleaned.length === 10) {
-			return `+1${cleaned}`;
-		} else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-			return `+${cleaned}`;
-		}
-		return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
-	};
-
 	const checkForExistingContact = async (phoneNumber) => {
 		try {
 			const allContacts = [...contacts.scheduledContacts, ...contacts.unscheduledContacts];
-			return allContacts.find(
-				(contact) => formatPhoneNumber(contact.phone) === formatPhoneNumber(phoneNumber)
-			);
+			const cleanedInput = phoneNumber.replace(/\D/g, '');
+			return allContacts.find((contact) => {
+				const cleanedContact = contact.phone.replace(/\D/g, '');
+				return cleanedInput === cleanedContact;
+			});
 		} catch (error) {
 			console.error('Error checking for existing contact:', error);
 			return null;
@@ -282,9 +276,18 @@ export default function ContactsScreen({ navigation }) {
 				return;
 			}
 
-			const formattedPhone = formatPhoneNumber(phoneNumber);
+			const cleanedPhone = phoneNumber.replace(/\D/g, '');
+			const formattedPhone =
+				cleanedPhone.length === 10
+					? `+1${cleanedPhone}`
+					: cleanedPhone.length === 11 && cleanedPhone.startsWith('1')
+					? `+${cleanedPhone}`
+					: cleanedPhone.startsWith('+')
+					? cleanedPhone
+					: `+${cleanedPhone}`;
 
 			const existingContact = await checkForExistingContact(formattedPhone);
+
 			if (existingContact) {
 				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 				return;

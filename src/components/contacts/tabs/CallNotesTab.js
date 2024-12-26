@@ -37,7 +37,10 @@ const CallNotesTab = ({
 		}
 
 		try {
-			await addContactHistory(contact.id, notes, date);
+			await addContactHistory(contact.id, {
+				notes: notes,
+				date: date.toISOString(),
+			});
 			const updatedHistory = await fetchContactHistory(contact.id);
 			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 			setCallNotes('');

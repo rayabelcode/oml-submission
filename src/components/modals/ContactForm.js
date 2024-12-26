@@ -22,6 +22,7 @@ import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
 import RelationshipPicker from '../general/RelationshipPicker';
 import { createContactData, SCHEDULING_CONSTANTS } from '../../utils/contactHelpers';
+import { formatPhoneNumber } from '../general/FormattedPhoneNumber';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
@@ -213,8 +214,11 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 								style={commonStyles.input}
 								placeholder="Phone"
 								placeholderTextColor={colors.text.secondary}
-								value={formData.phone}
-								onChangeText={(text) => setFormData({ ...formData, phone: text })}
+								value={formatPhoneNumber(formData.phone)}
+								onChangeText={(text) => {
+									const cleaned = text.replace(/\D/g, '');
+									setFormData({ ...formData, phone: cleaned });
+								}}
 								keyboardType="phone-pad"
 								returnKeyType="done"
 								onSubmitEditing={dismissKeyboard}
