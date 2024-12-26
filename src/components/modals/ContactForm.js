@@ -21,13 +21,13 @@ import { useTheme, spacing } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
 import RelationshipPicker from '../general/RelationshipPicker';
+import { createContactData, SCHEDULING_CONSTANTS } from '../../utils/contactHelpers';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
-	const relationshipTypes = ['friend', 'family', 'personal', 'work'];
 
 	const lastNameRef = useRef();
 	const emailRef = useRef();
@@ -38,9 +38,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 		last_name: '',
 		email: '',
 		phone: '',
-		frequency: 'weekly',
 		photo_url: null,
-		relationship_type: 'friend',
+		relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
 	});
 
 	const dismissKeyboard = () => {
@@ -89,9 +88,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 				last_name: '',
 				email: '',
 				phone: '',
-				frequency: 'weekly',
 				photo_url: null,
-				relationship_type: 'friend',
+				relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
 			});
 		}
 	}, [visible]);
@@ -231,7 +229,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 										Alert.alert('Error', 'First name is required');
 										return;
 									}
-									onSubmit(formData);
+									const contactData = createContactData(formData, user.uid);
+									onSubmit(contactData);
 								}}
 							>
 								<Icon name="checkmark-outline" size={24} color="#FFFFFF" />

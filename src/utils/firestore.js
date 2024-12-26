@@ -17,6 +17,8 @@ import {
 import { db } from '../config/firebase';
 import { storage } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth } from '../config/firebase';
+import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './contactHelpers';
 
 // User functions
 export const createUserDocument = async (userId, userData) => {
@@ -39,23 +41,8 @@ export const createUserDocument = async (userId, userData) => {
 export const addContact = async (userId, contactData) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
-		const newContact = {
-			...contactData,
-			user_id: userId,
-			first_name: contactData.first_name || '',
-			last_name: contactData.last_name || '',
-			photo_url: contactData.photo_url || null,
-			notes: contactData.notes || '',
-			contact_history: [],
-			tags: [],
-			next_contact: null,
-			archived: false,
-			created_at: serverTimestamp(),
-			last_updated: serverTimestamp(),
-		};
-
-		const docRef = await addDoc(contactsRef, newContact);
-		return { id: docRef.id, ...newContact };
+		const docRef = await addDoc(contactsRef, contactData);
+		return { id: docRef.id, ...contactData };
 	} catch (error) {
 		console.error('Error adding contact:', error);
 		throw error;
@@ -132,10 +119,8 @@ export const archiveContact = async (contactId) => {
 export const updateContact = async (contactId, updateData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
-		await updateDoc(contactRef, {
-			...updateData,
-			last_updated: serverTimestamp(),
-		});
+		const updates = updateContactData(updateData);
+		await updateDoc(contactRef, updates);
 	} catch (error) {
 		console.error('Error updating contact:', error);
 		throw error;
@@ -248,6 +233,98 @@ export const fetchPastContacts = async (userId) => {
 		throw error;
 	}
 };
+
+export async function updateContactScheduling(contactId, schedulingData) {
+	try {
+		const contactRef = doc(db, 'contacts', contactId);
+		const defaultScheduling = {
+			relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
+			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
+			custom_schedule: false,
+			custom_preferences: {
+				preferred_days: [],
+				active_hours: {
+					start: '09:00',
+					end: '17:00',
+				},
+				excluded_times: [],
+			},
+			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
+			minimum_gap: 30,
+		};
+
+		await updateDoc(contactRef, {
+			scheduling: {
+				...defaultScheduling,
+				...schedulingData,
+				updated_at: serverTimestamp(),
+			},
+		});
+	} catch (error) {
+		console.error('Error updating contact scheduling:', error);
+		throw error;
+	}
+}
+
+export async function updateNextContact(contactId, nextContactDate, options = {}) {
+	try {
+		const contactRef = doc(db, 'contacts', contactId);
+
+		const updateData = {
+			next_contact: nextContactDate ? nextContactDate.toISOString() : null,
+			last_updated: serverTimestamp(),
+		};
+
+		if (options.lastContacted) {
+			updateData.last_contacted = serverTimestamp();
+		}
+
+		await updateDoc(contactRef, updateData);
+
+		// Create reminder document if nextContactDate exists
+		if (nextContactDate) {
+			const remindersRef = collection(db, 'reminders');
+			await addDoc(remindersRef, {
+				contact_id: contactId,
+				date: nextContactDate,
+				created_at: serverTimestamp(),
+				updated_at: serverTimestamp(),
+				snoozed: false,
+				follow_up: false,
+				ai_suggestions: [], // Will be populated by AI module
+				user_id: auth.currentUser.uid,
+			});
+		}
+	} catch (error) {
+		console.error('Error updating next contact:', error);
+		throw error;
+	}
+}
+
+// Function to fetch all reminders for a user
+export async function fetchReminders(userId) {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('user_id', '==', userId),
+			where('snoozed', '==', false),
+			orderBy('date')
+		);
+
+		const querySnapshot = await getDocs(q);
+		const reminders = [];
+
+		querySnapshot.forEach((doc) => {
+			reminders.push({ id: doc.id, ...doc.data() });
+		});
+
+		return reminders;
+	} catch (error) {
+		console.error('Error fetching reminders:', error);
+		throw error;
+	}
+}
 
 // User profile functions
 export const updateUserProfile = async (userId, profileData) => {

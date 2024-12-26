@@ -34,6 +34,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
+import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
@@ -327,31 +328,10 @@ export default function ContactsScreen({ navigation }) {
 		if (!pendingContact) return;
 
 		try {
-			const contactData = {
-				...pendingContact,
-				notes: '',
-				contact_history: [],
-				tags: [],
-				frequency: 'weekly',
-				created_at: serverTimestamp(),
-				last_updated: serverTimestamp(),
-				user_id: user.uid,
-				scheduling: {
-					relationship_type: relationshipType,
-					frequency: 'weekly',
-					custom_schedule: false,
-					custom_preferences: {
-						preferred_days: [],
-						active_hours: {
-							start: '09:00',
-							end: '17:00',
-						},
-						excluded_times: [],
-					},
-					priority: 'normal',
-					minimum_gap: 30,
-				},
-			};
+			const contactData = createContactData(
+				{ ...pendingContact, relationship_type: relationshipType },
+				user.uid
+			);
 
 			const newContact = await addContact(user.uid, contactData);
 			await loadContacts();
@@ -383,28 +363,28 @@ export default function ContactsScreen({ navigation }) {
 		setRefreshing(false);
 	}, []);
 
-	const handleAddContact = async (formData) => {
+	const handleAddContact = async (contactData) => {
 		try {
-			await addContact(user.uid, formData);
+			await addContact(user.uid, contactData);
 
 			if (Platform.OS === 'ios') {
 				const { status } = await Contacts.requestPermissionsAsync();
 				if (status === 'granted') {
 					try {
 						const contact = {
-							[Contacts.Fields.FirstName]: formData.first_name,
-							[Contacts.Fields.LastName]: formData.last_name,
+							[Contacts.Fields.FirstName]: contactData.first_name,
+							[Contacts.Fields.LastName]: contactData.last_name,
 							[Contacts.Fields.PhoneNumbers]: [
 								{
 									label: 'mobile',
-									number: formData.phone,
+									number: contactData.phone,
 								},
 							],
-							[Contacts.Fields.Emails]: formData.email
+							[Contacts.Fields.Emails]: contactData.email
 								? [
 										{
 											label: 'work',
-											email: formData.email,
+											email: contactData.email,
 										},
 								  ]
 								: [],

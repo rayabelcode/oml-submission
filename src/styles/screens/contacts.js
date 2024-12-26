@@ -1,7 +1,6 @@
 import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
-
 const useStyles = () => {
 	const { colors } = useTheme();
 
@@ -18,6 +17,7 @@ const useStyles = () => {
 		scrollContent: {
 			flexGrow: 1,
 			paddingBottom: 20,
+			pointerEvents: 'box-none',
 		},
 		content: {
 			flex: 1,
@@ -794,6 +794,79 @@ const useStyles = () => {
 		aiModalScrollContent: {
 			padding: spacing.md,
 			flexGrow: 1,
+		},
+		// Scheduling
+		frequencyPicker: {
+			flexDirection: 'row',
+			flexWrap: 'wrap',
+			gap: 10,
+			marginTop: 10,
+			marginBottom: spacing.md,
+		},
+		frequencyOption: {
+			paddingVertical: 8,
+			paddingHorizontal: 16,
+			borderRadius: 20,
+			backgroundColor: colors.background.secondary,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		frequencyOptionSelected: {
+			backgroundColor: colors.primary,
+			borderColor: colors.primary,
+		},
+		frequencyText: {
+			color: colors.text.primary,
+			fontSize: 14,
+		},
+		frequencyTextSelected: {
+			color: colors.background.primary,
+			fontWeight: '500',
+		},
+		advancedSettingsButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			paddingVertical: 12,
+			paddingHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			backgroundColor: colors.background.secondary,
+			marginVertical: spacing.md,
+		},
+		advancedSettingsText: {
+			color: colors.text.secondary,
+			marginLeft: spacing.sm,
+			fontSize: 14,
+		},
+		advancedSettings: {
+			marginTop: spacing.sm,
+			padding: spacing.md,
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		settingsNote: {
+			color: colors.text.secondary,
+			fontStyle: 'italic',
+			fontSize: 14,
+			textAlign: 'center',
+		},
+		nextContactContainer: {
+			alignItems: 'center',
+			backgroundColor: colors.background.secondary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginBottom: spacing.md,
+		},
+		nextContactLabel: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			marginBottom: spacing.xs,
+		},
+		nextContactDate: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
 		},
 	});
 };
