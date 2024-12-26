@@ -6,6 +6,7 @@ import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { addContactHistory, fetchContactHistory } from '../../../utils/firestore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { updateContact } from '../../../utils/firestore';
 
 const CallNotesTab = ({
 	contact,
@@ -43,6 +44,17 @@ const CallNotesTab = ({
 			});
 			const updatedHistory = await fetchContactHistory(contact.id);
 			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+
+			// Clear suggestion cache and trigger new AI suggestions
+			setSuggestionCache({});
+			setLoadingSuggestions(true);
+			// Update the contact object with new history
+			const updatedContact = {
+				...contact,
+				contact_history: updatedHistory,
+			};
+			setSelectedContact(updatedContact);
+
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
@@ -54,10 +66,29 @@ const CallNotesTab = ({
 		try {
 			const updatedHistory = [...history];
 			updatedHistory[index].notes = updatedNote;
+
+			// Update both local state and Firestore
 			setHistory(updatedHistory);
+			await updateContact(contact.id, {
+				contact_history: updatedHistory,
+			});
+
+			// Clear suggestion cache and trigger new AI suggestions
+			setSuggestionCache({});
+			setLoadingSuggestions(true);
+			// Update the contact object with new history
+			const updatedContact = {
+				...contact,
+				contact_history: updatedHistory,
+			};
+			setSelectedContact(updatedContact);
+
 			setEditMode(null);
 		} catch (error) {
 			Alert.alert('Error', 'Failed to edit history');
+			// Reload original history on error
+			const originalHistory = await fetchContactHistory(contact.id);
+			setHistory(originalHistory);
 		}
 	};
 
@@ -71,9 +102,27 @@ const CallNotesTab = ({
 					try {
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
+
+						// Update both local state and Firestore
 						setHistory(updatedHistory);
+						await updateContact(contact.id, {
+							contact_history: updatedHistory,
+						});
+
+						// Clear suggestion cache and trigger new AI suggestions
+						setSuggestionCache({});
+						setLoadingSuggestions(true);
+						// Update the contact object with new history
+						const updatedContact = {
+							...contact,
+							contact_history: updatedHistory,
+						};
+						setSelectedContact(updatedContact);
 					} catch (error) {
 						Alert.alert('Error', 'Failed to delete history entry');
+						// Reload original history on error
+						const originalHistory = await fetchContactHistory(contact.id);
+						setHistory(originalHistory);
 					}
 				},
 			},

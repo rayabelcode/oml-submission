@@ -120,6 +120,18 @@ export const updateContact = async (contactId, updateData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
 		const updates = updateContactData(updateData);
+
+		// If notes are being updated, get existing contact first
+		if ('notes' in updateData) {
+			const contactSnapshot = await getDoc(contactRef);
+			if (contactSnapshot.exists()) {
+				// Preserve other fields while updating notes
+				const existingData = contactSnapshot.data();
+				updates.notes = updateData.notes;
+				updates.last_updated = serverTimestamp();
+			}
+		}
+
 		await updateDoc(contactRef, updates);
 	} catch (error) {
 		console.error('Error updating contact:', error);
