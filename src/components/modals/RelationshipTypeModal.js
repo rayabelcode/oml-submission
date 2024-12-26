@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
-import SegmentedControlTab from 'react-native-segmented-control-tab';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { spacing } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -59,32 +59,17 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 						How do you know this person?{'\n'}You can edit this at any time.
 					</Text>
 					<View style={{ marginBottom: spacing.xl }}>
-						<SegmentedControlTab
+						<SegmentedControl
 							values={relationshipTypes}
 							selectedIndex={selectedIndex}
-							defaultIndex={0}
-							onTabPress={setSelectedIndex}
-							tabsContainerStyle={{
-								backgroundColor: 'transparent',
+							onChange={(event) => {
+								setSelectedIndex(event.nativeEvent.selectedSegmentIndex);
 							}}
-							tabStyle={{
-								borderColor: colors.primary,
-								backgroundColor: colors.background.primary,
-								borderWidth: 1,
+							tintColor={colors.primary}
+							backgroundColor={colors.background.primary}
+							style={{
 								height: 45,
-								margin: 0,
-							}}
-							tabTextStyle={{
-								color: colors.text.primary,
-								fontSize: 16,
-								fontWeight: '600',
-							}}
-							activeTabStyle={{
-								backgroundColor: colors.primary,
-							}}
-							activeTabTextStyle={{
-								color: '#FFFFFF',
-								fontWeight: '600',
+								marginBottom: spacing.xs,
 							}}
 						/>
 					</View>

@@ -20,7 +20,7 @@ import { useCommonStyles } from '../../styles/common';
 import { useTheme, spacing } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
-import SegmentedControlTab from 'react-native-segmented-control-tab';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
@@ -121,8 +121,11 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 						</View>
 
 						<ScrollView
-							style={[styles.formContainer, { flexGrow: 0 }]}
-							contentContainerStyle={{ paddingBottom: spacing.sm }}
+							style={styles.formContainer}
+							contentContainerStyle={{
+								paddingBottom: spacing.sm,
+								flexGrow: 1,
+							}}
 							keyboardShouldPersistTaps="handled"
 						>
 							<View style={styles.photoUploadContainer}>
@@ -174,40 +177,23 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 							>
 								{'Tag the Relationship!'}{' '}
 							</Text>
-							<View style={{ marginBottom: spacing.xl }}>
-								<SegmentedControlTab
-									values={relationshipTypes.map((type) => type.charAt(0).toUpperCase() + type.slice(1))}
-									selectedIndex={relationshipTypes.indexOf(formData.relationship_type)}
-									onTabPress={(index) => {
-										setFormData((prev) => ({
-											...prev,
-											relationship_type: relationshipTypes[index],
-										}));
-									}}
-									tabsContainerStyle={{
-										backgroundColor: 'transparent',
-									}}
-									tabStyle={{
-										borderColor: colors.primary,
-										backgroundColor: colors.background.primary,
-										borderWidth: 1,
-										height: 45,
-										margin: 0,
-									}}
-									tabTextStyle={{
-										color: colors.text.primary,
-										fontSize: 16,
-										fontWeight: '600',
-									}}
-									activeTabStyle={{
-										backgroundColor: colors.primary,
-									}}
-									activeTabTextStyle={{
-										color: '#FFFFFF',
-										fontWeight: '600',
-									}}
-								/>
-							</View>
+							<SegmentedControl
+								values={relationshipTypes.map((type) => type.charAt(0).toUpperCase() + type.slice(1))}
+								selectedIndex={relationshipTypes.indexOf(formData.relationship_type)}
+								onChange={(event) => {
+									const index = event.nativeEvent.selectedSegmentIndex;
+									setFormData((prev) => ({
+										...prev,
+										relationship_type: relationshipTypes[index],
+									}));
+								}}
+								tintColor={colors.primary}
+								backgroundColor={colors.background.primary}
+								style={{
+									height: 45,
+									marginBottom: spacing.xl,
+								}}
+							/>
 
 							<TextInput
 								style={[commonStyles.input, { marginBottom: spacing.sm }]}
