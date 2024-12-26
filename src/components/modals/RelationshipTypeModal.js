@@ -2,9 +2,10 @@ import React, { useEffect } from 'react';
 import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
-import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { spacing } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
+import RelationshipPicker from '../general/RelationshipPicker';
+import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
 
 const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 	const { colors } = useTheme();
@@ -58,19 +59,14 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 					>
 						How do you know this person?{'\n'}You can edit this at any time.
 					</Text>
-					<View style={{ marginBottom: spacing.xl }}>
-						<SegmentedControl
-							values={relationshipTypes}
-							selectedIndex={selectedIndex}
-							onChange={(event) => {
-								setSelectedIndex(event.nativeEvent.selectedSegmentIndex);
+					<View style={{ marginBottom: spacing.xs }}>
+						<RelationshipPicker
+							value={RELATIONSHIP_TYPES[selectedIndex]}
+							onChange={(type) => {
+								setSelectedIndex(RELATIONSHIP_TYPES.indexOf(type));
 							}}
-							tintColor={colors.primary}
-							backgroundColor={colors.background.primary}
-							style={{
-								height: 45,
-								marginBottom: spacing.xs,
-							}}
+							style={{ marginBottom: spacing.xs }}
+							showLabel={false} // Turn off built-in 'Tag this Relationship' header
 						/>
 					</View>
 					<View style={{ alignItems: 'center' }}>

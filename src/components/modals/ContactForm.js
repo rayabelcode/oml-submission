@@ -20,7 +20,7 @@ import { useCommonStyles } from '../../styles/common';
 import { useTheme, spacing } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
-import SegmentedControl from '@react-native-segmented-control/segmented-control';
+import RelationshipPicker from '../general/RelationshipPicker';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
@@ -163,36 +163,9 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 								)}
 							</View>
 
-							{/* Relationship Picker */}
-							<Text
-								style={[
-									commonStyles.message,
-									{
-										color: colors.text.primary,
-										marginBottom: spacing.xs,
-										fontSize: 18,
-										fontWeight: 'bold',
-									},
-								]}
-							>
-								{'Tag the Relationship!'}{' '}
-							</Text>
-							<SegmentedControl
-								values={relationshipTypes.map((type) => type.charAt(0).toUpperCase() + type.slice(1))}
-								selectedIndex={relationshipTypes.indexOf(formData.relationship_type)}
-								onChange={(event) => {
-									const index = event.nativeEvent.selectedSegmentIndex;
-									setFormData((prev) => ({
-										...prev,
-										relationship_type: relationshipTypes[index],
-									}));
-								}}
-								tintColor={colors.primary}
-								backgroundColor={colors.background.primary}
-								style={{
-									height: 45,
-									marginBottom: spacing.xl,
-								}}
+							<RelationshipPicker
+								value={formData.relationship_type}
+								onChange={(type) => setFormData((prev) => ({ ...prev, relationship_type: type }))}
 							/>
 
 							<TextInput
