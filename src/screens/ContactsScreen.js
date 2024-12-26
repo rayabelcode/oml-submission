@@ -286,43 +286,85 @@ export default function ContactsScreen({ navigation }) {
 				return;
 			}
 
-			let photoUrl = null;
-			if (fullContact.imageAvailable && fullContact.image) {
-				try {
-					const manipResult = await ImageManipulator.manipulateAsync(
-						fullContact.image.uri,
-						[{ resize: { width: 300, height: 300 } }],
-						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-					);
+			// Show relationship type selection before processing the contact
+			Alert.alert(
+				'Select Relationship Type',
+				'What type of relationship do you have with this contact?',
+				[
+					{
+						text: 'Friend',
+						onPress: () => processContact(fullContact, formattedPhone, 'friend'),
+					},
+					{
+						text: 'Family',
+						onPress: () => processContact(fullContact, formattedPhone, 'family'),
+					},
+					{
+						text: 'Personal',
+						onPress: () => processContact(fullContact, formattedPhone, 'personal'),
+					},
+					{
+						text: 'Work',
+						onPress: () => processContact(fullContact, formattedPhone, 'work'),
+					},
+				],
+				{ cancelable: false }
+			);
 
-					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
-					if (!photoUrl || photoUrl.startsWith('file://')) {
-						photoUrl = null;
+			const processContact = async (fullContact, formattedPhone, relationshipType) => {
+				let photoUrl = null;
+				if (fullContact.imageAvailable && fullContact.image) {
+					try {
+						const manipResult = await ImageManipulator.manipulateAsync(
+							fullContact.image.uri,
+							[{ resize: { width: 300, height: 300 } }],
+							{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+						);
+
+						photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+						if (!photoUrl || photoUrl.startsWith('file://')) {
+							photoUrl = null;
+						}
+					} catch (photoError) {
+						console.error('Photo processing error:', photoError);
 					}
-				} catch (photoError) {
-					console.error('Photo processing error:', photoError);
 				}
-			}
 
-			const contactData = {
-				first_name: contact.firstName || '',
-				last_name: contact.lastName || '',
-				phone: formattedPhone,
-				email: contact.emails?.[0]?.email || '',
-				notes: '',
-				contact_history: [],
-				tags: [],
-				photo_url: photoUrl,
-				frequency: 'weekly',
-				created_at: serverTimestamp(),
-				last_updated: serverTimestamp(),
-				user_id: user.uid,
+				const contactData = {
+					first_name: contact.firstName || '',
+					last_name: contact.lastName || '',
+					phone: formattedPhone,
+					email: contact.emails?.[0]?.email || '',
+					notes: '',
+					contact_history: [],
+					tags: [],
+					photo_url: photoUrl,
+					frequency: 'weekly',
+					created_at: serverTimestamp(),
+					last_updated: serverTimestamp(),
+					user_id: user.uid,
+					scheduling: {
+						relationship_type: relationshipType,
+						frequency: 'weekly',
+						custom_schedule: false,
+						custom_preferences: {
+							preferred_days: [],
+							active_hours: {
+								start: '09:00',
+								end: '17:00',
+							},
+							excluded_times: [],
+						},
+						priority: 'normal',
+						minimum_gap: 30,
+					},
+				};
+
+				const newContact = await addContact(user.uid, contactData);
+				await loadContacts();
+				setSelectedContact(newContact);
+				setIsDetailsVisible(true);
 			};
-
-			const newContact = await addContact(user.uid, contactData);
-			await loadContacts();
-			setSelectedContact(newContact);
-			setIsDetailsVisible(true);
 		} catch (error) {
 			console.error('Contact import error:', error);
 			Alert.alert('Error', 'Failed to import contact: ' + error.message);
