@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.30",
+		"version": "1.0.31",
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"scheme": "onmylist",
@@ -54,7 +54,7 @@
 				{
 					"ios": {
 						"useFrameworks": "static",
-						"deploymentTarget": "13.0"
+						"deploymentTarget": "15.1"
 					}
 				}
 			],
