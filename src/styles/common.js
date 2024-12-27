@@ -42,17 +42,26 @@ export const useCommonStyles = () => {
 		},
 		modalHeader: {
 			flexDirection: 'row',
-			justifyContent: 'space-between',
+			justifyContent: 'center',
 			alignItems: 'center',
 			marginBottom: spacing.md,
 			position: 'relative',
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.xl,
+			minHeight: 40,
+			paddingLeft: 40, // Match the width of the call button
+			paddingRight: 40, // Match the width of the close button
 		},
 		modalTitle: {
 			fontSize: 24,
 			fontWeight: 'bold',
 			textAlign: 'center',
 			color: colors.text.primary,
+			flex: 1,
+			numberOfLines: 1,
+			adjustsFontSizeToFit: true,
+			maxHeight: 28,
+			marginHorizontal: 0, // Remove horizontal margin
+			paddingLeft: 0, // Remove left padding
 		},
 		primaryButton: {
 			backgroundColor: colors.primary,

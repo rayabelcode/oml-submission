@@ -172,7 +172,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 							>
 								<Icon name="call-outline" size={20} color={colors.background.primary} />
 							</TouchableOpacity>
-							<Text style={commonStyles.modalTitle}>
+							<Text style={commonStyles.modalTitle} numberOfLines={1} adjustsFontSizeToFit>
 								{contact.first_name} {contact.last_name}
 							</Text>
 							<TouchableOpacity style={styles.closeButton} onPress={onClose}>

@@ -247,15 +247,12 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 			position: 'relative',
 			paddingHorizontal: spacing.sm,
-			paddingLeft: 35,
 		},
 		modalTitle: {
 			fontSize: 24,
 			fontWeight: 'bold',
 			textAlign: 'center',
 			color: colors.text.primary,
-			flex: 1,
-			marginHorizontal: spacing.md,
 		},
 		closeButton: {
 			position: 'absolute',
@@ -878,14 +875,14 @@ const useStyles = () => {
 			width: 40,
 			height: 40,
 			borderRadius: 20,
-			backgroundColor: colors.secondary,
+			backgroundColor: colors.secondary, // Green color like Submit button
 			borderWidth: 2,
 			borderColor: colors.background.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
-			elevation: 3,
-			shadowColor: '#000',
+			elevation: 3, // For Android
+			shadowColor: '#000', // For iOS
 			shadowOffset: {
 				width: 0,
 				height: 2,
