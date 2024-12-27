@@ -17,7 +17,9 @@
 			"supportsTablet": true,
 			"bundleIdentifier": "com.rayabel.onmylistapp",
 			"infoPlist": {
-				"UIBackgroundModes": ["remote-notification"],
+				"UIBackgroundModes": ["remote-notification", "voip"],
+				"NSMicrophoneUsageDescription": "Allow OnMyList to access your microphone for calls",
+				"NSCameraUsageDescription": "Allow OnMyList to access your camera for FaceTime calls",
 				"NSContactsUsageDescription": "Allow OnMyList to access your contacts to import them into the app.",
 				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app."
 			},
@@ -29,7 +31,14 @@
 				"backgroundColor": "#000000"
 			},
 			"package": "com.rayabel.onmylistapp",
-			"permissions": ["RECEIVE_BOOT_COMPLETED", "READ_CONTACTS", "WRITE_CONTACTS"]
+			"permissions": [
+				"RECEIVE_BOOT_COMPLETED",
+				"READ_CONTACTS",
+				"WRITE_CONTACTS",
+				"READ_PHONE_STATE",
+				"CALL_PHONE",
+				"ANSWER_PHONE_CALLS"
+			]
 		},
 		"web": {
 			"favicon": "./assets/favicon.png"

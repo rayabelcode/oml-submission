@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+	Alert,
 	Modal,
 	View,
 	Text,
@@ -19,6 +20,11 @@ import CallNotesTab from './tabs/CallNotesTab';
 import ScheduleTab from './tabs/ScheduleTab';
 import TagsTab from './tabs/TagsTab';
 import EditContactTab from './tabs/EditContactTab';
+import Constants from 'expo-constants';
+import CallOptions from '../general/CallOptions';
+
+// Only import callHandler in production builds
+const callHandler = Constants.appOwnership === 'expo' ? null : require('../../utils/callHandler').callHandler;
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	const { colors } = useTheme();
@@ -30,6 +36,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const [suggestionCache, setSuggestionCache] = useState({});
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+	const [showCallOptions, setShowCallOptions] = useState(false);
 
 	// Reset tab when modal becomes visible
 	useEffect(() => {
@@ -150,7 +157,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 			<KeyboardAvoidingView
 				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
 				style={{ flex: 1 }}
-				keyboardVerticalOffset={-70} // Space between keyboard and modal
+				keyboardVerticalOffset={-70}
 			>
 				<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={onClose}>
 					<TouchableOpacity
@@ -165,7 +172,27 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 							<Text style={commonStyles.modalTitle}>
 								{contact.first_name} {contact.last_name}
 							</Text>
+							<TouchableOpacity
+								style={styles.callButton}
+								onPress={() => setShowCallOptions(!showCallOptions)}
+							>
+								<Icon name="call-outline" size={24} color={colors.primary} />
+							</TouchableOpacity>
+							<CallOptions
+								show={showCallOptions}
+								contact={contact}
+								onSelect={async (callType) => {
+									setShowCallOptions(false);
+									if (Constants.appOwnership !== 'expo') {
+										const success = await callHandler.initiateCall(contact, callType);
+										if (!success) {
+											Alert.alert('Error', `Could not initiate ${callType} call`);
+										}
+									}
+								}}
+							/>
 						</View>
+
 						<View style={styles.tabBar}>
 							<TouchableOpacity
 								style={[styles.tabItem, activeTab === 'notes' && styles.activeTab]}

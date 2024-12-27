@@ -338,6 +338,27 @@ export async function fetchReminders(userId) {
 	}
 }
 
+// Follow up reminders
+export async function createFollowUpReminder(contactId, date) {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		await addDoc(remindersRef, {
+			contact_id: contactId,
+			date: date,
+			created_at: serverTimestamp(),
+			updated_at: serverTimestamp(),
+			snoozed: false,
+			follow_up: true,
+			type: 'follow_up',
+			notes_required: true,
+			user_id: auth.currentUser.uid,
+		});
+	} catch (error) {
+		console.error('Error creating follow-up reminder:', error);
+		throw error;
+	}
+}
+
 // User profile functions
 export const updateUserProfile = async (userId, profileData) => {
 	try {

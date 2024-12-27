@@ -868,6 +868,11 @@ const useStyles = () => {
 			fontWeight: '600',
 			color: colors.text.primary,
 		},
+		callButton: {
+			position: 'absolute',
+			right: 16,
+			padding: 8,
+		},
 	});
 };
 
