@@ -23,9 +23,9 @@ const TIME_BUFFER = 5; // 5 minutes before and after blocked times
 
 // Score based time slot weighting
 const SCORE_WEIGHTS = {
-	DISTANCE_FROM_REMINDERS: 2.0, // Higher weight for spacing between reminders
-	PREFERRED_TIME_POSITION: 1.5, // Medium weight for optimal time of day
-	CONTACT_PRIORITY: 1.0, // Base weight for contact importance
+	DISTANCE_FROM_REMINDERS: 2.0,
+	PREFERRED_TIME_POSITION: 1.5,
+	CONTACT_PRIORITY: 1.0,
 };
 
 const TIME_SLOT_INTERVAL = 15; // Minutes between each potential slot
@@ -36,6 +36,8 @@ export class SchedulingService {
 		this.preferences = userPreferences;
 		this.reminders = existingReminders;
 		this.timeZone = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+		this.relationshipPreferences = userPreferences?.scheduling_preferences?.relationship_types || {};
+		this.globalExcludedTimes = userPreferences?.scheduling_preferences?.global_excluded_times || [];
 	}
 
 	calculatePreliminaryDate(lastContactDate, frequency) {
@@ -47,31 +49,29 @@ export class SchedulingService {
 		return nextDate;
 	}
 
-	adjustToPreferredDay(date) {
-		const dayOfWeek = date.getDay();
-		const preferredDays = this.preferences.preferredDays || [];
+	adjustToPreferredDay(date, contact) {
+		const typePrefs = this.relationshipPreferences[contact.relationship_type];
+		const preferredDays = typePrefs?.preferred_days || [];
 
 		if (preferredDays.length === 0) return date;
 
-		// Convert preferred days to numbers (0-6, where 0 is Sunday)
-		const preferredDayNumbers = preferredDays.map((day) => {
-			const daysMap = {
-				sunday: 0,
-				monday: 1,
-				tuesday: 2,
-				wednesday: 3,
-				thursday: 4,
-				friday: 5,
-				saturday: 6,
-			};
-			return daysMap[day.toLowerCase()];
-		});
+		const dayOfWeek = date.getDay();
+		const daysMap = {
+			sunday: 0,
+			monday: 1,
+			tuesday: 2,
+			wednesday: 3,
+			thursday: 4,
+			friday: 5,
+			saturday: 6,
+		};
 
-		// Find the next preferred day
+		const preferredDayNumbers = preferredDays.map((day) => daysMap[day.toLowerCase()]);
+
 		let daysToAdd = 0;
 		while (!preferredDayNumbers.includes((dayOfWeek + daysToAdd) % 7)) {
 			daysToAdd++;
-			if (daysToAdd > 7) break; // Prevent infinite loop
+			if (daysToAdd > 7) break;
 		}
 
 		const adjustedDate = new Date(date);
@@ -80,7 +80,7 @@ export class SchedulingService {
 	}
 
 	hasTimeConflict(dateTime) {
-		const minGap = 30; // 30 minutes minimum gap between reminders
+		const minGap = 30;
 		const timeToCheck = dateTime.getTime();
 
 		return this.reminders.some((reminder) => {
@@ -91,20 +91,50 @@ export class SchedulingService {
 		});
 	}
 
-	isTimeBlocked(dateTime) {
+	isTimeBlocked(dateTime, contact) {
 		const hour = dateTime.getHours();
 		const minute = dateTime.getMinutes();
+		const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
+			dateTime.getDay()
+		];
 
 		// Check default iOS times
-		return BLOCKED_TIMES.some((blockedTime) => {
-			const startMinute = blockedTime.minute - TIME_BUFFER;
-			const endMinute = blockedTime.minute + TIME_BUFFER;
+		if (
+			BLOCKED_TIMES.some((blockedTime) => {
+				const startMinute = blockedTime.minute - TIME_BUFFER;
+				const endMinute = blockedTime.minute + TIME_BUFFER;
+				return hour === blockedTime.hour && minute >= startMinute && minute <= endMinute;
+			})
+		)
+			return true;
 
-			if (hour === blockedTime.hour) {
-				return minute >= startMinute && minute <= endMinute;
-			}
-			return false;
-		});
+		// Check global excluded times
+		if (
+			this.globalExcludedTimes.some((excluded) => {
+				if (!excluded.days.includes(dayName)) return false;
+				const [startHour, startMinute] = excluded.start.split(':').map(Number);
+				const [endHour, endMinute] = excluded.end.split(':').map(Number);
+				const timeInMinutes = hour * 60 + minute;
+				const startInMinutes = startHour * 60 + startMinute;
+				const endInMinutes = endHour * 60 + endMinute;
+				return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
+			})
+		)
+			return true;
+
+		// Check relationship-specific excluded times
+		const typePrefs = this.relationshipPreferences[contact.relationship_type];
+		return (
+			typePrefs?.excluded_times?.some((excluded) => {
+				if (!excluded.days.includes(dayName)) return false;
+				const [startHour, startMinute] = excluded.start.split(':').map(Number);
+				const [endHour, endMinute] = excluded.end.split(':').map(Number);
+				const timeInMinutes = hour * 60 + minute;
+				const startInMinutes = startHour * 60 + startMinute;
+				const endInMinutes = endHour * 60 + endMinute;
+				return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
+			}) || false
+		);
 	}
 
 	calculateTimeSlotScore(dateTime, contact) {
@@ -113,7 +143,7 @@ export class SchedulingService {
 		const distanceScore = this.calculateDistanceScore(dateTime);
 		score += distanceScore * SCORE_WEIGHTS.DISTANCE_FROM_REMINDERS;
 
-		const positionScore = this.calculatePositionScore(dateTime);
+		const positionScore = this.calculatePositionScore(dateTime, contact);
 		score += positionScore * SCORE_WEIGHTS.PREFERRED_TIME_POSITION;
 
 		const priorityScore = this.calculatePriorityScore(contact);
@@ -128,49 +158,42 @@ export class SchedulingService {
 		const timeToCheck = dateTime.getTime();
 		const gaps = this.reminders.map((reminder) => {
 			const reminderTime = reminder.date.toDate().getTime();
-			return Math.abs(timeToCheck - reminderTime) / (1000 * 60); // Convert to minutes
+			return Math.abs(timeToCheck - reminderTime) / (1000 * 60);
 		});
 
 		const minGap = Math.min(...gaps);
 
-		// Score based on gap to nearest reminder
-		if (minGap < 30) return 0; // Less than minimum gap
-		if (minGap >= OPTIMAL_GAP) return 1.0; // Optimal or better spacing
+		if (minGap < 30) return 0;
+		if (minGap >= OPTIMAL_GAP) return 1.0;
 
-		// Linear score between minimum gap (30 min) and optimal gap (120 min)
 		return (minGap - 30) / (OPTIMAL_GAP - 30);
 	}
 
-	calculatePositionScore(dateTime) {
-		const { preferredTimeRanges } = this.preferences;
-		if (!preferredTimeRanges || preferredTimeRanges.length === 0) return 0.5;
+	calculatePositionScore(dateTime, contact) {
+		const typePrefs = this.relationshipPreferences[contact.relationship_type];
+		if (!typePrefs?.active_hours) return 0.5;
 
-		for (const range of preferredTimeRanges) {
-			const [startHour, startMinute] = range.start.split(':').map(Number);
-			const [endHour, endMinute] = range.end.split(':').map(Number);
+		const { start, end } = typePrefs.active_hours;
+		const [startHour, startMinute] = start.split(':').map(Number);
+		const [endHour, endMinute] = end.split(':').map(Number);
 
-			const startMinutes = startHour * 60 + startMinute;
-			const endMinutes = endHour * 60 + endMinute;
-			const slotMinutes = dateTime.getHours() * 60 + dateTime.getMinutes();
+		const startMinutes = startHour * 60 + startMinute;
+		const endMinutes = endHour * 60 + endMinute;
+		const slotMinutes = dateTime.getHours() * 60 + dateTime.getMinutes();
 
-			if (slotMinutes >= startMinutes && slotMinutes <= endMinutes) {
-				// Score highest in the middle of the preferred range
-				const rangeMiddle = (startMinutes + endMinutes) / 2;
-				const distanceFromMiddle = Math.abs(slotMinutes - rangeMiddle);
-				const maxDistance = (endMinutes - startMinutes) / 2;
-
-				return 1 - distanceFromMiddle / maxDistance;
-			}
+		if (slotMinutes >= startMinutes && slotMinutes <= endMinutes) {
+			const rangeMiddle = (startMinutes + endMinutes) / 2;
+			const distanceFromMiddle = Math.abs(slotMinutes - rangeMiddle);
+			const maxDistance = (endMinutes - startMinutes) / 2;
+			return 1 - distanceFromMiddle / maxDistance;
 		}
 
-		return 0; // Outside all preferred ranges
+		return 0;
 	}
 
 	calculatePriorityScore(contact) {
-		// Default priority if not specified
 		if (!contact.scheduling?.priority) return 0.5;
 
-		// Convert priority string to score
 		const priorityScores = {
 			high: 1.0,
 			normal: 0.5,
@@ -181,52 +204,43 @@ export class SchedulingService {
 	}
 
 	findAvailableTimeSlot(date, contact) {
-		const { preferredTimeRanges } = this.preferences;
-		if (!preferredTimeRanges || preferredTimeRanges.length === 0) {
-			return date;
-		}
+		const typePrefs = this.relationshipPreferences[contact.relationship_type];
+		if (!typePrefs?.active_hours) return date;
+
+		const { start, end } = typePrefs.active_hours;
+		const [startHour, startMinute] = start.split(':').map(Number);
+		const [endHour, endMinute] = end.split(':').map(Number);
 
 		let bestSlot = null;
 		let bestScore = -1;
 
-		for (const range of preferredTimeRanges) {
-			const [startHour, startMinute] = range.start.split(':').map(Number);
-			const [endHour, endMinute] = range.end.split(':').map(Number);
+		for (let hour = startHour; hour <= endHour; hour++) {
+			for (let minute = 0; minute < 60; minute += TIME_SLOT_INTERVAL) {
+				if (hour === endHour && minute > endMinute) continue;
+				if (hour === startHour && minute < startMinute) continue;
 
-			// Try each time slot in the range
-			for (let hour = startHour; hour <= endHour; hour++) {
-				for (let minute = 0; minute < 60; minute += TIME_SLOT_INTERVAL) {
-					// Skip if outside the range
-					if (hour === endHour && minute > endMinute) continue;
-					if (hour === startHour && minute < startMinute) continue;
+				const testDate = new Date(date);
+				testDate.setHours(hour, minute, 0, 0);
 
-					const testDate = new Date(date);
-					testDate.setHours(hour, minute, 0, 0);
+				if (this.isTimeBlocked(testDate, contact) || this.hasTimeConflict(testDate)) {
+					continue;
+				}
 
-					// Skip blocked or conflicting times
-					if (this.isTimeBlocked(testDate) || this.hasTimeConflict(testDate)) {
-						continue;
-					}
-
-					// Calculate score for this slot
-					const score = this.calculateTimeSlotScore(testDate, contact);
-
-					// Update best slot if this score is higher
-					if (score > bestScore) {
-						bestScore = score;
-						bestSlot = testDate;
-					}
+				const score = this.calculateTimeSlotScore(testDate, contact);
+				if (score > bestScore) {
+					bestScore = score;
+					bestSlot = testDate;
 				}
 			}
 		}
 
-		return bestSlot;
+		return bestSlot || date;
 	}
 
 	async scheduleReminder(contact, lastContactDate, frequency) {
 		try {
 			let nextDate = this.calculatePreliminaryDate(lastContactDate, frequency);
-			nextDate = this.adjustToPreferredDay(nextDate);
+			nextDate = this.adjustToPreferredDay(nextDate, contact);
 
 			const availableSlot = this.findAvailableTimeSlot(nextDate, contact);
 
@@ -242,7 +256,7 @@ export class SchedulingService {
 				snoozed: false,
 				follow_up: false,
 				ai_suggestions: [],
-				score: this.calculateTimeSlotScore(availableSlot, contact), // Optional: store the score
+				score: this.calculateTimeSlotScore(availableSlot, contact),
 			};
 		} catch (error) {
 			console.error('Scheduling error:', error);
