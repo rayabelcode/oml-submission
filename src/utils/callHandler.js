@@ -133,7 +133,7 @@ export class CallHandler {
 		console.log('Call answered:', callUUID);
 	};
 
-	onCallEnded = ({ callUUID }) => {
+	onCallEnded = async ({ callUUID }) => {
 		if (!this.activeCall || this.activeCall.uuid !== callUUID) return;
 
 		try {
@@ -144,7 +144,8 @@ export class CallHandler {
 				const followUpDate = new Date();
 				followUpDate.setHours(followUpDate.getHours() + 1);
 
-				Promise.all([
+				// Remove the local catch and let it propagate
+				await Promise.all([
 					updateNextContact(contact.id, followUpDate, {
 						lastContacted: true,
 					}),
@@ -154,10 +155,11 @@ export class CallHandler {
 						notes: `(${this.activeCall.type} call completed - Add your notes)`,
 						completed: false,
 					}),
-				]).catch((error) => {
-					console.error('Error handling call end:', error);
-				});
+				]);
 			}
+		} catch (error) {
+			console.error('Error handling call end:', error);
+			throw error; // Re-throw the error for testing purposes
 		} finally {
 			this.activeCall = null;
 		}
@@ -170,6 +172,10 @@ export class CallHandler {
 				this.callKeep.removeEventListener('didPerformSetMutedCallAction', this.onMuteCall);
 				this.callKeep.removeEventListener('answerCall', this.onAnswerCall);
 			}
+		}
+		// Clear any pending timeouts
+		if (this.activeCall && this.activeCall.timeoutId) {
+			clearTimeout(this.activeCall.timeoutId);
 		}
 		this.initialized = false;
 		this.activeCall = null;

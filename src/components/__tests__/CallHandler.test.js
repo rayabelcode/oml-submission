@@ -1,19 +1,30 @@
+import { jest } from '@jest/globals';
 import { CallHandler } from '../../utils/callHandler';
 import { Linking, Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { addContactHistory, updateNextContact, createFollowUpReminder } from '../../utils/firestore';
+
+jest.useRealTimers();
+
+const mockSetTimeout = jest.spyOn(global, 'setTimeout');
+const mockClearTimeout = jest.spyOn(global, 'clearTimeout');
 
 // Mock console.error to avoid noise in test output
 const originalConsoleError = console.error;
+
 beforeAll(() => {
 	console.error = jest.fn();
+	jest.useFakeTimers({
+		doNotFake: ['nextTick', 'setImmediate', 'clearImmediate'],
+	});
 });
 
 afterAll(() => {
 	console.error = originalConsoleError;
+	jest.useRealTimers();
+	mockSetTimeout.mockRestore();
+	mockClearTimeout.mockRestore();
 });
-
-// Mock timer functions
-jest.useFakeTimers();
 
 // Mock RNCallKeep
 jest.mock('react-native-callkeep', () => ({
@@ -37,9 +48,9 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
 }));
 
 jest.mock('../../utils/firestore', () => ({
-	addContactHistory: jest.fn(),
-	updateNextContact: jest.fn(),
-	createFollowUpReminder: jest.fn(),
+	addContactHistory: jest.fn().mockResolvedValue(true),
+	updateNextContact: jest.fn().mockResolvedValue(true),
+	createFollowUpReminder: jest.fn().mockResolvedValue(true),
 }));
 
 describe('CallHandler', () => {
@@ -52,15 +63,24 @@ describe('CallHandler', () => {
 	};
 
 	beforeEach(() => {
-		callHandler = new CallHandler();
 		jest.clearAllMocks();
 		jest.clearAllTimers();
+		callHandler = new CallHandler();
 		Linking.canOpenURL.mockResolvedValue(true);
 		Linking.openURL.mockResolvedValue(true);
+		addContactHistory.mockClear();
+		updateNextContact.mockClear();
+		createFollowUpReminder.mockClear();
 	});
 
 	afterEach(() => {
+		if (callHandler?.activeCall?.timeoutId) {
+			clearTimeout(callHandler.activeCall.timeoutId);
+		}
 		jest.clearAllTimers();
+		jest.clearAllMocks();
+		jest.runOnlyPendingTimers();
+		callHandler?.cleanup();
 	});
 
 	describe('initialization', () => {
@@ -105,63 +125,150 @@ describe('CallHandler', () => {
 	});
 
 	describe('call lifecycle', () => {
-		let mockDate;
-
-		beforeEach(() => {
-			// Set up a fixed date for testing
-			mockDate = new Date('2024-01-01T12:00:00Z');
-			jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
-		});
-
-		afterEach(() => {
-			jest.restoreAllMocks();
-		});
-
 		it('should handle call end correctly', async () => {
-			// Mock the date for call start
 			const startDate = new Date('2024-01-01T12:00:00Z');
-			jest.spyOn(global, 'Date').mockImplementation(() => startDate);
+			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startDate);
 
-			// Initiate call
-			const success = await callHandler.initiateCall(mockContact, 'phone');
-			expect(success).toBeTruthy();
+			await callHandler.initiateCall(mockContact, 'phone');
 			expect(callHandler.activeCall).not.toBeNull();
 
-			// Mock the date for call end (11 seconds later)
 			const endDate = new Date('2024-01-01T12:00:11Z');
-			jest.spyOn(global, 'Date').mockImplementation(() => endDate);
+			DateSpy.mockImplementation(() => endDate);
 
-			// End call
 			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
-
-			// Verify call was ended
 			expect(callHandler.activeCall).toBeNull();
+
+			DateSpy.mockRestore();
 		});
 
 		it('should not create follow-up for short calls', async () => {
-			// Mock the date for call start
 			const startDate = new Date('2024-01-01T12:00:00Z');
-			jest.spyOn(global, 'Date').mockImplementation(() => startDate);
+			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startDate);
 
-			// Initiate call
-			const success = await callHandler.initiateCall(mockContact, 'phone');
-			expect(success).toBeTruthy();
+			await callHandler.initiateCall(mockContact, 'phone');
 			expect(callHandler.activeCall).not.toBeNull();
 
-			// Mock the date for call end (5 seconds later)
 			const endDate = new Date('2024-01-01T12:00:05Z');
-			jest.spyOn(global, 'Date').mockImplementation(() => endDate);
+			DateSpy.mockImplementation(() => endDate);
 
-			// End call
+			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+			expect(callHandler.activeCall).toBeNull();
+
+			DateSpy.mockRestore();
+		});
+	});
+
+	describe('edge cases', () => {
+		it('should handle multiple rapid call initiations', async () => {
+			const call1 = callHandler.initiateCall(mockContact, 'phone');
+			const call2 = callHandler.initiateCall(mockContact, 'phone');
+			const results = await Promise.all([call1, call2]);
+			expect(results[0]).toBeTruthy();
+			expect(results[1]).toBeTruthy();
+		});
+
+		it('should handle invalid phone numbers', async () => {
+			Linking.canOpenURL.mockResolvedValueOnce(false);
+			const invalidContact = { ...mockContact, phone: 'invalid' };
+			const success = await callHandler.initiateCall(invalidContact, 'phone');
+			expect(success).toBeFalsy();
+		});
+
+		it('should handle undefined contact', async () => {
+			const success = await callHandler.initiateCall(undefined, 'phone');
+			expect(success).toBeFalsy();
+		});
+	});
+
+	describe('firestore integration', () => {
+		it('should create contact history for long calls', async () => {
+			const startTime = new Date('2024-01-01T12:00:00Z');
+			const endTime = new Date('2024-01-01T12:00:11Z');
+			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startTime);
+
+			await callHandler.initiateCall(mockContact, 'phone');
+			expect(callHandler.activeCall).not.toBeNull();
+
+			DateSpy.mockImplementation(() => endTime);
+
 			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
 
-			// Verify call was ended
+			expect(addContactHistory).toHaveBeenCalledWith(
+				mockContact.id,
+				expect.objectContaining({
+					completed: false,
+					notes: expect.stringContaining('call completed'),
+				})
+			);
+
+			DateSpy.mockRestore();
+		});
+
+		it('should update next contact date after long calls', async () => {
+			const startTime = new Date('2024-01-01T12:00:00Z');
+			const endTime = new Date('2024-01-01T12:00:11Z');
+			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startTime);
+
+			await callHandler.initiateCall(mockContact, 'phone');
+			expect(callHandler.activeCall).not.toBeNull();
+
+			DateSpy.mockImplementation(() => endTime);
+
+			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+
+			const expectedDate = new Date(endTime);
+			expectedDate.setHours(expectedDate.getHours() + 1);
+
+			expect(updateNextContact).toHaveBeenCalledWith(
+				mockContact.id,
+				expectedDate,
+				expect.objectContaining({
+					lastContacted: true,
+				})
+			);
+
+			DateSpy.mockRestore();
+		});
+	});
+
+	describe('error handling', () => {
+		it('should handle Linking.openURL failure', async () => {
+			Linking.openURL.mockRejectedValueOnce(new Error('Failed to open URL'));
+			const success = await callHandler.initiateCall(mockContact, 'phone');
+			expect(success).toBeFalsy();
+		});
+
+		it('should handle CallKeep setup failure', async () => {
+			const RNCallKeep = require('react-native-callkeep').default;
+			RNCallKeep.setup.mockRejectedValueOnce(new Error('Setup failed'));
+			await callHandler.setup();
+			expect(callHandler.initialized).toBeTruthy();
+		});
+
+		it('should handle firestore failures gracefully', async () => {
+			addContactHistory.mockRejectedValueOnce(new Error('Firestore error'));
+			updateNextContact.mockRejectedValueOnce(new Error('Firestore error'));
+			createFollowUpReminder.mockRejectedValueOnce(new Error('Firestore error'));
+
+			const startDate = new Date('2024-01-01T12:00:00Z');
+			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startDate);
+
+			await callHandler.initiateCall(mockContact, 'phone');
+
+			const endDate = new Date('2024-01-01T12:00:11Z');
+			DateSpy.mockImplementation(() => endDate);
+
+			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
 			expect(callHandler.activeCall).toBeNull();
+
+			DateSpy.mockRestore();
 		});
 	});
 
 	describe('cleanup', () => {
 		it('should reset state correctly', () => {
+			callHandler.initialized = true;
+			callHandler.activeCall = { some: 'data' };
 			callHandler.cleanup();
 			expect(callHandler.initialized).toBeFalsy();
 			expect(callHandler.activeCall).toBeNull();
