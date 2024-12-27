@@ -122,7 +122,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					/>
 				);
 			case 'schedule':
-				return <ScheduleTab contact={contact} setSelectedContact={setSelectedContact} />;
+				return (
+					<ScheduleTab
+						contact={contact}
+						setSelectedContact={setSelectedContact}
+						loadContacts={loadContacts} // Pass loadContacts to ScheduleTab
+					/>
+				);
 			case 'tags':
 				return <TagsTab contact={contact} setSelectedContact={setSelectedContact} />;
 			case 'edit':

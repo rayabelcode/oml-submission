@@ -32,6 +32,11 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 		contact?.scheduling?.custom_preferences?.preferred_days || []
 	);
 
+	// Ensure selectedDays is updated every time contact changes
+	useEffect(() => {
+		setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
+	}, [contact]);
+
 	const handleFrequencyChange = async (newFrequency) => {
 		try {
 			await updateContactScheduling(contact.id, {
@@ -54,7 +59,6 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 
 	const handleScheduleContact = async () => {
 		try {
-			// Get existing reminders for conflict checking
 			const existingReminders = []; // TODO: Fetch from Firestore
 
 			const scheduler = new SchedulingService(
@@ -143,10 +147,8 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 														? selectedDays.filter((d) => d !== day.toLowerCase())
 														: [...selectedDays, day.toLowerCase()];
 
-													// Update local state first
 													setSelectedDays(updatedDays);
 
-													// Update Firestore
 													await updateContactScheduling(contact.id, {
 														...contact.scheduling,
 														custom_schedule: true,
@@ -156,7 +158,6 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 														},
 													});
 
-													// Update parent component state
 													setSelectedContact({
 														...contact,
 														scheduling: {
@@ -171,7 +172,6 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 												} catch (error) {
 													console.error('Error updating preferred days:', error);
 													Alert.alert('Error', 'Failed to update preferred days');
-													// Revert local state on error
 													setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
 												}
 											}}
@@ -245,9 +245,7 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 															custom_schedule: false,
 															custom_preferences: null,
 														});
-														// Reset selected days
 														setSelectedDays([]);
-														// Update parent component state
 														setSelectedContact({
 															...contact,
 															scheduling: {
