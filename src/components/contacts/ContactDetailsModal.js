@@ -122,7 +122,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					/>
 				);
 			case 'schedule':
-				return <ScheduleTab contact={contact} setSelectedContact={setSelectedContact} />;
+				return (
+					<ScheduleTab
+						contact={contact}
+						setSelectedContact={setSelectedContact}
+						loadContacts={loadContacts} // Pass loadContacts to ScheduleTab
+					/>
+				);
 			case 'tags':
 				return <TagsTab contact={contact} setSelectedContact={setSelectedContact} />;
 			case 'edit':
@@ -208,7 +214,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								<Text style={[styles.tabLabel, activeTab === 'edit' && styles.activeTabLabel]}>Profile</Text>
 							</TouchableOpacity>
 						</View>
-						<ScrollView style={styles.tabContent}>{renderTab()}</ScrollView>
+						<View style={styles.tabContent}>{renderTab()}</View>
 					</TouchableOpacity>
 				</TouchableOpacity>
 			</KeyboardAvoidingView>

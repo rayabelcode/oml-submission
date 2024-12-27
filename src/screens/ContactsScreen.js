@@ -34,11 +34,15 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
+import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
+import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
+
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
 import ContactForm from '../components/modals/ContactForm'; // Add/Edit Contact Modal
 import ContactDetailsModal from '../components/contacts/ContactDetailsModal'; // View Contact Details Modal
+import RelationshipTypeModal from '../components/modals/RelationshipTypeModal'; // Relationship Type Modal
 import WobbleEffect from '../components/general/WobbleEffect'; // Wobble effect for contact cards
 
 // Get initials for image avatar
@@ -193,6 +197,8 @@ export default function ContactsScreen({ navigation }) {
 	const [isFormVisible, setIsFormVisible] = useState(false);
 	const [isDetailsVisible, setIsDetailsVisible] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
+	const [showRelationshipModal, setShowRelationshipModal] = useState(false);
+	const [pendingContact, setPendingContact] = useState(null);
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
@@ -210,22 +216,14 @@ export default function ContactsScreen({ navigation }) {
 		}
 	}
 
-	const formatPhoneNumber = (phoneNumber) => {
-		const cleaned = phoneNumber.replace(/\D/g, '');
-		if (cleaned.length === 10) {
-			return `+1${cleaned}`;
-		} else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-			return `+${cleaned}`;
-		}
-		return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
-	};
-
 	const checkForExistingContact = async (phoneNumber) => {
 		try {
 			const allContacts = [...contacts.scheduledContacts, ...contacts.unscheduledContacts];
-			return allContacts.find(
-				(contact) => formatPhoneNumber(contact.phone) === formatPhoneNumber(phoneNumber)
-			);
+			const cleanedInput = phoneNumber.replace(/\D/g, '');
+			return allContacts.find((contact) => {
+				const cleanedContact = contact.phone.replace(/\D/g, '');
+				return cleanedInput === cleanedContact;
+			});
 		} catch (error) {
 			console.error('Error checking for existing contact:', error);
 			return null;
@@ -278,9 +276,18 @@ export default function ContactsScreen({ navigation }) {
 				return;
 			}
 
-			const formattedPhone = formatPhoneNumber(phoneNumber);
+			const cleanedPhone = phoneNumber.replace(/\D/g, '');
+			const formattedPhone =
+				cleanedPhone.length === 10
+					? `+1${cleanedPhone}`
+					: cleanedPhone.length === 11 && cleanedPhone.startsWith('1')
+					? `+${cleanedPhone}`
+					: cleanedPhone.startsWith('+')
+					? cleanedPhone
+					: `+${cleanedPhone}`;
 
 			const existingContact = await checkForExistingContact(formattedPhone);
+
 			if (existingContact) {
 				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 				return;
@@ -304,28 +311,39 @@ export default function ContactsScreen({ navigation }) {
 				}
 			}
 
-			const contactData = {
+			// Store the pending contact data and show relationship modal
+			setPendingContact({
 				first_name: contact.firstName || '',
 				last_name: contact.lastName || '',
 				phone: formattedPhone,
 				email: contact.emails?.[0]?.email || '',
-				notes: '',
-				contact_history: [],
-				tags: [],
 				photo_url: photoUrl,
-				frequency: 'weekly',
-				created_at: serverTimestamp(),
-				last_updated: serverTimestamp(),
-				user_id: user.uid,
-			};
+			});
+			setShowRelationshipModal(true);
+		} catch (error) {
+			console.error('Contact import error:', error);
+			Alert.alert('Error', 'Failed to import contact: ' + error.message);
+		}
+	};
+
+	// Add this new function after handleContactSelection
+	const processPendingContact = async (relationshipType) => {
+		if (!pendingContact) return;
+
+		try {
+			const contactData = createContactData(
+				{ ...pendingContact, relationship_type: relationshipType },
+				user.uid
+			);
 
 			const newContact = await addContact(user.uid, contactData);
 			await loadContacts();
 			setSelectedContact(newContact);
 			setIsDetailsVisible(true);
+			setPendingContact(null);
 		} catch (error) {
-			console.error('Contact import error:', error);
-			Alert.alert('Error', 'Failed to import contact: ' + error.message);
+			console.error('Error processing contact:', error);
+			Alert.alert('Error', 'Failed to add contact');
 		}
 	};
 
@@ -348,28 +366,28 @@ export default function ContactsScreen({ navigation }) {
 		setRefreshing(false);
 	}, []);
 
-	const handleAddContact = async (formData) => {
+	const handleAddContact = async (contactData) => {
 		try {
-			await addContact(user.uid, formData);
+			await addContact(user.uid, contactData);
 
 			if (Platform.OS === 'ios') {
 				const { status } = await Contacts.requestPermissionsAsync();
 				if (status === 'granted') {
 					try {
 						const contact = {
-							[Contacts.Fields.FirstName]: formData.first_name,
-							[Contacts.Fields.LastName]: formData.last_name,
+							[Contacts.Fields.FirstName]: contactData.first_name,
+							[Contacts.Fields.LastName]: contactData.last_name,
 							[Contacts.Fields.PhoneNumbers]: [
 								{
 									label: 'mobile',
-									number: formData.phone,
+									number: contactData.phone,
 								},
 							],
-							[Contacts.Fields.Emails]: formData.email
+							[Contacts.Fields.Emails]: contactData.email
 								? [
 										{
 											label: 'work',
-											email: formData.email,
+											email: contactData.email,
 										},
 								  ]
 								: [],
@@ -607,6 +625,18 @@ export default function ContactsScreen({ navigation }) {
 				onSelectContact={(contact) => {
 					setIsSearchModalVisible(false);
 					handleContactSelection(contact);
+				}}
+			/>
+
+			<RelationshipTypeModal
+				visible={showRelationshipModal}
+				onClose={() => {
+					setShowRelationshipModal(false);
+					setPendingContact(null);
+				}}
+				onSelect={async (relationshipType) => {
+					setShowRelationshipModal(false);
+					await processPendingContact(relationshipType);
 				}}
 			/>
 		</SafeAreaView>

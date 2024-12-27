@@ -4,6 +4,7 @@ import { useStyles } from '../../styles/screens/settings';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useTheme } from '../../context/ThemeContext';
+import FormattedPhoneNumber from '../general/FormattedPhoneNumber';
 
 const ProfileSection = ({ userProfile, user }) => {
 	const styles = useStyles();
@@ -41,6 +42,9 @@ const ProfileSection = ({ userProfile, user }) => {
 					<Text style={[styles.profileName, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
 						{displayName}
 					</Text>
+					{userProfile?.phone && (
+						<FormattedPhoneNumber phoneNumber={userProfile.phone} style={styles.profileDetail} />
+					)}
 				</View>
 			</View>
 		</View>

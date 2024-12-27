@@ -10,6 +10,8 @@ import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import AutoDismissModalContainer from '../../../components/general/AutoDismissModalContainer';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
+import RelationshipPicker from '../../general/RelationshipPicker';
+import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
 
 const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) => {
 	const { colors } = useTheme();
@@ -17,7 +19,13 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const styles = useStyles();
 
 	const [isEditing, setIsEditing] = useState(false);
-	const [formData, setFormData] = useState({ ...contact });
+	const [formData, setFormData] = useState({
+		...contact,
+		scheduling: {
+			...contact.scheduling,
+			relationship_type: contact.scheduling?.relationship_type || 'friend',
+		},
+	});
 	const [showSuccess, setShowSuccess] = useState(false);
 
 	const handleEditPhotoUpload = async () => {
@@ -41,23 +49,19 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 					[{ resize: { width: 500 } }],
 					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
 				);
-				const photoURL = await uploadContactPhoto(contact.id, manipResult.uri);
+				const photoURL = await uploadContactPhoto(contact.user_id, manipResult.uri);
 
-				await updateContact(contact.id, {
+				const updatedContact = {
 					...contact,
 					photo_url: photoURL,
-				});
+				};
 
-				setFormData((prevFormData) => ({
-					...prevFormData,
-					photo_url: photoURL,
-				}));
-
-				setSelectedContact((prev) => ({
+				await updateContact(contact.id, updatedContact);
+				setFormData((prev) => ({
 					...prev,
 					photo_url: photoURL,
 				}));
-
+				setSelectedContact(updatedContact);
 				await loadContacts();
 			}
 		} catch (error) {
@@ -68,20 +72,42 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 	const handleSave = async () => {
 		try {
-			await updateContact(contact.id, {
+			const updatedContact = {
 				first_name: formData.first_name,
 				last_name: formData.last_name,
 				email: formData.email,
 				phone: formData.phone,
 				photo_url: formData.photo_url,
+				scheduling: {
+					...contact.scheduling,
+					relationship_type: formData.scheduling.relationship_type,
+					frequency: contact.scheduling?.frequency || 'weekly',
+					custom_schedule: contact.scheduling?.custom_schedule || false,
+					priority: contact.scheduling?.priority || 'normal',
+					minimum_gap: contact.scheduling?.minimum_gap || 30,
+					custom_preferences: {
+						preferred_days: contact.scheduling?.custom_preferences?.preferred_days || [],
+						active_hours: contact.scheduling?.custom_preferences?.active_hours || {
+							start: '09:00',
+							end: '17:00',
+						},
+						excluded_times: contact.scheduling?.custom_preferences?.excluded_times || [],
+					},
+				},
+			};
+
+			await updateContact(contact.id, updatedContact);
+			setSelectedContact({
+				...contact,
+				...updatedContact,
 			});
-			setSelectedContact(formData);
 			setIsEditing(false);
 			await loadContacts();
 			Alert.alert('Success', 'Contact updated successfully', [
 				{ text: 'OK', onPress: () => setIsEditing(false) },
 			]);
 		} catch (error) {
+			console.error('Error updating contact:', error);
 			Alert.alert('Error', 'Failed to update contact');
 		}
 	};
@@ -91,9 +117,9 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			<View style={{ flex: 1 }}>
 				<ScrollView
 					style={[styles.tabContent, { flex: 1 }]}
-					contentContainerStyle={{ paddingBottom: 20 }}
+					contentContainerStyle={styles.scrollContent}
 					scrollEnabled={true}
-					showsVerticalScrollIndicator={true}
+					showsVerticalScrollIndicator={false}
 				>
 					<TouchableOpacity activeOpacity={1}>
 						<View style={styles.contactHeader}>
@@ -199,18 +225,71 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 									<TextInput
 										style={styles.editInput}
-										value={formData.phone}
-										onChangeText={(text) => setFormData({ ...formData, phone: text })}
+										value={formatPhoneNumber(formData.phone)}
+										onChangeText={(text) => {
+											const cleaned = text.replace(/\D/g, '');
+											setFormData({ ...formData, phone: cleaned });
+										}}
 										placeholder="Phone"
 										placeholderTextColor={colors.text.secondary}
 										keyboardType="phone-pad"
 									/>
+
+									<View style={{ marginTop: 1 }}>
+										<View
+											style={{
+												backgroundColor:
+													colors.theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.05)',
+												paddingHorizontal: 12,
+												paddingTop: 8,
+												paddingBottom: 0,
+												marginBottom: 8,
+											}}
+										>
+											<Text
+												style={[
+													styles.contactDetail,
+													{
+														color: colors.text.primary,
+														fontWeight: '500',
+													},
+												]}
+											>
+												Relationship Type
+											</Text>
+										</View>
+										<RelationshipPicker
+											value={formData.scheduling?.relationship_type}
+											onChange={(type) =>
+												setFormData({
+													...formData,
+													scheduling: {
+														...formData.scheduling,
+														relationship_type: type,
+													},
+												})
+											}
+											showLabel={false}
+										/>
+									</View>
 								</View>
 							) : (
 								<View style={styles.viewFields}>
 									<Text style={styles.fullName}>{`${formData.first_name} ${formData.last_name}`}</Text>
+
 									{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
-									{formData.phone && <Text style={styles.contactDetail}>{formData.phone}</Text>}
+
+									{formData.phone && (
+										<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
+									)}
+
+									{formData.scheduling?.relationship_type && (
+										<Text style={styles.contactDetail}>
+											Relationship:{' '}
+											{formData.scheduling.relationship_type.charAt(0).toUpperCase() +
+												formData.scheduling.relationship_type.slice(1)}
+										</Text>
+									)}
 								</View>
 							)}
 						</View>

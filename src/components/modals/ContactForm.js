@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
 	Modal,
 	View,
@@ -10,7 +10,6 @@ import {
 	Alert,
 	KeyboardAvoidingView,
 	Platform,
-	keyboard,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,9 +17,12 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { useStyles } from '../../styles/screens/contacts';
 import { useCommonStyles } from '../../styles/common';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, spacing } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
+import RelationshipPicker from '../general/RelationshipPicker';
+import { createContactData, SCHEDULING_CONSTANTS } from '../../utils/contactHelpers';
+import { formatPhoneNumber } from '../general/FormattedPhoneNumber';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const { user } = useAuth();
@@ -28,13 +30,17 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 
+	const lastNameRef = useRef();
+	const emailRef = useRef();
+	const phoneRef = useRef();
+
 	const [formData, setFormData] = useState({
 		first_name: '',
 		last_name: '',
 		email: '',
 		phone: '',
-		frequency: 'weekly',
 		photo_url: null,
+		relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
 	});
 
 	const dismissKeyboard = () => {
@@ -50,30 +56,24 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				mediaTypes: ['images'],
 				allowsEditing: true,
 				aspect: [1, 1],
-				quality: 0.5,
-				selectionLimit: 1,
+				quality: 1,
 			});
 
 			if (!result.canceled && result.assets && result.assets[0]) {
-				try {
-					const manipResult = await ImageManipulator.manipulateAsync(
-						result.assets[0].uri,
-						[{ resize: { width: 300, height: 300 } }],
-						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-					);
+				const manipResult = await ImageManipulator.manipulateAsync(
+					result.assets[0].uri,
+					[{ resize: { width: 500 } }],
+					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+				);
 
-					const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
-					if (photoUrl) {
-						setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
-					} else {
-						Alert.alert('Error', 'Failed to upload photo');
-					}
-				} catch (manipError) {
-					console.error('Error manipulating image:', manipError);
-					Alert.alert('Error', 'Failed to process the selected image');
+				const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+				if (photoUrl) {
+					setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
+				} else {
+					Alert.alert('Error', 'Failed to upload photo');
 				}
 			}
 		} catch (error) {
@@ -89,8 +89,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 				last_name: '',
 				email: '',
 				phone: '',
-				frequency: 'weekly',
 				photo_url: null,
+				relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
 			});
 		}
 	}, [visible]);
@@ -104,11 +104,29 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 						style={commonStyles.modalContent}
 						onPress={(e) => e.stopPropagation()}
 					>
-						<View style={commonStyles.modalHeader}>
+						<View
+							style={[
+								commonStyles.modalHeader,
+								{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+							]}
+						>
+							<Icon
+								name="person-add-outline"
+								size={24}
+								color={colors.text.primary}
+								style={{ marginRight: spacing.sm }}
+							/>
 							<Text style={commonStyles.modalTitle}>Add New Contact</Text>
 						</View>
 
-						<ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
+						<ScrollView
+							style={styles.formContainer}
+							contentContainerStyle={{
+								paddingBottom: spacing.sm,
+								flexGrow: 1,
+							}}
+							keyboardShouldPersistTaps="handled"
+						>
 							<View style={styles.photoUploadContainer}>
 								{formData.photo_url ? (
 									<View style={styles.photoPreview}>
@@ -134,50 +152,80 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 										</TouchableOpacity>
 									</View>
 								) : (
-									<TouchableOpacity style={styles.uploadButton} onPress={handlePhotoUpload}>
+									<TouchableOpacity
+										style={[styles.uploadButton, { marginBottom: 0 }]}
+										onPress={handlePhotoUpload}
+									>
 										<Icon name="camera-outline" size={24} color={colors.primary} />
 										<Text style={styles.uploadButtonText}>Add Photo</Text>
 									</TouchableOpacity>
 								)}
 							</View>
 
+							<RelationshipPicker
+								value={formData.relationship_type}
+								onChange={(type) => setFormData((prev) => ({ ...prev, relationship_type: type }))}
+							/>
+
 							<TextInput
-								style={commonStyles.input}
+								style={[commonStyles.input, { marginBottom: spacing.sm }]}
 								placeholder="First Name"
 								placeholderTextColor={colors.text.secondary}
 								value={formData.first_name}
 								onChangeText={(text) => setFormData({ ...formData, first_name: text })}
+								autoCorrect={false}
+								autoCapitalize="words"
+								returnKeyType="next"
+								onSubmitEditing={() => lastNameRef.current?.focus()}
+								blurOnSubmit={false}
 							/>
 
 							<TextInput
-								style={commonStyles.input}
+								ref={lastNameRef}
+								style={[commonStyles.input, { marginBottom: spacing.sm }]}
 								placeholder="Last Name"
 								placeholderTextColor={colors.text.secondary}
 								value={formData.last_name}
 								onChangeText={(text) => setFormData({ ...formData, last_name: text })}
+								autoCorrect={false}
+								autoCapitalize="words"
+								returnKeyType="next"
+								onSubmitEditing={() => emailRef.current?.focus()}
+								blurOnSubmit={false}
 							/>
 
 							<TextInput
-								style={commonStyles.input}
+								ref={emailRef}
+								style={[commonStyles.input, { marginBottom: spacing.sm }]}
 								placeholder="Email"
 								placeholderTextColor={colors.text.secondary}
 								value={formData.email}
 								onChangeText={(text) => setFormData({ ...formData, email: text })}
 								keyboardType="email-address"
 								autoCapitalize="none"
+								autoCorrect={false}
+								returnKeyType="next"
+								onSubmitEditing={() => phoneRef.current?.focus()}
+								blurOnSubmit={false}
 							/>
 
 							<TextInput
+								ref={phoneRef}
 								style={commonStyles.input}
 								placeholder="Phone"
 								placeholderTextColor={colors.text.secondary}
-								value={formData.phone}
-								onChangeText={(text) => setFormData({ ...formData, phone: text })}
+								value={formatPhoneNumber(formData.phone)}
+								onChangeText={(text) => {
+									const cleaned = text.replace(/\D/g, '');
+									setFormData({ ...formData, phone: cleaned });
+								}}
 								keyboardType="phone-pad"
+								returnKeyType="done"
+								onSubmitEditing={dismissKeyboard}
 							/>
 						</ScrollView>
 
-						<View style={styles.editModalActions}>
+						<View style={[styles.editModalActions, { justifyContent: 'center', gap: spacing.md }]}>
 							<TouchableOpacity
 								style={[commonStyles.primaryButton, styles.saveButton]}
 								onPress={() => {
@@ -185,11 +233,12 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 										Alert.alert('Error', 'First name is required');
 										return;
 									}
-									onSubmit(formData);
+									const contactData = createContactData(formData, user.uid);
+									onSubmit(contactData);
 								}}
 							>
-								<Icon name="checkmark-outline" size={24} color={colors.background.primary} />
-								<Text style={commonStyles.primaryButtonText}>Save</Text>
+								<Icon name="checkmark-outline" size={24} color="#FFFFFF" />
+								<Text style={[commonStyles.primaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity style={[commonStyles.secondaryButton, styles.cancelButton]} onPress={onClose}>

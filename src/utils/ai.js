@@ -13,7 +13,9 @@ export const generateTopicSuggestions = async (contact, history) => {
 			return ['No conversation history available yet.'];
 		}
 
-		// Format contact history
+		// Create full name from first_name and last_name
+		const contactName = `${contact.first_name} ${contact.last_name || ''}`.trim();
+
 		const recentHistory = (contact.contact_history || [])
 			.slice(-5)
 			.map(
@@ -21,7 +23,6 @@ export const generateTopicSuggestions = async (contact, history) => {
 			)
 			.join('\n');
 
-		// If no history, return early
 		if (!recentHistory) {
 			return ['Start your first conversation!'];
 		}
@@ -36,10 +37,10 @@ export const generateTopicSuggestions = async (contact, history) => {
 				},
 				{
 					role: 'user',
-					content: `I need conversation topics for my contact ${contact.name}.
+					content: `I need conversation topics for my contact ${contactName}.
             
 Contact Information:
-Name: ${contact.name}
+Name: ${contactName}
 Contact Notes: ${contact.notes || 'No additional notes'}
 
 Recent Conversation History:
