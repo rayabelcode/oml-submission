@@ -247,12 +247,15 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 			position: 'relative',
 			paddingHorizontal: spacing.sm,
+			paddingLeft: 35,
 		},
 		modalTitle: {
 			fontSize: 24,
 			fontWeight: 'bold',
 			textAlign: 'center',
 			color: colors.text.primary,
+			flex: 1,
+			marginHorizontal: spacing.md,
 		},
 		closeButton: {
 			position: 'absolute',
@@ -868,10 +871,27 @@ const useStyles = () => {
 			fontWeight: '600',
 			color: colors.text.primary,
 		},
-		callButton: {
+		callIconButton: {
 			position: 'absolute',
-			right: 16,
-			padding: 8,
+			left: -15,
+			top: -15,
+			width: 40,
+			height: 40,
+			borderRadius: 20,
+			backgroundColor: colors.secondary,
+			borderWidth: 2,
+			borderColor: colors.background.primary,
+			alignItems: 'center',
+			justifyContent: 'center',
+			zIndex: 5,
+			elevation: 3,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 2,
+			},
+			shadowOpacity: 0.25,
+			shadowRadius: 3.84,
 		},
 	});
 };

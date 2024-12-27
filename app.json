@@ -18,10 +18,12 @@
 			"bundleIdentifier": "com.rayabel.onmylistapp",
 			"infoPlist": {
 				"UIBackgroundModes": ["remote-notification", "voip"],
-				"NSMicrophoneUsageDescription": "Allow OnMyList to access your microphone for calls",
-				"NSCameraUsageDescription": "Allow OnMyList to access your camera for FaceTime calls",
 				"NSContactsUsageDescription": "Allow OnMyList to access your contacts to import them into the app.",
-				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app."
+				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app.",
+				"NSMicrophoneUsageDescription": "This app needs microphone access for call features.",
+				"NSCameraUsageDescription": "This app needs camera access for video calls.",
+				"NSPhotoLibraryUsageDescription": "This app needs photo library access for profile pictures.",
+				"LSApplicationQueriesSchemes": ["tel", "telprompt", "facetime", "facetime-audio"]
 			},
 			"usesAppleSignIn": true
 		},
@@ -35,16 +37,34 @@
 				"RECEIVE_BOOT_COMPLETED",
 				"READ_CONTACTS",
 				"WRITE_CONTACTS",
-				"READ_PHONE_STATE",
 				"CALL_PHONE",
-				"ANSWER_PHONE_CALLS"
+				"READ_PHONE_STATE",
+				"CAMERA",
+				"RECORD_AUDIO"
 			]
 		},
 		"web": {
 			"favicon": "./assets/favicon.png"
 		},
 		"newArchEnabled": true,
-		"plugins": ["expo-build-properties", "expo-font"],
+		"plugins": [
+			[
+				"expo-build-properties",
+				{
+					"ios": {
+						"useFrameworks": "static"
+					}
+				}
+			],
+			"expo-font",
+			[
+				"expo-contacts",
+				{
+					"contactsPermission": "Allow OnMyList to access your contacts."
+				}
+			],
+			"expo-notifications"
+		],
 		"extra": {
 			"eas": {
 				"projectId": "a2b79805-c750-4012-92e8-fee850d83b9c"
