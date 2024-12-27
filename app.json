@@ -21,8 +21,9 @@
 				"NSContactsUsageDescription": "Allow OnMyList to access your contacts to import them into the app.",
 				"NSContactsUsageDescriptionLocation": "This allows you to import your existing contacts into the app.",
 				"NSMicrophoneUsageDescription": "This app needs microphone access for call features.",
-				"NSCameraUsageDescription": "This app needs camera access for video calls.",
-				"NSPhotoLibraryUsageDescription": "This app needs photo library access for profile pictures.",
+				"NSCameraUsageDescription": "Allow OnMyList to use your camera for profile pictures and video calls.",
+				"NSPhotoLibraryUsageDescription": "Allow OnMyList to access your photos for profile pictures.",
+				"NSPhotoLibraryAddUsageDescription": "Allow OnMyList to save photos to your library.",
 				"LSApplicationQueriesSchemes": ["tel", "telprompt", "facetime", "facetime-audio"]
 			},
 			"usesAppleSignIn": true
@@ -52,7 +53,8 @@
 				"expo-build-properties",
 				{
 					"ios": {
-						"useFrameworks": "static"
+						"useFrameworks": "static",
+						"deploymentTarget": "13.0"
 					}
 				}
 			],
@@ -61,6 +63,12 @@
 				"expo-contacts",
 				{
 					"contactsPermission": "Allow OnMyList to access your contacts."
+				}
+			],
+			[
+				"expo-image-picker",
+				{
+					"photosPermission": "Allow OnMyList to access your photos for profile pictures."
 				}
 			],
 			"expo-notifications"
