@@ -17,7 +17,7 @@ const FREQUENCY_OPTIONS = [
 	{ label: 'Yearly', value: 'yearly' },
 ];
 
-const ScheduleTab = ({ contact, setSelectedContact }) => {
+const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
@@ -169,6 +169,7 @@ const ScheduleTab = ({ contact, setSelectedContact }) => {
 															},
 														},
 													});
+													await loadContacts();
 												} catch (error) {
 													console.error('Error updating preferred days:', error);
 													Alert.alert('Error', 'Failed to update preferred days');
