@@ -165,19 +165,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								onPress={() => setShowCallOptions(!showCallOptions)}
 							>
 								<Icon name="call-outline" size={20} color={colors.background.primary} />
-								<CallOptions
-									show={showCallOptions}
-									contact={contact}
-									onSelect={async (callType) => {
-										setShowCallOptions(false);
-										if (Constants.appOwnership !== 'expo') {
-											const success = await callHandler.initiateCall(contact, callType);
-											if (!success) {
-												Alert.alert('Error', `Could not initiate ${callType} call`);
-											}
-										}
-									}}
-								/>
+								<CallOptions show={showCallOptions} contact={contact} />
 							</TouchableOpacity>
 							<View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 50 }}>
 								<Text style={commonStyles.modalTitle} numberOfLines={1} adjustsFontSizeToFit>

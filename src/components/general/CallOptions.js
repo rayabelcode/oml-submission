@@ -1,31 +1,43 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import Constants from 'expo-constants';
 
-const CallOptions = ({ onSelect, show, contact }) => {
+const CallOptions = ({ show, contact }) => {
 	const { colors } = useTheme();
 
 	if (!show) return null;
 
 	const handleCall = async (callType) => {
+		// Check if we're in Expo Go
 		if (Constants.appOwnership === 'expo') {
-			// In Expo Go, just use direct linking
+			console.log('Call simulation in Expo Go:', callType, contact.phone);
+			return; // Just log the attempt when in Expo Go
+		}
+
+		// Only proceed with actual calls on iOS
+		if (Platform.OS === 'ios') {
 			let urlScheme;
 			switch (callType) {
 				case 'facetime-video':
 					urlScheme = `facetime://${contact.phone}`;
 					break;
-				case 'facetime-audio':
-					urlScheme = `facetime-audio://${contact.phone}`;
+				case 'phone':
+					urlScheme = `tel:${contact.phone}`;
 					break;
 				default:
 					urlScheme = `tel:${contact.phone}`;
 			}
-			await Linking.openURL(urlScheme);
-		} else {
-			onSelect(callType);
+
+			try {
+				const supported = await Linking.canOpenURL(urlScheme);
+				if (supported) {
+					await Linking.openURL(urlScheme);
+				}
+			} catch (error) {
+				console.error('Error initiating call:', error);
+			}
 		}
 	};
 
@@ -61,8 +73,8 @@ const styles = StyleSheet.create({
 	option: {
 		padding: 8,
 		marginHorizontal: 4,
-		flex: 1, // Make options take equal space
-		alignItems: 'center', // Center the icons
+		flex: 1,
+		alignItems: 'center',
 	},
 });
 
