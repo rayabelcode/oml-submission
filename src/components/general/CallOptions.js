@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import Constants from 'expo-constants';
@@ -30,12 +30,9 @@ const CallOptions = ({ onSelect, show, contact }) => {
 	};
 
 	return (
-		<View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+		<View style={[styles.optionsContainer, { backgroundColor: colors.background.secondary }]}>
 			<TouchableOpacity style={styles.option} onPress={() => handleCall('phone')}>
 				<Icon name="call-outline" size={24} color={colors.primary} />
-			</TouchableOpacity>
-			<TouchableOpacity style={styles.option} onPress={() => handleCall('facetime-audio')}>
-				<Icon name="mic-outline" size={24} color={colors.primary} />
 			</TouchableOpacity>
 			<TouchableOpacity style={styles.option} onPress={() => handleCall('facetime-video')}>
 				<Icon name="videocam-outline" size={24} color={colors.primary} />
@@ -45,25 +42,27 @@ const CallOptions = ({ onSelect, show, contact }) => {
 };
 
 const styles = StyleSheet.create({
-	container: {
+	optionsContainer: {
 		position: 'absolute',
-		right: 50,
-		top: 50,
-		borderRadius: 12,
-		padding: 8,
-		flexDirection: 'row',
+		top: '100%',
+		left: 0,
+		borderRadius: 8,
+		paddingVertical: 4,
+		paddingHorizontal: 8,
 		shadowColor: '#000',
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
+		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.25,
 		shadowRadius: 3.84,
 		elevation: 5,
+		zIndex: 9999,
+		flexDirection: 'row',
+		minWidth: 120,
 	},
 	option: {
 		padding: 8,
 		marginHorizontal: 4,
+		flex: 1, // Make options take equal space
+		alignItems: 'center', // Center the icons
 	},
 });
 

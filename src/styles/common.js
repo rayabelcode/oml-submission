@@ -46,10 +46,8 @@ export const useCommonStyles = () => {
 			alignItems: 'center',
 			marginBottom: spacing.md,
 			position: 'relative',
-			paddingHorizontal: spacing.xl,
-			minHeight: 40,
-			paddingLeft: 40, // Match the width of the call button
-			paddingRight: 40, // Match the width of the close button
+			height: 40,
+			marginTop: 0, // Add space for the buttons that overflow
 		},
 		modalTitle: {
 			fontSize: 24,
@@ -59,9 +57,6 @@ export const useCommonStyles = () => {
 			flex: 1,
 			numberOfLines: 1,
 			adjustsFontSizeToFit: true,
-			maxHeight: 28,
-			marginHorizontal: 0, // Remove horizontal margin
-			paddingLeft: 0, // Remove left padding
 		},
 		primaryButton: {
 			backgroundColor: colors.primary,

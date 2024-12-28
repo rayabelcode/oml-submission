@@ -870,11 +870,11 @@ const useStyles = () => {
 		},
 		callIconButton: {
 			position: 'absolute',
-			left: -15,
-			top: -15,
-			width: 40,
-			height: 40,
-			borderRadius: 20,
+			left: -18,
+			top: -18,
+			width: 50,
+			height: 50,
+			borderRadius: 50,
 			backgroundColor: colors.secondary, // Green color like Submit button
 			borderWidth: 2,
 			borderColor: colors.background.primary,

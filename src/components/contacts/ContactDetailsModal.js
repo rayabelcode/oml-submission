@@ -8,6 +8,7 @@ import {
 	ScrollView,
 	KeyboardAvoidingView,
 	Platform,
+	StyleSheet,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,14 +39,12 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 	const [showCallOptions, setShowCallOptions] = useState(false);
 
-	// Reset tab when modal becomes visible
 	useEffect(() => {
 		if (visible) {
 			setActiveTab('notes');
 		}
 	}, [visible]);
 
-	// Load contact history
 	useEffect(() => {
 		if (contact?.id) {
 			fetchContactHistory(contact.id).then((history) => {
@@ -55,7 +54,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		}
 	}, [contact]);
 
-	// Load suggestion cache
 	useEffect(() => {
 		const loadCache = async () => {
 			try {
@@ -70,25 +68,21 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 		loadCache();
 	}, []);
 
-	// Load suggestions when contact changes
 	useEffect(() => {
 		const loadSuggestions = async () => {
 			if (!contact) return;
 
 			setLoadingSuggestions(true);
 			try {
-				// Check cache first
 				const cacheKey = `${contact.id}-suggestions`;
 				const cachedSuggestions = suggestionCache[cacheKey];
 
 				if (cachedSuggestions) {
 					setSuggestions(cachedSuggestions);
 				} else {
-					// Generate new suggestions
 					const newSuggestions = await generateTopicSuggestions(contact, history);
 					setSuggestions(newSuggestions);
 
-					// Update cache
 					const newCache = {
 						...suggestionCache,
 						[cacheKey]: newSuggestions,
@@ -133,7 +127,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 					<ScheduleTab
 						contact={contact}
 						setSelectedContact={setSelectedContact}
-						loadContacts={loadContacts} // Pass loadContacts to ScheduleTab
+						loadContacts={loadContacts}
 					/>
 				);
 			case 'tags':
@@ -165,32 +159,34 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						activeOpacity={1}
 						onPress={(e) => e.stopPropagation()}
 					>
-						<View style={commonStyles.modalHeader}>
+						<View style={[commonStyles.modalHeader]}>
 							<TouchableOpacity
-								style={styles.callIconButton}
+								style={[styles.callIconButton]}
 								onPress={() => setShowCallOptions(!showCallOptions)}
 							>
 								<Icon name="call-outline" size={20} color={colors.background.primary} />
+								<CallOptions
+									show={showCallOptions}
+									contact={contact}
+									onSelect={async (callType) => {
+										setShowCallOptions(false);
+										if (Constants.appOwnership !== 'expo') {
+											const success = await callHandler.initiateCall(contact, callType);
+											if (!success) {
+												Alert.alert('Error', `Could not initiate ${callType} call`);
+											}
+										}
+									}}
+								/>
 							</TouchableOpacity>
-							<Text style={commonStyles.modalTitle} numberOfLines={1} adjustsFontSizeToFit>
-								{contact.first_name} {contact.last_name}
-							</Text>
+							<View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 50 }}>
+								<Text style={commonStyles.modalTitle} numberOfLines={1} adjustsFontSizeToFit>
+									{contact.first_name} {contact.last_name}
+								</Text>
+							</View>
 							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
 								<Icon name="close-outline" size={24} color={colors.text.secondary} />
 							</TouchableOpacity>
-							<CallOptions
-								show={showCallOptions}
-								contact={contact}
-								onSelect={async (callType) => {
-									setShowCallOptions(false);
-									if (Constants.appOwnership !== 'expo') {
-										const success = await callHandler.initiateCall(contact, callType);
-										if (!success) {
-											Alert.alert('Error', `Could not initiate ${callType} call`);
-										}
-									}
-								}}
-							/>
 						</View>
 
 						<View style={styles.tabBar}>
