@@ -3,6 +3,7 @@
 		"name": "OnMyList",
 		"slug": "OnMyList",
 		"version": "1.0.32",
+		"runtimeVersion": { "policy": "appVersion" },
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"scheme": "onmylist",
