@@ -612,10 +612,11 @@ const useStyles = () => {
 			fontSize: 16,
 		},
 		sectionTitle: {
-			fontSize: 16,
-			fontWeight: '500',
-			marginBottom: spacing.sm,
+			fontSize: 17,
+			fontWeight: '700',
+			marginBottom: spacing.md,
 			color: colors.text.primary,
+			textAlign: 'center',
 		},
 		// Edit tab
 		contactHeader: {
@@ -698,8 +699,9 @@ const useStyles = () => {
 			gap: spacing.sm,
 		},
 		headerButton: {
-			paddingHorizontal: spacing.xs, // Smaller padding between icons
-			marginRight: 0, // Remove any extra margin
+			paddingHorizontal: spacing.xs, // Padding between icons
+			paddingVertical: spacing.xs, // Vertical padding for tap area
+			marginRight: 0,
 		},
 		saveButtonText: {
 			color: colors.background.primary,

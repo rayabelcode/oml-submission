@@ -474,10 +474,10 @@ export default function ContactsScreen({ navigation }) {
 					{/* Icons closer together */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
-							<Icon name="add-outline" size={24} color={colors.text.primary} />
+							<Icon name="add-outline" size={30} color={colors.text.primary} />
 						</TouchableOpacity>
 						<TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
-							<Icon name="search-outline" size={24} color={colors.text.primary} />
+							<Icon name="search-outline" size={30} color={colors.text.primary} />
 						</TouchableOpacity>
 					</View>
 				</View>
