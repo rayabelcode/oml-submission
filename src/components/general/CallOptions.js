@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Linking, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Linking, Platform, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import Constants from 'expo-constants';
 
-const CallOptions = ({ show, contact }) => {
+const CallOptions = ({ show, contact, onClose }) => {
 	const { colors } = useTheme();
 
 	if (!show) return null;
@@ -13,6 +13,7 @@ const CallOptions = ({ show, contact }) => {
 		// Check if we're in Expo Go
 		if (Constants.appOwnership === 'expo') {
 			console.log('Call simulation in Expo Go:', callType, contact.phone);
+			onClose();
 			return; // Just log the attempt when in Expo Go
 		}
 
@@ -33,10 +34,12 @@ const CallOptions = ({ show, contact }) => {
 			try {
 				const supported = await Linking.canOpenURL(urlScheme);
 				if (supported) {
+					onClose();
 					await Linking.openURL(urlScheme);
 				}
 			} catch (error) {
 				console.error('Error initiating call:', error);
+				onClose();
 			}
 		}
 	};
@@ -44,10 +47,14 @@ const CallOptions = ({ show, contact }) => {
 	return (
 		<View style={[styles.optionsContainer, { backgroundColor: colors.background.secondary }]}>
 			<TouchableOpacity style={styles.option} onPress={() => handleCall('phone')}>
-				<Icon name="call-outline" size={24} color={colors.primary} />
+				<Text>
+					<Icon name="call-outline" size={24} color={colors.primary} />
+				</Text>
 			</TouchableOpacity>
 			<TouchableOpacity style={styles.option} onPress={() => handleCall('facetime-video')}>
-				<Icon name="videocam-outline" size={24} color={colors.primary} />
+				<Text>
+					<Icon name="videocam-outline" size={24} color={colors.primary} />
+				</Text>
 			</TouchableOpacity>
 		</View>
 	);
@@ -66,9 +73,9 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.25,
 		shadowRadius: 3.84,
 		elevation: 5,
-		zIndex: 9999,
 		flexDirection: 'row',
 		minWidth: 120,
+		zIndex: 1,
 	},
 	option: {
 		padding: 8,

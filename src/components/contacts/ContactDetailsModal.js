@@ -42,6 +42,13 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 	useEffect(() => {
 		if (visible) {
 			setActiveTab('notes');
+			setShowCallOptions(false); // Reset call options when modal opens
+		}
+	}, [visible]);
+
+	useEffect(() => {
+		if (!visible) {
+			setShowCallOptions(false);
 		}
 	}, [visible]);
 
@@ -153,7 +160,14 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 				style={{ flex: 1 }}
 				keyboardVerticalOffset={-70}
 			>
-				<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={onClose}>
+				<TouchableOpacity
+					style={commonStyles.modalContainer}
+					activeOpacity={1}
+					onPress={(e) => {
+						setShowCallOptions(false);
+						onClose();
+					}}
+				>
 					<TouchableOpacity
 						style={[commonStyles.modalContent]}
 						activeOpacity={1}
@@ -164,9 +178,16 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								style={[styles.callIconButton]}
 								onPress={() => setShowCallOptions(!showCallOptions)}
 							>
-								<Icon name="call-outline" size={20} color={colors.background.primary} />
-								<CallOptions show={showCallOptions} contact={contact} />
+								<Text>
+									<Icon name="call-outline" size={20} color={colors.background.primary} />
+								</Text>
+								<CallOptions
+									show={showCallOptions}
+									contact={contact}
+									onClose={() => setShowCallOptions(false)}
+								/>
 							</TouchableOpacity>
+
 							<View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 50 }}>
 								<Text style={commonStyles.modalTitle} numberOfLines={1} adjustsFontSizeToFit>
 									{contact.first_name} {contact.last_name}
