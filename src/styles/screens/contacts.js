@@ -659,8 +659,8 @@ const useStyles = () => {
 			borderBottomColor: colors.border,
 			paddingVertical: spacing.sm,
 			marginBottom: spacing.md,
-			textAlign: 'center',  // Add this line
-			width: '100%',       // Add this line
+			textAlign: 'center', // Add this line
+			width: '100%', // Add this line
 		},
 		editActions: {
 			flexDirection: 'row',
@@ -687,8 +687,8 @@ const useStyles = () => {
 		headerButtons: {
 			flexDirection: 'row',
 			justifyContent: 'center', // Changed from flex: 10
-			alignItems: 'center',     // Added
-			width: '100%',           // Added
+			alignItems: 'center', // Added
+			width: '100%', // Added
 			gap: spacing.sm,
 		},
 		headerButton: {
@@ -905,6 +905,23 @@ const useStyles = () => {
 			},
 			shadowOpacity: 0.25,
 			shadowRadius: 3.84,
+		},
+		headerContent: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			alignItems: 'center',
+			width: '100%',
+			paddingHorizontal: spacing.md,
+		},
+		searchInput: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+			padding: spacing.sm,
+			marginTop: spacing.sm,
+			marginHorizontal: spacing.md,
+			fontSize: 16,
+			color: colors.text.primary,
+			height: 40,
 		},
 	});
 };

@@ -183,9 +183,18 @@ export default function ContactsScreen({ navigation }) {
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 
+	// Editing state
 	const [editingContact, setEditingContact] = useState(null);
 	const [isAnyEditing, setIsAnyEditing] = useState(false);
 	const [deleteButtonPosition, setDeleteButtonPosition] = useState(null);
+
+	// Search state
+	const [showSearch, setShowSearch] = useState(false);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [filteredContacts, setFilteredContacts] = useState({
+		scheduledContacts: [],
+		unscheduledContacts: [],
+	});
 
 	const logoSource =
 		theme === 'dark'
@@ -423,12 +432,58 @@ export default function ContactsScreen({ navigation }) {
 		);
 	}
 
+	const handleSearch = (text) => {
+		setSearchQuery(text);
+		if (text.trim() === '') {
+			setFilteredContacts(contacts);
+			return;
+		}
+
+		const query = text.toLowerCase();
+		const filtered = {
+			scheduledContacts: contacts.scheduledContacts.filter(
+				(contact) =>
+					`${contact.first_name} ${contact.last_name}`.toLowerCase().includes(query) ||
+					contact.email?.toLowerCase().includes(query) ||
+					contact.phone?.includes(query)
+			),
+			unscheduledContacts: contacts.unscheduledContacts.filter(
+				(contact) =>
+					`${contact.first_name} ${contact.last_name}`.toLowerCase().includes(query) ||
+					contact.email?.toLowerCase().includes(query) ||
+					contact.phone?.includes(query)
+			),
+		};
+		setFilteredContacts(filtered);
+	};
+
 	return (
 		<SafeAreaView style={commonStyles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
-				<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+				<View style={styles.headerContent}>
+					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+					<TouchableOpacity onPress={() => setShowSearch(!showSearch)}>
+						<Icon name="search-outline" size={24} color={colors.text.primary} />
+					</TouchableOpacity>
+				</View>
+				{showSearch && (
+					<TextInput
+						style={styles.searchInput}
+						value={searchQuery}
+						onChangeText={handleSearch}
+						placeholder="Search contacts..."
+						placeholderTextColor={colors.text.secondary}
+						autoFocus
+						autoCorrect={false}
+						spellCheck={false}
+						keyboardType="default"
+						autoCapitalize="none"
+						returnKeyType="search"
+						enablesReturnKeyAutomatically={true}
+					/>
+				)}
 			</View>
 
 			<View style={styles.buttonContainer}>
@@ -458,11 +513,11 @@ export default function ContactsScreen({ navigation }) {
 					<Text style={commonStyles.message}>Loading contacts...</Text>
 				) : (
 					<>
-						{contacts.scheduledContacts.length > 0 && (
+						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length > 0 && (
 							<View style={styles.section}>
 								<Text style={styles.sectionTitle}>Scheduled Contacts</Text>
 								<View style={styles.grid}>
-									{contacts.scheduledContacts.map((contact) => (
+									{(searchQuery ? filteredContacts : contacts).scheduledContacts.map((contact) => (
 										<ContactCard
 											key={contact.id}
 											contact={contact}
@@ -478,11 +533,11 @@ export default function ContactsScreen({ navigation }) {
 							</View>
 						)}
 
-						{contacts.unscheduledContacts.length > 0 && (
+						{(searchQuery ? filteredContacts : contacts).unscheduledContacts.length > 0 && (
 							<View style={styles.section}>
 								<Text style={styles.sectionTitle}>Other Contacts</Text>
 								<View style={styles.grid}>
-									{contacts.unscheduledContacts.map((contact) => (
+									{(searchQuery ? filteredContacts : contacts).unscheduledContacts.map((contact) => (
 										<ContactCard
 											key={contact.id}
 											contact={contact}
@@ -498,12 +553,16 @@ export default function ContactsScreen({ navigation }) {
 							</View>
 						)}
 
-						{contacts.scheduledContacts.length === 0 && contacts.unscheduledContacts.length === 0 && (
-							<Text style={commonStyles.message}>No contacts yet</Text>
-						)}
+						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length === 0 &&
+							(searchQuery ? filteredContacts : contacts).unscheduledContacts.length === 0 && (
+								<Text style={commonStyles.message}>
+									{searchQuery ? 'No matching contacts found' : 'No contacts yet'}
+								</Text>
+							)}
 					</>
 				)}
 			</ScrollView>
+
 			{isAnyEditing && (
 				<TouchableOpacity
 					style={{
