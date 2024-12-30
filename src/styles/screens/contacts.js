@@ -41,10 +41,12 @@ const useStyles = () => {
 		headerActions: {
 			flexDirection: 'row',
 			alignItems: 'center',
+			justifyContent: 'flex-end', // Icons to the right
+			gap: spacing.lg, // Spacing between icons
 		},		
 		logo: {
-			width: '50%',
-			height: 30,
+			width: '30%',
+			height: 15,
 		},
 		buttonContainer: {
 			flexDirection: 'row',
@@ -690,16 +692,14 @@ const useStyles = () => {
 		},
 		headerButtons: {
 			flexDirection: 'row',
-			justifyContent: 'center', // Changed from flex: 10
-			alignItems: 'center', // Added
-			width: '100%', // Added
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
 			gap: spacing.sm,
 		},
 		headerButton: {
-			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.sm,
-			borderRadius: layout.borderRadius.sm,
-			minWidth: 70,
+			paddingHorizontal: spacing.xs, // Smaller padding between icons
+			marginRight: 0, // Remove any extra margin
 		},
 		saveButtonText: {
 			color: colors.background.primary,
@@ -912,10 +912,10 @@ const useStyles = () => {
 		},
 		headerContent: {
 			flexDirection: 'row',
-			justifyContent: 'space-between',
 			alignItems: 'center',
+			justifyContent: 'space-between',
 			width: '100%',
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.xs,
 		},
 		searchInput: {
 			backgroundColor: colors.background.secondary,

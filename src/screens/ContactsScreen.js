@@ -465,7 +465,13 @@ export default function ContactsScreen({ navigation }) {
 
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
-					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+					{/* Smaller logo */}
+					<Image
+						source={logoSource}
+						style={styles.logo}
+						resizeMode="contain"
+					/>
+					{/* Icons closer together */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={24} color={colors.text.primary} />
@@ -491,25 +497,6 @@ export default function ContactsScreen({ navigation }) {
 						enablesReturnKeyAutomatically={true}
 					/>
 				)}
-			</View>
-
-			<View style={styles.buttonContainer}>
-				<TouchableOpacity
-					style={[commonStyles.primaryButton, styles.importButton]}
-					onPress={handleImportContacts}
-				>
-					<Icon name="people-outline" size={20} color={colors.background.primary} />
-					<Text style={commonStyles.primaryButtonText}>Add Contact</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={styles.newButton}
-					onPress={() => {
-						setIsFormVisible(true);
-					}}
-				>
-					<Icon name="add-outline" size={20} color={colors.primary} />
-					<Text style={styles.newButtonText}>New</Text>
-				</TouchableOpacity>
 			</View>
 
 			<ScrollView
