@@ -71,7 +71,8 @@
 					"photosPermission": "Allow OnMyList to access your photos for profile pictures."
 				}
 			],
-			"expo-notifications"
+			"expo-notifications",
+			"./src/utils/expo/enableUserScriptSandboxing.js"
 		],
 		"extra": {
 			"eas": {
