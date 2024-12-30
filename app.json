@@ -2,7 +2,10 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.34",
+		"version": "1.0.35",
+		"runtimeVersion": {
+			"policy": "sdkVersion"
+		},
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"scheme": "onmylist",
