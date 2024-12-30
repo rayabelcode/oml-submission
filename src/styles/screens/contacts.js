@@ -38,6 +38,10 @@ const useStyles = () => {
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
 		},
+		headerActions: {
+			flexDirection: 'row',
+			alignItems: 'center',
+		},		
 		logo: {
 			width: '50%',
 			height: 30,

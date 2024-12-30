@@ -36,6 +36,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
+import AddContactModal from '../components/contacts/AddContactModal';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -211,6 +212,7 @@ export default function ContactsScreen({ navigation }) {
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+	const [showAddModal, setShowAddModal] = useState(false);
 
 	async function loadContacts() {
 		try {
@@ -464,9 +466,14 @@ export default function ContactsScreen({ navigation }) {
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
 					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-					<TouchableOpacity onPress={() => setShowSearch(!showSearch)}>
-						<Icon name="search-outline" size={24} color={colors.text.primary} />
-					</TouchableOpacity>
+					<View style={styles.headerActions}>
+						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
+							<Icon name="add-outline" size={24} color={colors.text.primary} />
+						</TouchableOpacity>
+						<TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
+							<Icon name="search-outline" size={24} color={colors.text.primary} />
+						</TouchableOpacity>
+					</View>
 				</View>
 				{showSearch && (
 					<TextInput
@@ -675,6 +682,19 @@ export default function ContactsScreen({ navigation }) {
 				}}
 				setIsDetailsVisible={setIsDetailsVisible}
 				loadContacts={loadContacts}
+			/>
+
+			<AddContactModal
+				show={showAddModal}
+				onClose={() => setShowAddModal(false)}
+				onImport={() => {
+					setShowAddModal(false);
+					handleImportContacts();
+				}}
+				onNew={() => {
+					setShowAddModal(false);
+					setIsFormVisible(true);
+				}}
 			/>
 
 			<ContactSearchModal
