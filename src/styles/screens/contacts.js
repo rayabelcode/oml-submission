@@ -613,13 +613,19 @@ const useStyles = () => {
 		},
 		// Edit tab
 		contactHeader: {
-			flexDirection: 'row',
-			padding: spacing.md,
+			width: '100%',
 			alignItems: 'center',
-			justifyContent: 'space-between',
+			flexDirection: 'column',
+			padding: spacing.md,
+		},
+		photoWrapper: {
+			width: '100%',
+			alignItems: 'center',
+			marginBottom: spacing.xs,
 		},
 		photoContainer: {
 			width: 100,
+			alignItems: 'center',
 		},
 		contactInfo: {
 			flex: 1,
@@ -631,10 +637,17 @@ const useStyles = () => {
 			color: colors.text.primary,
 			marginBottom: spacing.md,
 		},
+		// Contact Info on Profile tab
 		contactDetail: {
 			fontSize: 16,
-			color: colors.text.secondary,
-			marginBottom: spacing.sm,
+			color: colors.text.primary,
+			marginVertical: spacing.sm,
+			textAlign: 'center',
+		},
+		centeredDetails: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.md,
 		},
 		editFields: {
 			width: '100%',
@@ -646,6 +659,8 @@ const useStyles = () => {
 			borderBottomColor: colors.border,
 			paddingVertical: spacing.sm,
 			marginBottom: spacing.md,
+			textAlign: 'center',  // Add this line
+			width: '100%',       // Add this line
 		},
 		editActions: {
 			flexDirection: 'row',
@@ -671,9 +686,10 @@ const useStyles = () => {
 		},
 		headerButtons: {
 			flexDirection: 'row',
+			justifyContent: 'center', // Changed from flex: 10
+			alignItems: 'center',     // Added
+			width: '100%',           // Added
 			gap: spacing.sm,
-			marginLeft: spacing.sm,
-			flex: 10,
 		},
 		headerButton: {
 			paddingHorizontal: spacing.md,

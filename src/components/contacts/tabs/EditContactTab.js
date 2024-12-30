@@ -123,50 +123,52 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 				>
 					<TouchableOpacity activeOpacity={1}>
 						<View style={styles.contactHeader}>
-							<View style={styles.photoContainer}>
-								{formData.photo_url ? (
-									<View style={styles.photoPreview}>
-										<ExpoImage
-											source={{ uri: formData.photo_url }}
-											style={styles.photoImage}
-											cachePolicy="memory-disk"
-										/>
-										{isEditing && (
-											<TouchableOpacity
-												style={styles.removePhotoButton}
-												onPress={() => {
-													Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
-														{ text: 'Cancel', style: 'cancel' },
-														{
-															text: 'Remove',
-															style: 'destructive',
-															onPress: async () => {
-																try {
-																	await updateContact(contact.id, {
-																		...contact,
-																		photo_url: null,
-																	});
-																	setFormData((prev) => ({ ...prev, photo_url: null }));
-																	setSelectedContact({ ...contact, photo_url: null });
-																	loadContacts();
-																} catch (error) {
-																	Alert.alert('Error', 'Failed to remove photo');
-																}
+							<View style={styles.photoWrapper}>
+								<View style={styles.photoContainer}>
+									{formData.photo_url ? (
+										<View style={styles.photoPreview}>
+											<ExpoImage
+												source={{ uri: formData.photo_url }}
+												style={styles.photoImage}
+												cachePolicy="memory-disk"
+											/>
+											{isEditing && (
+												<TouchableOpacity
+													style={styles.removePhotoButton}
+													onPress={() => {
+														Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+															{ text: 'Cancel', style: 'cancel' },
+															{
+																text: 'Remove',
+																style: 'destructive',
+																onPress: async () => {
+																	try {
+																		await updateContact(contact.id, {
+																			...contact,
+																			photo_url: null,
+																		});
+																		setFormData((prev) => ({ ...prev, photo_url: null }));
+																		setSelectedContact({ ...contact, photo_url: null });
+																		loadContacts();
+																	} catch (error) {
+																		Alert.alert('Error', 'Failed to remove photo');
+																	}
+																},
 															},
-														},
-													]);
-												}}
-											>
-												<Icon name="close-circle" size={24} color={colors.danger} />
-											</TouchableOpacity>
-										)}
-									</View>
-								) : (
-									<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
-										<Icon name="camera-outline" size={24} color={colors.primary} />
-										<Text style={styles.uploadButtonText}>Add Photo</Text>
-									</TouchableOpacity>
-								)}
+														]);
+													}}
+												>
+													<Icon name="close-circle" size={24} color={colors.danger} />
+												</TouchableOpacity>
+											)}
+										</View>
+									) : (
+										<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
+											<Icon name="camera-outline" size={24} color={colors.primary} />
+											<Text style={styles.uploadButtonText}>Add Photo</Text>
+										</TouchableOpacity>
+									)}
+								</View>
 							</View>
 
 							<View style={styles.headerButtons}>
@@ -275,21 +277,21 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 								</View>
 							) : (
 								<View style={styles.viewFields}>
-									<Text style={styles.fullName}>{`${formData.first_name} ${formData.last_name}`}</Text>
+									<View style={styles.centeredDetails}>
+										{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
 
-									{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
+										{formData.phone && (
+											<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
+										)}
 
-									{formData.phone && (
-										<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
-									)}
-
-									{formData.scheduling?.relationship_type && (
-										<Text style={styles.contactDetail}>
-											Relationship:{' '}
-											{formData.scheduling.relationship_type.charAt(0).toUpperCase() +
-												formData.scheduling.relationship_type.slice(1)}
-										</Text>
-									)}
+										{formData.scheduling?.relationship_type && (
+											<Text style={styles.contactDetail}>
+												Relationship:{' '}
+												{formData.scheduling.relationship_type.charAt(0).toUpperCase() +
+													formData.scheduling.relationship_type.slice(1)}
+											</Text>
+										)}
+									</View>
 								</View>
 							)}
 						</View>
