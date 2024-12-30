@@ -45,6 +45,7 @@ const createStyles = (colors) =>
 			marginLeft: spacing.sm,
 			flexShrink: 1,
 			maxWidth: '80%',
+			textAlign: 'center',
 		},
 		profileEmail: {
 			color: colors.text.secondary,
@@ -126,6 +127,7 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.md,
 			fontSize: 16,
 			color: colors.text.primary,
+			textAlign: 'center',
 		},
 		loginButton: {
 			backgroundColor: colors.primary,
@@ -368,6 +370,7 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			color: colors.text.secondary,
 			marginBottom: spacing.xs,
+			textAlign: 'center',
 		},
 		input: {
 			backgroundColor: colors.background.secondary,
@@ -377,6 +380,7 @@ const createStyles = (colors) =>
 		inputText: {
 			fontSize: 16,
 			color: colors.text.primary,
+			textAlign: 'center',
 		},
 		defaultAvatarContainer: {
 			width: 120,
@@ -422,6 +426,7 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			color: colors.text.primary,
 			paddingRight: spacing.md,
+			textAlign: 'center',
 		},
 		// Headers for each page under settings
 		headerSettingsPages: {
