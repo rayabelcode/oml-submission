@@ -36,6 +36,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
+import AddContactModal from '../components/contacts/AddContactModal';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -183,9 +184,18 @@ export default function ContactsScreen({ navigation }) {
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 
+	// Editing state
 	const [editingContact, setEditingContact] = useState(null);
 	const [isAnyEditing, setIsAnyEditing] = useState(false);
 	const [deleteButtonPosition, setDeleteButtonPosition] = useState(null);
+
+	// Search state
+	const [showSearch, setShowSearch] = useState(false);
+	const [searchQuery, setSearchQuery] = useState('');
+	const [filteredContacts, setFilteredContacts] = useState({
+		scheduledContacts: [],
+		unscheduledContacts: [],
+	});
 
 	const logoSource =
 		theme === 'dark'
@@ -202,6 +212,7 @@ export default function ContactsScreen({ navigation }) {
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
+	const [showAddModal, setShowAddModal] = useState(false);
 
 	async function loadContacts() {
 		try {
@@ -423,31 +434,69 @@ export default function ContactsScreen({ navigation }) {
 		);
 	}
 
+	const handleSearch = (text) => {
+		setSearchQuery(text);
+		if (text.trim() === '') {
+			setFilteredContacts(contacts);
+			return;
+		}
+
+		const query = text.toLowerCase();
+		const filtered = {
+			scheduledContacts: contacts.scheduledContacts.filter(
+				(contact) =>
+					`${contact.first_name} ${contact.last_name}`.toLowerCase().includes(query) ||
+					contact.email?.toLowerCase().includes(query) ||
+					contact.phone?.includes(query)
+			),
+			unscheduledContacts: contacts.unscheduledContacts.filter(
+				(contact) =>
+					`${contact.first_name} ${contact.last_name}`.toLowerCase().includes(query) ||
+					contact.email?.toLowerCase().includes(query) ||
+					contact.phone?.includes(query)
+			),
+		};
+		setFilteredContacts(filtered);
+	};
+
 	return (
 		<SafeAreaView style={commonStyles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
-				<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-			</View>
-
-			<View style={styles.buttonContainer}>
-				<TouchableOpacity
-					style={[commonStyles.primaryButton, styles.importButton]}
-					onPress={handleImportContacts}
-				>
-					<Icon name="people-outline" size={20} color={colors.background.primary} />
-					<Text style={commonStyles.primaryButtonText}>Add Contact</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={styles.newButton}
-					onPress={() => {
-						setIsFormVisible(true);
-					}}
-				>
-					<Icon name="add-outline" size={20} color={colors.primary} />
-					<Text style={styles.newButtonText}>New</Text>
-				</TouchableOpacity>
+				<View style={styles.headerContent}>
+					{/* Smaller logo */}
+					<Image
+						source={logoSource}
+						style={styles.logo}
+						resizeMode="contain"
+					/>
+					{/* Icons closer together */}
+					<View style={styles.headerActions}>
+						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
+							<Icon name="add-outline" size={30} color={colors.text.primary} />
+						</TouchableOpacity>
+						<TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
+							<Icon name="search-outline" size={30} color={colors.text.primary} />
+						</TouchableOpacity>
+					</View>
+				</View>
+				{showSearch && (
+					<TextInput
+						style={styles.searchInput}
+						value={searchQuery}
+						onChangeText={handleSearch}
+						placeholder="Search contacts..."
+						placeholderTextColor={colors.text.secondary}
+						autoFocus
+						autoCorrect={false}
+						spellCheck={false}
+						keyboardType="default"
+						autoCapitalize="none"
+						returnKeyType="search"
+						enablesReturnKeyAutomatically={true}
+					/>
+				)}
 			</View>
 
 			<ScrollView
@@ -458,11 +507,11 @@ export default function ContactsScreen({ navigation }) {
 					<Text style={commonStyles.message}>Loading contacts...</Text>
 				) : (
 					<>
-						{contacts.scheduledContacts.length > 0 && (
+						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length > 0 && (
 							<View style={styles.section}>
 								<Text style={styles.sectionTitle}>Scheduled Contacts</Text>
 								<View style={styles.grid}>
-									{contacts.scheduledContacts.map((contact) => (
+									{(searchQuery ? filteredContacts : contacts).scheduledContacts.map((contact) => (
 										<ContactCard
 											key={contact.id}
 											contact={contact}
@@ -478,11 +527,11 @@ export default function ContactsScreen({ navigation }) {
 							</View>
 						)}
 
-						{contacts.unscheduledContacts.length > 0 && (
+						{(searchQuery ? filteredContacts : contacts).unscheduledContacts.length > 0 && (
 							<View style={styles.section}>
 								<Text style={styles.sectionTitle}>Other Contacts</Text>
 								<View style={styles.grid}>
-									{contacts.unscheduledContacts.map((contact) => (
+									{(searchQuery ? filteredContacts : contacts).unscheduledContacts.map((contact) => (
 										<ContactCard
 											key={contact.id}
 											contact={contact}
@@ -498,12 +547,16 @@ export default function ContactsScreen({ navigation }) {
 							</View>
 						)}
 
-						{contacts.scheduledContacts.length === 0 && contacts.unscheduledContacts.length === 0 && (
-							<Text style={commonStyles.message}>No contacts yet</Text>
-						)}
+						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length === 0 &&
+							(searchQuery ? filteredContacts : contacts).unscheduledContacts.length === 0 && (
+								<Text style={commonStyles.message}>
+									{searchQuery ? 'No matching contacts found' : 'No contacts yet'}
+								</Text>
+							)}
 					</>
 				)}
 			</ScrollView>
+
 			{isAnyEditing && (
 				<TouchableOpacity
 					style={{
@@ -616,6 +669,19 @@ export default function ContactsScreen({ navigation }) {
 				}}
 				setIsDetailsVisible={setIsDetailsVisible}
 				loadContacts={loadContacts}
+			/>
+
+			<AddContactModal
+				show={showAddModal}
+				onClose={() => setShowAddModal(false)}
+				onImport={() => {
+					setShowAddModal(false);
+					handleImportContacts();
+				}}
+				onNew={() => {
+					setShowAddModal(false);
+					setIsFormVisible(true);
+				}}
 			/>
 
 			<ContactSearchModal

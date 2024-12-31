@@ -1,16 +1,20 @@
 import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import { Alert, LogBox, Platform } from 'react-native';
+import { Alert, LogBox, Platform, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
+
+SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
 	dsn: Constants.expoConfig?.extra?.SENTRY_DSN || Constants.manifest?.extra?.SENTRY_DSN,
@@ -44,36 +48,60 @@ async function registerForPushNotificationsAsync() {
 }
 
 function App() {
+	const [appIsReady, setAppIsReady] = useState(false);
+
 	useEffect(() => {
-		async function setupPushNotifications() {
-			await registerForPushNotificationsAsync();
+		async function prepare() {
+			try {
+				await Font.loadAsync({
+					'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
+				});
 
-			Notifications.setNotificationHandler({
-				handleNotification: async () => ({
-					shouldShowAlert: true,
-					shouldPlaySound: true,
-					shouldSetBadge: false,
-				}),
-			});
+				await registerForPushNotificationsAsync();
 
-			Notifications.addNotificationReceivedListener((notification) => {
-				console.log('Foreground notification received:', notification);
-			});
+				Notifications.setNotificationHandler({
+					handleNotification: async () => ({
+						shouldShowAlert: true,
+						shouldPlaySound: true,
+						shouldSetBadge: false,
+					}),
+				});
+
+				Notifications.addNotificationReceivedListener((notification) => {
+					console.log('Foreground notification received:', notification);
+				});
+			} catch (e) {
+				console.warn(e);
+			} finally {
+				setAppIsReady(true);
+			}
 		}
 
-		setupPushNotifications();
+		prepare();
 	}, []);
 
+	const onLayoutRootView = useCallback(async () => {
+		if (appIsReady) {
+			await SplashScreen.hideAsync();
+		}
+	}, [appIsReady]);
+
+	if (!appIsReady) {
+		return null;
+	}
+
 	return (
-		<ThemeProvider>
-			<AuthProvider>
-				<NavigationContainer>
-					<SafeAreaWrapper>
-						<TabNavigator />
-					</SafeAreaWrapper>
-				</NavigationContainer>
-			</AuthProvider>
-		</ThemeProvider>
+		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+			<ThemeProvider>
+				<AuthProvider>
+					<NavigationContainer>
+						<SafeAreaWrapper>
+							<TabNavigator />
+						</SafeAreaWrapper>
+					</NavigationContainer>
+				</AuthProvider>
+			</ThemeProvider>
+		</View>
 	);
 }
 

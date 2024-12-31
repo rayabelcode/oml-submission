@@ -38,9 +38,15 @@ const useStyles = () => {
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
 		},
+		headerActions: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'flex-end', // Icons to the right
+			gap: spacing.lg, // Spacing between icons
+		},		
 		logo: {
-			width: '50%',
-			height: 30,
+			width: '30%',
+			height: 15,
 		},
 		buttonContainer: {
 			flexDirection: 'row',
@@ -606,20 +612,27 @@ const useStyles = () => {
 			fontSize: 16,
 		},
 		sectionTitle: {
-			fontSize: 16,
-			fontWeight: '500',
-			marginBottom: spacing.sm,
+			fontSize: 17,
+			fontWeight: '700',
+			marginBottom: spacing.md,
 			color: colors.text.primary,
+			textAlign: 'center',
 		},
 		// Edit tab
 		contactHeader: {
-			flexDirection: 'row',
-			padding: spacing.md,
+			width: '100%',
 			alignItems: 'center',
-			justifyContent: 'space-between',
+			flexDirection: 'column',
+			padding: spacing.md,
+		},
+		photoWrapper: {
+			width: '100%',
+			alignItems: 'center',
+			marginBottom: spacing.xs,
 		},
 		photoContainer: {
 			width: 100,
+			alignItems: 'center',
 		},
 		contactInfo: {
 			flex: 1,
@@ -631,10 +644,17 @@ const useStyles = () => {
 			color: colors.text.primary,
 			marginBottom: spacing.md,
 		},
+		// Contact Info on Profile tab
 		contactDetail: {
 			fontSize: 16,
-			color: colors.text.secondary,
-			marginBottom: spacing.sm,
+			color: colors.text.primary,
+			marginVertical: spacing.sm,
+			textAlign: 'center',
+		},
+		centeredDetails: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.md,
 		},
 		editFields: {
 			width: '100%',
@@ -646,6 +666,8 @@ const useStyles = () => {
 			borderBottomColor: colors.border,
 			paddingVertical: spacing.sm,
 			marginBottom: spacing.md,
+			textAlign: 'center', // Add this line
+			width: '100%', // Add this line
 		},
 		editActions: {
 			flexDirection: 'row',
@@ -671,15 +693,15 @@ const useStyles = () => {
 		},
 		headerButtons: {
 			flexDirection: 'row',
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
 			gap: spacing.sm,
-			marginLeft: spacing.sm,
-			flex: 10,
 		},
 		headerButton: {
-			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.sm,
-			borderRadius: layout.borderRadius.sm,
-			minWidth: 70,
+			paddingHorizontal: spacing.xs, // Padding between icons
+			paddingVertical: spacing.xs, // Vertical padding for tap area
+			marginRight: 0,
 		},
 		saveButtonText: {
 			color: colors.background.primary,
@@ -889,6 +911,23 @@ const useStyles = () => {
 			},
 			shadowOpacity: 0.25,
 			shadowRadius: 3.84,
+		},
+		headerContent: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			width: '100%',
+			paddingHorizontal: spacing.xs,
+		},
+		searchInput: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+			padding: spacing.sm,
+			marginTop: spacing.sm,
+			marginHorizontal: spacing.md,
+			fontSize: 16,
+			color: colors.text.primary,
+			height: 40,
 		},
 	});
 };
