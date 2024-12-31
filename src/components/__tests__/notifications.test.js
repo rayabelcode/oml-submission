@@ -18,27 +18,6 @@ afterAll(() => {
 	console.error.mockRestore();
 });
 
-// Mock expo-notifications
-jest.mock('expo-notifications', () => ({
-	setNotificationHandler: jest.fn(),
-	scheduleNotificationAsync: jest.fn().mockResolvedValue('mock-notification-id'),
-	cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(true),
-	getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-	requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-	MAX_NOTIFICATION_CONTENT_LENGTH: 100,
-	AndroidImportance: {
-		MAX: 5,
-	},
-}));
-
-// Mock AsyncStorage
-jest.mock('@react-native-async-storage/async-storage', () => ({
-	getItem: jest.fn(),
-	setItem: jest.fn(),
-	removeItem: jest.fn(),
-	clear: jest.fn(),
-}));
-
 // Mock firestore utilities
 jest.mock('../../utils/firestore', () => ({
 	addReminder: jest.fn().mockResolvedValue('mock-firestore-id'),

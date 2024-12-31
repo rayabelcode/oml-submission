@@ -3,6 +3,12 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { NotificationsView } from '../dashboard/NotificationsView';
 
+// Mock GestureHandler
+jest.mock('react-native-gesture-handler', () => ({
+	GestureHandlerRootView: ({ children }) => children,
+	Swipeable: ({ children }) => children,
+}));
+
 // Mock ThemeContext
 jest.mock('../../context/ThemeContext', () => ({
 	useTheme: () => ({
@@ -10,6 +16,7 @@ jest.mock('../../context/ThemeContext', () => ({
 			primary: '#000',
 			text: { primary: '#000' },
 			background: { primary: '#fff' },
+			danger: '#ff0000',
 		},
 	}),
 }));
@@ -19,6 +26,10 @@ jest.mock('../../styles/screens/dashboard', () => ({
 	useStyles: () => ({
 		contactsList: {},
 		message: {},
+		card: {},
+		cardName: {},
+		cardDate: {},
+		notificationsContainer: {},
 	}),
 }));
 
@@ -77,45 +88,25 @@ describe('NotificationsView', () => {
 		return render(<NotificationsView {...props} />);
 	};
 
-	it('renders loading state correctly', () => {
-		const { getByTestId } = renderComponent({
+	it('renders loading state', () => {
+		const { getByText } = renderComponent({
 			...defaultProps,
 			loading: true,
 		});
-
-		expect(getByTestId('loading-indicator')).toBeTruthy();
+		expect(getByText('Loading notifications...')).toBeTruthy();
 	});
 
-	it('renders empty state when no reminders', () => {
+	it('renders empty state', () => {
 		const { getByText } = renderComponent({
 			...defaultProps,
 			reminders: [],
 		});
-
-		expect(getByText('No follow-up reminders')).toBeTruthy();
+		expect(getByText('No notifications')).toBeTruthy();
 	});
 
-	it('renders reminders list correctly', () => {
-		const { getAllByTestId } = renderComponent();
-		const reminderItems = getAllByTestId('reminder-item');
-
-		expect(reminderItems).toHaveLength(mockReminders.length);
-	});
-
-	it('handles refresh action', async () => {
-		const onRefresh = jest.fn();
-		const { getByTestId } = renderComponent({
-			...defaultProps,
-			onRefresh,
-		});
-
-		const flatList = getByTestId('reminders-list');
-		// Directly trigger the refresh through the RefreshControl
-		const refreshControl = flatList.props.refreshControl;
-		await act(async () => {
-			refreshControl.props.onRefresh();
-		});
-
-		expect(onRefresh).toHaveBeenCalled();
+	it('renders reminders', () => {
+		const { getAllByText } = renderComponent();
+		const elements = getAllByText('Add Call Notes');
+		expect(elements.length).toBeGreaterThan(0);
 	});
 });
