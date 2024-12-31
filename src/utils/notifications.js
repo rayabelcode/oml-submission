@@ -145,7 +145,8 @@ class NotificationService {
 
 	async scheduleFollowUpReminder(contact, callEndTime, userId) {
 		try {
-			const followUpTime = new Date(callEndTime.getTime() + 3 * 60 * 1000);
+			// Schedule follow-up reminder 1 minute after call ends
+			const followUpTime = new Date(callEndTime.getTime() + 1 * 60 * 1000);
 
 			const result = await this.scheduleContactReminder(
 				{
