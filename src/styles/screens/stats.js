@@ -1,4 +1,3 @@
-// src/styles/screens/stats.js
 import { StyleSheet } from 'react-native';
 import { spacing, layout } from '../../context/ThemeContext';
 
@@ -75,6 +74,49 @@ export const useStyles = (colors) => {
 		lastContact: {
 			fontSize: 14,
 			color: colors.text.secondary,
+		},
+		message: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			textAlign: 'center',
+			paddingVertical: spacing.md,
+		},
+		frequencyRow: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			paddingVertical: spacing.sm,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		frequencyCount: {
+			fontSize: 14,
+			color: colors.primary,
+			fontWeight: '500',
+		},
+		insightRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			paddingVertical: spacing.md,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		insightText: {
+			fontSize: 16,
+			color: colors.text.primary,
+			marginLeft: spacing.md,
+			flex: 1,
+		},
+		retryButton: {
+			backgroundColor: colors.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.sm,
+			marginTop: spacing.md,
+		},
+		retryText: {
+			color: colors.background.primary,
+			fontSize: 16,
+			fontWeight: '500',
+			textAlign: 'center',
 		},
 	});
 };
