@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { Alert, LogBox, Platform, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { notificationService } from './src/utils/notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
@@ -57,15 +58,8 @@ function App() {
 					'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 				});
 
-				await registerForPushNotificationsAsync();
-
-				Notifications.setNotificationHandler({
-					handleNotification: async () => ({
-						shouldShowAlert: true,
-						shouldPlaySound: true,
-						shouldSetBadge: false,
-					}),
-				});
+				await notificationService.initialize();
+				await notificationService.requestPermissions();
 
 				Notifications.addNotificationReceivedListener((notification) => {
 					console.log('Foreground notification received:', notification);
