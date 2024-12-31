@@ -337,7 +337,6 @@ export default function ContactsScreen({ navigation }) {
 		}
 	};
 
-	// Add this new function after handleContactSelection
 	const processPendingContact = async (relationshipType) => {
 		if (!pendingContact) return;
 

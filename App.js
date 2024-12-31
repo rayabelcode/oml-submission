@@ -59,7 +59,6 @@ function App() {
 				});
 
 				await notificationService.initialize();
-				await notificationService.requestPermissions();
 
 				Notifications.addNotificationReceivedListener((notification) => {
 					console.log('Foreground notification received:', notification);

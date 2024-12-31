@@ -31,6 +31,9 @@ class NotificationService {
 				}),
 			});
 
+			// Request permissions during initialization
+			await this.requestPermissions();
+
 			// Restore badge count
 			const storedBadgeCount = await AsyncStorage.getItem('badgeCount');
 			this.badgeCount = storedBadgeCount ? parseInt(storedBadgeCount, 10) : 0;
@@ -45,6 +48,36 @@ class NotificationService {
 			return true;
 		} catch (error) {
 			console.error('Failed to initialize notification service:', error);
+			return false;
+		}
+	}
+
+	async requestPermissions() {
+		try {
+			const { status: existingStatus } = await Notifications.getPermissionsAsync();
+			let finalStatus = existingStatus;
+
+			if (existingStatus !== 'granted') {
+				const { status } = await Notifications.requestPermissionsAsync();
+				finalStatus = status;
+			}
+
+			if (finalStatus !== 'granted') {
+				throw new Error('Permission not granted for notifications');
+			}
+
+			if (Platform.OS === 'ios') {
+				await Notifications.setNotificationChannelAsync('default', {
+					name: 'default',
+					importance: Notifications.AndroidImportance.MAX,
+					vibrationPattern: [0, 250, 250, 250],
+					lightColor: '#FF231F7C',
+				});
+			}
+
+			return true;
+		} catch (error) {
+			console.error('Error requesting notification permissions:', error);
 			return false;
 		}
 	}
@@ -64,13 +97,16 @@ class NotificationService {
 		try {
 			// Create Firestore reminder first
 			const reminderData = {
-				contactId: contact.id,
-				scheduledTime: date,
+				contact_id: contact.id,
+				date: date,
+				created_at: new Date(),
+				updated_at: new Date(),
+				snoozed: false,
+				follow_up: false,
 				type: 'regular',
 				status: 'pending',
 				notes: contact.notes || '',
-				createdAt: new Date(),
-				userId: userId,
+				user_id: userId,
 			};
 
 			const firestoreId = await addReminder(reminderData);

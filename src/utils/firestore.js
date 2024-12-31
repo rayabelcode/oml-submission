@@ -293,18 +293,13 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 
 		await updateDoc(contactRef, updateData);
 
-		// Create reminder document if nextContactDate exists
 		if (nextContactDate) {
-			const remindersRef = collection(db, 'reminders');
-			await addDoc(remindersRef, {
-				contact_id: contactId,
-				date: nextContactDate,
-				created_at: serverTimestamp(),
-				updated_at: serverTimestamp(),
-				snoozed: false,
-				follow_up: false,
-				ai_suggestions: [], // Will be populated by AI module
-				user_id: auth.currentUser.uid,
+			await addReminder({
+				contactId: contactId,
+				scheduledTime: nextContactDate,
+				type: 'regular',
+				userId: auth.currentUser.uid,
+				notes: '',
 			});
 		}
 	} catch (error) {
@@ -358,6 +353,101 @@ export async function createFollowUpReminder(contactId, date) {
 		throw error;
 	}
 }
+
+// New reminder functions
+export const addReminder = async (reminderData) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const docRef = await addDoc(remindersRef, {
+			...reminderData,
+			created_at: serverTimestamp(),
+			updated_at: serverTimestamp(),
+			contact_id: reminderData.contactId,
+			user_id: reminderData.userId,
+			date: reminderData.scheduledTime,
+			snoozed: false,
+			follow_up: reminderData.type === 'follow_up',
+			ai_suggestions: [],
+			notes_required: reminderData.type === 'follow_up',
+			completed: false,
+		});
+		return docRef.id;
+	} catch (error) {
+		console.error('Error adding reminder:', error);
+		throw error;
+	}
+};
+
+export const updateReminder = async (reminderId, updateData) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		await updateDoc(reminderRef, {
+			...updateData,
+			updated_at: serverTimestamp(),
+		});
+		return true;
+	} catch (error) {
+		console.error('Error updating reminder:', error);
+		throw error;
+	}
+};
+
+export const deleteReminder = async (reminderId) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		await deleteDoc(reminderRef);
+		return true;
+	} catch (error) {
+		console.error('Error deleting reminder:', error);
+		throw error;
+	}
+};
+
+export const getReminder = async (reminderId) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderSnap = await getDoc(reminderRef);
+
+		if (!reminderSnap.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		return {
+			id: reminderSnap.id,
+			...reminderSnap.data(),
+		};
+	} catch (error) {
+		console.error('Error getting reminder:', error);
+		throw error;
+	}
+};
+
+export const getContactReminders = async (contactId, userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('contact_id', '==', contactId),
+			where('user_id', '==', userId),
+			where('snoozed', '==', false)
+		);
+
+		const querySnapshot = await getDocs(q);
+		const reminders = [];
+
+		querySnapshot.forEach((doc) => {
+			reminders.push({
+				id: doc.id,
+				...doc.data(),
+			});
+		});
+
+		return reminders;
+	} catch (error) {
+		console.error('Error getting contact reminders:', error);
+		throw error;
+	}
+};
 
 // User profile functions
 export const updateUserProfile = async (userId, profileData) => {
