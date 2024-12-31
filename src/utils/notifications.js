@@ -234,6 +234,52 @@ class NotificationService {
 			return false;
 		}
 	}
+
+	async handleFollowUpComplete(reminderId, notes = '') {
+		try {
+			// Cancel the notification first
+			const mapping = this.notificationMap.get(reminderId);
+			if (mapping) {
+				await Notifications.cancelScheduledNotificationAsync(mapping.localId);
+			}
+
+			// Complete the follow-up in Firestore
+			await completeFollowUp(reminderId, notes);
+
+			// Update local state
+			this.notificationMap.delete(reminderId);
+			await this.saveNotificationMap();
+
+			// Update badge count
+			if (this.badgeCount > 0) {
+				this.badgeCount--;
+				await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
+			}
+
+			return true;
+		} catch (error) {
+			console.error('Error handling follow-up completion:', error);
+			return false;
+		}
+	}
+
+	async rescheduleFollowUp(reminderId, newTime) {
+		try {
+			const reminder = await getReminder(reminderId);
+			if (!reminder) throw new Error('Reminder not found');
+
+			// Cancel existing notification
+			await this.cancelReminder(reminderId);
+
+			// Schedule new follow-up
+			const result = await this.scheduleFollowUpReminder(reminder.contact, newTime, reminder.userId);
+
+			return result;
+		} catch (error) {
+			console.error('Error rescheduling follow-up:', error);
+			return null;
+		}
+	}
 }
 
 export const notificationService = new NotificationService();

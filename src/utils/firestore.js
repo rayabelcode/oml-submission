@@ -354,7 +354,7 @@ export async function createFollowUpReminder(contactId, date) {
 	}
 }
 
-// New reminder functions
+// V2 reminder functions
 export const addReminder = async (reminderData) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
@@ -367,9 +367,13 @@ export const addReminder = async (reminderData) => {
 			date: reminderData.scheduledTime,
 			snoozed: false,
 			follow_up: reminderData.type === 'follow_up',
-			ai_suggestions: [],
+			history_entry_id: reminderData.historyEntryId,
 			notes_required: reminderData.type === 'follow_up',
 			completed: false,
+			completion_time: null,
+			notes_added: false,
+			call_duration: reminderData.callDuration || null,
+			call_type: reminderData.callType || null,
 		});
 		return docRef.id;
 	} catch (error) {
@@ -445,6 +449,75 @@ export const getContactReminders = async (contactId, userId) => {
 		return reminders;
 	} catch (error) {
 		console.error('Error getting contact reminders:', error);
+		throw error;
+	}
+};
+
+// Follow up functions
+export const getFollowUpReminders = async (userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('user_id', '==', userId),
+			where('type', '==', 'follow_up'),
+			where('completed', '==', false),
+			orderBy('date', 'desc')
+		);
+
+		const querySnapshot = await getDocs(q);
+		return querySnapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
+	} catch (error) {
+		console.error('Error fetching follow-up reminders:', error);
+		throw error;
+	}
+};
+
+export const completeFollowUp = async (reminderId, notes) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderDoc = await getDoc(reminderRef);
+
+		if (!reminderDoc.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		const reminderData = reminderDoc.data();
+		const batch = writeBatch(db);
+
+		// Update the reminder
+		batch.update(reminderRef, {
+			completed: true,
+			completion_time: serverTimestamp(),
+			notes_added: !!notes,
+			updated_at: serverTimestamp(),
+		});
+
+		// Update the contact history if there's a history entry
+		if (reminderData.history_entry_id) {
+			const contactRef = doc(db, 'contacts', reminderData.contact_id);
+			const contactDoc = await getDoc(contactRef);
+
+			if (contactDoc.exists()) {
+				const contactData = contactDoc.data();
+				const history = contactData.contact_history || [];
+				const historyIndex = history.findIndex((h) => h.id === reminderData.history_entry_id);
+
+				if (historyIndex !== -1) {
+					history[historyIndex].notes = notes || history[historyIndex].notes;
+					history[historyIndex].completed = true;
+					batch.update(contactRef, { contact_history: history });
+				}
+			}
+		}
+
+		await batch.commit();
+		return true;
+	} catch (error) {
+		console.error('Error completing follow-up:', error);
 		throw error;
 	}
 };

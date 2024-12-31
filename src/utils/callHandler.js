@@ -1,8 +1,8 @@
 import { Platform, Linking, Alert } from 'react-native';
-import { addContactHistory, updateNextContact, createFollowUpReminder } from './firestore';
+import { addContactHistory, updateNextContact } from './firestore';
 import Constants from 'expo-constants';
+import { notificationService } from './notifications';
 
-// Conditionally import RNCallKeep
 const RNCallKeep = Constants.appOwnership === 'expo' ? null : require('react-native-callkeep').default;
 
 export class CallHandler {
@@ -13,7 +13,6 @@ export class CallHandler {
 	}
 
 	async setup() {
-		// Skip CallKeep setup in Expo Go
 		if (Constants.appOwnership === 'expo') {
 			this.initialized = true;
 			return;
@@ -41,13 +40,10 @@ export class CallHandler {
 			await this.callKeep.setup(options);
 			this.initialized = true;
 			this.setupEventListeners();
-		} catch (error) {
-			console.error('CallKeep setup error:', error);
-		}
+		} catch (error) {}
 	}
 
 	setupEventListeners() {
-		// Skip in Expo Go
 		if (Constants.appOwnership === 'expo') return;
 
 		this.callKeep.addEventListener('endCall', this.onCallEnded);
@@ -64,7 +60,6 @@ export class CallHandler {
 		}
 
 		try {
-			// Set up activeCall object
 			this.activeCall = {
 				contact,
 				startTime: new Date(),
@@ -72,7 +67,6 @@ export class CallHandler {
 				type: callType,
 			};
 
-			// Only use CallKeep in production build
 			if (Constants.appOwnership !== 'expo') {
 				await this.callKeep.startCall(
 					this.activeCall.uuid,
@@ -99,7 +93,6 @@ export class CallHandler {
 				this.activeCall = null;
 				const error = new Error(`Cannot make ${callType} call. Please check if the app is installed.`);
 				if (Constants.appOwnership !== 'expo') {
-					console.error('Error initiating call:', error);
 					Alert.alert('Call Error', error.message);
 				}
 				return false;
@@ -107,7 +100,6 @@ export class CallHandler {
 
 			await Linking.openURL(urlScheme);
 
-			// For Expo Go, simulate a call end after linking
 			if (Constants.appOwnership === 'expo') {
 				setTimeout(() => {
 					this.onCallEnded({ callUUID: 'expo-mock-uuid' });
@@ -118,48 +110,55 @@ export class CallHandler {
 		} catch (error) {
 			this.activeCall = null;
 			if (Constants.appOwnership !== 'expo') {
-				console.error('Error initiating call:', error);
 				Alert.alert('Call Error', error.message || 'Could not initiate call');
 			}
 			return false;
 		}
 	}
 
-	onMuteCall = ({ muted, callUUID }) => {
-		console.log('Call muted:', muted);
-	};
+	onMuteCall = ({ muted, callUUID }) => {};
 
-	onAnswerCall = ({ callUUID }) => {
-		console.log('Call answered:', callUUID);
-	};
+	onAnswerCall = ({ callUUID }) => {};
 
 	onCallEnded = async ({ callUUID }) => {
 		if (!this.activeCall || this.activeCall.uuid !== callUUID) return;
 
 		try {
 			const contact = this.activeCall.contact;
-			const callDuration = (new Date().getTime() - this.activeCall.startTime.getTime()) / 1000;
+			const callEndTime = new Date();
+			const callDuration = (callEndTime.getTime() - this.activeCall.startTime.getTime()) / 1000;
 
 			if (callDuration > 10) {
-				const followUpDate = new Date();
-				followUpDate.setHours(followUpDate.getHours() + 1);
+				const nextContactDate = new Date();
+				nextContactDate.setHours(nextContactDate.getHours() + 1);
 
-				// Remove the local catch and let it propagate
-				await Promise.all([
-					updateNextContact(contact.id, followUpDate, {
-						lastContacted: true,
-					}),
-					createFollowUpReminder(contact.id, followUpDate),
-					addContactHistory(contact.id, {
-						date: new Date().toISOString(),
-						notes: `(${this.activeCall.type} call completed - Add your notes)`,
-						completed: false,
-					}),
-				]);
+				const historyEntry = await addContactHistory(contact.id, {
+					date: callEndTime.toISOString(),
+					notes: `(${this.activeCall.type} call completed - Add your notes)`,
+					completed: false,
+				});
+
+				await updateNextContact(contact.id, nextContactDate, {
+					lastContacted: true,
+				});
+
+				const followUpResult = await notificationService.scheduleFollowUpReminder(
+					{
+						...contact,
+						notes: 'Add notes about your recent call',
+						history: historyEntry,
+						callData: {
+							duration: callDuration,
+							type: this.activeCall.type,
+							endTime: callEndTime,
+						},
+					},
+					callEndTime,
+					contact.user_id
+				);
 			}
 		} catch (error) {
-			console.error('Error handling call end:', error);
-			throw error; // Re-throw the error for testing purposes
+			throw error;
 		} finally {
 			this.activeCall = null;
 		}
@@ -173,7 +172,6 @@ export class CallHandler {
 				this.callKeep.removeEventListener('answerCall', this.onAnswerCall);
 			}
 		}
-		// Clear any pending timeouts
 		if (this.activeCall && this.activeCall.timeoutId) {
 			clearTimeout(this.activeCall.timeoutId);
 		}
