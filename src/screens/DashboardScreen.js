@@ -7,8 +7,10 @@ import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { fetchUpcomingContacts } from '../utils/firestore';
-import StatsView from '../components/dashboard/StatsView'; // Import StatsView component
-import ContactCard from '../components/dashboard/ContactCard'; // Import ContactCard component
+import { NotificationsView } from '../components/dashboard/NotificationsView';
+import { notificationService } from '../utils/notifications';
+import StatsView from '../components/dashboard/StatsView';
+import ContactCard from '../components/dashboard/ContactCard';
 
 export default function DashboardScreen({ navigation }) {
 	const { user } = useAuth();
@@ -16,10 +18,10 @@ export default function DashboardScreen({ navigation }) {
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 	const [contacts, setContacts] = useState([]);
+	const [reminders, setReminders] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
-
 	const [stats, setStats] = useState({
 		monthlyContacts: 0,
 		currentStreak: 0,
@@ -32,16 +34,11 @@ export default function DashboardScreen({ navigation }) {
 		try {
 			const now = new Date();
 			const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-			// Get all contacts
 			const allContacts = await fetchUpcomingContacts(user.uid);
-
-			// Monthly contacts (completed this month)
 			const monthlyCount = allContacts.reduce((count, contact) => {
 				return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
 			}, 0);
 
-			// Calculate streak (consecutive days with at least one contact)
 			let streak = 0;
 			const today = new Date().setHours(0, 0, 0, 0);
 			let checkDate = today;
@@ -54,13 +51,12 @@ export default function DashboardScreen({ navigation }) {
 
 				if (dateContacts) {
 					streak++;
-					checkDate -= 86400000; // Subtract one day
+					checkDate -= 86400000;
 				} else {
 					hasContact = false;
 				}
 			}
 
-			// Most frequent contacts (last 30 days)
 			const thirtyDaysAgo = new Date(now - 30 * 86400000);
 			const frequentContacts = allContacts
 				.map((contact) => ({
@@ -71,7 +67,6 @@ export default function DashboardScreen({ navigation }) {
 				.sort((a, b) => b.count - a.count)
 				.slice(0, 5);
 
-			// Contacts needing attention (no contact in last 30 days)
 			const needsAttention = allContacts
 				.filter((contact) => {
 					const lastContact = contact.contact_history?.[0]?.date;
@@ -91,8 +86,25 @@ export default function DashboardScreen({ navigation }) {
 				totalActive: allContacts.length,
 			});
 		} catch (error) {
-			console.error('Error calculating stats:', error);
 			Alert.alert('Error', 'Failed to load statistics');
+		}
+	};
+
+	const loadReminders = async () => {
+		try {
+			const activeReminders = await notificationService.getActiveReminders();
+			setReminders(activeReminders);
+		} catch (error) {
+			Alert.alert('Error', 'Failed to load reminders');
+		}
+	};
+
+	const handleFollowUpComplete = async (reminderId, notes) => {
+		try {
+			await notificationService.handleFollowUpComplete(reminderId, notes);
+			loadReminders();
+		} catch (error) {
+			Alert.alert('Error', 'Failed to complete follow-up');
 		}
 	};
 
@@ -102,7 +114,6 @@ export default function DashboardScreen({ navigation }) {
 			const contactsList = await fetchUpcomingContacts(user.uid);
 			setContacts(contactsList.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
 		} catch (error) {
-			console.error('Error loading contacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
 		} finally {
 			setLoading(false);
@@ -112,6 +123,7 @@ export default function DashboardScreen({ navigation }) {
 	useEffect(() => {
 		if (user) {
 			loadContacts();
+			loadReminders();
 		}
 	}, [user]);
 
@@ -123,7 +135,7 @@ export default function DashboardScreen({ navigation }) {
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
-		await loadContacts();
+		await Promise.all([loadContacts(), loadReminders()]);
 		setRefreshing(false);
 	}, []);
 
@@ -138,7 +150,6 @@ export default function DashboardScreen({ navigation }) {
 	return (
 		<View style={commonStyles.container}>
 			<StatusBar style="auto" />
-
 			<View style={styles.header}>
 				<Text style={styles.title}>Calendar + Stats</Text>
 			</View>
@@ -159,6 +170,14 @@ export default function DashboardScreen({ navigation }) {
 					<Icon name="stats-chart-outline" size={24} color={colors.primary} />
 					<Text style={styles.toggleButtonText}>Stats</Text>
 				</TouchableOpacity>
+
+				<TouchableOpacity
+					style={[commonStyles.toggleButton, viewMode === 'notifications' && styles.toggleButtonActive]}
+					onPress={() => setViewMode('notifications')}
+				>
+					<Icon name="notifications-outline" size={24} color={colors.primary} />
+					<Text style={styles.toggleButtonText}>Follow-ups</Text>
+				</TouchableOpacity>
 			</View>
 
 			{viewMode === 'calendar' ? (
@@ -174,8 +193,10 @@ export default function DashboardScreen({ navigation }) {
 						contacts.map((contact) => <ContactCard key={contact.id} contact={contact} onPress={() => {}} />)
 					)}
 				</ScrollView>
-			) : (
+			) : viewMode === 'stats' ? (
 				<StatsView stats={stats} />
+			) : (
+				<NotificationsView reminders={reminders} onComplete={handleFollowUpComplete} />
 			)}
 		</View>
 	);

@@ -141,6 +141,11 @@ const useStyles = () => {
 			fontStyle: 'italic',
 			fontWeight: '600',
 		},
+		notificationsContainer: {
+			flex: 1,
+			padding: spacing.md,
+			backgroundColor: colors.background.primary,
+		},
 	});
 };
 
