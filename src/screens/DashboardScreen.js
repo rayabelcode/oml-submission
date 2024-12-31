@@ -18,7 +18,6 @@ export default function DashboardScreen({ navigation }) {
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 	const [contacts, setContacts] = useState([]);
-	const [reminders, setReminders] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
@@ -28,6 +27,11 @@ export default function DashboardScreen({ navigation }) {
 		frequentContacts: [],
 		needsAttention: [],
 		totalActive: 0,
+	});
+	const [remindersState, setRemindersState] = useState({
+		data: [],
+		loading: true,
+		error: null,
 	});
 
 	const calculateStats = async () => {
@@ -91,10 +95,20 @@ export default function DashboardScreen({ navigation }) {
 	};
 
 	const loadReminders = async () => {
+		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
 			const activeReminders = await notificationService.getActiveReminders();
-			setReminders(activeReminders);
+			setRemindersState({
+				data: activeReminders,
+				loading: false,
+				error: null,
+			});
 		} catch (error) {
+			setRemindersState({
+				data: [],
+				loading: false,
+				error: 'Failed to load reminders',
+			});
 			Alert.alert('Error', 'Failed to load reminders');
 		}
 	};
@@ -135,8 +149,13 @@ export default function DashboardScreen({ navigation }) {
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
-		await Promise.all([loadContacts(), loadReminders()]);
-		setRefreshing(false);
+		try {
+			await Promise.all([loadContacts(), loadReminders()]);
+		} catch (error) {
+			Alert.alert('Error', 'Failed to refresh data');
+		} finally {
+			setRefreshing(false);
+		}
 	}, []);
 
 	if (!user) {
@@ -196,7 +215,13 @@ export default function DashboardScreen({ navigation }) {
 			) : viewMode === 'stats' ? (
 				<StatsView stats={stats} />
 			) : (
-				<NotificationsView reminders={reminders} onComplete={handleFollowUpComplete} />
+				<NotificationsView
+					reminders={remindersState.data}
+					onComplete={handleFollowUpComplete}
+					loading={remindersState.loading}
+					onRefresh={onRefresh}
+					refreshing={refreshing}
+				/>
 			)}
 		</View>
 	);
