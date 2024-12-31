@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { addReminder, updateReminder, deleteReminder, completeFollowUp, getReminder } from './firestore';
+import { auth } from '../config/firebase';
 
 const NOTIFICATION_MAP_KEY = 'notification_map';
 
@@ -237,20 +238,20 @@ class NotificationService {
 
 	async handleFollowUpComplete(reminderId, notes = '') {
 		try {
-			// Cancel the notification first
+			if (!auth.currentUser) {
+				throw new Error('No authenticated user');
+			}
+
 			const mapping = this.notificationMap.get(reminderId);
 			if (mapping) {
 				await Notifications.cancelScheduledNotificationAsync(mapping.localId);
 			}
 
-			// Complete the follow-up in Firestore
 			await completeFollowUp(reminderId, notes);
 
-			// Update local state
 			this.notificationMap.delete(reminderId);
 			await this.saveNotificationMap();
 
-			// Update badge count
 			if (this.badgeCount > 0) {
 				this.badgeCount--;
 				await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
@@ -258,8 +259,8 @@ class NotificationService {
 
 			return true;
 		} catch (error) {
-			console.error('Error handling follow-up completion:', error);
-			return false;
+			console.error('Error completing follow-up:', error);
+			throw error;
 		}
 	}
 

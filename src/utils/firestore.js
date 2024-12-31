@@ -363,7 +363,8 @@ export const addReminder = async (reminderData) => {
 			created_at: serverTimestamp(),
 			updated_at: serverTimestamp(),
 			contact_id: reminderData.contactId,
-			user_id: reminderData.userId,
+			user_id: auth.currentUser.uid,
+			userId: auth.currentUser.uid,
 			date: reminderData.scheduledTime,
 			snoozed: false,
 			follow_up: reminderData.type === 'follow_up',
@@ -486,9 +487,13 @@ export const completeFollowUp = async (reminderId, notes) => {
 		}
 
 		const reminderData = reminderDoc.data();
+
+		if (reminderData.user_id !== auth.currentUser?.uid) {
+			throw new Error('User does not have permission to modify this reminder');
+		}
+
 		const batch = writeBatch(db);
 
-		// Update the reminder
 		batch.update(reminderRef, {
 			completed: true,
 			completion_time: serverTimestamp(),
@@ -498,7 +503,6 @@ export const completeFollowUp = async (reminderId, notes) => {
 			status: 'completed',
 		});
 
-		// Update the contact history if contact_id exists
 		if (reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -507,7 +511,6 @@ export const completeFollowUp = async (reminderId, notes) => {
 				const contactData = contactDoc.data();
 				const history = contactData.contact_history || [];
 
-				// Add new history entry instead of trying to update existing one
 				const newHistoryEntry = {
 					date: new Date().toISOString(),
 					notes: notes || '',
@@ -515,7 +518,6 @@ export const completeFollowUp = async (reminderId, notes) => {
 					completed: true,
 				};
 
-				// Add new entry at the beginning of the array
 				batch.update(contactRef, {
 					contact_history: [newHistoryEntry, ...history],
 					last_updated: serverTimestamp(),
