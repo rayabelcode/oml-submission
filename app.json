@@ -8,12 +8,9 @@
 		},
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
-		"sounds": [
-			"./assets/sounds/family.wav",
-			"./assets/sounds/friend.wav",
-			"./assets/sounds/work.wav",
-			"./assets/sounds/personal.wav"
-		],
+		"notification": {
+			"icon": "./assets/icon.png"
+		},
 		"scheme": "onmylist",
 		"userInterfaceStyle": "automatic",
 		"splash": {

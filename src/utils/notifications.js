@@ -3,13 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { addReminder, updateReminder, deleteReminder } from './firestore';
 
-const REMINDER_SOUNDS = {
-	family: 'family.wav',
-	friend: 'friend.wav',
-	work: 'work.wav',
-	personal: 'personal.wav',
-};
-
 const NOTIFICATION_MAP_KEY = 'notification_map';
 
 class NotificationService {
@@ -97,8 +90,8 @@ class NotificationService {
 		try {
 			// Create Firestore reminder first
 			const reminderData = {
-				contact_id: contact.id,
-				date: date,
+				contactId: contact.id,
+				scheduledTime: date,
 				created_at: new Date(),
 				updated_at: new Date(),
 				snoozed: false,
@@ -106,12 +99,12 @@ class NotificationService {
 				type: 'regular',
 				status: 'pending',
 				notes: contact.notes || '',
-				user_id: userId,
+				userId: userId,
 			};
 
 			const firestoreId = await addReminder(reminderData);
 
-			// Schedule local notification
+			// Schedule local notification with default sound
 			const notificationContent = {
 				title: `Reminder: Contact ${contact.first_name}`,
 				body: contact.notes ? `Note: ${contact.notes}` : 'Time to catch up!',
@@ -121,9 +114,7 @@ class NotificationService {
 					type: 'contact_reminder',
 				},
 				badge: this.badgeCount + 1,
-				sound: contact.scheduling?.relationship_type
-					? REMINDER_SOUNDS[contact.scheduling.relationship_type]
-					: REMINDER_SOUNDS.personal,
+				sound: true,
 			};
 
 			const trigger = date instanceof Date ? { date } : null;

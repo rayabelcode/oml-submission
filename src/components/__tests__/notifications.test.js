@@ -61,7 +61,6 @@ jest.mock('../../utils/firestore', () => ({
 }));
 
 describe('NotificationService', () => {
-	// Mock variables for all tests
 	const mockUserId = 'user-123';
 	const mockContactId = 'contact-123';
 	const mockReminderId = 'reminder-123';
@@ -147,9 +146,6 @@ describe('NotificationService', () => {
 		const mockContact = {
 			id: mockContactId,
 			first_name: 'John',
-			scheduling: {
-				relationship_type: 'family',
-			},
 		};
 
 		beforeEach(async () => {
@@ -172,8 +168,8 @@ describe('NotificationService', () => {
 
 			expect(addReminder).toHaveBeenCalledWith(
 				expect.objectContaining({
-					contact_id: mockContact.id,
-					user_id: mockUserId,
+					contactId: mockContact.id,
+					userId: mockUserId,
 					type: 'regular',
 					status: 'pending',
 				})
@@ -184,7 +180,6 @@ describe('NotificationService', () => {
 					content: expect.objectContaining({
 						title: expect.any(String),
 						badge: expect.any(Number),
-						sound: 'family.wav',
 					}),
 					trigger: { date: mockDate },
 				})
