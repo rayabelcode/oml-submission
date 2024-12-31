@@ -32,6 +32,7 @@ const useStyles = () => {
 		buttonContainer: {
 			flexDirection: 'row',
 			paddingHorizontal: spacing.md,
+			paddingTop: spacing.lg,
 			paddingBottom: spacing.md,
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
@@ -145,6 +146,18 @@ const useStyles = () => {
 			flex: 1,
 			padding: spacing.md,
 			backgroundColor: colors.background.primary,
+		},
+		// Notification swiping
+		swipeActionContainer: {
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: 100,
+			height: '100%',
+		},
+		swipeActionText: {
+			color: colors.background.primary,
+			fontWeight: '600',
+			fontSize: 16,
 		},
 	});
 };

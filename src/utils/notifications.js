@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { addReminder, updateReminder, deleteReminder } from './firestore';
+import { addReminder, updateReminder, deleteReminder, completeFollowUp, getReminder } from './firestore';
 
 const NOTIFICATION_MAP_KEY = 'notification_map';
 
@@ -59,7 +59,7 @@ class NotificationService {
 				throw new Error('Permission not granted for notifications');
 			}
 
-			if (Platform.OS === 'ios') {
+			if (Platform.OS === 'android') {
 				await Notifications.setNotificationChannelAsync('default', {
 					name: 'default',
 					importance: Notifications.AndroidImportance.MAX,

@@ -494,23 +494,32 @@ export const completeFollowUp = async (reminderId, notes) => {
 			completion_time: serverTimestamp(),
 			notes_added: !!notes,
 			updated_at: serverTimestamp(),
+			notes: notes || '',
+			status: 'completed',
 		});
 
-		// Update the contact history if there's a history entry
-		if (reminderData.history_entry_id) {
+		// Update the contact history if contact_id exists
+		if (reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
 
 			if (contactDoc.exists()) {
 				const contactData = contactDoc.data();
 				const history = contactData.contact_history || [];
-				const historyIndex = history.findIndex((h) => h.id === reminderData.history_entry_id);
 
-				if (historyIndex !== -1) {
-					history[historyIndex].notes = notes || history[historyIndex].notes;
-					history[historyIndex].completed = true;
-					batch.update(contactRef, { contact_history: history });
-				}
+				// Add new history entry instead of trying to update existing one
+				const newHistoryEntry = {
+					date: new Date().toISOString(),
+					notes: notes || '',
+					type: 'follow_up',
+					completed: true,
+				};
+
+				// Add new entry at the beginning of the array
+				batch.update(contactRef, {
+					contact_history: [newHistoryEntry, ...history],
+					last_updated: serverTimestamp(),
+				});
 			}
 		}
 
