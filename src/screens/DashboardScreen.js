@@ -38,7 +38,6 @@ export default function DashboardScreen({ navigation, route }) {
 		if (route.params?.initialView === 'notifications') {
 			setViewMode('notifications');
 			if (route.params?.highlightReminderId) {
-				console.log('[DashboardScreen] Should highlight reminder:', route.params.highlightReminderId);
 			}
 		}
 	}, [route.params]);
@@ -53,11 +52,9 @@ export default function DashboardScreen({ navigation, route }) {
 	);
 
 	const loadReminders = async () => {
-		console.log('[DashboardScreen] Loading reminders...');
 		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
 			const activeReminders = await notificationService.getActiveReminders();
-			console.log('[DashboardScreen] Loaded reminders:', activeReminders);
 			setRemindersState({
 				data: activeReminders,
 				loading: false,

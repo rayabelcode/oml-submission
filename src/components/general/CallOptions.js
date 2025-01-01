@@ -6,15 +6,12 @@ import { callHandler } from '../../utils/callHandler';
 const CallOptions = ({ show, contact, onClose }) => {
 	const handleCall = async (callType) => {
 		if (Constants.appOwnership === 'expo') {
-			console.log('Call simulation in Expo Go:', callType, contact.phone);
 			onClose();
 			return;
 		}
 
 		try {
-			console.log('[CallOptions] Initiating call:', { type: callType, contact: contact.id });
 			await callHandler.initiateCall(contact, callType);
-			console.log('[CallOptions] Call initiated successfully');
 			onClose();
 		} catch (error) {
 			console.error('[CallOptions] Error initiating call:', error);

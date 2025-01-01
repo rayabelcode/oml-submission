@@ -45,7 +45,6 @@ async function registerForPushNotificationsAsync() {
 	}
 
 	const token = (await Notifications.getExpoPushTokenAsync()).data;
-	console.log('Expo Push Notification Token:', token);
 	return token;
 }
 
@@ -66,7 +65,6 @@ function App() {
 				await notificationService.initialize();
 
 				Notifications.addNotificationReceivedListener((notification) => {
-					console.log('Foreground notification received:', notification);
 				});
 			} catch (e) {
 				console.warn(e);

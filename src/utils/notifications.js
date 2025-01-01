@@ -62,7 +62,6 @@ class NotificationService {
 	handleNotificationResponse = async (response) => {
 		try {
 			const data = response.notification.request.content.data;
-			console.log('[NotificationService] Handling notification response:', data);
 			if (data.type === 'call_follow_up' && data.firestoreId) {
 				navigate('Dashboard', {
 					screen: 'Dashboard',
@@ -176,11 +175,6 @@ class NotificationService {
 	}
 
 	async scheduleCallFollowUp(contact, notificationTime) {
-		console.log('[NotificationService] Scheduling call follow-up for:', {
-			contactId: contact.id,
-			time: notificationTime,
-		});
-
 		if (!this.initialized) {
 			await this.initialize();
 		}
@@ -216,7 +210,6 @@ class NotificationService {
 				trigger: notificationTime instanceof Date ? { date: notificationTime } : null,
 			});
 
-			console.log('[NotificationService] Notification scheduled with ID:', localNotificationId);
 			return firestoreId;
 		} catch (error) {
 			console.error('[NotificationService] Error scheduling call follow-up:', error);
@@ -227,13 +220,10 @@ class NotificationService {
 	async getActiveReminders() {
 		try {
 			if (!auth.currentUser) {
-				console.log('[NotificationService] No authenticated user');
 				return [];
 			}
 
-			console.log('[NotificationService] Getting active reminders for user:', auth.currentUser.uid);
 			const reminders = await getReminders(auth.currentUser.uid, 'pending');
-			console.log('[NotificationService] Retrieved reminders:', reminders);
 
 			return reminders.map((reminder) => ({
 				firestoreId: reminder.id,

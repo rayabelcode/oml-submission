@@ -357,7 +357,6 @@ export async function createFollowUpReminder(contactId, date) {
 // V2 reminder functions
 export const addReminder = async (reminderData) => {
 	try {
-		console.log('[Firestore] Adding reminder:', reminderData); // Debug log
 		const remindersRef = collection(db, 'reminders');
 
 		// Create base reminder data with required fields
@@ -384,7 +383,6 @@ export const addReminder = async (reminderData) => {
 			reminderDoc.call_data = reminderData.call_data;
 		}
 
-		console.log('[Firestore] Final reminder document:', reminderDoc); // Debug log
 		const docRef = await addDoc(remindersRef, reminderDoc);
 		return docRef.id;
 	} catch (error) {
@@ -439,7 +437,6 @@ export const getReminder = async (reminderId) => {
 
 export const getReminders = async (userId, status = 'pending') => {
 	try {
-		console.log('[Firestore] Getting reminders for user:', userId, 'status:', status);
 		const remindersRef = collection(db, 'reminders');
 		const q = query(
 			remindersRef,
@@ -449,18 +446,41 @@ export const getReminders = async (userId, status = 'pending') => {
 		);
 
 		const snapshot = await getDocs(q);
+
 		const reminders = snapshot.docs.map((doc) => {
 			const data = doc.data();
-			console.log('[Firestore] Reminder data:', data); // Debug log
+
+			// Handle date conversion safely
+			let scheduledTime;
+			try {
+				if (data.date?.toDate) {
+					scheduledTime = data.date.toDate();
+				} else if (data.scheduledTime?.toDate) {
+					scheduledTime = data.scheduledTime.toDate();
+				} else if (data.date) {
+					scheduledTime = new Date(data.date);
+				} else if (data.scheduledTime) {
+					scheduledTime = new Date(data.scheduledTime);
+				} else {
+					scheduledTime = new Date();
+				}
+			} catch (error) {
+				console.error('[Firestore] Error converting date:', error);
+				scheduledTime = new Date();
+			}
+
 			return {
 				id: doc.id,
 				...data,
-				scheduledTime: data.date?.toDate() || data.scheduledTime?.toDate() || new Date(),
+				scheduledTime,
 				contactName: data.contactName || 'Unknown Contact',
+				// Make sure all required fields are present
+				contact_id: data.contact_id || data.contactId,
+				call_data: data.call_data || null,
+				type: data.type || 'regular',
 			};
 		});
 
-		console.log('[Firestore] Retrieved reminders:', reminders.length);
 		return reminders;
 	} catch (error) {
 		console.error('[Firestore] Error getting reminders:', error);

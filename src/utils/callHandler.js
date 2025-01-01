@@ -13,8 +13,6 @@ export class CallHandler {
 	}
 
 	async initiateCall(contact, callType = 'phone') {
-		console.log('[CallHandler] Initiating call:', { contact: contact.id, type: callType });
-
 		try {
 			let urlScheme;
 			switch (callType) {
@@ -43,15 +41,12 @@ export class CallHandler {
 			};
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
-			console.log('[CallHandler] Saved call data:', callData);
 
 			// Initialize notification service
 			await notificationService.initialize();
-			console.log('[CallHandler] Notification service initialized');
 
-			// Schedule follow-up notification (5 seconds for testing)
+			// Schedule follow-up notification
 			const notificationTime = new Date(Date.now() + 5000);
-			console.log('[CallHandler] Scheduling notification for:', notificationTime);
 
 			const notificationId = await notificationService.scheduleCallFollowUp(
 				{
@@ -63,8 +58,6 @@ export class CallHandler {
 				},
 				notificationTime
 			);
-
-			console.log('[CallHandler] Notification scheduled');
 
 			// Open call URL
 			await Linking.openURL(urlScheme);
@@ -81,7 +74,6 @@ export class CallHandler {
 		try {
 			const savedCallData = await AsyncStorage.getItem(ACTIVE_CALL_KEY);
 			if (!savedCallData) {
-				console.log('[CallHandler] No active call found to process');
 				return;
 			}
 
@@ -90,9 +82,6 @@ export class CallHandler {
 			const callEndTime = new Date();
 			const startTime = new Date(callData.startTime);
 			const callDuration = (callEndTime.getTime() - startTime.getTime()) / 1000;
-
-			console.log('[CallHandler] Processing call end. Duration:', callDuration);
-
 			const nextContactDate = new Date();
 			nextContactDate.setHours(nextContactDate.getHours() + 1);
 
@@ -105,8 +94,6 @@ export class CallHandler {
 			await updateNextContact(contact.id, nextContactDate, {
 				lastContacted: true,
 			});
-
-			console.log('[CallHandler] Call end processed successfully');
 		} catch (error) {
 			console.error('[CallHandler] Error processing call end:', error);
 			throw error;
