@@ -13,6 +13,8 @@ import ContactCard from '../components/dashboard/ContactCard';
 import ContactDetailsModal from '../components/contacts/ContactDetailsModal';
 import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
+import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -71,10 +73,31 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	};
 
-	const handleFollowUpComplete = async (reminderId) => {
+	const handleFollowUpComplete = async (reminderId, notes) => {
 		try {
+			if (notes) {
+				const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
+				const contactId = reminder.data?.contactId;
+				const contact = contacts.find((c) => c.id === contactId);
+
+				if (contact) {
+					const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+					const newHistoryEntry = {
+						completed: true,
+						date: currentDate,
+						notes: notes,
+					};
+
+					const contactRef = doc(db, 'contacts', contact.id);
+					await updateDoc(contactRef, {
+						contact_history: arrayUnion(newHistoryEntry),
+						last_updated: serverTimestamp(),
+					});
+				}
+			}
+
 			await notificationService.handleFollowUpComplete(reminderId);
-			await loadReminders();
+			await Promise.all([loadReminders(), loadContacts()]);
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			Alert.alert('Error', 'Failed to complete follow-up');
