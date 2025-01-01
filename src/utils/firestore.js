@@ -555,6 +555,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 
 		const batch = writeBatch(db);
 
+		// Always update the reminder status
 		batch.update(reminderRef, {
 			completed: true,
 			completion_time: serverTimestamp(),
@@ -564,7 +565,8 @@ export const completeFollowUp = async (reminderId, notes) => {
 			status: 'completed',
 		});
 
-		if (reminderData.contact_id) {
+		// Only add to contact history if notes were provided
+		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
 
@@ -574,7 +576,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 
 				const newHistoryEntry = {
 					date: new Date().toISOString(),
-					notes: notes || '',
+					notes: notes,
 					type: 'follow_up',
 					completed: true,
 				};
