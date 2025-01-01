@@ -1,90 +1,96 @@
-// src/components/dashboard/NotificationsView.js
 import React from 'react';
-import { View, Text, ScrollView, RefreshControl, Animated } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
-import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-export function NotificationsView({ reminders, onComplete, loading, onRefresh, refreshing }) {
-	const styles = useStyles();
-	const { colors } = useTheme();
+export function NotificationsView({ 
+    reminders, 
+    onComplete, 
+    loading, 
+    onRefresh, 
+    refreshing,
+    onAddNotes,
+    onSnooze 
+}) {
+    const styles = useStyles();
+    const { colors } = useTheme();
 
-	const renderRightActions = (progress, dragX) => {
-		const trans = dragX.interpolate({
-			inputRange: [-100, 0],
-			outputRange: [0, 100],
-		});
+    const ReminderCard = ({ reminder }) => {
+        const date = reminder.scheduledTime ? new Date(reminder.scheduledTime) : new Date();
+        const formattedDate = date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+        });
 
-		return (
-			<Animated.View
-				style={[
-					{
-						transform: [{ translateX: trans }],
-						backgroundColor: colors.danger,
-						justifyContent: 'center',
-						alignItems: 'center',
-						width: 100,
-					},
-				]}
-			>
-				<Text
-					style={{
-						color: colors.background.primary,
-						fontWeight: '600',
-						fontSize: 16,
-					}}
-				>
-					Delete
-				</Text>
-			</Animated.View>
-		);
-	};
+        return (
+            <View style={styles.card}>
+                <View style={styles.cardContent}>
+                    <Text style={styles.cardName}>Call Follow-up</Text>
+                    <Text style={styles.cardDate}>
+                        Add notes for call with {reminder.contactName || 'Contact'} on {formattedDate}
+                    </Text>
+                </View>
+                
+                <View style={styles.cardActions}>
+                    <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => onComplete(reminder.firestoreId)}
+                    >
+                        <Icon name="close-circle-outline" size={24} color={colors.danger} />
+                        <Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
+                    </TouchableOpacity>
 
-	const handleSwipeAction = (reminder) => {
-		if (reminder.firestoreId) {
-			onComplete(reminder.firestoreId);
-		}
-	};
+                    <View style={styles.actionButtonSeparator} />
 
-	const ReminderCard = ({ reminder }) => {
-		const date = reminder.scheduledTime ? new Date(reminder.scheduledTime) : new Date();
-		const formattedDate = date.toLocaleDateString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-		});
+                    <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => onAddNotes(reminder)}
+                    >
+                        <Icon name="create-outline" size={24} color={colors.primary} />
+                        <Text style={[styles.actionText, { color: colors.primary }]}>Add Notes</Text>
+                    </TouchableOpacity>
 
-		return (
-			<Swipeable
-				renderRightActions={(progress, dragX) => renderRightActions(progress, dragX)}
-				onSwipeableOpen={() => handleSwipeAction(reminder)}
-			>
-				<View style={styles.card}>
-					<Text style={styles.cardName}>Add Call Notes</Text>
-					<Text style={styles.cardDate}>
-						Call with {reminder.contactName || 'Contact'} on {formattedDate}
-					</Text>
-				</View>
-			</Swipeable>
-		);
-	};
+                    <View style={styles.actionButtonSeparator} />
 
-	return (
-		<GestureHandlerRootView style={{ flex: 1 }}>
-			<ScrollView
-				style={styles.notificationsContainer}
-				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-				}
-			>
-				{loading ? (
-					<Text style={styles.message}>Loading notifications...</Text>
-				) : reminders.length === 0 ? (
-					<Text style={styles.message}>No notifications</Text>
-				) : (
-					reminders.map((reminder, index) => <ReminderCard key={index} reminder={reminder} />)
-				)}
-			</ScrollView>
-		</GestureHandlerRootView>
-	);
+                    <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => onSnooze(reminder)}
+                    >
+                        <Icon name="time-outline" size={24} color={colors.secondary} />
+                        <Text style={[styles.actionText, { color: colors.secondary }]}>Snooze</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ScrollView
+                style={styles.notificationsContainer}
+                refreshControl={
+                    <RefreshControl 
+                        refreshing={refreshing} 
+                        onRefresh={onRefresh} 
+                        tintColor={colors.primary}
+                    />
+                }
+            >
+                {loading ? (
+                    <Text style={styles.message}>Loading notifications...</Text>
+                ) : reminders.length === 0 ? (
+                    <Text style={styles.message}>No notifications</Text>
+                ) : (
+                    reminders.map((reminder, index) => (
+                        <ReminderCard key={index} reminder={reminder} />
+                    ))
+                )}
+            </ScrollView>
+        </GestureHandlerRootView>
+    );
 }

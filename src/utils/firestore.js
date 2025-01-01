@@ -358,24 +358,42 @@ export async function createFollowUpReminder(contactId, date) {
 export const addReminder = async (reminderData) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
-		const docRef = await addDoc(remindersRef, {
-			...reminderData,
+
+		// Create base reminder data with required fields
+		const reminderDoc = {
 			created_at: serverTimestamp(),
 			updated_at: serverTimestamp(),
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
 			userId: auth.currentUser.uid,
 			date: reminderData.scheduledTime,
+			status: reminderData.status || 'pending',
 			snoozed: false,
 			follow_up: reminderData.type === 'follow_up',
-			history_entry_id: reminderData.historyEntryId,
-			notes_required: reminderData.type === 'follow_up',
 			completed: false,
 			completion_time: null,
 			notes_added: false,
-			call_duration: reminderData.callDuration || null,
-			call_type: reminderData.callType || null,
-		});
+			contactName: reminderData.contactName || '',
+		};
+
+		// Add optional fields only if they exist
+		if (reminderData.historyEntryId) {
+			reminderDoc.history_entry_id = reminderData.historyEntryId;
+		}
+
+		if (reminderData.call_data) {
+			reminderDoc.call_data = reminderData.call_data;
+		}
+
+		if (reminderData.callDuration) {
+			reminderDoc.call_duration = reminderData.callDuration;
+		}
+
+		if (reminderData.callType) {
+			reminderDoc.call_type = reminderData.callType;
+		}
+
+		const docRef = await addDoc(remindersRef, reminderDoc);
 		return docRef.id;
 	} catch (error) {
 		console.error('Error adding reminder:', error);
@@ -423,6 +441,29 @@ export const getReminder = async (reminderId) => {
 		};
 	} catch (error) {
 		console.error('Error getting reminder:', error);
+		throw error;
+	}
+};
+
+export const getReminders = async (userId, status = 'pending') => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('userId', '==', userId),
+			where('status', '==', status),
+			orderBy('date', 'desc')
+		);
+
+		const snapshot = await getDocs(q);
+		return snapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+			scheduledTime: doc.data().date?.toDate() || doc.data().scheduledTime?.toDate(),
+			contactName: doc.data().contactName || 'Unknown Contact',
+		}));
+	} catch (error) {
+		console.error('Error getting reminders:', error);
 		throw error;
 	}
 };

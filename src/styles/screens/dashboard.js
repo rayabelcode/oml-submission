@@ -65,6 +65,33 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 			borderWidth: 1,
 			borderColor: colors.border,
+			overflow: 'hidden',
+		},
+		cardContent: {
+			flex: 1,
+		},
+		cardActions: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			marginTop: spacing.md,
+			paddingTop: spacing.md,
+			borderTopWidth: 1,
+			borderTopColor: colors.border,
+		},
+		actionButton: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.sm,
+		},
+		actionText: {
+			fontSize: 12,
+			marginTop: 4,
+			fontWeight: '500',
+		},
+		actionButtonSeparator: {
+			width: 1,
+			backgroundColor: colors.border,
 		},
 		cardHeader: {
 			flexDirection: 'row',

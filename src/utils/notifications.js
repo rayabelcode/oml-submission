@@ -1,7 +1,14 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { addReminder, updateReminder, deleteReminder, completeFollowUp, getReminder } from './firestore';
+import {
+	addReminder,
+	updateReminder,
+	deleteReminder,
+	completeFollowUp,
+	getReminder,
+	getReminders,
+} from './firestore';
 import { auth } from '../config/firebase';
 
 const NOTIFICATION_MAP_KEY = 'notification_map';
@@ -150,34 +157,73 @@ class NotificationService {
 		});
 
 		if (!this.initialized) {
-			console.log('[NotificationService] Initializing service...');
 			await this.initialize();
 		}
 
 		try {
+			// Create reminder data with only necessary fields
+			const reminderData = {
+				contactId: contact.id,
+				scheduledTime: notificationTime,
+				type: 'follow_up',
+				status: 'pending',
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				call_data: contact.callData,
+			};
+
+			const firestoreId = await addReminder(reminderData);
+
+			// Schedule local notification
 			const content = {
 				title: `Add Notes for Call with ${contact.first_name}`,
 				body: 'Tap to add notes about your recent call',
 				data: {
 					type: 'call_follow_up',
 					contactId: contact.id,
+					firestoreId: firestoreId,
 					callData: contact.callData,
 				},
 				sound: true,
 			};
 
-			console.log('[NotificationService] Creating notification with content:', content);
-
-			const notificationId = await Notifications.scheduleNotificationAsync({
+			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content,
 				trigger: notificationTime instanceof Date ? { date: notificationTime } : null,
 			});
 
-			console.log('[NotificationService] Notification scheduled with ID:', notificationId);
-			return notificationId;
+			console.log('[NotificationService] Notification scheduled with ID:', localNotificationId);
+			return firestoreId;
 		} catch (error) {
 			console.error('[NotificationService] Error scheduling call follow-up:', error);
-			return null;
+			throw error;
+		}
+	}
+
+	async getActiveReminders() {
+		try {
+			if (!auth.currentUser) {
+				console.log('[NotificationService] No authenticated user');
+				return [];
+			}
+
+			console.log('[NotificationService] Getting active reminders for user:', auth.currentUser.uid);
+			const reminders = await getReminders(auth.currentUser.uid, 'pending');
+			console.log('[NotificationService] Retrieved reminders:', reminders);
+
+			// Map the reminders to the expected format
+			return reminders.map((reminder) => ({
+				firestoreId: reminder.id,
+				scheduledTime: reminder.scheduledTime,
+				contactName: reminder.contactName,
+				data: {
+					contactId: reminder.contact_id,
+					callData: reminder.call_data,
+					type: reminder.type,
+				},
+			}));
+		} catch (error) {
+			console.error('[NotificationService] Error getting active reminders:', error);
+			return [];
 		}
 	}
 
@@ -239,11 +285,17 @@ class NotificationService {
 
 	async getActiveReminders() {
 		try {
-			const localNotifications = await Notifications.getAllScheduledNotificationsAsync();
-			return Array.from(this.notificationMap.entries()).map(([firestoreId, mapping]) => ({
-				firestoreId,
-				...mapping,
-				localNotification: localNotifications.find((n) => n.identifier === mapping.localId),
+			// Get all pending reminders from Firestore
+			const reminders = await getReminders(auth.currentUser.uid, 'pending');
+
+			return reminders.map((reminder) => ({
+				firestoreId: reminder.id,
+				scheduledTime: reminder.scheduledTime,
+				contactName: reminder.contactName,
+				data: {
+					contactId: reminder.contactId,
+					callData: reminder.call_data,
+				},
 			}));
 		} catch (error) {
 			console.error('Error getting active reminders:', error);
