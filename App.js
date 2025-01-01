@@ -14,6 +14,7 @@ import { notificationService } from './src/utils/notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
+import { navigationRef } from './src/navigation/RootNavigation';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -96,7 +97,7 @@ function App() {
 		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
 			<ThemeProvider>
 				<AuthProvider>
-					<NavigationContainer>
+					<NavigationContainer ref={navigationRef}>
 						<SafeAreaWrapper>
 							<TabNavigator />
 						</SafeAreaWrapper>

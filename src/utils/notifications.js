@@ -10,6 +10,7 @@ import {
 	getReminders,
 } from './firestore';
 import { auth } from '../config/firebase';
+import { navigate } from '../navigation/RootNavigation';
 
 const NOTIFICATION_MAP_KEY = 'notification_map';
 
@@ -32,6 +33,11 @@ class NotificationService {
 				}),
 			});
 
+			// Add notification tap listener
+			const subscription = Notifications.addNotificationResponseReceivedListener(
+				this.handleNotificationResponse
+			);
+
 			// Request permissions during initialization
 			await this.requestPermissions();
 
@@ -52,6 +58,24 @@ class NotificationService {
 			return false;
 		}
 	}
+
+	handleNotificationResponse = async (response) => {
+		try {
+			const data = response.notification.request.content.data;
+			console.log('[NotificationService] Handling notification response:', data);
+			if (data.type === 'call_follow_up' && data.firestoreId) {
+				navigate('Dashboard', {
+					screen: 'Dashboard',
+					params: {
+						initialView: 'notifications',
+						highlightReminderId: data.firestoreId,
+					},
+				});
+			}
+		} catch (error) {
+			console.error('[NotificationService] Error handling notification response:', error);
+		}
+	};
 
 	async requestPermissions() {
 		try {
@@ -108,6 +132,7 @@ class NotificationService {
 				status: 'pending',
 				notes: contact.notes || '',
 				userId: userId,
+				contactName: `${contact.first_name} ${contact.last_name}`,
 			};
 
 			const firestoreId = await addReminder(reminderData);
@@ -210,7 +235,6 @@ class NotificationService {
 			const reminders = await getReminders(auth.currentUser.uid, 'pending');
 			console.log('[NotificationService] Retrieved reminders:', reminders);
 
-			// Map the reminders to the expected format
 			return reminders.map((reminder) => ({
 				firestoreId: reminder.id,
 				scheduledTime: reminder.scheduledTime,
@@ -224,106 +248,6 @@ class NotificationService {
 		} catch (error) {
 			console.error('[NotificationService] Error getting active reminders:', error);
 			return [];
-		}
-	}
-
-	async scheduleFollowUpReminder(contact, callEndTime, userId) {
-		try {
-			// Schedule follow-up reminder 1 minute after call ends
-			const followUpTime = new Date(callEndTime.getTime() + 1 * 60 * 1000);
-
-			const result = await this.scheduleContactReminder(
-				{
-					...contact,
-					notes: 'Add notes about your recent call',
-				},
-				followUpTime,
-				userId
-			);
-
-			if (result) {
-				await updateReminder(result.firestoreId, {
-					type: 'follow_up',
-				});
-			}
-
-			return result;
-		} catch (error) {
-			console.error('Error scheduling follow-up reminder:', error);
-			return null;
-		}
-	}
-
-	async cancelReminder(firestoreId) {
-		try {
-			const mapping = this.notificationMap.get(firestoreId);
-			if (mapping) {
-				// Cancel local notification
-				await Notifications.cancelScheduledNotificationAsync(mapping.localId);
-
-				// Update Firestore
-				await updateReminder(firestoreId, { status: 'cancelled' });
-
-				// Update local state
-				this.notificationMap.delete(firestoreId);
-				await this.saveNotificationMap();
-
-				// Update badge count
-				if (this.badgeCount > 0) {
-					this.badgeCount--;
-					await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
-				}
-
-				return true;
-			}
-			return false;
-		} catch (error) {
-			console.error('Error canceling reminder:', error);
-			return false;
-		}
-	}
-
-	async getActiveReminders() {
-		try {
-			// Get all pending reminders from Firestore
-			const reminders = await getReminders(auth.currentUser.uid, 'pending');
-
-			return reminders.map((reminder) => ({
-				firestoreId: reminder.id,
-				scheduledTime: reminder.scheduledTime,
-				contactName: reminder.contactName,
-				data: {
-					contactId: reminder.contactId,
-					callData: reminder.call_data,
-				},
-			}));
-		} catch (error) {
-			console.error('Error getting active reminders:', error);
-			return [];
-		}
-	}
-
-	async clearAllReminders(userId) {
-		try {
-			// Cancel all local notifications
-			await Notifications.cancelAllScheduledNotificationsAsync();
-
-			// Update all Firestore reminders
-			for (const [firestoreId] of this.notificationMap) {
-				await updateReminder(firestoreId, { status: 'cancelled' });
-			}
-
-			// Clear local state
-			this.notificationMap.clear();
-			await this.saveNotificationMap();
-
-			this.badgeCount = 0;
-			await AsyncStorage.setItem('badgeCount', '0');
-
-			return true;
-		} catch (error) {
-			console.error('Error clearing all reminders:', error);
-			return false;
 		}
 	}
 
@@ -360,16 +284,72 @@ class NotificationService {
 			const reminder = await getReminder(reminderId);
 			if (!reminder) throw new Error('Reminder not found');
 
-			// Cancel existing notification
-			await this.cancelReminder(reminderId);
+			// Update the existing reminder instead of creating a new one
+			await updateReminder(reminderId, {
+				scheduledTime: newTime,
+				date: newTime,
+				status: 'pending',
+			});
 
-			// Schedule new follow-up
-			const result = await this.scheduleFollowUpReminder(reminder.contact, newTime, reminder.userId);
+			// Cancel existing local notification if it exists
+			const existingMapping = this.notificationMap.get(reminderId);
+			if (existingMapping) {
+				await Notifications.cancelScheduledNotificationAsync(existingMapping.localId);
+			}
 
-			return result;
+			// Schedule new local notification
+			const content = {
+				title: `Add Notes for Call with ${reminder.contactName}`,
+				body: 'Tap to add notes about your recent call',
+				data: {
+					type: 'call_follow_up',
+					contactId: reminder.contact_id,
+					firestoreId: reminderId,
+					callData: reminder.call_data,
+				},
+				sound: true,
+			};
+
+			const localNotificationId = await Notifications.scheduleNotificationAsync({
+				content,
+				trigger: { date: newTime },
+			});
+
+			// Update mapping
+			this.notificationMap.set(reminderId, {
+				localId: localNotificationId,
+				scheduledTime: newTime,
+			});
+			await this.saveNotificationMap();
+
+			return true;
 		} catch (error) {
 			console.error('Error rescheduling follow-up:', error);
-			return null;
+			throw error;
+		}
+	}
+
+	async clearAllReminders() {
+		try {
+			// Cancel all local notifications
+			await Notifications.cancelAllScheduledNotificationsAsync();
+
+			// Update all Firestore reminders
+			for (const [firestoreId] of this.notificationMap) {
+				await updateReminder(firestoreId, { status: 'cancelled' });
+			}
+
+			// Clear local state
+			this.notificationMap.clear();
+			await this.saveNotificationMap();
+
+			this.badgeCount = 0;
+			await AsyncStorage.setItem('badgeCount', '0');
+
+			return true;
+		} catch (error) {
+			console.error('Error clearing all reminders:', error);
+			return false;
 		}
 	}
 }

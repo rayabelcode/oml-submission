@@ -357,6 +357,7 @@ export async function createFollowUpReminder(contactId, date) {
 // V2 reminder functions
 export const addReminder = async (reminderData) => {
 	try {
+		console.log('[Firestore] Adding reminder:', reminderData); // Debug log
 		const remindersRef = collection(db, 'reminders');
 
 		// Create base reminder data with required fields
@@ -365,9 +366,11 @@ export const addReminder = async (reminderData) => {
 			updated_at: serverTimestamp(),
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
-			userId: auth.currentUser.uid,
+			userId: auth.currentUser.uid, // Keep both for backward compatibility
 			date: reminderData.scheduledTime,
+			scheduledTime: reminderData.scheduledTime,
 			status: reminderData.status || 'pending',
+			type: reminderData.type || 'follow_up',
 			snoozed: false,
 			follow_up: reminderData.type === 'follow_up',
 			completed: false,
@@ -377,26 +380,15 @@ export const addReminder = async (reminderData) => {
 		};
 
 		// Add optional fields only if they exist
-		if (reminderData.historyEntryId) {
-			reminderDoc.history_entry_id = reminderData.historyEntryId;
-		}
-
 		if (reminderData.call_data) {
 			reminderDoc.call_data = reminderData.call_data;
 		}
 
-		if (reminderData.callDuration) {
-			reminderDoc.call_duration = reminderData.callDuration;
-		}
-
-		if (reminderData.callType) {
-			reminderDoc.call_type = reminderData.callType;
-		}
-
+		console.log('[Firestore] Final reminder document:', reminderDoc); // Debug log
 		const docRef = await addDoc(remindersRef, reminderDoc);
 		return docRef.id;
 	} catch (error) {
-		console.error('Error adding reminder:', error);
+		console.error('[Firestore] Error adding reminder:', error);
 		throw error;
 	}
 };
@@ -447,6 +439,7 @@ export const getReminder = async (reminderId) => {
 
 export const getReminders = async (userId, status = 'pending') => {
 	try {
+		console.log('[Firestore] Getting reminders for user:', userId, 'status:', status);
 		const remindersRef = collection(db, 'reminders');
 		const q = query(
 			remindersRef,
@@ -456,14 +449,21 @@ export const getReminders = async (userId, status = 'pending') => {
 		);
 
 		const snapshot = await getDocs(q);
-		return snapshot.docs.map((doc) => ({
-			id: doc.id,
-			...doc.data(),
-			scheduledTime: doc.data().date?.toDate() || doc.data().scheduledTime?.toDate(),
-			contactName: doc.data().contactName || 'Unknown Contact',
-		}));
+		const reminders = snapshot.docs.map((doc) => {
+			const data = doc.data();
+			console.log('[Firestore] Reminder data:', data); // Debug log
+			return {
+				id: doc.id,
+				...data,
+				scheduledTime: data.date?.toDate() || data.scheduledTime?.toDate() || new Date(),
+				contactName: data.contactName || 'Unknown Contact',
+			};
+		});
+
+		console.log('[Firestore] Retrieved reminders:', reminders.length);
+		return reminders;
 	} catch (error) {
-		console.error('Error getting reminders:', error);
+		console.error('[Firestore] Error getting reminders:', error);
 		throw error;
 	}
 };

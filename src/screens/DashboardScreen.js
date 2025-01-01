@@ -12,8 +12,9 @@ import { notificationService } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
 import ContactDetailsModal from '../components/contacts/ContactDetailsModal';
 import ActionModal from '../components/general/ActionModal';
+import { useFocusEffect } from '@react-navigation/native';
 
-export default function DashboardScreen({ navigation }) {
+export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
 	const { colors } = useTheme();
 	const styles = useStyles();
@@ -31,6 +32,25 @@ export default function DashboardScreen({ navigation }) {
 		loading: true,
 		error: null,
 	});
+
+	// Handle navigation from notifications
+	useEffect(() => {
+		if (route.params?.initialView === 'notifications') {
+			setViewMode('notifications');
+			if (route.params?.highlightReminderId) {
+				console.log('[DashboardScreen] Should highlight reminder:', route.params.highlightReminderId);
+			}
+		}
+	}, [route.params]);
+
+	// Refresh data when screen is focused
+	useFocusEffect(
+		React.useCallback(() => {
+			if (user) {
+				loadReminders();
+			}
+		}, [user])
+	);
 
 	const loadReminders = async () => {
 		console.log('[DashboardScreen] Loading reminders...');
