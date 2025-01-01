@@ -107,8 +107,9 @@ const useStyles = () => {
 			color: colors.text.primary,
 		},
 		cardDate: {
-			fontSize: 14,
+			fontSize: 16,
 			color: colors.text.secondary,
+			marginBottom: 10,
 		},
 		avatarContainer: {
 			width: 40,
@@ -185,6 +186,36 @@ const useStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '600',
 			fontSize: 16,
+		},
+		// Call notes on reminders
+		cardTitle: {
+			fontSize: 20,
+			fontWeight: 'bold',
+			color: colors.text.primary,
+			marginBottom: 5,
+		},
+		notesContainer: {
+			padding: spacing.md,
+		},
+		notesInput: {
+			borderRadius: layout.borderRadius.sm,
+			padding: spacing.md,
+			minHeight: 80,
+			marginBottom: spacing.md,
+			fontSize: 16,
+		},
+		submitButton: {
+			backgroundColor: colors.primary,
+			padding: 10,
+			borderRadius: 8,
+			alignItems: 'center',
+		},
+		submitButtonDisabled: {
+			opacity: 0.5,
+		},
+		submitButtonText: {
+			color: '#fff',
+			fontWeight: 'bold',
 		},
 	});
 };
