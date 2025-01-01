@@ -23,9 +23,7 @@ import TagsTab from './tabs/TagsTab';
 import EditContactTab from './tabs/EditContactTab';
 import Constants from 'expo-constants';
 import CallOptions from '../general/CallOptions';
-
-// Only import callHandler in production builds
-const callHandler = Constants.appOwnership === 'expo' ? null : require('../../utils/callHandler').callHandler;
+import { callHandler } from '../../utils/callHandler';
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	const { colors } = useTheme();

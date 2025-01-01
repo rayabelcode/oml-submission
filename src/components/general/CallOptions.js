@@ -1,7 +1,7 @@
 import React from 'react';
-import { Linking, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import ActionModal from '../general/ActionModal';
+import { callHandler } from '../../utils/callHandler';
 
 const CallOptions = ({ show, contact, onClose }) => {
 	const handleCall = async (callType) => {
@@ -11,29 +11,14 @@ const CallOptions = ({ show, contact, onClose }) => {
 			return;
 		}
 
-		if (Platform.OS === 'ios') {
-			let urlScheme;
-			switch (callType) {
-				case 'facetime-video':
-					urlScheme = `facetime://${contact.phone}`;
-					break;
-				case 'phone':
-					urlScheme = `tel:${contact.phone}`;
-					break;
-				default:
-					urlScheme = `tel:${contact.phone}`;
-			}
-
-			try {
-				const supported = await Linking.canOpenURL(urlScheme);
-				if (supported) {
-					onClose();
-					await Linking.openURL(urlScheme);
-				}
-			} catch (error) {
-				console.error('Error initiating call:', error);
-				onClose();
-			}
+		try {
+			console.log('[CallOptions] Initiating call:', { type: callType, contact: contact.id });
+			await callHandler.initiateCall(contact, callType);
+			console.log('[CallOptions] Call initiated successfully');
+			onClose();
+		} catch (error) {
+			console.error('[CallOptions] Error initiating call:', error);
+			onClose();
 		}
 	};
 

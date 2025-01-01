@@ -143,6 +143,44 @@ class NotificationService {
 		}
 	}
 
+	async scheduleCallFollowUp(contact, notificationTime) {
+		console.log('[NotificationService] Scheduling call follow-up for:', {
+			contactId: contact.id,
+			time: notificationTime,
+		});
+
+		if (!this.initialized) {
+			console.log('[NotificationService] Initializing service...');
+			await this.initialize();
+		}
+
+		try {
+			const content = {
+				title: `Add Notes for Call with ${contact.first_name}`,
+				body: 'Tap to add notes about your recent call',
+				data: {
+					type: 'call_follow_up',
+					contactId: contact.id,
+					callData: contact.callData,
+				},
+				sound: true,
+			};
+
+			console.log('[NotificationService] Creating notification with content:', content);
+
+			const notificationId = await Notifications.scheduleNotificationAsync({
+				content,
+				trigger: notificationTime instanceof Date ? { date: notificationTime } : null,
+			});
+
+			console.log('[NotificationService] Notification scheduled with ID:', notificationId);
+			return notificationId;
+		} catch (error) {
+			console.error('[NotificationService] Error scheduling call follow-up:', error);
+			return null;
+		}
+	}
+
 	async scheduleFollowUpReminder(contact, callEndTime, userId) {
 		try {
 			// Schedule follow-up reminder 1 minute after call ends
