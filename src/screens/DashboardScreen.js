@@ -81,7 +81,7 @@ export default function DashboardScreen({ navigation, route }) {
 				const contact = contacts.find((c) => c.id === contactId);
 
 				if (contact) {
-					const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+					const currentDate = new Date().toISOString().split('T')[0];
 					const newHistoryEntry = {
 						completed: true,
 						date: currentDate,
@@ -96,11 +96,20 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			}
 
+			// Update local state first
+			setRemindersState((prev) => ({
+				...prev,
+				data: prev.data.filter((r) => r.firestoreId !== reminderId),
+			}));
+
+			// Then update backend
 			await notificationService.handleFollowUpComplete(reminderId);
-			await Promise.all([loadReminders(), loadContacts()]);
+			await loadContacts(); // Only reload contacts if needed
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			Alert.alert('Error', 'Failed to complete follow-up');
+			// Reload everything if there's an error
+			await loadReminders();
 		}
 	};
 
