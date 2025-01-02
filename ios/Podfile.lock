@@ -1700,8 +1700,6 @@ PODS:
     - React-logger (= 0.76.5)
     - React-perflogger (= 0.76.5)
     - React-utils (= 0.76.5)
-  - RNCallKeep (4.3.16):
-    - React
   - RNCAsyncStorage (1.23.1):
     - DoubleConversion
     - glog
@@ -2114,7 +2112,6 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
-  - RNCallKeep (from `../node_modules/react-native-callkeep`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
@@ -2323,8 +2320,6 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
-  RNCallKeep:
-    :path: "../node_modules/react-native-callkeep"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
   RNCPicker:
@@ -2442,7 +2437,6 @@ SPEC CHECKSUMS:
   React-utils: 89a30618bd38c591900879825de59104ded1e246
   ReactCodegen: 28abe92ea9a1e277edc25d02d7d53ab3acf5cc07
   ReactCommon: 7da12c0f59956995a153de45835b64c89e0a4a57
-  RNCallKeep: 1930a01d8caf48f018be4f2db0c9f03405c2f977
   RNCAsyncStorage: d2806c4f4c8555fb3ca3fe5759e2f5e5ef74efe4
   RNCPicker: 5d3866a625683cec4ba77771330f4383ad376940
   RNDateTimePicker: dd58d8235c3d12d349c043c2d9bcedcbb513f106

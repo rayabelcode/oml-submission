@@ -33,17 +33,6 @@ afterAll(() => {
 	mockClearTimeout.mockRestore();
 });
 
-// Mock RNCallKeep
-jest.mock('react-native-callkeep', () => ({
-	default: {
-		setup: jest.fn(),
-		addEventListener: jest.fn(),
-		removeEventListener: jest.fn(),
-		startCall: jest.fn(),
-		getNewUUID: jest.fn(() => 'mock-uuid'),
-	},
-}));
-
 // Mock other dependencies
 jest.mock('expo-constants', () => ({
 	appOwnership: 'expo',
@@ -288,13 +277,6 @@ describe('CallHandler', () => {
 			Linking.openURL.mockRejectedValueOnce(new Error('Failed to open URL'));
 			const success = await callHandler.initiateCall(mockContact, 'phone');
 			expect(success).toBeFalsy();
-		});
-
-		it('should handle CallKeep setup failure', async () => {
-			const RNCallKeep = require('react-native-callkeep').default;
-			RNCallKeep.setup.mockRejectedValueOnce(new Error('Setup failed'));
-			await callHandler.setup();
-			expect(callHandler.initialized).toBeTruthy();
 		});
 
 		it('should handle firestore failures gracefully', async () => {

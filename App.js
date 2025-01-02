@@ -8,7 +8,7 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import { Alert, LogBox, Platform, View, NativeEventEmitter, NativeModules } from 'react-native';
+import { Alert, LogBox, Platform, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from './src/utils/notifications';
 import * as SplashScreen from 'expo-splash-screen';
@@ -52,10 +52,6 @@ function App() {
 	const [appIsReady, setAppIsReady] = useState(false);
 
 	useEffect(() => {
-		// No-op listener for RNCallKeepDidChangeAudioRoute
-		const eventEmitter = new NativeEventEmitter(NativeModules.RNCallKeep);
-		const subscription = eventEmitter.addListener('RNCallKeepDidChangeAudioRoute', () => {});
-
 		async function prepare() {
 			try {
 				await Font.loadAsync({
@@ -64,8 +60,7 @@ function App() {
 
 				await notificationService.initialize();
 
-				Notifications.addNotificationReceivedListener((notification) => {
-				});
+				Notifications.addNotificationReceivedListener((notification) => {});
 			} catch (e) {
 				console.warn(e);
 			} finally {
@@ -74,11 +69,6 @@ function App() {
 		}
 
 		prepare();
-
-		// Cleanup the listener on unmount
-		return () => {
-			subscription.remove();
-		};
 	}, []);
 
 	const onLayoutRootView = useCallback(async () => {
