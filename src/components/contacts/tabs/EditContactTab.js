@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
@@ -17,6 +17,8 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
+	const [newTag, setNewTag] = useState('');
+	const inputRef = useRef(null);
 
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState({
@@ -27,6 +29,55 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 		},
 	});
 	const [showSuccess, setShowSuccess] = useState(false);
+
+	const handleAddTag = async () => {
+		if (!newTag.trim()) return;
+
+		const normalizedNewTag = newTag.trim().toLowerCase();
+		const existingTags = contact.tags || [];
+		if (existingTags.some((tag) => tag.toLowerCase() === normalizedNewTag)) {
+			Alert.alert('Duplicate Tag', 'This tag already exists.');
+			setNewTag('');
+			return;
+		}
+
+		const updatedTags = [...existingTags, newTag.trim()];
+
+		try {
+			await updateContact(contact.id, {
+				tags: updatedTags,
+			});
+
+			setSelectedContact((prev) => ({
+				...prev,
+				tags: updatedTags,
+			}));
+
+			setNewTag('');
+			inputRef.current?.focus();
+		} catch (error) {
+			Alert.alert('Error', 'Failed to add tag');
+			console.error('Error adding tag:', error);
+		}
+	};
+
+	const handleDeleteTag = async (tagToDelete) => {
+		try {
+			const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+
+			await updateContact(contact.id, {
+				tags: updatedTags,
+			});
+
+			setSelectedContact((prev) => ({
+				...prev,
+				tags: updatedTags,
+			}));
+		} catch (error) {
+			Alert.alert('Error', 'Failed to delete tag');
+			console.error('Error deleting tag:', error);
+		}
+	};
 
 	const handleEditPhotoUpload = async () => {
 		try {
@@ -132,6 +183,9 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 												style={styles.photoImage}
 												cachePolicy="memory-disk"
 											/>
+											<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
+												<Icon name="create-outline" size={20} color="#FFFFFF" />
+											</TouchableOpacity>
 											{isEditing && (
 												<TouchableOpacity
 													style={styles.removePhotoButton}
@@ -158,7 +212,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 														]);
 													}}
 												>
-													<Icon name="close-circle" size={24} color={colors.danger} />
+													<Icon name="close-circle" size={28} color="#FF6B6B" />
 												</TouchableOpacity>
 											)}
 										</View>
@@ -274,6 +328,62 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 											showLabel={false}
 										/>
 									</View>
+
+									<View style={styles.separator} />
+<View style={styles.dangerSection}>
+    <TouchableOpacity
+        style={styles.dangerButton}
+        onPress={() => {
+            Alert.alert('Archive Contact', 'Archive this contact?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Archive',
+                    onPress: async () => {
+                        try {
+                            await archiveContact(contact.id);
+                            await loadContacts();
+                            onClose();
+                        } catch (error) {
+                            Alert.alert('Error', 'Unable to archive contact');
+                        }
+                    },
+                },
+            ]);
+        }}
+    >
+        <Icon name="archive-outline" size={24} color={colors.text.secondary} />
+        <Text style={styles.dangerButtonText}>Archive</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+        style={styles.dangerButton}
+        onPress={() => {
+            Alert.alert(
+                'Delete Contact',
+                'Are you sure you want to delete this contact? This action cannot be undone.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => {
+                            try {
+                                await deleteContact(contact.id);
+                                await loadContacts();
+                                onClose();
+                            } catch (error) {
+                                Alert.alert('Error', 'Unable to delete contact');
+                            }
+                        },
+                    },
+                ]
+            );
+        }}
+    >
+        <Icon name="trash-outline" size={24} color={colors.danger} />
+        <Text style={[styles.dangerButtonText, { color: colors.danger }]}>Delete</Text>
+    </TouchableOpacity>
+</View>
 								</View>
 							) : (
 								<View style={styles.viewFields}>
@@ -292,75 +402,53 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 											</Text>
 										)}
 									</View>
+
+									<View style={styles.separator} />
+
+									<View style={styles.tagInputWrapper}>
+										<TextInput
+											ref={inputRef}
+											style={[styles.tagInput, { textAlign: 'center' }]}
+											placeholder="Add a Tag"
+											placeholderTextColor={colors.text.secondary}
+											value={newTag}
+											onChangeText={setNewTag}
+											onSubmitEditing={handleAddTag}
+											returnKeyType="done"
+											blurOnSubmit={false}
+										/>
+										<Text style={styles.tagInputHelper}>Tags help you remember what matters most.</Text>
+									</View>
+									<View style={styles.tagsContainer}>
+										{(contact.tags || []).map((tag, index) => (
+											<View key={index} style={styles.tagBubble}>
+												<Text style={styles.tagText}>{tag}</Text>
+												<TouchableOpacity
+													onPress={() => {
+														Alert.alert('Delete Tag', `Are you sure you want to delete "${tag}"?`, [
+															{ text: 'Cancel', style: 'cancel' },
+															{
+																text: 'Delete',
+																style: 'destructive',
+																onPress: () => handleDeleteTag(tag),
+															},
+														]);
+													}}
+												>
+													<Icon
+														name="close-circle"
+														size={16}
+														color={colors.text.secondary}
+														style={styles.tagDeleteIcon}
+													/>
+												</TouchableOpacity>
+											</View>
+										))}
+									</View>
 								</View>
 							)}
 						</View>
 					</TouchableOpacity>
-
-					{!isEditing && (
-						<TouchableOpacity activeOpacity={1}>
-							<View style={styles.separator} />
-							<View style={styles.actionButtons}>
-								<TouchableOpacity style={[styles.actionButton]} onPress={() => setIsEditing(true)}>
-									<Icon name="create-outline" size={32} color={colors.primary} />
-									<Text style={[styles.actionButtonText, { color: colors.primary }]}>Edit</Text>
-								</TouchableOpacity>
-
-								<TouchableOpacity
-									style={[styles.actionButton]}
-									onPress={() => {
-										Alert.alert('Archive Contact', 'Archive this contact?', [
-											{ text: 'Cancel', style: 'cancel' },
-											{
-												text: 'Archive',
-												onPress: async () => {
-													try {
-														await archiveContact(contact.id);
-														await loadContacts();
-														onClose();
-													} catch (error) {
-														Alert.alert('Error', 'Unable to archive contact');
-													}
-												},
-											},
-										]);
-									}}
-								>
-									<Icon name="archive-outline" size={32} color={colors.text.secondary} />
-									<Text style={[styles.actionButtonText, { color: colors.text.secondary }]}>Archive</Text>
-								</TouchableOpacity>
-
-								<TouchableOpacity
-									style={[styles.actionButton]}
-									onPress={() => {
-										Alert.alert(
-											'Delete Contact',
-											'Are you sure you want to delete this contact? This action cannot be undone.',
-											[
-												{ text: 'Cancel', style: 'cancel' },
-												{
-													text: 'Delete',
-													style: 'destructive',
-													onPress: async () => {
-														try {
-															await deleteContact(contact.id);
-															await loadContacts();
-															onClose();
-														} catch (error) {
-															Alert.alert('Error', 'Unable to delete contact');
-														}
-													},
-												},
-											]
-										);
-									}}
-								>
-									<Icon name="trash-outline" size={32} color={colors.danger} />
-									<Text style={[styles.actionButtonText, { color: colors.danger }]}>Delete</Text>
-								</TouchableOpacity>
-							</View>
-						</TouchableOpacity>
-					)}
 				</ScrollView>
 			</View>
 			<AutoDismissModalContainer message="Contact Updated" isVisible={showSuccess} />
