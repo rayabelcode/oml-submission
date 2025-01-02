@@ -43,7 +43,7 @@ const useStyles = () => {
 			alignItems: 'center',
 			justifyContent: 'flex-end', // Icons to the right
 			gap: spacing.lg, // Spacing between icons
-		},		
+		},
 		logo: {
 			width: '30%',
 			height: 15,
@@ -262,17 +262,23 @@ const useStyles = () => {
 		},
 		closeButton: {
 			position: 'absolute',
-			top: -15,
-			right: -15,
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			backgroundColor: colors.background.primary,
-			borderWidth: 2,
-			borderColor: colors.text.primary,
+			right: -18,
+			top: -18,
+			width: 50,
+			height: 50,
+			borderRadius: 50,
+			backgroundColor: '#FF6B6B',
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
+			elevation: 3,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 2,
+			},
+			shadowOpacity: 0.25,
+			shadowRadius: 3.84,
 		},
 		editModalActions: {
 			flexDirection: 'row',
@@ -897,14 +903,14 @@ const useStyles = () => {
 			width: 50,
 			height: 50,
 			borderRadius: 50,
-			backgroundColor: colors.secondary, // Green color like Submit button
+			backgroundColor: '#65D36E',
 			borderWidth: 2,
 			borderColor: colors.background.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
-			elevation: 3, // For Android
-			shadowColor: '#000', // For iOS
+			elevation: 3,
+			shadowColor: '#000',
 			shadowOffset: {
 				width: 0,
 				height: 2,
@@ -912,6 +918,7 @@ const useStyles = () => {
 			shadowOpacity: 0.25,
 			shadowRadius: 3.84,
 		},
+
 		headerContent: {
 			flexDirection: 'row',
 			alignItems: 'center',

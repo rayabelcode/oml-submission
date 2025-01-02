@@ -44,9 +44,9 @@ export const useCommonStyles = () => {
 			flexDirection: 'row',
 			justifyContent: 'center',
 			alignItems: 'center',
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 			position: 'relative',
-			height: 40,
+			height: 30,
 			marginTop: 0, // Add space for the buttons that overflow
 		},
 		modalTitle: {

@@ -177,7 +177,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								onPress={() => setShowCallOptions(!showCallOptions)}
 							>
 								<Text>
-									<Icon name="call-outline" size={20} color={colors.background.primary} />
+									<Icon name="call" size={20} color={colors.background.primary} />
 								</Text>
 								<CallOptions
 									show={showCallOptions}
@@ -192,7 +192,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								</Text>
 							</View>
 							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-								<Icon name="close-outline" size={24} color={colors.text.secondary} />
+							<Icon name="close" size={24} color="#000000" />
 							</TouchableOpacity>
 						</View>
 
