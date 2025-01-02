@@ -268,6 +268,8 @@ const useStyles = () => {
 			height: 50,
 			borderRadius: 50,
 			backgroundColor: '#FF6B6B',
+			borderWidth: 2,
+			borderColor: colors.background.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
