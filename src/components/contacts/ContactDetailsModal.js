@@ -19,13 +19,10 @@ import { fetchContactHistory } from '../../utils/firestore';
 import { generateTopicSuggestions } from '../../utils/ai';
 import CallNotesTab from './tabs/CallNotesTab';
 import ScheduleTab from './tabs/ScheduleTab';
-import TagsTab from './tabs/TagsTab';
 import EditContactTab from './tabs/EditContactTab';
 import Constants from 'expo-constants';
 import CallOptions from '../general/CallOptions';
-
-// Only import callHandler in production builds
-const callHandler = Constants.appOwnership === 'expo' ? null : require('../../utils/callHandler').callHandler;
+import { callHandler } from '../../utils/callHandler';
 
 const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, loadContacts }) => {
 	const { colors } = useTheme();
@@ -137,8 +134,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 						loadContacts={loadContacts}
 					/>
 				);
-			case 'tags':
-				return <TagsTab contact={contact} setSelectedContact={setSelectedContact} />;
 			case 'edit':
 				return (
 					<EditContactTab
@@ -179,7 +174,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								onPress={() => setShowCallOptions(!showCallOptions)}
 							>
 								<Text>
-									<Icon name="call-outline" size={20} color={colors.background.primary} />
+									<Icon name="call" size={20} color={colors.background.primary} />
 								</Text>
 								<CallOptions
 									show={showCallOptions}
@@ -194,7 +189,7 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								</Text>
 							</View>
 							<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-								<Icon name="close-outline" size={24} color={colors.text.secondary} />
+								<Icon name="close" size={24} color="#000000" />
 							</TouchableOpacity>
 						</View>
 
@@ -222,17 +217,6 @@ const ContactDetailsModal = ({ visible, contact, setSelectedContact, onClose, lo
 								<Text style={[styles.tabLabel, activeTab === 'schedule' && styles.activeTabLabel]}>
 									Schedule
 								</Text>
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={[styles.tabItem, activeTab === 'tags' && styles.activeTab]}
-								onPress={() => setActiveTab('tags')}
-							>
-								<Icon
-									name="pricetag-outline"
-									size={24}
-									color={activeTab === 'tags' ? colors.primary : colors.text.secondary}
-								/>
-								<Text style={[styles.tabLabel, activeTab === 'tags' && styles.activeTabLabel]}>Tags</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
 								style={[styles.tabItem, activeTab === 'edit' && styles.activeTab]}

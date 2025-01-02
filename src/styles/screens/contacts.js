@@ -43,7 +43,7 @@ const useStyles = () => {
 			alignItems: 'center',
 			justifyContent: 'flex-end', // Icons to the right
 			gap: spacing.lg, // Spacing between icons
-		},		
+		},
 		logo: {
 			width: '30%',
 			height: 15,
@@ -262,17 +262,25 @@ const useStyles = () => {
 		},
 		closeButton: {
 			position: 'absolute',
-			top: -15,
-			right: -15,
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			backgroundColor: colors.background.primary,
+			right: -18,
+			top: -18,
+			width: 50,
+			height: 50,
+			borderRadius: 50,
+			backgroundColor: '#FF6B6B',
 			borderWidth: 2,
-			borderColor: colors.text.primary,
+			borderColor: colors.background.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
+			elevation: 3,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 2,
+			},
+			shadowOpacity: 0.25,
+			shadowRadius: 3.84,
 		},
 		editModalActions: {
 			flexDirection: 'row',
@@ -327,10 +335,10 @@ const useStyles = () => {
 		},
 		removePhotoButton: {
 			position: 'absolute',
-			top: -5,
-			right: -5,
+			top: -6,
+			right: -6,
 			backgroundColor: colors.background.primary,
-			borderRadius: 12,
+			borderRadius: 20,
 		},
 		uploadButton: {
 			width: 100,
@@ -623,12 +631,12 @@ const useStyles = () => {
 			width: '100%',
 			alignItems: 'center',
 			flexDirection: 'column',
-			padding: spacing.md,
+			padding: 'none;',
 		},
 		photoWrapper: {
 			width: '100%',
 			alignItems: 'center',
-			marginBottom: spacing.xs,
+			marginBottom: 0,
 		},
 		photoContainer: {
 			width: 100,
@@ -648,13 +656,13 @@ const useStyles = () => {
 		contactDetail: {
 			fontSize: 16,
 			color: colors.text.primary,
-			marginVertical: spacing.sm,
+			marginVertical: spacing.xs,
 			textAlign: 'center',
 		},
 		centeredDetails: {
 			alignItems: 'center',
 			justifyContent: 'center',
-			paddingVertical: spacing.md,
+			paddingVertical: 'none',
 		},
 		editFields: {
 			width: '100%',
@@ -678,15 +686,16 @@ const useStyles = () => {
 		actionButtons: {
 			flexDirection: 'row',
 			justifyContent: 'center',
-			gap: spacing.xl,
-			paddingVertical: spacing.lg,
-			marginTop: spacing.xl,
+			gap: spacing.sm,
+			paddingVertical: spacing.xs,
+			marginVertical: spacing.xs,
 		},
 		actionButton: {
 			alignItems: 'center',
-			padding: spacing.sm,
-			minWidth: 80,
+			padding: spacing.xs,
+			minWidth: 60,
 		},
+
 		actionButtonText: {
 			fontSize: 12,
 			marginTop: spacing.xs,
@@ -697,6 +706,7 @@ const useStyles = () => {
 			alignItems: 'center',
 			width: '100%',
 			gap: spacing.sm,
+			marginTop: spacing.md,
 		},
 		headerButton: {
 			paddingHorizontal: spacing.xs, // Padding between icons
@@ -705,9 +715,12 @@ const useStyles = () => {
 		},
 		saveButtonText: {
 			color: colors.background.primary,
+			fontSize: 16,
 			fontWeight: '600',
 		},
 		cancelButtonText: {
+			color: colors.text.primary,
+			fontSize: 16,
 			fontWeight: '500',
 		},
 		editButtonText: {
@@ -716,7 +729,7 @@ const useStyles = () => {
 		},
 		contactDetails: {
 			padding: spacing.md,
-			marginTop: spacing.xs,
+			marginTop: 0,
 		},
 		separator: {
 			height: 1,
@@ -735,12 +748,15 @@ const useStyles = () => {
 		},
 		saveButton: {
 			backgroundColor: colors.primary,
-			marginRight: spacing.xs,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.md,
 		},
 		cancelButton: {
-			backgroundColor: colors.background.primary,
-			borderWidth: 2,
-			borderColor: colors.border,
+			backgroundColor: colors.background.secondary,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.md,
 		},
 		buttonText: {
 			color: colors.background.primary,
@@ -897,14 +913,34 @@ const useStyles = () => {
 			width: 50,
 			height: 50,
 			borderRadius: 50,
-			backgroundColor: colors.secondary, // Green color like Submit button
+			backgroundColor: '#65D36E',
 			borderWidth: 2,
 			borderColor: colors.background.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
-			elevation: 3, // For Android
-			shadowColor: '#000', // For iOS
+			elevation: 3,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 2,
+			},
+			shadowOpacity: 0.25,
+			shadowRadius: 3.84,
+		},
+		editAvatarButton: {
+			position: 'absolute',
+			right: -5,
+			bottom: -5,
+			width: 36,
+			height: 36,
+			borderRadius: 18,
+			backgroundColor: colors.primary,
+			alignItems: 'center',
+			justifyContent: 'center',
+			zIndex: 5,
+			elevation: 3,
+			shadowColor: '#000',
 			shadowOffset: {
 				width: 0,
 				height: 2,
@@ -928,6 +964,29 @@ const useStyles = () => {
 			fontSize: 16,
 			color: colors.text.primary,
 			height: 40,
+		},
+		dangerZone: {
+			marginTop: spacing.lg,
+			padding: spacing.md,
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+		},
+		dangerSection: {
+			flexDirection: 'row',
+			justifyContent: 'space-around',
+			paddingVertical: spacing.md,
+			marginTop: spacing.sm,
+		},
+		dangerButton: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			flex: 1,
+		},
+		dangerButtonText: {
+			fontSize: 12,
+			marginTop: 4,
+			textAlign: 'center',
+			color: colors.text.secondary,
 		},
 	});
 };

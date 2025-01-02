@@ -8,11 +8,13 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import TabNavigator from './src/navigation/TabNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import { Alert, LogBox, Platform, View } from 'react-native';
+import { Alert, LogBox, Platform, View, NativeEventEmitter, NativeModules } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { notificationService } from './src/utils/notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
+import { navigationRef } from './src/navigation/RootNavigation';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,7 +45,6 @@ async function registerForPushNotificationsAsync() {
 	}
 
 	const token = (await Notifications.getExpoPushTokenAsync()).data;
-	console.log('Expo Push Notification Token:', token);
 	return token;
 }
 
@@ -51,24 +52,19 @@ function App() {
 	const [appIsReady, setAppIsReady] = useState(false);
 
 	useEffect(() => {
+		// No-op listener for RNCallKeepDidChangeAudioRoute
+		const eventEmitter = new NativeEventEmitter(NativeModules.RNCallKeep);
+		const subscription = eventEmitter.addListener('RNCallKeepDidChangeAudioRoute', () => {});
+
 		async function prepare() {
 			try {
 				await Font.loadAsync({
 					'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 				});
 
-				await registerForPushNotificationsAsync();
-
-				Notifications.setNotificationHandler({
-					handleNotification: async () => ({
-						shouldShowAlert: true,
-						shouldPlaySound: true,
-						shouldSetBadge: false,
-					}),
-				});
+				await notificationService.initialize();
 
 				Notifications.addNotificationReceivedListener((notification) => {
-					console.log('Foreground notification received:', notification);
 				});
 			} catch (e) {
 				console.warn(e);
@@ -78,6 +74,11 @@ function App() {
 		}
 
 		prepare();
+
+		// Cleanup the listener on unmount
+		return () => {
+			subscription.remove();
+		};
 	}, []);
 
 	const onLayoutRootView = useCallback(async () => {
@@ -94,7 +95,7 @@ function App() {
 		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
 			<ThemeProvider>
 				<AuthProvider>
-					<NavigationContainer>
+					<NavigationContainer ref={navigationRef}>
 						<SafeAreaWrapper>
 							<TabNavigator />
 						</SafeAreaWrapper>

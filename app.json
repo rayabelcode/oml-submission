@@ -2,12 +2,15 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.36",
+		"version": "1.0.39",
 		"runtimeVersion": {
 			"policy": "sdkVersion"
 		},
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
+		"notification": {
+			"icon": "./assets/icon.png"
+		},
 		"scheme": "onmylist",
 		"userInterfaceStyle": "automatic",
 		"splash": {

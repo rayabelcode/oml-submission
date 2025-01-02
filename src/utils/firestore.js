@@ -293,18 +293,13 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 
 		await updateDoc(contactRef, updateData);
 
-		// Create reminder document if nextContactDate exists
 		if (nextContactDate) {
-			const remindersRef = collection(db, 'reminders');
-			await addDoc(remindersRef, {
-				contact_id: contactId,
-				date: nextContactDate,
-				created_at: serverTimestamp(),
-				updated_at: serverTimestamp(),
-				snoozed: false,
-				follow_up: false,
-				ai_suggestions: [], // Will be populated by AI module
-				user_id: auth.currentUser.uid,
+			await addReminder({
+				contactId: contactId,
+				scheduledTime: nextContactDate,
+				type: 'regular',
+				userId: auth.currentUser.uid,
+				notes: '',
 			});
 		}
 	} catch (error) {
@@ -358,6 +353,248 @@ export async function createFollowUpReminder(contactId, date) {
 		throw error;
 	}
 }
+
+// V2 reminder functions
+export const addReminder = async (reminderData) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+
+		// Create base reminder data with required fields
+		const reminderDoc = {
+			created_at: serverTimestamp(),
+			updated_at: serverTimestamp(),
+			contact_id: reminderData.contactId,
+			user_id: auth.currentUser.uid,
+			userId: auth.currentUser.uid, // Keep both for backward compatibility
+			date: reminderData.scheduledTime,
+			scheduledTime: reminderData.scheduledTime,
+			status: reminderData.status || 'pending',
+			type: reminderData.type || 'follow_up',
+			snoozed: false,
+			follow_up: reminderData.type === 'follow_up',
+			completed: false,
+			completion_time: null,
+			notes_added: false,
+			contactName: reminderData.contactName || '',
+		};
+
+		// Add optional fields only if they exist
+		if (reminderData.call_data) {
+			reminderDoc.call_data = reminderData.call_data;
+		}
+
+		const docRef = await addDoc(remindersRef, reminderDoc);
+		return docRef.id;
+	} catch (error) {
+		console.error('[Firestore] Error adding reminder:', error);
+		throw error;
+	}
+};
+
+export const updateReminder = async (reminderId, updateData) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		await updateDoc(reminderRef, {
+			...updateData,
+			updated_at: serverTimestamp(),
+		});
+		return true;
+	} catch (error) {
+		console.error('Error updating reminder:', error);
+		throw error;
+	}
+};
+
+export const deleteReminder = async (reminderId) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		await deleteDoc(reminderRef);
+		return true;
+	} catch (error) {
+		console.error('Error deleting reminder:', error);
+		throw error;
+	}
+};
+
+export const getReminder = async (reminderId) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderSnap = await getDoc(reminderRef);
+
+		if (!reminderSnap.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		return {
+			id: reminderSnap.id,
+			...reminderSnap.data(),
+		};
+	} catch (error) {
+		console.error('Error getting reminder:', error);
+		throw error;
+	}
+};
+
+export const getReminders = async (userId, status = 'pending') => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('userId', '==', userId),
+			where('status', '==', status),
+			orderBy('date', 'desc')
+		);
+
+		const snapshot = await getDocs(q);
+
+		const reminders = snapshot.docs.map((doc) => {
+			const data = doc.data();
+
+			// Handle date conversion safely
+			let scheduledTime;
+			try {
+				if (data.date?.toDate) {
+					scheduledTime = data.date.toDate();
+				} else if (data.scheduledTime?.toDate) {
+					scheduledTime = data.scheduledTime.toDate();
+				} else if (data.date) {
+					scheduledTime = new Date(data.date);
+				} else if (data.scheduledTime) {
+					scheduledTime = new Date(data.scheduledTime);
+				} else {
+					scheduledTime = new Date();
+				}
+			} catch (error) {
+				console.error('[Firestore] Error converting date:', error);
+				scheduledTime = new Date();
+			}
+
+			return {
+				id: doc.id,
+				...data,
+				scheduledTime,
+				contactName: data.contactName || 'Unknown Contact',
+				// Make sure all required fields are present
+				contact_id: data.contact_id || data.contactId,
+				call_data: data.call_data || null,
+				type: data.type || 'regular',
+			};
+		});
+
+		return reminders;
+	} catch (error) {
+		console.error('[Firestore] Error getting reminders:', error);
+		throw error;
+	}
+};
+
+export const getContactReminders = async (contactId, userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('contact_id', '==', contactId),
+			where('user_id', '==', userId),
+			where('snoozed', '==', false)
+		);
+
+		const querySnapshot = await getDocs(q);
+		const reminders = [];
+
+		querySnapshot.forEach((doc) => {
+			reminders.push({
+				id: doc.id,
+				...doc.data(),
+			});
+		});
+
+		return reminders;
+	} catch (error) {
+		console.error('Error getting contact reminders:', error);
+		throw error;
+	}
+};
+
+// Follow up functions
+export const getFollowUpReminders = async (userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('user_id', '==', userId),
+			where('type', '==', 'follow_up'),
+			where('completed', '==', false),
+			orderBy('date', 'desc')
+		);
+
+		const querySnapshot = await getDocs(q);
+		return querySnapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
+	} catch (error) {
+		console.error('Error fetching follow-up reminders:', error);
+		throw error;
+	}
+};
+
+export const completeFollowUp = async (reminderId, notes) => {
+	try {
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderDoc = await getDoc(reminderRef);
+
+		if (!reminderDoc.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		const reminderData = reminderDoc.data();
+
+		if (reminderData.user_id !== auth.currentUser?.uid) {
+			throw new Error('User does not have permission to modify this reminder');
+		}
+
+		const batch = writeBatch(db);
+
+		// Always update the reminder status
+		batch.update(reminderRef, {
+			completed: true,
+			completion_time: serverTimestamp(),
+			notes_added: !!notes,
+			updated_at: serverTimestamp(),
+			notes: notes || '',
+			status: 'completed',
+		});
+
+		// Only add to contact history if notes were provided
+		if (notes && reminderData.contact_id) {
+			const contactRef = doc(db, 'contacts', reminderData.contact_id);
+			const contactDoc = await getDoc(contactRef);
+
+			if (contactDoc.exists()) {
+				const contactData = contactDoc.data();
+				const history = contactData.contact_history || [];
+
+				const newHistoryEntry = {
+					date: new Date().toISOString(),
+					notes: notes,
+					type: 'follow_up',
+					completed: true,
+				};
+
+				batch.update(contactRef, {
+					contact_history: [newHistoryEntry, ...history],
+					last_updated: serverTimestamp(),
+				});
+			}
+		}
+
+		await batch.commit();
+		return true;
+	} catch (error) {
+		console.error('Error completing follow-up:', error);
+		throw error;
+	}
+};
 
 // User profile functions
 export const updateUserProfile = async (userId, profileData) => {

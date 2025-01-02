@@ -3,6 +3,7 @@ import { CallHandler } from '../../utils/callHandler';
 import { Linking, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { addContactHistory, updateNextContact, createFollowUpReminder } from '../../utils/firestore';
+import { notificationService } from '../../utils/notifications';
 
 jest.useRealTimers();
 
@@ -11,6 +12,12 @@ const mockClearTimeout = jest.spyOn(global, 'clearTimeout');
 
 // Mock console.error to avoid noise in test output
 const originalConsoleError = console.error;
+
+jest.mock('../../utils/notifications', () => ({
+	notificationService: {
+		scheduleFollowUpReminder: jest.fn(),
+	},
+}));
 
 beforeAll(() => {
 	console.error = jest.fn();
@@ -83,7 +90,7 @@ describe('CallHandler', () => {
 		callHandler?.cleanup();
 	});
 
-	describe('initialization', () => {
+	describe('CallHandler initialization', () => {
 		it('should initialize with correct default values', () => {
 			expect(callHandler.initialized).toBeFalsy();
 			expect(callHandler.activeCall).toBeNull();
@@ -231,6 +238,51 @@ describe('CallHandler', () => {
 		});
 	});
 
+	describe('follow-up functionality', () => {
+		beforeEach(() => {
+			jest.spyOn(notificationService, 'scheduleFollowUpReminder').mockResolvedValue({
+				firestoreId: 'mock-follow-up-id',
+				localNotificationId: 'mock-local-id',
+			});
+		});
+
+		it('should schedule follow-up reminder for long calls', async () => {
+			// Create real Date objects
+			const mockStartTime = new Date('2024-01-01T12:00:00Z');
+			const mockEndTime = new Date('2024-01-01T12:00:11Z');
+
+			// Create a Date spy that returns our mock dates
+			const DateSpy = jest.spyOn(global, 'Date');
+			DateSpy.mockImplementationOnce(() => mockStartTime)
+				.mockImplementationOnce(() => mockEndTime)
+				.mockImplementationOnce(() => mockEndTime); // For nextContactDate
+
+			await callHandler.initiateCall(mockContact, 'phone');
+			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+
+			expect(notificationService.scheduleFollowUpReminder).toHaveBeenCalled();
+
+			DateSpy.mockRestore();
+		});
+
+		it('should not schedule follow-up for short calls', async () => {
+			// Create real Date objects
+			const mockStartTime = new Date('2024-01-01T12:00:00Z');
+			const mockEndTime = new Date('2024-01-01T12:00:05Z');
+
+			// Create a Date spy that returns our mock dates
+			const DateSpy = jest.spyOn(global, 'Date');
+			DateSpy.mockImplementationOnce(() => mockStartTime).mockImplementationOnce(() => mockEndTime);
+
+			await callHandler.initiateCall(mockContact, 'phone');
+			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+
+			expect(notificationService.scheduleFollowUpReminder).not.toHaveBeenCalled();
+
+			DateSpy.mockRestore();
+		});
+	});
+
 	describe('error handling', () => {
 		it('should handle Linking.openURL failure', async () => {
 			Linking.openURL.mockRejectedValueOnce(new Error('Failed to open URL'));
@@ -246,19 +298,29 @@ describe('CallHandler', () => {
 		});
 
 		it('should handle firestore failures gracefully', async () => {
-			addContactHistory.mockRejectedValueOnce(new Error('Firestore error'));
-			updateNextContact.mockRejectedValueOnce(new Error('Firestore error'));
-			createFollowUpReminder.mockRejectedValueOnce(new Error('Firestore error'));
+			// Setup mocks to reject
+			addContactHistory.mockRejectedValue(new Error('Firestore error'));
+			updateNextContact.mockRejectedValue(new Error('Firestore error'));
+			createFollowUpReminder.mockRejectedValue(new Error('Firestore error'));
 
-			const startDate = new Date('2024-01-01T12:00:00Z');
-			const DateSpy = jest.spyOn(global, 'Date').mockImplementation(() => startDate);
+			// Create real Date objects
+			const mockStartTime = new Date('2024-01-01T12:00:00Z');
+			const mockEndTime = new Date('2024-01-01T12:00:11Z');
+
+			// Create a Date spy that returns our mock dates
+			const DateSpy = jest.spyOn(global, 'Date');
+			DateSpy.mockImplementationOnce(() => mockStartTime)
+				.mockImplementationOnce(() => mockEndTime)
+				.mockImplementationOnce(() => mockEndTime); // For nextContactDate
 
 			await callHandler.initiateCall(mockContact, 'phone');
 
-			const endDate = new Date('2024-01-01T12:00:11Z');
-			DateSpy.mockImplementation(() => endDate);
+			// We expect this to throw but still cleanup
+			await expect(async () => {
+				await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+			}).rejects.toThrow('Firestore error');
 
-			await callHandler.onCallEnded({ callUUID: callHandler.activeCall.uuid });
+			// Verify cleanup still happened
 			expect(callHandler.activeCall).toBeNull();
 
 			DateSpy.mockRestore();

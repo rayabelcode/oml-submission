@@ -32,6 +32,7 @@ const useStyles = () => {
 		buttonContainer: {
 			flexDirection: 'row',
 			paddingHorizontal: spacing.md,
+			paddingTop: spacing.lg,
 			paddingBottom: spacing.md,
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
@@ -64,6 +65,33 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 			borderWidth: 1,
 			borderColor: colors.border,
+			overflow: 'hidden',
+		},
+		cardContent: {
+			flex: 1,
+		},
+		cardActions: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			marginTop: spacing.md,
+			paddingTop: spacing.md,
+			borderTopWidth: 1,
+			borderTopColor: colors.border,
+		},
+		actionButton: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.sm,
+		},
+		actionText: {
+			fontSize: 12,
+			marginTop: 4,
+			fontWeight: '500',
+		},
+		actionButtonSeparator: {
+			width: 1,
+			backgroundColor: colors.border,
 		},
 		cardHeader: {
 			flexDirection: 'row',
@@ -79,8 +107,9 @@ const useStyles = () => {
 			color: colors.text.primary,
 		},
 		cardDate: {
-			fontSize: 14,
+			fontSize: 16,
 			color: colors.text.secondary,
+			marginBottom: 10,
 		},
 		avatarContainer: {
 			width: 40,
@@ -140,6 +169,53 @@ const useStyles = () => {
 			paddingVertical: spacing.sm,
 			fontStyle: 'italic',
 			fontWeight: '600',
+		},
+		notificationsContainer: {
+			flex: 1,
+			padding: spacing.md,
+			backgroundColor: colors.background.primary,
+		},
+		// Notification swiping
+		swipeActionContainer: {
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: 100,
+			height: '100%',
+		},
+		swipeActionText: {
+			color: colors.background.primary,
+			fontWeight: '600',
+			fontSize: 16,
+		},
+		// Call notes on reminders
+		cardTitle: {
+			fontSize: 20,
+			fontWeight: 'bold',
+			color: colors.text.primary,
+			marginBottom: 5,
+		},
+		notesContainer: {
+			padding: spacing.md,
+		},
+		notesInput: {
+			borderRadius: layout.borderRadius.sm,
+			padding: spacing.md,
+			minHeight: 80,
+			marginBottom: spacing.md,
+			fontSize: 16,
+		},
+		submitButton: {
+			backgroundColor: colors.primary,
+			padding: 10,
+			borderRadius: 8,
+			alignItems: 'center',
+		},
+		submitButtonDisabled: {
+			opacity: 0.5,
+		},
+		submitButtonText: {
+			color: '#fff',
+			fontWeight: 'bold',
 		},
 	});
 };

@@ -7,10 +7,16 @@ import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { fetchUpcomingContacts } from '../utils/firestore';
-import StatsView from '../components/dashboard/StatsView'; // Import StatsView component
-import ContactCard from '../components/dashboard/ContactCard'; // Import ContactCard component
+import { NotificationsView } from '../components/dashboard/NotificationsView';
+import { notificationService } from '../utils/notifications';
+import ContactCard from '../components/dashboard/ContactCard';
+import ContactDetailsModal from '../components/contacts/ContactDetailsModal';
+import ActionModal from '../components/general/ActionModal';
+import { useFocusEffect } from '@react-navigation/native';
+import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
-export default function DashboardScreen({ navigation }) {
+export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
 	const { colors } = useTheme();
 	const styles = useStyles();
@@ -19,80 +25,114 @@ export default function DashboardScreen({ navigation }) {
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
-
-	const [stats, setStats] = useState({
-		monthlyContacts: 0,
-		currentStreak: 0,
-		frequentContacts: [],
-		needsAttention: [],
-		totalActive: 0,
+	const [selectedContact, setSelectedContact] = useState(null);
+	const [showContactModal, setShowContactModal] = useState(false);
+	const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
+	const [selectedReminder, setSelectedReminder] = useState(null);
+	const [remindersState, setRemindersState] = useState({
+		data: [],
+		loading: true,
+		error: null,
 	});
 
-	const calculateStats = async () => {
+	// Handle navigation from notifications
+	useEffect(() => {
+		if (route.params?.initialView === 'notifications') {
+			setViewMode('notifications');
+			if (route.params?.highlightReminderId) {
+			}
+		}
+	}, [route.params]);
+
+	// Refresh data when screen is focused
+	useFocusEffect(
+		React.useCallback(() => {
+			if (user) {
+				loadReminders();
+			}
+		}, [user])
+	);
+
+	const loadReminders = async () => {
+		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
-			const now = new Date();
-			const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+			const activeReminders = await notificationService.getActiveReminders();
+			setRemindersState({
+				data: activeReminders,
+				loading: false,
+				error: null,
+			});
+		} catch (error) {
+			console.error('[DashboardScreen] Error loading reminders:', error);
+			setRemindersState({
+				data: [],
+				loading: false,
+				error: 'Failed to load reminders',
+			});
+			Alert.alert('Error', 'Failed to load reminders');
+		}
+	};
 
-			// Get all contacts
-			const allContacts = await fetchUpcomingContacts(user.uid);
+	const handleFollowUpComplete = async (reminderId, notes) => {
+		try {
+			if (notes) {
+				const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
+				const contactId = reminder.data?.contactId;
+				const contact = contacts.find((c) => c.id === contactId);
 
-			// Monthly contacts (completed this month)
-			const monthlyCount = allContacts.reduce((count, contact) => {
-				return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
-			}, 0);
+				if (contact) {
+					const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+					const newHistoryEntry = {
+						completed: true,
+						date: currentDate,
+						notes: notes,
+					};
 
-			// Calculate streak (consecutive days with at least one contact)
-			let streak = 0;
-			const today = new Date().setHours(0, 0, 0, 0);
-			let checkDate = today;
-			let hasContact = true;
-
-			while (hasContact) {
-				const dateContacts = allContacts.some((contact) =>
-					contact.contact_history?.some((h) => new Date(h.date).setHours(0, 0, 0, 0) === checkDate)
-				);
-
-				if (dateContacts) {
-					streak++;
-					checkDate -= 86400000; // Subtract one day
-				} else {
-					hasContact = false;
+					const contactRef = doc(db, 'contacts', contact.id);
+					await updateDoc(contactRef, {
+						contact_history: arrayUnion(newHistoryEntry),
+						last_updated: serverTimestamp(),
+					});
 				}
 			}
 
-			// Most frequent contacts (last 30 days)
-			const thirtyDaysAgo = new Date(now - 30 * 86400000);
-			const frequentContacts = allContacts
-				.map((contact) => ({
-					name: `${contact.first_name} ${contact.last_name}`,
-					count: contact.contact_history?.filter((h) => new Date(h.date) >= thirtyDaysAgo).length || 0,
-				}))
-				.filter((c) => c.count > 0)
-				.sort((a, b) => b.count - a.count)
-				.slice(0, 5);
-
-			// Contacts needing attention (no contact in last 30 days)
-			const needsAttention = allContacts
-				.filter((contact) => {
-					const lastContact = contact.contact_history?.[0]?.date;
-					return !lastContact || new Date(lastContact) < thirtyDaysAgo;
-				})
-				.map((contact) => ({
-					name: `${contact.first_name} ${contact.last_name}`,
-					lastContact: contact.contact_history?.[0]?.date || 'Never',
-				}))
-				.slice(0, 5);
-
-			setStats({
-				monthlyContacts: monthlyCount,
-				currentStreak: streak,
-				frequentContacts,
-				needsAttention,
-				totalActive: allContacts.length,
-			});
+			await notificationService.handleFollowUpComplete(reminderId);
+			await Promise.all([loadReminders(), loadContacts()]);
 		} catch (error) {
-			console.error('Error calculating stats:', error);
-			Alert.alert('Error', 'Failed to load statistics');
+			console.error('Error completing follow-up:', error);
+			Alert.alert('Error', 'Failed to complete follow-up');
+		}
+	};
+
+	const handleAddNotes = (reminder) => {
+		const contact = contacts.find((c) => c.id === reminder.data?.contactId);
+		if (contact) {
+			setSelectedContact(contact);
+			setShowContactModal(true);
+		} else {
+			console.error('Contact not found for reminder:', reminder);
+			Alert.alert('Error', 'Could not find contact information');
+		}
+	};
+
+	const handleSnooze = (reminder) => {
+		setSelectedReminder(reminder);
+		setShowSnoozeOptions(true);
+	};
+
+	const handleSnoozeSelection = async (duration) => {
+		if (!selectedReminder) return;
+
+		try {
+			const newTime = new Date(Date.now() + duration);
+			await notificationService.rescheduleFollowUp(selectedReminder.firestoreId, newTime);
+			await loadReminders();
+		} catch (error) {
+			console.error('Error snoozing reminder:', error);
+			Alert.alert('Error', 'Failed to snooze reminder');
+		} finally {
+			setShowSnoozeOptions(false);
+			setSelectedReminder(null);
 		}
 	};
 
@@ -112,25 +152,26 @@ export default function DashboardScreen({ navigation }) {
 	useEffect(() => {
 		if (user) {
 			loadContacts();
+			loadReminders();
 		}
 	}, [user]);
 
-	useEffect(() => {
-		if (user && viewMode === 'stats') {
-			calculateStats();
-		}
-	}, [user, viewMode]);
-
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
-		await loadContacts();
-		setRefreshing(false);
+		try {
+			await Promise.all([loadContacts(), loadReminders()]);
+		} catch (error) {
+			console.error('Error refreshing data:', error);
+			Alert.alert('Error', 'Failed to refresh data');
+		} finally {
+			setRefreshing(false);
+		}
 	}, []);
 
 	if (!user) {
 		return (
 			<View style={commonStyles.container}>
-				<Text style={commonStyles.message}>Please log in to view your calendar</Text>
+				<Text style={commonStyles.message}>Please log in to view your dashboard</Text>
 			</View>
 		);
 	}
@@ -138,10 +179,6 @@ export default function DashboardScreen({ navigation }) {
 	return (
 		<View style={commonStyles.container}>
 			<StatusBar style="auto" />
-
-			<View style={styles.header}>
-				<Text style={styles.title}>Calendar + Stats</Text>
-			</View>
 
 			<View style={styles.buttonContainer}>
 				<TouchableOpacity
@@ -153,11 +190,11 @@ export default function DashboardScreen({ navigation }) {
 				</TouchableOpacity>
 
 				<TouchableOpacity
-					style={[commonStyles.toggleButton, viewMode === 'stats' && styles.toggleButtonActive]}
-					onPress={() => setViewMode('stats')}
+					style={[commonStyles.toggleButton, viewMode === 'notifications' && styles.toggleButtonActive]}
+					onPress={() => setViewMode('notifications')}
 				>
-					<Icon name="stats-chart-outline" size={24} color={colors.primary} />
-					<Text style={styles.toggleButtonText}>Stats</Text>
+					<Icon name="notifications-outline" size={24} color={colors.primary} />
+					<Text style={styles.toggleButtonText}>Notifications</Text>
 				</TouchableOpacity>
 			</View>
 
@@ -171,12 +208,66 @@ export default function DashboardScreen({ navigation }) {
 					) : contacts.length === 0 ? (
 						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						contacts.map((contact) => <ContactCard key={contact.id} contact={contact} onPress={() => {}} />)
+						contacts.map((contact) => (
+							<ContactCard
+								key={contact.id}
+								contact={contact}
+								onPress={() => {
+									setSelectedContact(contact);
+									setShowContactModal(true);
+								}}
+							/>
+						))
 					)}
 				</ScrollView>
 			) : (
-				<StatsView stats={stats} />
+				<NotificationsView
+					reminders={remindersState.data}
+					onComplete={handleFollowUpComplete}
+					onAddNotes={handleAddNotes}
+					onSnooze={handleSnooze}
+					loading={remindersState.loading}
+					onRefresh={onRefresh}
+					refreshing={refreshing}
+				/>
 			)}
+
+			<ContactDetailsModal
+				visible={showContactModal}
+				contact={selectedContact}
+				setSelectedContact={setSelectedContact}
+				onClose={() => setShowContactModal(false)}
+				loadContacts={loadContacts}
+				initialTab="notes"
+			/>
+
+			<ActionModal
+				show={showSnoozeOptions}
+				onClose={() => {
+					setShowSnoozeOptions(false);
+					setSelectedReminder(null);
+				}}
+				options={[
+					{
+						id: '1h',
+						icon: 'time-outline',
+						text: 'In 1 hour',
+						onPress: () => handleSnoozeSelection(60 * 60 * 1000),
+					},
+					{
+						id: '3h',
+						icon: 'time-outline',
+						text: 'In 3 hours',
+						onPress: () => handleSnoozeSelection(3 * 60 * 60 * 1000),
+					},
+					{
+						id: '1d',
+						icon: 'calendar-outline',
+						text: 'Tomorrow',
+						onPress: () => handleSnoozeSelection(24 * 60 * 60 * 1000),
+					},
+				]}
+			/>
 		</View>
 	);
 }

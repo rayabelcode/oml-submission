@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import ContactsScreen from '../screens/ContactsScreen';
+import StatsScreen from '../screens/StatsScreen';
 import SettingsStack from './SettingsStack';
 
 const Tab = createBottomTabNavigator();
@@ -32,7 +33,8 @@ export default function TabNavigator() {
 				tabBarIcon: ({ focused, color, size }) => {
 					const iconNames = {
 						Contacts: focused ? 'people' : 'people-outline',
-						Calendar: focused ? 'calendar' : 'calendar-outline',
+						Dashboard: focused ? 'calendar' : 'calendar-outline',
+						Stats: focused ? 'stats-chart' : 'stats-chart-outline',
 						Settings: focused ? 'settings' : 'settings-outline',
 					}[route.name];
 					return <Icon name={iconNames} size={size} color={color} />;
@@ -52,7 +54,8 @@ export default function TabNavigator() {
 			})}
 		>
 			<Tab.Screen name="Contacts" component={ContactsScreen} />
-			<Tab.Screen name="Calendar" component={DashboardScreen} />
+			<Tab.Screen name="Dashboard" component={DashboardScreen} />
+			<Tab.Screen name="Stats" component={StatsScreen} />
 			<Tab.Screen name="Settings" component={SettingsStack} />
 		</Tab.Navigator>
 	);
