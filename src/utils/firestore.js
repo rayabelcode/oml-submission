@@ -58,19 +58,21 @@ export const subscribeToContacts = (userId, callback) => {
 
 	try {
 		const contactsRef = collection(db, 'contacts');
-		// Only filter by user_id, handle archived filtering in the callback
 		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
 
-		console.log('Setting up contacts subscription for user:', userId);
+		// Try to get cached data first
+		cacheManager.getCachedContacts(userId).then((cached) => {
+			if (cached) {
+				callback(cached);
+			}
+		});
 
 		const unsubscribe = onSnapshot(
 			q,
-			(querySnapshot) => {
-				console.log('Received contacts update:', querySnapshot.size, 'contacts');
+			async (querySnapshot) => {
 				const contacts = [];
 				querySnapshot.forEach((doc) => {
 					const contactData = doc.data();
-					// Only add non-archived contacts
 					if (!contactData.archived) {
 						contacts.push({ id: doc.id, ...contactData });
 					}
@@ -81,29 +83,35 @@ export const subscribeToContacts = (userId, callback) => {
 					unscheduledContacts: contacts.filter((contact) => !contact.next_contact),
 				};
 
-				console.log('Formatted contacts:', {
-					scheduled: formattedContacts.scheduledContacts.length,
-					unscheduled: formattedContacts.unscheduledContacts.length,
-				});
-
+				// Save to cache
+				await cacheManager.saveContacts(userId, formattedContacts);
 				callback(formattedContacts);
 			},
-			(error) => {
+			async (error) => {
 				console.error('Contacts subscription error:', error);
-				// Attempt to fetch contacts normally on subscription error
-				fetchContacts(userId)
-					.then((contacts) => callback(contacts))
-					.catch((err) => {
-						console.error('Fallback fetch failed:', err);
-						callback({ scheduledContacts: [], unscheduledContacts: [] });
-					});
+				// Try to get cached data on error
+				const cached = await cacheManager.getCachedContacts(userId);
+				if (cached) {
+					callback(cached);
+				} else {
+					callback({ scheduledContacts: [], unscheduledContacts: [] });
+				}
 			}
 		);
 
+		// Store the unsubscribe function
+		activeSubscriptions.set(`contacts_${userId}`, unsubscribe);
 		return unsubscribe;
 	} catch (error) {
 		console.error('Error setting up contacts subscription:', error);
-		callback({ scheduledContacts: [], unscheduledContacts: [] });
+		// Try to get cached data on setup error
+		cacheManager.getCachedContacts(userId).then((cached) => {
+			if (cached) {
+				callback(cached);
+			} else {
+				callback({ scheduledContacts: [], unscheduledContacts: [] });
+			}
+		});
 		return () => {};
 	}
 };
@@ -276,27 +284,44 @@ export const fetchContactHistory = async (contactId) => {
 };
 
 // Real-time Contact Details Subscription
-export const subscribeToContactDetails = (contactId, callback) => {
-	if (activeSubscriptions.has(`contact_${contactId}`)) {
-		activeSubscriptions.get(`contact_${contactId}`)();
+export const subscribeToContactDetails = (contactId, callback, onError) => {
+	if (!contactId) {
+		console.error('No contactId provided to subscribeToContactDetails');
+		return () => {};
 	}
 
-	const contactRef = doc(db, 'contacts', contactId);
-	const unsubscribe = onSnapshot(
-		contactRef,
-		(doc) => {
-			if (doc.exists()) {
-				const contactData = { id: doc.id, ...doc.data() };
-				callback(contactData);
-			}
-		},
-		(error) => {
-			console.error('Error in contact details subscription:', error);
-		}
-	);
+	try {
+		const contactRef = doc(db, 'contacts', contactId);
 
-	activeSubscriptions.set(`contact_${contactId}`, unsubscribe);
-	return unsubscribe;
+		const unsubscribe = onSnapshot(
+			contactRef,
+			(doc) => {
+				if (doc.exists()) {
+					const contactData = { id: doc.id, ...doc.data() };
+					callback(contactData);
+				} else {
+					console.error('Contact document does not exist:', contactId);
+					onError && onError(new Error('Contact not found'));
+				}
+			},
+			(error) => {
+				console.error('Error in contact details subscription:', error);
+				onError && onError(error);
+			}
+		);
+
+		// Store the unsubscribe function
+		if (activeSubscriptions.has(`contact_${contactId}`)) {
+			activeSubscriptions.get(`contact_${contactId}`)();
+		}
+		activeSubscriptions.set(`contact_${contactId}`, unsubscribe);
+
+		return unsubscribe;
+	} catch (error) {
+		console.error('Error setting up contact details subscription:', error);
+		onError && onError(error);
+		return () => {};
+	}
 };
 
 // Schedule and Upcoming Contacts Operations
@@ -784,42 +809,66 @@ export const subscribeToUserProfile = (userId, callback) => {
 
 export const getUserProfile = async (userId) => {
 	try {
+		// Try to get cached profile first
+		const cachedProfile = await cacheManager.getCachedProfile(userId);
+		if (cachedProfile) {
+			return cachedProfile;
+		}
+
 		const userRef = doc(db, 'users', userId);
 		const userSnap = await getDoc(userRef);
 
 		if (!userSnap.exists()) {
-			const defaultProfile = {
-				created_at: serverTimestamp(),
-				notifications_enabled: true,
-				email: userId,
-				photo_url: null,
-				first_name: '',
-				last_name: '',
-			};
-			await setDoc(userRef, defaultProfile);
-			return defaultProfile;
+			return null;
 		}
-		return userSnap.data();
+
+		const profileData = {
+			id: userSnap.id,
+			...userSnap.data(),
+		};
+
+		// Cache the profile data
+		await cacheManager.saveProfile(userId, profileData);
+		return profileData;
 	} catch (error) {
-		console.error('Error fetching user profile:', error);
+		console.error('Error getting user profile:', error);
+		// Try to return cached data on error
+		const cachedProfile = await cacheManager.getCachedProfile(userId);
+		if (cachedProfile) {
+			return cachedProfile;
+		}
 		throw error;
 	}
 };
 
 export const uploadProfilePhoto = async (userId, photoUri) => {
 	try {
-		if (!photoUri) return null;
-
 		const response = await fetch(photoUri);
 		const blob = await response.blob();
 		const filename = `profiles/${userId}/${Date.now()}.jpg`;
 		const storageRef = ref(storage, filename);
 
 		await uploadBytes(storageRef, blob);
-		const downloadURL = await getDownloadURL(storageRef);
+		const photoURL = await getDownloadURL(storageRef);
 
-		await updateUserProfile(userId, { photo_url: downloadURL });
-		return downloadURL;
+		// Update user profile with new photo URL
+		const userRef = doc(db, 'users', userId);
+		await updateDoc(userRef, {
+			photo_url: photoURL,
+			last_updated: serverTimestamp(),
+		});
+
+		// Update cache with new photo URL
+		const cachedProfile = await cacheManager.getCachedProfile(userId);
+		if (cachedProfile) {
+			await cacheManager.saveProfile(userId, {
+				...cachedProfile,
+				photo_url: photoURL,
+				last_updated: new Date().toISOString(),
+			});
+		}
+
+		return photoURL;
 	} catch (error) {
 		console.error('Error uploading profile photo:', error);
 		return null;

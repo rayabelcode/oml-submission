@@ -24,12 +24,26 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
 
+	useEffect(() => {
+		if (contact?.contact_history) {
+			setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+		}
+	}, [contact]);
+
 	// Set up real-time subscription
 	const loadContactData = useCallback(async () => {
 		try {
 			if (unsubscribeRef) {
 				unsubscribeRef();
 			}
+
+			// Set initial history from contact
+			if (contact?.contact_history) {
+				setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+			}
+
+			// Set loading to false after initial history is set
+			setIsLoading(false);
 
 			const unsubscribe = subscribeToContactDetails(
 				contact.id,
@@ -41,12 +55,10 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						);
 						setError(null);
 					}
-					setIsLoading(false);
 				},
 				(error) => {
 					console.error('Contact subscription error:', error);
 					setError('Failed to load contact updates');
-					setIsLoading(false);
 				}
 			);
 

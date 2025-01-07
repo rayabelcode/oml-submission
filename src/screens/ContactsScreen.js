@@ -220,19 +220,12 @@ export default function ContactsScreen({ navigation }) {
 				return;
 			}
 
-			console.log('Loading contacts for user:', user.uid);
-
 			// Clean up existing subscription if any
 			if (unsubscribeRef) {
 				unsubscribeRef();
 			}
 
 			const unsubscribe = subscribeToContacts(user.uid, (contactsList) => {
-				console.log(
-					'Contacts update received:',
-					contactsList.scheduledContacts.length + contactsList.unscheduledContacts.length,
-					'total contacts'
-				);
 				setContacts(contactsList);
 				setLoading(false);
 			});

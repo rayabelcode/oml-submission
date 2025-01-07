@@ -5,7 +5,7 @@ const CACHE_KEYS = {
 	UPCOMING_CONTACTS: 'cached_upcoming_contacts_',
 	REMINDERS: 'cached_reminders_',
 	CONTACT_HISTORY: 'cached_history_',
-	USER_PROFILE: 'cached_profile_',
+	PROFILE: 'cached_profile_',
 	STATS: 'cached_stats_',
 	LAST_UPDATED: 'last_updated_',
 };
@@ -49,12 +49,12 @@ export const cacheManager = {
 		}
 	},
 
-	async saveUserProfile(userId, profile) {
+	async saveProfile(userId, profileData) {
 		try {
-			await AsyncStorage.setItem(CACHE_KEYS.USER_PROFILE + userId, JSON.stringify(profile));
-			await this.updateLastUpdated(userId, CACHE_KEYS.USER_PROFILE);
+			await AsyncStorage.setItem(CACHE_KEYS.PROFILE + userId, JSON.stringify(profileData));
+			await this.updateLastUpdated(userId, CACHE_KEYS.PROFILE);
 		} catch (error) {
-			console.error('Error caching user profile:', error);
+			console.error('Error caching profile:', error);
 		}
 	},
 
@@ -119,15 +119,15 @@ export const cacheManager = {
 		}
 	},
 
-	async getCachedUserProfile(userId) {
+	async getCachedProfile(userId) {
 		try {
-			const cached = await AsyncStorage.getItem(CACHE_KEYS.USER_PROFILE + userId);
-			if (await this.isCacheValid(userId, CACHE_KEYS.USER_PROFILE)) {
+			const cached = await AsyncStorage.getItem(CACHE_KEYS.PROFILE + userId);
+			if (await this.isCacheValid(userId, CACHE_KEYS.PROFILE)) {
 				return cached ? JSON.parse(cached) : null;
 			}
 			return null;
 		} catch (error) {
-			console.error('Error getting cached user profile:', error);
+			console.error('Error getting cached profile:', error);
 			return null;
 		}
 	},
@@ -185,6 +185,15 @@ export const cacheManager = {
 			await AsyncStorage.removeItem(CACHE_KEYS.LAST_UPDATED + cacheType + userId);
 		} catch (error) {
 			console.error('Error clearing specific cache:', error);
+		}
+	},
+
+	async clearProfileCache(userId) {
+		try {
+			await AsyncStorage.removeItem(CACHE_KEYS.PROFILE + userId);
+			await AsyncStorage.removeItem(CACHE_KEYS.LAST_UPDATED + CACHE_KEYS.PROFILE + userId);
+		} catch (error) {
+			console.error('Error clearing profile cache:', error);
 		}
 	},
 };
