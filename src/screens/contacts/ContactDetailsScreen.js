@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
 import CallNotesTab from '../../components/contacts/tabs/CallNotesTab';
 import EditContactTab from '../../components/contacts/tabs/EditContactTab';
 import ScheduleTab from '../../components/contacts/tabs/ScheduleTab';
+import CallOptions from '../../components/general/CallOptions';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { fetchContactHistory, fetchContacts } from '../../utils/firestore';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,10 +15,11 @@ const Tab = createBottomTabNavigator();
 
 const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact } = route.params;
-	const { colors, theme } = useTheme();
+	const { colors } = useTheme();
 	const styles = useContactDetailsStyles();
 	const [contact, setContact] = useState(initialContact);
 	const [history, setHistory] = useState([]);
+	const [showCallOptions, setShowCallOptions] = useState(false);
 
 	const loadContactData = useCallback(async () => {
 		try {
@@ -49,7 +51,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			{/* Header */}
 			<View style={styles.headerContainer}>
 				<TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back-outline" size={28} color={colors.text.primary} />
@@ -59,17 +60,14 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 					{`${contact.first_name} ${contact.last_name}`}
 				</Text>
 
-				<TouchableOpacity
-					style={styles.phoneButton}
-					onPress={() => {
-						/* Handle phone call */
-					}}
-				>
-					<Icon name="call" size={22} color={theme === 'dark' ? '#000000' : '#FFFFFF'} />
+				<TouchableOpacity style={styles.phoneButton} onPress={() => setShowCallOptions(!showCallOptions)}>
+					<Icon name="call-outline" size={22} color="#000000" />
 				</TouchableOpacity>
+				{showCallOptions && (
+					<CallOptions show={showCallOptions} contact={contact} onClose={() => setShowCallOptions(false)} />
+				)}
 			</View>
 
-			{/* Tab Navigator */}
 			<Tab.Navigator
 				screenOptions={{
 					tabBarStyle: {
@@ -82,12 +80,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 					sceneContainerStyle: {
 						backgroundColor: colors.background.primary,
 					},
-					contentStyle: {
-						backgroundColor: colors.background.primary,
-					},
-				}}
-				sceneContainerStyle={{
-					backgroundColor: colors.background.primary,
 				}}
 			>
 				<Tab.Screen
