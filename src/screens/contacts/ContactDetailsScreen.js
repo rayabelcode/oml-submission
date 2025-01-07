@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
@@ -72,12 +72,26 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				initialRouteName={initialTab}
 				screenOptions={{
 					tabBarStyle: {
-						backgroundColor: colors.background.primary,
+						backgroundColor: colors.tabBar.background,
 						borderTopColor: colors.border,
 						borderTopWidth: 1,
+						elevation: 8,
+						shadowColor: '#000',
+						shadowOffset: {
+							width: 0,
+							height: -4,
+						},
+						shadowOpacity: 0.1,
+						shadowRadius: 4,
+						height: Platform.OS === 'ios' ? 88 : 60,
+						paddingBottom: Platform.OS === 'ios' ? 30 : 8,
 					},
 					tabBarActiveTintColor: colors.primary,
 					tabBarInactiveTintColor: colors.text.secondary,
+					tabBarLabelStyle: {
+						fontSize: 12,
+						fontWeight: '500',
+					},
 					sceneContainerStyle: {
 						backgroundColor: colors.background.primary,
 					},
@@ -102,7 +116,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						</View>
 					)}
 				</Tab.Screen>
-
 				<Tab.Screen
 					name="Schedule"
 					options={{
@@ -121,7 +134,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						</View>
 					)}
 				</Tab.Screen>
-
 				<Tab.Screen
 					name="Profile"
 					options={{

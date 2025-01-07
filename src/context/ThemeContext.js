@@ -40,6 +40,9 @@ const lightTheme = {
 	warning: '#FFCC00',
 	success: '#34C759',
 	border: '#E5E5EA',
+	tabBar: {
+		background: '#F5F5F5',
+	},
 };
 
 //Dark Color Theme
@@ -61,6 +64,9 @@ const darkTheme = {
 	warning: '#FFD60A',
 	success: '#32D74B',
 	border: '#3A3A3C',
+	tabBar: {
+		background: '#1E1E1E',
+	},
 };
 
 export function ThemeProvider({ children }) {
