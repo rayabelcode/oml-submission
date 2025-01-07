@@ -421,8 +421,11 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const handleOpenDetails = (contact) => {
-		setSelectedContact(contact);
-		setIsDetailsVisible(true);
+		navigation.navigate('ContactDetails', {
+			contact,
+			loadContacts,
+			setSelectedContact,
+		});
 	};
 
 	if (!user) {
@@ -465,11 +468,7 @@ export default function ContactsScreen({ navigation }) {
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
 					{/* Smaller logo */}
-					<Image
-						source={logoSource}
-						style={styles.logo}
-						resizeMode="contain"
-					/>
+					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
 					{/* Icons closer together */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>

@@ -6,9 +6,9 @@ import { useAuth } from '../context/AuthContext';
 import React, { useEffect } from 'react';
 
 import DashboardScreen from '../screens/DashboardScreen';
-import ContactsScreen from '../screens/ContactsScreen';
 import StatsScreen from '../screens/StatsScreen';
 import SettingsStack from './SettingsStack';
+import ContactsStack from './ContactsStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -53,7 +53,7 @@ export default function TabNavigator() {
 				},
 			})}
 		>
-			<Tab.Screen name="Contacts" component={ContactsScreen} />
+			<Tab.Screen name="Contacts" component={ContactsStack} />
 			<Tab.Screen name="Dashboard" component={DashboardScreen} />
 			<Tab.Screen name="Stats" component={StatsScreen} />
 			<Tab.Screen name="Settings" component={SettingsStack} />
