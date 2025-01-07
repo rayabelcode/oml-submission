@@ -14,8 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 const Tab = createBottomTabNavigator();
 
 const ContactDetailsScreen = ({ route, navigation }) => {
-	const { contact: initialContact } = route.params;
-	const { colors, theme } = useTheme(); 
+	const { contact: initialContact, initialTab = 'Notes' } = route.params;
+	const { colors, theme } = useTheme();
 	const styles = useContactDetailsStyles();
 	const [contact, setContact] = useState(initialContact);
 	const [history, setHistory] = useState([]);
@@ -61,7 +61,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				</Text>
 
 				<TouchableOpacity style={styles.phoneButton} onPress={() => setShowCallOptions(!showCallOptions)}>
-				<Icon name="call" size={22} color={theme === 'light' ? '#FFFFFF' : '#000000'} />
+					<Icon name="call" size={22} color={theme === 'light' ? '#FFFFFF' : '#000000'} />
 				</TouchableOpacity>
 				{showCallOptions && (
 					<CallOptions show={showCallOptions} contact={contact} onClose={() => setShowCallOptions(false)} />
@@ -69,6 +69,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 			</View>
 
 			<Tab.Navigator
+				initialRouteName={initialTab}
 				screenOptions={{
 					tabBarStyle: {
 						backgroundColor: colors.background.primary,

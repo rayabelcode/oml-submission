@@ -217,7 +217,12 @@ export default function DashboardScreen({ navigation, route }) {
 							<ContactCard
 								key={contact.id}
 								contact={contact}
-								onPress={(contact) => navigation.navigate('ContactDetails', { contact })}
+								onPress={(contact) =>
+									navigation.navigate('ContactDetails', {
+										contact,
+										initialTab: 'Schedule',
+									})
+								}
 							/>
 						))
 					)}
@@ -226,7 +231,12 @@ export default function DashboardScreen({ navigation, route }) {
 				<NotificationsView
 					reminders={remindersState.data}
 					onComplete={handleFollowUpComplete}
-					onAddNotes={handleAddNotes}
+					onAddNotes={(reminder) => {
+						const contact = contacts.find((c) => c.id === reminder.data?.contactId);
+						if (contact) {
+							navigation.navigate('ContactDetails', { contact });
+						}
+					}}
 					onSnooze={handleSnooze}
 					loading={remindersState.loading}
 					onRefresh={onRefresh}
