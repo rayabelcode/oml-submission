@@ -13,12 +13,24 @@ import {
 	getDoc,
 	arrayUnion,
 	writeBatch,
+	onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { storage } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth } from '../config/firebase';
 import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './contactHelpers';
+import { cacheManager } from './cache';
+import NetInfo from '@react-native-community/netinfo';
+
+// Store active subscriptions
+const activeSubscriptions = new Map();
+
+// Helper function to clean up subscriptions
+export const cleanupSubscriptions = () => {
+	activeSubscriptions.forEach((unsubscribe) => unsubscribe());
+	activeSubscriptions.clear();
+};
 
 // User functions
 export const createUserDocument = async (userId, userData) => {
@@ -36,8 +48,109 @@ export const createUserDocument = async (userId, userData) => {
 		throw error;
 	}
 };
+// Contact functions with real-time capabilities
+export const subscribeToContacts = (userId, callback) => {
+	if (!userId) {
+		console.error('No userId provided to subscribeToContacts');
+		callback({ scheduledContacts: [], unscheduledContacts: [] });
+		return () => {};
+	}
 
-// Contact functions
+	try {
+		const contactsRef = collection(db, 'contacts');
+		// Only filter by user_id, handle archived filtering in the callback
+		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
+
+		console.log('Setting up contacts subscription for user:', userId);
+
+		const unsubscribe = onSnapshot(
+			q,
+			(querySnapshot) => {
+				console.log('Received contacts update:', querySnapshot.size, 'contacts');
+				const contacts = [];
+				querySnapshot.forEach((doc) => {
+					const contactData = doc.data();
+					// Only add non-archived contacts
+					if (!contactData.archived) {
+						contacts.push({ id: doc.id, ...contactData });
+					}
+				});
+
+				const formattedContacts = {
+					scheduledContacts: contacts.filter((contact) => contact.next_contact),
+					unscheduledContacts: contacts.filter((contact) => !contact.next_contact),
+				};
+
+				console.log('Formatted contacts:', {
+					scheduled: formattedContacts.scheduledContacts.length,
+					unscheduled: formattedContacts.unscheduledContacts.length,
+				});
+
+				callback(formattedContacts);
+			},
+			(error) => {
+				console.error('Contacts subscription error:', error);
+				// Attempt to fetch contacts normally on subscription error
+				fetchContacts(userId)
+					.then((contacts) => callback(contacts))
+					.catch((err) => {
+						console.error('Fallback fetch failed:', err);
+						callback({ scheduledContacts: [], unscheduledContacts: [] });
+					});
+			}
+		);
+
+		return unsubscribe;
+	} catch (error) {
+		console.error('Error setting up contacts subscription:', error);
+		callback({ scheduledContacts: [], unscheduledContacts: [] });
+		return () => {};
+	}
+};
+
+// Keep existing fetchContacts for backward compatibility and offline-first approach
+export const fetchContacts = async (userId) => {
+	try {
+		const networkState = await NetInfo.fetch();
+
+		if (!networkState.isConnected) {
+			const cachedContacts = await cacheManager.getCachedContacts(userId);
+			if (cachedContacts) {
+				return cachedContacts;
+			}
+			throw new Error('No internet connection and no cached data available');
+		}
+
+		const contactsRef = collection(db, 'contacts');
+		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
+
+		const querySnapshot = await getDocs(q);
+		const contacts = [];
+
+		querySnapshot.forEach((doc) => {
+			const contactData = doc.data();
+			if (!contactData.archived) {
+				contacts.push({ id: doc.id, ...contactData });
+			}
+		});
+
+		const formattedContacts = {
+			scheduledContacts: contacts.filter((contact) => contact.next_contact !== null),
+			unscheduledContacts: contacts.filter((contact) => contact.next_contact === null),
+		};
+
+		await cacheManager.saveContacts(userId, formattedContacts);
+		return formattedContacts;
+	} catch (error) {
+		console.error('Error fetching contacts:', error);
+		const cachedContacts = await cacheManager.getCachedContacts(userId);
+		if (cachedContacts) {
+			return cachedContacts;
+		}
+		throw error;
+	}
+};
+
 export const addContact = async (userId, contactData) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
@@ -49,23 +162,16 @@ export const addContact = async (userId, contactData) => {
 	}
 };
 
-// Upload contact photo
 export const uploadContactPhoto = async (userId, photoUri) => {
 	try {
 		if (!photoUri) return null;
 
-		// Create blob from URI
 		const response = await fetch(photoUri);
 		const blob = await response.blob();
-
-		// Create unique filename
 		const filename = `contacts/${userId}/${Date.now()}.jpg`;
 		const storageRef = ref(storage, filename);
 
-		// Upload photo
 		await uploadBytes(storageRef, blob);
-
-		// Get download URL
 		const downloadURL = await getDownloadURL(storageRef);
 		return downloadURL;
 	} catch (error) {
@@ -75,34 +181,7 @@ export const uploadContactPhoto = async (userId, photoUri) => {
 	}
 };
 
-export const fetchContacts = async (userId) => {
-	try {
-		const contactsRef = collection(db, 'contacts');
-		// Change query to handle contacts without archived field
-		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
-
-		const querySnapshot = await getDocs(q);
-		const contacts = [];
-
-		querySnapshot.forEach((doc) => {
-			const contactData = doc.data();
-			// Include contact if archived is false or undefined
-			if (!contactData.archived) {
-				contacts.push({ id: doc.id, ...contactData });
-			}
-		});
-
-		return {
-			scheduledContacts: contacts.filter((contact) => contact.next_contact !== null),
-			unscheduledContacts: contacts.filter((contact) => contact.next_contact === null),
-		};
-	} catch (error) {
-		console.error('Error fetching contacts:', error);
-		throw error;
-	}
-};
-
-// Archive contact
+// Archive, Update, Delete Contact Operations
 export const archiveContact = async (contactId) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
@@ -121,11 +200,9 @@ export const updateContact = async (contactId, updateData) => {
 		const contactRef = doc(db, 'contacts', contactId);
 		const updates = updateContactData(updateData);
 
-		// If notes are being updated, get existing contact first
 		if ('notes' in updateData) {
 			const contactSnapshot = await getDoc(contactRef);
 			if (contactSnapshot.exists()) {
-				// Preserve other fields while updating notes
 				const existingData = contactSnapshot.data();
 				updates.notes = updateData.notes;
 				updates.last_updated = serverTimestamp();
@@ -149,6 +226,7 @@ export const deleteContact = async (contactId) => {
 	}
 };
 
+// Contact History Operations
 export const addContactHistory = async (contactId, historyData) => {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
@@ -158,14 +236,10 @@ export const addContactHistory = async (contactId, historyData) => {
 			completed: true,
 		};
 
-		// Get current history first
 		const contactDoc = await getDoc(contactRef);
 		const currentHistory = contactDoc.data().contact_history || [];
-
-		// Add new entry at beginning of array
 		const updatedHistory = [newHistoryEntry, ...currentHistory];
 
-		// Update with new history array
 		await updateDoc(contactRef, {
 			contact_history: updatedHistory,
 			last_updated: serverTimestamp(),
@@ -189,11 +263,10 @@ export const fetchContactHistory = async (contactId) => {
 		const data = contactSnap.data();
 		const history = data.contact_history || [];
 
-		// Convert timestamps and sort
 		return history
 			.map((entry) => ({
 				...entry,
-				date: entry.date, // Keep the ISO string format
+				date: entry.date,
 			}))
 			.sort((a, b) => new Date(b.date) - new Date(a.date));
 	} catch (error) {
@@ -202,13 +275,35 @@ export const fetchContactHistory = async (contactId) => {
 	}
 };
 
-// Schedule functions
+// Real-time Contact Details Subscription
+export const subscribeToContactDetails = (contactId, callback) => {
+	if (activeSubscriptions.has(`contact_${contactId}`)) {
+		activeSubscriptions.get(`contact_${contactId}`)();
+	}
+
+	const contactRef = doc(db, 'contacts', contactId);
+	const unsubscribe = onSnapshot(
+		contactRef,
+		(doc) => {
+			if (doc.exists()) {
+				const contactData = { id: doc.id, ...doc.data() };
+				callback(contactData);
+			}
+		},
+		(error) => {
+			console.error('Error in contact details subscription:', error);
+		}
+	);
+
+	activeSubscriptions.set(`contact_${contactId}`, unsubscribe);
+	return unsubscribe;
+};
+
+// Schedule and Upcoming Contacts Operations
 export const fetchUpcomingContacts = async (userId) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
-
 		const q = query(contactsRef, where('user_id', '==', userId), where('next_contact', '!=', null));
-
 		const querySnapshot = await getDocs(q);
 		const contacts = [];
 
@@ -229,11 +324,44 @@ export const fetchUpcomingContacts = async (userId) => {
 	}
 };
 
+// Real-time Upcoming Contacts Subscription
+export const subscribeToUpcomingContacts = (userId, callback) => {
+	if (activeSubscriptions.has(`upcoming_${userId}`)) {
+		activeSubscriptions.get(`upcoming_${userId}`)();
+	}
+
+	const contactsRef = collection(db, 'contacts');
+	const q = query(contactsRef, where('user_id', '==', userId), where('next_contact', '!=', null));
+
+	const unsubscribe = onSnapshot(
+		q,
+		(snapshot) => {
+			const contacts = [];
+			snapshot.forEach((doc) => {
+				const data = doc.data();
+				if (data.next_contact) {
+					contacts.push({ id: doc.id, ...data });
+				}
+			});
+
+			cacheManager.saveUpcomingContacts(userId, contacts);
+			callback(contacts);
+		},
+		(error) => {
+			console.error('Error in upcoming contacts subscription:', error);
+			cacheManager.getCachedUpcomingContacts(userId).then((cached) => {
+				if (cached) callback(cached);
+			});
+		}
+	);
+
+	activeSubscriptions.set(`upcoming_${userId}`, unsubscribe);
+	return unsubscribe;
+};
+
 export const fetchPastContacts = async (userId) => {
 	try {
-		const contactsRef = collection(db, 'contacts');
 		const contacts = await fetchContacts(userId);
-
 		return contacts.scheduledContacts
 			.filter((contact) => contact.contact_history.length > 0)
 			.map((contact) => ({
@@ -246,6 +374,7 @@ export const fetchPastContacts = async (userId) => {
 	}
 };
 
+// Scheduling Operations
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
@@ -308,64 +437,16 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 	}
 }
 
-// Function to fetch all reminders for a user
-export async function fetchReminders(userId) {
-	try {
-		const remindersRef = collection(db, 'reminders');
-		const q = query(
-			remindersRef,
-			where('user_id', '==', userId),
-			where('snoozed', '==', false),
-			orderBy('date')
-		);
-
-		const querySnapshot = await getDocs(q);
-		const reminders = [];
-
-		querySnapshot.forEach((doc) => {
-			reminders.push({ id: doc.id, ...doc.data() });
-		});
-
-		return reminders;
-	} catch (error) {
-		console.error('Error fetching reminders:', error);
-		throw error;
-	}
-}
-
-// Follow up reminders
-export async function createFollowUpReminder(contactId, date) {
-	try {
-		const remindersRef = collection(db, 'reminders');
-		await addDoc(remindersRef, {
-			contact_id: contactId,
-			date: date,
-			created_at: serverTimestamp(),
-			updated_at: serverTimestamp(),
-			snoozed: false,
-			follow_up: true,
-			type: 'follow_up',
-			notes_required: true,
-			user_id: auth.currentUser.uid,
-		});
-	} catch (error) {
-		console.error('Error creating follow-up reminder:', error);
-		throw error;
-	}
-}
-
-// V2 reminder functions
+// Reminder Operations
 export const addReminder = async (reminderData) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
-
-		// Create base reminder data with required fields
 		const reminderDoc = {
 			created_at: serverTimestamp(),
 			updated_at: serverTimestamp(),
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
-			userId: auth.currentUser.uid, // Keep both for backward compatibility
+			userId: auth.currentUser.uid,
 			date: reminderData.scheduledTime,
 			scheduledTime: reminderData.scheduledTime,
 			status: reminderData.status || 'pending',
@@ -378,7 +459,6 @@ export const addReminder = async (reminderData) => {
 			contactName: reminderData.contactName || '',
 		};
 
-		// Add optional fields only if they exist
 		if (reminderData.call_data) {
 			reminderDoc.call_data = reminderData.call_data;
 		}
@@ -389,6 +469,65 @@ export const addReminder = async (reminderData) => {
 		console.error('[Firestore] Error adding reminder:', error);
 		throw error;
 	}
+};
+
+// Real-time Reminders Subscription
+export const subscribeToReminders = (userId, status, callback) => {
+	const subscriptionKey = `reminders_${userId}_${status}`;
+	if (activeSubscriptions.has(subscriptionKey)) {
+		activeSubscriptions.get(subscriptionKey)();
+	}
+
+	const remindersRef = collection(db, 'reminders');
+	const q = query(remindersRef, where('userId', '==', userId), where('status', '==', status));
+
+	const unsubscribe = onSnapshot(
+		q,
+		(snapshot) => {
+			const reminders = snapshot.docs.map((doc) => {
+				const data = doc.data();
+				let scheduledTime;
+				try {
+					if (data.date?.toDate) {
+						scheduledTime = data.date.toDate();
+					} else if (data.scheduledTime?.toDate) {
+						scheduledTime = data.scheduledTime.toDate();
+					} else if (data.date) {
+						scheduledTime = new Date(data.date);
+					} else if (data.scheduledTime) {
+						scheduledTime = new Date(data.scheduledTime);
+					} else {
+						scheduledTime = new Date();
+					}
+				} catch (error) {
+					console.error('[Firestore] Error converting date:', error);
+					scheduledTime = new Date();
+				}
+
+				return {
+					id: doc.id,
+					...data,
+					scheduledTime,
+					contactName: data.contactName || 'Unknown Contact',
+					contact_id: data.contact_id || data.contactId,
+					call_data: data.call_data || null,
+					type: data.type || 'regular',
+				};
+			});
+
+			cacheManager.saveReminders(userId, reminders);
+			callback(reminders);
+		},
+		(error) => {
+			console.error('Error in reminders subscription:', error);
+			cacheManager.getCachedReminders(userId).then((cached) => {
+				if (cached) callback(cached);
+			});
+		}
+	);
+
+	activeSubscriptions.set(subscriptionKey, unsubscribe);
+	return unsubscribe;
 };
 
 export const updateReminder = async (reminderId, updateData) => {
@@ -447,10 +586,8 @@ export const getReminders = async (userId, status = 'pending') => {
 
 		const snapshot = await getDocs(q);
 
-		const reminders = snapshot.docs.map((doc) => {
+		return snapshot.docs.map((doc) => {
 			const data = doc.data();
-
-			// Handle date conversion safely
 			let scheduledTime;
 			try {
 				if (data.date?.toDate) {
@@ -474,14 +611,11 @@ export const getReminders = async (userId, status = 'pending') => {
 				...data,
 				scheduledTime,
 				contactName: data.contactName || 'Unknown Contact',
-				// Make sure all required fields are present
 				contact_id: data.contact_id || data.contactId,
 				call_data: data.call_data || null,
 				type: data.type || 'regular',
 			};
 		});
-
-		return reminders;
 	} catch (error) {
 		console.error('[Firestore] Error getting reminders:', error);
 		throw error;
@@ -499,23 +633,17 @@ export const getContactReminders = async (contactId, userId) => {
 		);
 
 		const querySnapshot = await getDocs(q);
-		const reminders = [];
-
-		querySnapshot.forEach((doc) => {
-			reminders.push({
-				id: doc.id,
-				...doc.data(),
-			});
-		});
-
-		return reminders;
+		return querySnapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
 	} catch (error) {
 		console.error('Error getting contact reminders:', error);
 		throw error;
 	}
 };
 
-// Follow up functions
+// Follow-up Operations
 export const getFollowUpReminders = async (userId) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
@@ -555,7 +683,6 @@ export const completeFollowUp = async (reminderId, notes) => {
 
 		const batch = writeBatch(db);
 
-		// Always update the reminder status
 		batch.update(reminderRef, {
 			completed: true,
 			completion_time: serverTimestamp(),
@@ -565,7 +692,6 @@ export const completeFollowUp = async (reminderId, notes) => {
 			status: 'completed',
 		});
 
-		// Only add to contact history if notes were provided
 		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -596,7 +722,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 	}
 };
 
-// User profile functions
+// User Profile Operations
 export const updateUserProfile = async (userId, profileData) => {
 	try {
 		const userRef = doc(db, 'users', userId);
@@ -610,19 +736,50 @@ export const updateUserProfile = async (userId, profileData) => {
 	}
 };
 
-// Username check
 export const checkUsernameExists = async (username, currentUserId) => {
 	try {
 		const usersRef = collection(db, 'users');
 		const q = query(usersRef, where('username', '==', username.toLowerCase()));
 		const querySnapshot = await getDocs(q);
-
-		// Check if any user other than the current user has this username
 		return querySnapshot.docs.some((doc) => doc.id !== currentUserId);
 	} catch (error) {
 		console.error('Error checking username:', error);
 		throw error;
 	}
+};
+
+// Real-time User Profile Subscription
+export const subscribeToUserProfile = (userId, callback) => {
+	if (activeSubscriptions.has(`profile_${userId}`)) {
+		activeSubscriptions.get(`profile_${userId}`)();
+	}
+
+	const userRef = doc(db, 'users', userId);
+	const unsubscribe = onSnapshot(
+		userRef,
+		async (doc) => {
+			if (!doc.exists()) {
+				const defaultProfile = {
+					created_at: serverTimestamp(),
+					notifications_enabled: true,
+					email: userId,
+					photo_url: null,
+					first_name: '',
+					last_name: '',
+				};
+				await setDoc(userRef, defaultProfile);
+				callback(defaultProfile);
+			} else {
+				callback(doc.data());
+			}
+		},
+		(error) => {
+			console.error('Error in user profile subscription:', error);
+		}
+	);
+
+	activeSubscriptions.set(`profile_${userId}`, unsubscribe);
+	return unsubscribe;
 };
 
 export const getUserProfile = async (userId) => {
@@ -631,7 +788,6 @@ export const getUserProfile = async (userId) => {
 		const userSnap = await getDoc(userRef);
 
 		if (!userSnap.exists()) {
-			// Create default user profile if it doesn't exist
 			const defaultProfile = {
 				created_at: serverTimestamp(),
 				notifications_enabled: true,
@@ -650,23 +806,19 @@ export const getUserProfile = async (userId) => {
 	}
 };
 
-// Upload profile photo
 export const uploadProfilePhoto = async (userId, photoUri) => {
 	try {
 		if (!photoUri) return null;
 
 		const response = await fetch(photoUri);
 		const blob = await response.blob();
-
 		const filename = `profiles/${userId}/${Date.now()}.jpg`;
 		const storageRef = ref(storage, filename);
 
 		await uploadBytes(storageRef, blob);
 		const downloadURL = await getDownloadURL(storageRef);
 
-		// Update user profile with new photo URL
 		await updateUserProfile(userId, { photo_url: downloadURL });
-
 		return downloadURL;
 	} catch (error) {
 		console.error('Error uploading profile photo:', error);
@@ -674,13 +826,10 @@ export const uploadProfilePhoto = async (userId, photoUri) => {
 	}
 };
 
-// Export user data
+// Data Export and Account Deletion
 export const exportUserData = async (userId) => {
 	try {
-		// Get user profile
 		const userProfile = await getUserProfile(userId);
-
-		// Get all user contacts
 		const contactsRef = collection(db, 'contacts');
 		const q = query(contactsRef, where('user_id', '==', userId));
 		const querySnapshot = await getDocs(q);
@@ -700,10 +849,8 @@ export const exportUserData = async (userId) => {
 	}
 };
 
-// Delete user account and data
 export const deleteUserAccount = async (userId) => {
 	try {
-		// Delete all contacts
 		const contactsRef = collection(db, 'contacts');
 		const q = query(contactsRef, where('user_id', '==', userId));
 		const querySnapshot = await getDocs(q);
@@ -713,13 +860,54 @@ export const deleteUserAccount = async (userId) => {
 			batch.delete(doc.ref);
 		});
 
-		// Delete user profile
 		const userRef = doc(db, 'users', userId);
 		batch.delete(userRef);
 
 		await batch.commit();
+		cleanupSubscriptions();
 	} catch (error) {
 		console.error('Error deleting user account:', error);
 		throw error;
 	}
+};
+
+// Export all functions
+export default {
+	// Subscription management
+	subscribeToContacts,
+	subscribeToContactDetails,
+	subscribeToUpcomingContacts,
+	subscribeToReminders,
+	subscribeToUserProfile,
+	cleanupSubscriptions,
+
+	// Contact operations
+	addContact,
+	updateContact,
+	deleteContact,
+	archiveContact,
+	fetchContacts,
+	addContactHistory,
+	fetchContactHistory,
+
+	// Reminder operations
+	addReminder,
+	updateReminder,
+	deleteReminder,
+	getReminder,
+	getReminders,
+	getContactReminders,
+	completeFollowUp,
+
+	// User profile operations
+	createUserDocument,
+	getUserProfile,
+	updateUserProfile,
+	uploadProfilePhoto,
+	uploadContactPhoto,
+	checkUsernameExists,
+
+	// Data management
+	exportUserData,
+	deleteUserAccount,
 };

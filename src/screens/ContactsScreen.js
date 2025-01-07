@@ -27,6 +27,7 @@ import {
 	addContactHistory,
 	fetchContactHistory,
 	uploadContactPhoto,
+	subscribeToContacts,
 } from '../utils/firestore';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
@@ -210,16 +211,36 @@ export default function ContactsScreen({ navigation }) {
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
 	const [showAddModal, setShowAddModal] = useState(false);
+	const [unsubscribeRef, setUnsubscribeRef] = useState(null);
 
 	async function loadContacts() {
 		try {
-			if (!user) return;
-			const contactsList = await fetchContacts(user.uid);
-			setContacts(contactsList);
+			if (!user) {
+				setLoading(false);
+				return;
+			}
+
+			console.log('Loading contacts for user:', user.uid);
+
+			// Clean up existing subscription if any
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+
+			const unsubscribe = subscribeToContacts(user.uid, (contactsList) => {
+				console.log(
+					'Contacts update received:',
+					contactsList.scheduledContacts.length + contactsList.unscheduledContacts.length,
+					'total contacts'
+				);
+				setContacts(contactsList);
+				setLoading(false);
+			});
+
+			setUnsubscribeRef(() => unsubscribe);
 		} catch (error) {
-			console.error('Error loading contacts:', error);
+			console.error('Error in loadContacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
-		} finally {
 			setLoading(false);
 		}
 	}
@@ -355,6 +376,11 @@ export default function ContactsScreen({ navigation }) {
 
 	useEffect(() => {
 		loadContacts();
+		return () => {
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+		};
 	}, [user]);
 
 	// Reset editing state when leaving the screen
