@@ -15,7 +15,7 @@ const Tab = createBottomTabNavigator();
 
 const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact } = route.params;
-	const { colors } = useTheme();
+	const { colors, theme } = useTheme(); 
 	const styles = useContactDetailsStyles();
 	const [contact, setContact] = useState(initialContact);
 	const [history, setHistory] = useState([]);
@@ -61,7 +61,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				</Text>
 
 				<TouchableOpacity style={styles.phoneButton} onPress={() => setShowCallOptions(!showCallOptions)}>
-					<Icon name="call-outline" size={22} color="#000000" />
+				<Icon name="call" size={22} color={theme === 'light' ? '#FFFFFF' : '#000000'} />
 				</TouchableOpacity>
 				{showCallOptions && (
 					<CallOptions show={showCallOptions} contact={contact} onClose={() => setShowCallOptions(false)} />
