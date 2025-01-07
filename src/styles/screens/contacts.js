@@ -988,6 +988,12 @@ const useStyles = () => {
 			textAlign: 'center',
 			color: colors.text.secondary,
 		},
+		loadingContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+			padding: spacing.xl,
+		},
 	});
 };
 

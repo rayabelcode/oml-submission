@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
+import {
+	View,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	ScrollView,
+	Alert,
+	Platform,
+	Modal,
+	ActivityIndicator,
+} from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -91,6 +101,13 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 							contact_history: updatedHistory,
 						};
 						setSelectedContact(updatedContact);
+
+						// Clear suggestions cache for this contact
+						const cacheKey = `${contact.id}-suggestions`;
+						const newCache = { ...suggestionCache };
+						delete newCache[cacheKey];
+						setSuggestionCache(newCache);
+						await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 					} catch (error) {
 						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
@@ -273,7 +290,10 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						</View>
 						<ScrollView style={styles.aiModalScrollContent}>
 							{loadingSuggestions ? (
-								<Text style={styles.suggestionsText}>Loading suggestions...</Text>
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size="large" color={colors.primary} />
+									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>Generating suggestions...</Text>
+								</View>
 							) : (
 								suggestions.map((suggestion, index) => (
 									<Text key={index} style={styles.suggestion}>
