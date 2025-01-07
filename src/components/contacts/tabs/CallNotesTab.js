@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { addContactHistory, fetchContactHistory, updateContact } from '../../../utils/firestore';
 import { generateTopicSuggestions } from '../../../utils/ai';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
@@ -23,53 +23,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
-	useEffect(() => {
-		const loadCache = async () => {
-			try {
-				const cached = await AsyncStorage.getItem('suggestionCache');
-				if (cached) {
-					setSuggestionCache(JSON.parse(cached));
-				}
-			} catch (error) {
-				console.error('Error loading suggestion cache:', error);
-			}
-		};
-		loadCache();
-	}, []);
-
-	useEffect(() => {
-		const loadSuggestions = async () => {
-			if (!contact) return;
-
-			setLoadingSuggestions(true);
-			try {
-				const cacheKey = `${contact.id}-suggestions`;
-				const cachedSuggestions = suggestionCache[cacheKey];
-
-				if (cachedSuggestions) {
-					setSuggestions(cachedSuggestions);
-				} else {
-					const newSuggestions = await generateTopicSuggestions(contact, history);
-					setSuggestions(newSuggestions);
-
-					const newCache = {
-						...suggestionCache,
-						[cacheKey]: newSuggestions,
-					};
-					setSuggestionCache(newCache);
-					await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
-				}
-			} catch (error) {
-				console.error('Error loading suggestions:', error);
-				setSuggestions(['Unable to load suggestions at this time.']);
-			} finally {
-				setLoadingSuggestions(false);
-			}
-		};
-
-		loadSuggestions();
-	}, [contact, history]);
-
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
 			Alert.alert('Error', 'Please enter call notes');
@@ -82,19 +35,31 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				date: date.toISOString(),
 			};
 
+			// Update local state immediately
 			const newHistory = [newHistoryEntry, ...history];
 			setHistory(newHistory);
+
+			// Update Firestore
 			await addContactHistory(contact.id, newHistoryEntry);
 
+			// Update the contact object
 			const updatedContact = {
 				...contact,
 				contact_history: newHistory,
 			};
 			setSelectedContact(updatedContact);
 
+			// Clear suggestions cache for this contact
+			const cacheKey = `${contact.id}-suggestions`;
+			const newCache = { ...suggestionCache };
+			delete newCache[cacheKey];
+			setSuggestionCache(newCache);
+			await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
+			// Revert local state on error
 			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
 			const updatedHistory = await fetchContactHistory(contact.id);
@@ -110,14 +75,17 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				style: 'destructive',
 				onPress: async () => {
 					try {
+						// Update local state immediately
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
 						setHistory(updatedHistory);
 
+						// Update Firestore
 						await updateContact(contact.id, {
 							contact_history: updatedHistory,
 						});
 
+						// Update the contact object
 						const updatedContact = {
 							...contact,
 							contact_history: updatedHistory,
@@ -126,6 +94,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					} catch (error) {
 						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
+						// Revert local state on error
 						const originalHistory = await fetchContactHistory(contact.id);
 						setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 					}
@@ -136,14 +105,17 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 
 	const handleEditHistory = async (index, updatedNote) => {
 		try {
+			// Update local state immediately
 			const updatedHistory = [...history];
 			updatedHistory[index].notes = updatedNote;
 			setHistory(updatedHistory);
 
+			// Update Firestore
 			await updateContact(contact.id, {
 				contact_history: updatedHistory,
 			});
 
+			// Update the contact object
 			const updatedContact = {
 				...contact,
 				contact_history: updatedHistory,
@@ -154,8 +126,43 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 		} catch (error) {
 			console.error('Error editing history:', error);
 			Alert.alert('Error', 'Failed to edit history');
+			// Revert local state on error
 			const originalHistory = await fetchContactHistory(contact.id);
 			setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+		}
+	};
+
+	const handleGetSuggestions = async () => {
+		if (!contact) return;
+
+		setLoadingSuggestions(true);
+		try {
+			const cacheKey = `${contact.id}-suggestions`;
+			const cachedSuggestions = suggestionCache[cacheKey];
+
+			// If there are cached suggestions and no new calls have been added, use cache
+			if (cachedSuggestions) {
+				setSuggestions(cachedSuggestions);
+				setLoadingSuggestions(false);
+				return;
+			}
+
+			// Generate new suggestions only if no cache exists or new call was added
+			const newSuggestions = await generateTopicSuggestions(contact, history);
+			setSuggestions(newSuggestions);
+
+			// Update cache
+			const newCache = {
+				...suggestionCache,
+				[cacheKey]: newSuggestions,
+			};
+			setSuggestionCache(newCache);
+			await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+		} catch (error) {
+			console.error('Error loading suggestions:', error);
+			setSuggestions(['Unable to load suggestions at this time.']);
+		} finally {
+			setLoadingSuggestions(false);
 		}
 	};
 
@@ -191,7 +198,13 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					</TouchableOpacity>
 				</View>
 
-				<TouchableOpacity style={styles.aiButton} onPress={() => setShowAISuggestions(true)}>
+				<TouchableOpacity
+					style={styles.aiButton}
+					onPress={() => {
+						handleGetSuggestions();
+						setShowAISuggestions(true);
+					}}
+				>
 					<Icon name="bulb-outline" size={22} color="#FFFFFF" />
 					<Text style={styles.aiButtonText}>Get Conversation Topics</Text>
 				</TouchableOpacity>
