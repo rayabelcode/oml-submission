@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
-import TabNavigator from './src/navigation/TabNavigator';
+import SharedNavigator from './src/navigation/SharedNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { Alert, LogBox, Platform, View } from 'react-native';
@@ -87,7 +87,7 @@ function App() {
 				<AuthProvider>
 					<NavigationContainer ref={navigationRef}>
 						<SafeAreaWrapper>
-							<TabNavigator />
+							<SharedNavigator />
 						</SafeAreaWrapper>
 					</NavigationContainer>
 				</AuthProvider>

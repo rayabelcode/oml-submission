@@ -10,7 +10,6 @@ import { fetchUpcomingContacts } from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
 import { notificationService } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
-import ContactDetailsModal from '../components/contacts/ContactDetailsModal';
 import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
@@ -25,8 +24,6 @@ export default function DashboardScreen({ navigation, route }) {
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
-	const [selectedContact, setSelectedContact] = useState(null);
-	const [showContactModal, setShowContactModal] = useState(false);
 	const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
 	const [selectedReminder, setSelectedReminder] = useState(null);
 	const [remindersState, setRemindersState] = useState({
@@ -116,8 +113,7 @@ export default function DashboardScreen({ navigation, route }) {
 	const handleAddNotes = (reminder) => {
 		const contact = contacts.find((c) => c.id === reminder.data?.contactId);
 		if (contact) {
-			setSelectedContact(contact);
-			setShowContactModal(true);
+			navigation.navigate('ContactDetails', { contact });
 		} else {
 			console.error('Contact not found for reminder:', reminder);
 			Alert.alert('Error', 'Could not find contact information');
@@ -221,10 +217,12 @@ export default function DashboardScreen({ navigation, route }) {
 							<ContactCard
 								key={contact.id}
 								contact={contact}
-								onPress={() => {
-									setSelectedContact(contact);
-									setShowContactModal(true);
-								}}
+								onPress={(contact) =>
+									navigation.navigate('ContactDetails', {
+										contact,
+										initialTab: 'Schedule',
+									})
+								}
 							/>
 						))
 					)}
@@ -233,22 +231,18 @@ export default function DashboardScreen({ navigation, route }) {
 				<NotificationsView
 					reminders={remindersState.data}
 					onComplete={handleFollowUpComplete}
-					onAddNotes={handleAddNotes}
+					onAddNotes={(reminder) => {
+						const contact = contacts.find((c) => c.id === reminder.data?.contactId);
+						if (contact) {
+							navigation.navigate('ContactDetails', { contact });
+						}
+					}}
 					onSnooze={handleSnooze}
 					loading={remindersState.loading}
 					onRefresh={onRefresh}
 					refreshing={refreshing}
 				/>
 			)}
-
-			<ContactDetailsModal
-				visible={showContactModal}
-				contact={selectedContact}
-				setSelectedContact={setSelectedContact}
-				onClose={() => setShowContactModal(false)}
-				loadContacts={loadContacts}
-				initialTab="notes"
-			/>
 
 			<ActionModal
 				show={showSnoozeOptions}

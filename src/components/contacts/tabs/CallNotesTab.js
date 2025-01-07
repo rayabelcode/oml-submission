@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, Platform, Modal } from 'react-native';
+import {
+	View,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	ScrollView,
+	Alert,
+	Platform,
+	Modal,
+	ActivityIndicator,
+} from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
-import { addContactHistory, fetchContactHistory } from '../../../utils/firestore';
+import { addContactHistory, fetchContactHistory, updateContact } from '../../../utils/firestore';
+import { generateTopicSuggestions } from '../../../utils/ai';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { updateContact } from '../../../utils/firestore';
 
-const CallNotesTab = ({
-	contact,
-	history,
-	setHistory,
-	suggestionCache,
-	setSuggestionCache,
-	suggestions,
-	setSuggestions,
-	loadingSuggestions,
-	setLoadingSuggestions,
-	setSelectedContact,
-}) => {
+const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
@@ -28,8 +28,10 @@ const CallNotesTab = ({
 	const [callDate, setCallDate] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [editMode, setEditMode] = useState(null);
-
 	const [showAISuggestions, setShowAISuggestions] = useState(false);
+	const [suggestionCache, setSuggestionCache] = useState({});
+	const [suggestions, setSuggestions] = useState([]);
+	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
@@ -38,57 +40,40 @@ const CallNotesTab = ({
 		}
 
 		try {
-			await addContactHistory(contact.id, {
+			const newHistoryEntry = {
 				notes: notes,
 				date: date.toISOString(),
-			});
-			const updatedHistory = await fetchContactHistory(contact.id);
-			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+			};
 
-			// Clear suggestion cache and trigger new AI suggestions
-			setSuggestionCache({});
-			setLoadingSuggestions(true);
-			// Update the contact object with new history
+			// Update local state immediately
+			const newHistory = [newHistoryEntry, ...history];
+			setHistory(newHistory);
+
+			// Update Firestore
+			await addContactHistory(contact.id, newHistoryEntry);
+
+			// Update the contact object
 			const updatedContact = {
 				...contact,
-				contact_history: updatedHistory,
+				contact_history: newHistory,
 			};
 			setSelectedContact(updatedContact);
+
+			// Clear suggestions cache for this contact
+			const cacheKey = `${contact.id}-suggestions`;
+			const newCache = { ...suggestionCache };
+			delete newCache[cacheKey];
+			setSuggestionCache(newCache);
+			await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
+			// Revert local state on error
+			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
-		}
-	};
-
-	const handleEditHistory = async (index, updatedNote) => {
-		try {
-			const updatedHistory = [...history];
-			updatedHistory[index].notes = updatedNote;
-
-			// Update both local state and Firestore
-			setHistory(updatedHistory);
-			await updateContact(contact.id, {
-				contact_history: updatedHistory,
-			});
-
-			// Clear suggestion cache and trigger new AI suggestions
-			setSuggestionCache({});
-			setLoadingSuggestions(true);
-			// Update the contact object with new history
-			const updatedContact = {
-				...contact,
-				contact_history: updatedHistory,
-			};
-			setSelectedContact(updatedContact);
-
-			setEditMode(null);
-		} catch (error) {
-			Alert.alert('Error', 'Failed to edit history');
-			// Reload original history on error
-			const originalHistory = await fetchContactHistory(contact.id);
-			setHistory(originalHistory);
+			const updatedHistory = await fetchContactHistory(contact.id);
+			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 		}
 	};
 
@@ -100,33 +85,102 @@ const CallNotesTab = ({
 				style: 'destructive',
 				onPress: async () => {
 					try {
+						// Update local state immediately
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
-
-						// Update both local state and Firestore
 						setHistory(updatedHistory);
+
+						// Update Firestore
 						await updateContact(contact.id, {
 							contact_history: updatedHistory,
 						});
 
-						// Clear suggestion cache and trigger new AI suggestions
-						setSuggestionCache({});
-						setLoadingSuggestions(true);
-						// Update the contact object with new history
+						// Update the contact object
 						const updatedContact = {
 							...contact,
 							contact_history: updatedHistory,
 						};
 						setSelectedContact(updatedContact);
+
+						// Clear suggestions cache for this contact
+						const cacheKey = `${contact.id}-suggestions`;
+						const newCache = { ...suggestionCache };
+						delete newCache[cacheKey];
+						setSuggestionCache(newCache);
+						await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 					} catch (error) {
+						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
-						// Reload original history on error
+						// Revert local state on error
 						const originalHistory = await fetchContactHistory(contact.id);
-						setHistory(originalHistory);
+						setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 					}
 				},
 			},
 		]);
+	};
+
+	const handleEditHistory = async (index, updatedNote) => {
+		try {
+			// Update local state immediately
+			const updatedHistory = [...history];
+			updatedHistory[index].notes = updatedNote;
+			setHistory(updatedHistory);
+
+			// Update Firestore
+			await updateContact(contact.id, {
+				contact_history: updatedHistory,
+			});
+
+			// Update the contact object
+			const updatedContact = {
+				...contact,
+				contact_history: updatedHistory,
+			};
+			setSelectedContact(updatedContact);
+
+			setEditMode(null);
+		} catch (error) {
+			console.error('Error editing history:', error);
+			Alert.alert('Error', 'Failed to edit history');
+			// Revert local state on error
+			const originalHistory = await fetchContactHistory(contact.id);
+			setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+		}
+	};
+
+	const handleGetSuggestions = async () => {
+		if (!contact) return;
+
+		setLoadingSuggestions(true);
+		try {
+			const cacheKey = `${contact.id}-suggestions`;
+			const cachedSuggestions = suggestionCache[cacheKey];
+
+			// If there are cached suggestions and no new calls have been added, use cache
+			if (cachedSuggestions) {
+				setSuggestions(cachedSuggestions);
+				setLoadingSuggestions(false);
+				return;
+			}
+
+			// Generate new suggestions only if no cache exists or new call was added
+			const newSuggestions = await generateTopicSuggestions(contact, history);
+			setSuggestions(newSuggestions);
+
+			// Update cache
+			const newCache = {
+				...suggestionCache,
+				[cacheKey]: newSuggestions,
+			};
+			setSuggestionCache(newCache);
+			await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+		} catch (error) {
+			console.error('Error loading suggestions:', error);
+			setSuggestions(['Unable to load suggestions at this time.']);
+		} finally {
+			setLoadingSuggestions(false);
+		}
 	};
 
 	return (
@@ -160,20 +214,22 @@ const CallNotesTab = ({
 						<Text style={commonStyles.primaryButtonText}>Submit</Text>
 					</TouchableOpacity>
 				</View>
-			</View>
 
-			<TouchableOpacity style={styles.aiButton} onPress={() => setShowAISuggestions(true)}>
-				<Icon name="hardware-chip-outline" size={28} color={colors.background.primary} />
-				<Text style={styles.aiButtonText}>AI Call Notes</Text>
-			</TouchableOpacity>
+				<TouchableOpacity
+					style={styles.aiButton}
+					onPress={() => {
+						handleGetSuggestions();
+						setShowAISuggestions(true);
+					}}
+				>
+					<Icon name="bulb-outline" size={22} color="#FFFFFF" />
+					<Text style={styles.aiButtonText}>Get Conversation Topics</Text>
+				</TouchableOpacity>
+			</View>
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
 				<Text style={styles.sectionTitle}>Contact History</Text>
-				{history.length === 0 ? (
-					<Text style={styles.emptyHistoryText}>
-						Add your contact history above to view your call history...
-					</Text>
-				) : (
+				{history.length > 0 ? (
 					history.map((entry, index) => (
 						<View key={index} style={styles.historyEntry}>
 							<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
@@ -213,6 +269,10 @@ const CallNotesTab = ({
 							</View>
 						</View>
 					))
+				) : (
+					<Text style={styles.emptyHistoryText}>
+						Add your contact history above to view your call history...
+					</Text>
 				)}
 			</TouchableOpacity>
 
@@ -224,29 +284,27 @@ const CallNotesTab = ({
 			>
 				<View style={styles.aiModalContainer}>
 					<View style={styles.aiModalContent}>
-						<View style={styles.modalHeader}>
-							<View style={styles.modalTitleContainer}>
-								<Icon name="hardware-chip-outline" size={28} color={colors.text.primary} />
-								<Text style={styles.modalTitle}>AI Suggestions</Text>
-							</View>
-							<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-								<Icon name="close" size={24} color={colors.text.primary} />
-							</TouchableOpacity>
+						<View style={styles.modalTitleContainer}>
+							<Icon name="bulb-outline" size={24} color={colors.primary} />
+							<Text style={styles.sectionTitle}>Conversation Topics</Text>
 						</View>
-						<Text style={styles.aiSubtitle}>Based on your recent calls.</Text>
-						<ScrollView contentContainerStyle={styles.aiModalScrollContent}>
+						<ScrollView style={styles.aiModalScrollContent}>
 							{loadingSuggestions ? (
-								<Text style={styles.suggestionsText}>Loading suggestions...</Text>
-							) : (
-								<View style={styles.suggestionsContainer}>
-									{suggestions.map((topic, index) => (
-										<Text key={index} style={styles.suggestion}>
-											{topic}
-										</Text>
-									))}
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size="large" color={colors.primary} />
+									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>Generating suggestions...</Text>
 								</View>
+							) : (
+								suggestions.map((suggestion, index) => (
+									<Text key={index} style={styles.suggestion}>
+										{suggestion}
+									</Text>
+								))
 							)}
 						</ScrollView>
+						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+							<Icon name="close" size={24} color="#000000" />
+						</TouchableOpacity>
 					</View>
 				</View>
 			</Modal>

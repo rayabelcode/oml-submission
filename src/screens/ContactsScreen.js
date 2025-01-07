@@ -42,7 +42,6 @@ import AddContactModal from '../components/contacts/AddContactModal';
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
 import ContactSearchModal from '../components/modals/ContactSearchModal'; // Search for contacts to add
 import ContactForm from '../components/modals/ContactForm'; // Add/Edit Contact Modal
-import ContactDetailsModal from '../components/contacts/ContactDetailsModal'; // View Contact Details Modal
 import RelationshipTypeModal from '../components/modals/RelationshipTypeModal'; // Relationship Type Modal
 import WobbleEffect from '../components/general/WobbleEffect'; // Wobble effect for contact cards
 
@@ -205,8 +204,6 @@ export default function ContactsScreen({ navigation }) {
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [isFormVisible, setIsFormVisible] = useState(false);
-	const [isDetailsVisible, setIsDetailsVisible] = useState(false);
-	const [selectedContact, setSelectedContact] = useState(null);
 	const [showRelationshipModal, setShowRelationshipModal] = useState(false);
 	const [pendingContact, setPendingContact] = useState(null);
 	const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
@@ -348,8 +345,7 @@ export default function ContactsScreen({ navigation }) {
 
 			const newContact = await addContact(user.uid, contactData);
 			await loadContacts();
-			setSelectedContact(newContact);
-			setIsDetailsVisible(true);
+			navigation.navigate('ContactDetails', { contact: newContact });
 			setPendingContact(null);
 		} catch (error) {
 			console.error('Error processing contact:', error);
@@ -421,8 +417,7 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const handleOpenDetails = (contact) => {
-		setSelectedContact(contact);
-		setIsDetailsVisible(true);
+		navigation.navigate('ContactDetails', { contact });
 	};
 
 	if (!user) {
@@ -465,11 +460,7 @@ export default function ContactsScreen({ navigation }) {
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
 					{/* Smaller logo */}
-					<Image
-						source={logoSource}
-						style={styles.logo}
-						resizeMode="contain"
-					/>
+					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
 					{/* Icons closer together */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
@@ -630,29 +621,17 @@ export default function ContactsScreen({ navigation }) {
 				loadContacts={loadContacts}
 			/>
 
-			<ContactDetailsModal
-				visible={isDetailsVisible}
-				contact={selectedContact}
-				setSelectedContact={setSelectedContact}
-				onClose={() => {
-					setIsDetailsVisible(false);
-					setSelectedContact(null);
-				}}
-				loadContacts={loadContacts}
-			/>
-
 			<ScheduleModal
 				visible={isScheduleModalVisible}
-				contact={selectedContact}
+				contact={editingContact}
 				onClose={() => setIsScheduleModalVisible(false)}
 				onSubmit={async (date) => {
 					try {
-						await updateContact(selectedContact.id, {
+						await updateContact(editingContact.id, {
 							next_contact: date.toISOString(),
 						});
 						loadContacts();
 						setIsScheduleModalVisible(false);
-						setIsDetailsVisible(false);
 						Alert.alert('Success', 'Contact has been scheduled', [
 							{
 								text: 'OK',
@@ -666,7 +645,6 @@ export default function ContactsScreen({ navigation }) {
 						Alert.alert('Error', 'Failed to schedule contact');
 					}
 				}}
-				setIsDetailsVisible={setIsDetailsVisible}
 				loadContacts={loadContacts}
 			/>
 

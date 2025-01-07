@@ -32,64 +32,77 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		contact?.scheduling?.custom_preferences?.preferred_days || []
 	);
 
-	// Ensure selectedDays is updated every time contact changes
 	useEffect(() => {
 		setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
 	}, [contact]);
 
 	const handleFrequencyChange = async (newFrequency) => {
 		try {
+			const updatedContact = {
+				...contact,
+				scheduling: {
+					...contact.scheduling,
+					frequency: newFrequency,
+					custom_schedule: contact.scheduling?.custom_schedule || false,
+				},
+			};
+
+			// Update local state immediately
+			setFrequency(newFrequency);
+			setSelectedContact(updatedContact);
+
+			// Update Firestore
 			await updateContactScheduling(contact.id, {
 				frequency: newFrequency,
 				custom_schedule: contact.scheduling?.custom_schedule || false,
 			});
-			setFrequency(newFrequency);
-			setSelectedContact({
-				...contact,
-				scheduling: {
-					frequency: newFrequency,
-					custom_schedule: contact.scheduling?.custom_schedule || false,
-				},
-			});
 		} catch (error) {
 			console.error('Error updating frequency:', error);
 			Alert.alert('Error', 'Failed to update contact frequency');
+			// Revert local state on error
+			setFrequency(contact.scheduling?.frequency || 'weekly');
+			setSelectedContact(contact);
 		}
 	};
 
 	const handleScheduleContact = async () => {
 		try {
-			const existingReminders = []; // TODO: Fetch from Firestore
-
 			const scheduler = new SchedulingService(
 				contact.scheduling?.custom_preferences,
-				existingReminders,
+				[],
 				Intl.DateTimeFormat().resolvedOptions().timeZone
 			);
 
 			const lastContact = contact.last_contacted || new Date();
 			const reminderDetails = await scheduler.scheduleReminder(contact, lastContact, frequency);
+			const nextContactDate = new Date(reminderDetails.date.toDate());
 
+			const updatedContact = {
+				...contact,
+				next_contact: nextContactDate.toISOString(),
+				scheduling: {
+					...contact.scheduling,
+					frequency,
+					custom_schedule: showAdvancedSettings,
+				},
+			};
+
+			// Update local state immediately
+			setSelectedContact(updatedContact);
+
+			// Update Firestore
 			await updateContactScheduling(contact.id, {
 				frequency,
 				custom_schedule: showAdvancedSettings,
 			});
-
-			await updateNextContact(contact.id, new Date(reminderDetails.date.toDate()));
-
-			setSelectedContact({
-				...contact,
-				next_contact: reminderDetails.date.toDate().toISOString(),
-				scheduling: {
-					...contact.scheduling,
-					frequency,
-				},
-			});
+			await updateNextContact(contact.id, nextContactDate);
 
 			Alert.alert('Success', 'Contact has been scheduled');
 		} catch (error) {
 			console.error('Error scheduling contact:', error);
 			Alert.alert('Error', 'Failed to schedule contact');
+			// Revert local state on error
+			setSelectedContact(contact);
 		}
 	};
 
