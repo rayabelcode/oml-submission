@@ -41,7 +41,7 @@ const lightTheme = {
 	success: '#34C759',
 	border: '#E5E5EA',
 	tabBar: {
-		background: '#F5F5F5',
+		background: '#E0E0E0',
 	},
 };
 
@@ -65,7 +65,7 @@ const darkTheme = {
 	success: '#32D74B',
 	border: '#3A3A3C',
 	tabBar: {
-		background: '#1E1E1E',
+		background: '#2C2C2E',
 	},
 };
 

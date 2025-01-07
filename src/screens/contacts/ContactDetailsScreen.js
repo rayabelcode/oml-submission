@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
@@ -7,11 +7,8 @@ import CallNotesTab from '../../components/contacts/tabs/CallNotesTab';
 import EditContactTab from '../../components/contacts/tabs/EditContactTab';
 import ScheduleTab from '../../components/contacts/tabs/ScheduleTab';
 import CallOptions from '../../components/general/CallOptions';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { fetchContactHistory, fetchContacts } from '../../utils/firestore';
 import { useFocusEffect } from '@react-navigation/native';
-
-const Tab = createBottomTabNavigator();
 
 const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact, initialTab = 'Notes' } = route.params;
@@ -20,6 +17,9 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 	const [contact, setContact] = useState(initialContact);
 	const [history, setHistory] = useState([]);
 	const [showCallOptions, setShowCallOptions] = useState(false);
+	const [selectedIndex, setSelectedIndex] = useState(
+		initialTab === 'Notes' ? 0 : initialTab === 'Schedule' ? 1 : 2
+	);
 
 	const loadContactData = useCallback(async () => {
 		try {
@@ -49,8 +49,89 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 		await loadContactData();
 	};
 
+	const renderContent = () => {
+		switch (selectedIndex) {
+			case 0:
+				return (
+					<CallNotesTab
+						contact={contact}
+						history={history}
+						setHistory={setHistory}
+						setSelectedContact={handleUpdateContact}
+					/>
+				);
+			case 1:
+				return (
+					<ScheduleTab
+						contact={contact}
+						setSelectedContact={handleUpdateContact}
+						loadContacts={loadContactData}
+					/>
+				);
+			case 2:
+				return (
+					<EditContactTab
+						contact={contact}
+						setSelectedContact={handleUpdateContact}
+						loadContacts={loadContactData}
+						onClose={() => navigation.goBack()}
+					/>
+				);
+			default:
+				return null;
+		}
+	};
+
+	const localStyles = StyleSheet.create({
+		container: {
+			flex: 1,
+		},
+		contentContainer: {
+			flex: 1,
+			marginBottom: 65,
+		},
+		segmentedControlContainer: {
+			position: 'absolute',
+			bottom: 0,
+			left: 0,
+			right: 0,
+			paddingHorizontal: 10,
+			paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+			backgroundColor: 'transparent',
+		},
+		segmentedWrapper: {
+			flexDirection: 'row',
+			backgroundColor: theme === 'dark' ? '#1C1C1E' : '#F2F2F7',
+			borderRadius: 12,
+			borderWidth: 1,
+			borderColor: colors.border,
+			height: 50,
+			overflow: 'hidden',
+		},
+		segment: {
+			flex: 1,
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: 8,
+			gap: 6,
+		},
+		selectedSegment: {
+			backgroundColor: theme === 'dark' ? '#2C2C2E' : '#FFFFFF',
+		},
+		segmentText: {
+			fontSize: 13,
+			color: colors.text.secondary,
+			fontWeight: '500',
+		},
+		selectedText: {
+			color: colors.primary,
+			fontWeight: '600',
+		},
+	});
+
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, localStyles.container]}>
 			<View style={styles.headerContainer}>
 				<TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back-outline" size={28} color={colors.text.primary} />
@@ -68,92 +149,59 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				)}
 			</View>
 
-			<Tab.Navigator
-				initialRouteName={initialTab}
-				screenOptions={{
-					tabBarStyle: {
-						backgroundColor: colors.tabBar.background,
-						borderTopColor: colors.border,
-						borderTopWidth: 1,
-						elevation: 8,
-						shadowColor: '#000',
-						shadowOffset: {
-							width: 0,
-							height: -4,
-						},
-						shadowOpacity: 0.1,
-						shadowRadius: 4,
-						height: Platform.OS === 'ios' ? 88 : 60,
-						paddingBottom: Platform.OS === 'ios' ? 30 : 8,
-					},
-					tabBarActiveTintColor: colors.primary,
-					tabBarInactiveTintColor: colors.text.secondary,
-					tabBarLabelStyle: {
-						fontSize: 12,
-						fontWeight: '500',
-					},
-					sceneContainerStyle: {
-						backgroundColor: colors.background.primary,
-					},
-				}}
-			>
-				<Tab.Screen
-					name="Notes"
-					options={{
-						headerShown: false,
-						tabBarIcon: ({ color, size }) => <Icon name="document-text-outline" size={size} color={color} />,
-					}}
-				>
-					{(props) => (
-						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
-							<CallNotesTab
-								{...props}
-								contact={contact}
-								history={history}
-								setHistory={setHistory}
-								setSelectedContact={handleUpdateContact}
-							/>
-						</View>
-					)}
-				</Tab.Screen>
-				<Tab.Screen
-					name="Schedule"
-					options={{
-						headerShown: false,
-						tabBarIcon: ({ color, size }) => <Icon name="calendar-outline" size={size} color={color} />,
-					}}
-				>
-					{(props) => (
-						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
-							<ScheduleTab
-								{...props}
-								contact={contact}
-								setSelectedContact={handleUpdateContact}
-								loadContacts={loadContactData}
-							/>
-						</View>
-					)}
-				</Tab.Screen>
-				<Tab.Screen
-					name="Profile"
-					options={{
-						headerShown: false,
-						tabBarIcon: ({ color, size }) => <Icon name="person-outline" size={size} color={color} />,
-					}}
-				>
-					{(props) => (
-						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
-							<EditContactTab
-								{...props}
-								contact={contact}
-								setSelectedContact={handleUpdateContact}
-								loadContacts={loadContactData}
-								onClose={() => navigation.goBack()}
-							/>
-						</View>
-					)}
-				</Tab.Screen>
-			</Tab.Navigator>
+			<View style={localStyles.contentContainer}>{renderContent()}</View>
+
+			<View style={localStyles.segmentedControlContainer}>
+				<View style={localStyles.segmentedWrapper}>
+					<TouchableOpacity
+						style={[
+							localStyles.segment,
+							selectedIndex === 0 && localStyles.selectedSegment,
+							{ borderRightWidth: 1, borderRightColor: colors.border },
+						]}
+						onPress={() => setSelectedIndex(0)}
+					>
+						<Icon
+							name="document-text-outline"
+							size={20}
+							color={selectedIndex === 0 ? colors.primary : colors.text.secondary}
+						/>
+						<Text style={[localStyles.segmentText, selectedIndex === 0 && localStyles.selectedText]}>
+							Notes
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={[
+							localStyles.segment,
+							selectedIndex === 1 && localStyles.selectedSegment,
+							{ borderRightWidth: 1, borderRightColor: colors.border },
+						]}
+						onPress={() => setSelectedIndex(1)}
+					>
+						<Icon
+							name="calendar-outline"
+							size={20}
+							color={selectedIndex === 1 ? colors.primary : colors.text.secondary}
+						/>
+						<Text style={[localStyles.segmentText, selectedIndex === 1 && localStyles.selectedText]}>
+							Schedule
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						style={[localStyles.segment, selectedIndex === 2 && localStyles.selectedSegment]}
+						onPress={() => setSelectedIndex(2)}
+					>
+						<Icon
+							name="person-outline"
+							size={20}
+							color={selectedIndex === 2 ? colors.primary : colors.text.secondary}
+						/>
+						<Text style={[localStyles.segmentText, selectedIndex === 2 && localStyles.selectedText]}>
+							Profile
+						</Text>
+					</TouchableOpacity>
+				</View>
+			</View>
 		</View>
 	);
 };
