@@ -2,23 +2,22 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
-import { useStyles } from '../../styles/screens/contacts';
+import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
 import CallNotesTab from '../../components/contacts/tabs/CallNotesTab';
 import EditContactTab from '../../components/contacts/tabs/EditContactTab';
 import ScheduleTab from '../../components/contacts/tabs/ScheduleTab';
-import CallOptions from '../../components/general/CallOptions';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { fetchContactHistory, fetchContacts } from '../../utils/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 
+const Tab = createBottomTabNavigator();
+
 const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact } = route.params;
-	const { colors } = useTheme();
-	const styles = useStyles();
-
+	const { colors, theme } = useTheme();
+	const styles = useContactDetailsStyles();
 	const [contact, setContact] = useState(initialContact);
-	const [activeTab, setActiveTab] = useState('notes');
 	const [history, setHistory] = useState([]);
-	const [showCallOptions, setShowCallOptions] = useState(false);
 
 	const loadContactData = useCallback(async () => {
 		try {
@@ -40,7 +39,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 	useFocusEffect(
 		useCallback(() => {
 			loadContactData();
-			return () => {};
 		}, [loadContactData])
 	);
 
@@ -49,93 +47,108 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 		await loadContactData();
 	};
 
-	const renderTabContent = () => {
-		switch (activeTab) {
-			case 'notes':
-				return (
-					<CallNotesTab
-						contact={contact}
-						history={history}
-						setHistory={setHistory}
-						setSelectedContact={handleUpdateContact}
-					/>
-				);
-			case 'schedule':
-				return (
-					<ScheduleTab
-						contact={contact}
-						setSelectedContact={handleUpdateContact}
-						loadContacts={loadContactData}
-					/>
-				);
-			case 'edit':
-				return (
-					<EditContactTab
-						contact={contact}
-						setSelectedContact={handleUpdateContact}
-						loadContacts={loadContactData}
-						onClose={() => navigation.goBack()}
-					/>
-				);
-			default:
-				return null;
-		}
-	};
-
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
-				<TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-					<Icon name="arrow-back" size={24} color={colors.text.primary} />
+			{/* Header */}
+			<View style={styles.headerContainer}>
+				<TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+					<Icon name="chevron-back-outline" size={28} color={colors.text.primary} />
 				</TouchableOpacity>
-				<Text style={[styles.modalTitle, { flex: 1, textAlign: 'center' }]} numberOfLines={1}>
-					{contact.first_name} {contact.last_name}
+
+				<Text style={styles.headerTitle} numberOfLines={1}>
+					{`${contact.first_name} ${contact.last_name}`}
 				</Text>
-				<TouchableOpacity onPress={() => setShowCallOptions(!showCallOptions)} style={styles.headerButton}>
-					<Icon name="call" size={24} color={colors.primary} />
-				</TouchableOpacity>
-				{showCallOptions && (
-					<CallOptions show={showCallOptions} contact={contact} onClose={() => setShowCallOptions(false)} />
-				)}
-			</View>
 
-			<View style={styles.tabBar}>
 				<TouchableOpacity
-					style={[styles.tabItem, activeTab === 'notes' && styles.activeTab]}
-					onPress={() => setActiveTab('notes')}
+					style={styles.phoneButton}
+					onPress={() => {
+						/* Handle phone call */
+					}}
 				>
-					<Icon
-						name="document-text-outline"
-						size={24}
-						color={activeTab === 'notes' ? colors.primary : colors.text.secondary}
-					/>
-					<Text style={[styles.tabLabel, activeTab === 'notes' && styles.activeTabLabel]}>Notes</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={[styles.tabItem, activeTab === 'schedule' && styles.activeTab]}
-					onPress={() => setActiveTab('schedule')}
-				>
-					<Icon
-						name="calendar-outline"
-						size={24}
-						color={activeTab === 'schedule' ? colors.primary : colors.text.secondary}
-					/>
-					<Text style={[styles.tabLabel, activeTab === 'schedule' && styles.activeTabLabel]}>Schedule</Text>
-				</TouchableOpacity>
-				<TouchableOpacity
-					style={[styles.tabItem, activeTab === 'edit' && styles.activeTab]}
-					onPress={() => setActiveTab('edit')}
-				>
-					<Icon
-						name="create-outline"
-						size={24}
-						color={activeTab === 'edit' ? colors.primary : colors.text.secondary}
-					/>
-					<Text style={[styles.tabLabel, activeTab === 'edit' && styles.activeTabLabel]}>Profile</Text>
+					<Icon name="call" size={22} color={theme === 'dark' ? '#000000' : '#FFFFFF'} />
 				</TouchableOpacity>
 			</View>
 
-			<ScrollView style={styles.tabContent}>{renderTabContent()}</ScrollView>
+			{/* Tab Navigator */}
+			<Tab.Navigator
+				screenOptions={{
+					tabBarStyle: {
+						backgroundColor: colors.background.primary,
+						borderTopColor: colors.border,
+						borderTopWidth: 1,
+					},
+					tabBarActiveTintColor: colors.primary,
+					tabBarInactiveTintColor: colors.text.secondary,
+					sceneContainerStyle: {
+						backgroundColor: colors.background.primary,
+					},
+					contentStyle: {
+						backgroundColor: colors.background.primary,
+					},
+				}}
+				sceneContainerStyle={{
+					backgroundColor: colors.background.primary,
+				}}
+			>
+				<Tab.Screen
+					name="Notes"
+					options={{
+						headerShown: false,
+						tabBarIcon: ({ color, size }) => <Icon name="document-text-outline" size={size} color={color} />,
+					}}
+				>
+					{(props) => (
+						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+							<CallNotesTab
+								{...props}
+								contact={contact}
+								history={history}
+								setHistory={setHistory}
+								setSelectedContact={handleUpdateContact}
+							/>
+						</View>
+					)}
+				</Tab.Screen>
+
+				<Tab.Screen
+					name="Schedule"
+					options={{
+						headerShown: false,
+						tabBarIcon: ({ color, size }) => <Icon name="calendar-outline" size={size} color={color} />,
+					}}
+				>
+					{(props) => (
+						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+							<ScheduleTab
+								{...props}
+								contact={contact}
+								setSelectedContact={handleUpdateContact}
+								loadContacts={loadContactData}
+							/>
+						</View>
+					)}
+				</Tab.Screen>
+
+				<Tab.Screen
+					name="Profile"
+					options={{
+						headerShown: false,
+						tabBarIcon: ({ color, size }) => <Icon name="person-outline" size={size} color={color} />,
+					}}
+				>
+					{(props) => (
+						<View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+							<EditContactTab
+								{...props}
+								contact={contact}
+								setSelectedContact={handleUpdateContact}
+								loadContacts={loadContactData}
+								onClose={() => navigation.goBack()}
+							/>
+						</View>
+					)}
+				</Tab.Screen>
+			</Tab.Navigator>
 		</View>
 	);
 };
