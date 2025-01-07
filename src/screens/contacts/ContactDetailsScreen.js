@@ -91,12 +91,22 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 
 	const handleUpdateContact = async (updatedData) => {
 		try {
+			// Update local state immediately
+			const updatedContact = {
+				...contact,
+				...updatedData,
+			};
+			setContact(updatedContact);
+
+			// Update Firestore
 			await updateContact(contact.id, updatedData);
 			setError(null);
 		} catch (error) {
 			console.error('Error updating contact:', error);
 			setError('Failed to update contact');
 			Alert.alert('Error', 'Failed to update contact. Please try again.');
+			// Revert on error
+			setContact(contact);
 		}
 	};
 

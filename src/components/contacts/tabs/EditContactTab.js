@@ -26,7 +26,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			relationship_type: contact.scheduling?.relationship_type || 'friend',
 		},
 	});
-	const [showSuccess, setShowSuccess] = useState(false);
 
 	const handleAddTag = async () => {
 		if (!newTag.trim()) return;
@@ -166,8 +165,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			// Update Firestore
 			await updateContact(contact.id, updatedContact);
 			setIsEditing(false);
-			setShowSuccess(true);
-			setTimeout(() => setShowSuccess(false), 2000);
 		} catch (error) {
 			console.error('Error updating contact:', error);
 			Alert.alert('Error', 'Failed to update contact');
@@ -468,7 +465,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 					</TouchableOpacity>
 				</ScrollView>
 			</View>
-			<AutoDismissModalContainer message="Contact Updated" isVisible={showSuccess} />
 		</>
 	);
 };
