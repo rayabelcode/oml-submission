@@ -4,22 +4,10 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
-import { addContactHistory, fetchContactHistory } from '../../../utils/firestore';
+import { addContactHistory, fetchContactHistory, updateContact } from '../../../utils/firestore';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { updateContact } from '../../../utils/firestore';
 
-const CallNotesTab = ({
-	contact,
-	history = [], // Fallback to an empty array if history is undefined
-	setHistory,
-	suggestionCache,
-	setSuggestionCache,
-	suggestions,
-	setSuggestions,
-	loadingSuggestions,
-	setLoadingSuggestions,
-	setSelectedContact,
-}) => {
+const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
@@ -29,8 +17,6 @@ const CallNotesTab = ({
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [editMode, setEditMode] = useState(null);
 
-	const [showAISuggestions, setShowAISuggestions] = useState(false);
-
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
 			Alert.alert('Error', 'Please enter call notes');
@@ -38,57 +24,33 @@ const CallNotesTab = ({
 		}
 
 		try {
-			await addContactHistory(contact.id, {
+			const newHistoryEntry = {
 				notes: notes,
 				date: date.toISOString(),
-			});
-			const updatedHistory = await fetchContactHistory(contact.id);
-			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+			};
 
-			// Clear suggestion cache and trigger new AI suggestions
-			setSuggestionCache({});
-			setLoadingSuggestions(true);
-			// Update the contact object with new history
+			// Update local state immediately
+			const newHistory = [newHistoryEntry, ...history];
+			setHistory(newHistory);
+
+			// Update Firestore
+			await addContactHistory(contact.id, newHistoryEntry);
+
+			// Update the contact object
 			const updatedContact = {
 				...contact,
-				contact_history: updatedHistory,
+				contact_history: newHistory,
 			};
 			setSelectedContact(updatedContact);
 
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
+			// Revert local state on error
+			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
-		}
-	};
-
-	const handleEditHistory = async (index, updatedNote) => {
-		try {
-			const updatedHistory = [...history];
-			updatedHistory[index].notes = updatedNote;
-
-			// Update both local state and Firestore
-			setHistory(updatedHistory);
-			await updateContact(contact.id, {
-				contact_history: updatedHistory,
-			});
-
-			// Clear suggestion cache and trigger new AI suggestions
-			setSuggestionCache({});
-			setLoadingSuggestions(true);
-			// Update the contact object with new history
-			const updatedContact = {
-				...contact,
-				contact_history: updatedHistory,
-			};
-			setSelectedContact(updatedContact);
-
-			setEditMode(null);
-		} catch (error) {
-			Alert.alert('Error', 'Failed to edit history');
-			// Reload original history on error
-			const originalHistory = await fetchContactHistory(contact.id);
-			setHistory(originalHistory);
+			const updatedHistory = await fetchContactHistory(contact.id);
+			setHistory(updatedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 		}
 	};
 
@@ -100,33 +62,61 @@ const CallNotesTab = ({
 				style: 'destructive',
 				onPress: async () => {
 					try {
+						// Update local state immediately
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
-
-						// Update both local state and Firestore
 						setHistory(updatedHistory);
+
+						// Update Firestore
 						await updateContact(contact.id, {
 							contact_history: updatedHistory,
 						});
 
-						// Clear suggestion cache and trigger new AI suggestions
-						setSuggestionCache({});
-						setLoadingSuggestions(true);
-						// Update the contact object with new history
+						// Update the contact object
 						const updatedContact = {
 							...contact,
 							contact_history: updatedHistory,
 						};
 						setSelectedContact(updatedContact);
 					} catch (error) {
+						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
-						// Reload original history on error
+						// Revert local state on error
 						const originalHistory = await fetchContactHistory(contact.id);
-						setHistory(originalHistory);
+						setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 					}
 				},
 			},
 		]);
+	};
+
+	const handleEditHistory = async (index, updatedNote) => {
+		try {
+			// Update local state immediately
+			const updatedHistory = [...history];
+			updatedHistory[index].notes = updatedNote;
+			setHistory(updatedHistory);
+
+			// Update Firestore
+			await updateContact(contact.id, {
+				contact_history: updatedHistory,
+			});
+
+			// Update the contact object
+			const updatedContact = {
+				...contact,
+				contact_history: updatedHistory,
+			};
+			setSelectedContact(updatedContact);
+
+			setEditMode(null);
+		} catch (error) {
+			console.error('Error editing history:', error);
+			Alert.alert('Error', 'Failed to edit history');
+			// Revert local state on error
+			const originalHistory = await fetchContactHistory(contact.id);
+			setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
+		}
 	};
 
 	return (

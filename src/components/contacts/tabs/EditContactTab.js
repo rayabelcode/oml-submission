@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'reac
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { MediaType } from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
@@ -19,7 +18,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 	const styles = useStyles();
 	const [newTag, setNewTag] = useState('');
 	const inputRef = useRef(null);
-
 	const [isEditing, setIsEditing] = useState(false);
 	const [formData, setFormData] = useState({
 		...contact,
@@ -42,40 +40,45 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 		}
 
 		const updatedTags = [...existingTags, newTag.trim()];
+		const updatedContact = {
+			...contact,
+			tags: updatedTags,
+		};
 
 		try {
-			await updateContact(contact.id, {
-				tags: updatedTags,
-			});
-
-			setSelectedContact((prev) => ({
-				...prev,
-				tags: updatedTags,
-			}));
-
+			// Update local state immediately
+			setSelectedContact(updatedContact);
 			setNewTag('');
 			inputRef.current?.focus();
+
+			// Update Firestore
+			await updateContact(contact.id, { tags: updatedTags });
 		} catch (error) {
 			Alert.alert('Error', 'Failed to add tag');
 			console.error('Error adding tag:', error);
+			// Revert local state on error
+			setSelectedContact(contact);
 		}
 	};
 
 	const handleDeleteTag = async (tagToDelete) => {
 		try {
 			const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
-
-			await updateContact(contact.id, {
+			const updatedContact = {
+				...contact,
 				tags: updatedTags,
-			});
+			};
 
-			setSelectedContact((prev) => ({
-				...prev,
-				tags: updatedTags,
-			}));
+			// Update local state immediately
+			setSelectedContact(updatedContact);
+
+			// Update Firestore
+			await updateContact(contact.id, { tags: updatedTags });
 		} catch (error) {
 			Alert.alert('Error', 'Failed to delete tag');
 			console.error('Error deleting tag:', error);
+			// Revert local state on error
+			setSelectedContact(contact);
 		}
 	};
 
@@ -88,7 +91,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			}
 
 			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ['images'],
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
 				aspect: [1, 1],
 				quality: 1,
@@ -100,30 +103,36 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 					[{ resize: { width: 500 } }],
 					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
 				);
-				const photoURL = await uploadContactPhoto(contact.user_id, manipResult.uri);
 
+				const photoURL = await uploadContactPhoto(contact.user_id, manipResult.uri);
 				const updatedContact = {
 					...contact,
 					photo_url: photoURL,
 				};
 
-				await updateContact(contact.id, updatedContact);
+				// Update local state immediately
 				setFormData((prev) => ({
 					...prev,
 					photo_url: photoURL,
 				}));
 				setSelectedContact(updatedContact);
-				await loadContacts();
+
+				// Update Firestore
+				await updateContact(contact.id, updatedContact);
 			}
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');
+			// Revert local state on error
+			setFormData({ ...contact });
+			setSelectedContact(contact);
 		}
 	};
 
 	const handleSave = async () => {
 		try {
 			const updatedContact = {
+				...contact,
 				first_name: formData.first_name,
 				last_name: formData.last_name,
 				email: formData.email,
@@ -147,19 +156,20 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 				},
 			};
 
+			// Update local state immediately
+			setSelectedContact(updatedContact);
+
+			// Update Firestore
 			await updateContact(contact.id, updatedContact);
-			setSelectedContact({
-				...contact,
-				...updatedContact,
-			});
 			setIsEditing(false);
-			await loadContacts();
-			Alert.alert('Success', 'Contact updated successfully', [
-				{ text: 'OK', onPress: () => setIsEditing(false) },
-			]);
+			setShowSuccess(true);
+			setTimeout(() => setShowSuccess(false), 2000);
 		} catch (error) {
 			console.error('Error updating contact:', error);
 			Alert.alert('Error', 'Failed to update contact');
+			// Revert local state on error
+			setSelectedContact(contact);
+			setFormData(contact);
 		}
 	};
 
@@ -201,8 +211,14 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 																			...contact,
 																			photo_url: null,
 																		});
-																		setFormData((prev) => ({ ...prev, photo_url: null }));
-																		setSelectedContact({ ...contact, photo_url: null });
+																		setFormData((prev) => ({
+																			...prev,
+																			photo_url: null,
+																		}));
+																		setSelectedContact({
+																			...contact,
+																			photo_url: null,
+																		});
 																		loadContacts();
 																	} catch (error) {
 																		Alert.alert('Error', 'Failed to remove photo');
@@ -278,7 +294,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 										autoCapitalize="none"
 										autoCorrect={false}
 									/>
-
 									<TextInput
 										style={styles.editInput}
 										value={formatPhoneNumber(formData.phone)}
@@ -330,70 +345,68 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 									</View>
 
 									<View style={styles.separator} />
-<View style={styles.dangerSection}>
-    <TouchableOpacity
-        style={styles.dangerButton}
-        onPress={() => {
-            Alert.alert('Archive Contact', 'Archive this contact?', [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Archive',
-                    onPress: async () => {
-                        try {
-                            await archiveContact(contact.id);
-                            await loadContacts();
-                            onClose();
-                        } catch (error) {
-                            Alert.alert('Error', 'Unable to archive contact');
-                        }
-                    },
-                },
-            ]);
-        }}
-    >
-        <Icon name="archive-outline" size={24} color={colors.text.secondary} />
-        <Text style={styles.dangerButtonText}>Archive</Text>
-    </TouchableOpacity>
+									<View style={styles.dangerSection}>
+										<TouchableOpacity
+											style={styles.dangerButton}
+											onPress={() => {
+												Alert.alert('Archive Contact', 'Archive this contact?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Archive',
+														onPress: async () => {
+															try {
+																await archiveContact(contact.id);
+																await loadContacts();
+																onClose();
+															} catch (error) {
+																Alert.alert('Error', 'Unable to archive contact');
+															}
+														},
+													},
+												]);
+											}}
+										>
+											<Icon name="archive-outline" size={24} color={colors.text.secondary} />
+											<Text style={styles.dangerButtonText}>Archive</Text>
+										</TouchableOpacity>
 
-    <TouchableOpacity
-        style={styles.dangerButton}
-        onPress={() => {
-            Alert.alert(
-                'Delete Contact',
-                'Are you sure you want to delete this contact? This action cannot be undone.',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: async () => {
-                            try {
-                                await deleteContact(contact.id);
-                                await loadContacts();
-                                onClose();
-                            } catch (error) {
-                                Alert.alert('Error', 'Unable to delete contact');
-                            }
-                        },
-                    },
-                ]
-            );
-        }}
-    >
-        <Icon name="trash-outline" size={24} color={colors.danger} />
-        <Text style={[styles.dangerButtonText, { color: colors.danger }]}>Delete</Text>
-    </TouchableOpacity>
-</View>
+										<TouchableOpacity
+											style={styles.dangerButton}
+											onPress={() => {
+												Alert.alert(
+													'Delete Contact',
+													'Are you sure you want to delete this contact? This action cannot be undone.',
+													[
+														{ text: 'Cancel', style: 'cancel' },
+														{
+															text: 'Delete',
+															style: 'destructive',
+															onPress: async () => {
+																try {
+																	await deleteContact(contact.id);
+																	await loadContacts();
+																	onClose();
+																} catch (error) {
+																	Alert.alert('Error', 'Unable to delete contact');
+																}
+															},
+														},
+													]
+												);
+											}}
+										>
+											<Icon name="trash-outline" size={24} color={colors.danger} />
+											<Text style={[styles.dangerButtonText, { color: colors.danger }]}>Delete</Text>
+										</TouchableOpacity>
+									</View>
 								</View>
 							) : (
 								<View style={styles.viewFields}>
 									<View style={styles.centeredDetails}>
 										{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
-
 										{formData.phone && (
 											<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
 										)}
-
 										{formData.scheduling?.relationship_type && (
 											<Text style={styles.contactDetail}>
 												Relationship:{' '}

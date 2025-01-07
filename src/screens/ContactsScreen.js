@@ -421,11 +421,7 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const handleOpenDetails = (contact) => {
-		navigation.navigate('ContactDetails', {
-			contact,
-			loadContacts,
-			setSelectedContact,
-		});
+		navigation.navigate('ContactDetails', { contact });
 	};
 
 	if (!user) {
