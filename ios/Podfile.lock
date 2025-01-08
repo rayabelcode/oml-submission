@@ -1744,7 +1744,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNCPicker (2.10.2):
+  - RNCPicker (2.11.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1807,6 +1807,15 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNImageCropPicker (0.41.6):
+    - React-Core
+    - React-RCTImage
+    - RNImageCropPicker/QBImagePickerController (= 0.41.6)
+    - TOCropViewController (~> 2.7.4)
+  - RNImageCropPicker/QBImagePickerController (0.41.6):
+    - React-Core
+    - React-RCTImage
+    - TOCropViewController (~> 2.7.4)
   - RNReanimated (3.16.6):
     - DoubleConversion
     - glog
@@ -1939,7 +1948,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNSentry (6.4.0):
+  - RNSentry (6.5.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1960,7 +1969,7 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - Sentry/HybridSDK (= 8.41.0)
+    - Sentry/HybridSDK (= 8.43.0)
     - Yoga
   - RNSVG (15.10.1):
     - DoubleConversion
@@ -2037,8 +2046,9 @@ PODS:
   - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
-  - Sentry/HybridSDK (8.41.0)
+  - Sentry/HybridSDK (8.43.0)
   - SocketRocket (0.7.1)
+  - TOCropViewController (2.7.4)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2141,6 +2151,7 @@ DEPENDENCIES:
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNImageCropPicker (from `../node_modules/react-native-image-crop-picker`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - "RNSentry (from `../node_modules/@sentry/react-native`)"
@@ -2160,6 +2171,7 @@ SPEC REPOS:
     - SDWebImageWebPCoder
     - Sentry
     - SocketRocket
+    - TOCropViewController
 
 EXTERNAL SOURCES:
   boost:
@@ -2357,6 +2369,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/datetimepicker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
+  RNImageCropPicker:
+    :path: "../node_modules/react-native-image-crop-picker"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2469,20 +2483,22 @@ SPEC CHECKSUMS:
   ReactCodegen: 28abe92ea9a1e277edc25d02d7d53ab3acf5cc07
   ReactCommon: 7da12c0f59956995a153de45835b64c89e0a4a57
   RNCAsyncStorage: d2806c4f4c8555fb3ca3fe5759e2f5e5ef74efe4
-  RNCPicker: 5d3866a625683cec4ba77771330f4383ad376940
+  RNCPicker: 1a44b9398c53f672d80773df7cc54f2126bbe35a
   RNDateTimePicker: dd58d8235c3d12d349c043c2d9bcedcbb513f106
   RNGestureHandler: 1e33ee267aaf61bbab6089d32df3b38c3024e3dd
+  RNImageCropPicker: d5387003612dd08d52fb062760136e0e473df186
   RNReanimated: fb3896d9010787799eb5748e50fd59746a503001
   RNScreens: f5762e2dd74e365dcee2007dc96942a528ac25d4
-  RNSentry: aec22806237ebac3afa7f3ed4c00352f372a3992
+  RNSentry: bd9d15d37733a485519d08eebba55a223823e059
   RNSVG: fda2fb96dd529a22bf8cf9a38fc051378fd4866e
   RNVectorIcons: 959270651e3b1bd49d6c469fc9ac52149f67f55c
   SDWebImage: 8a6b7b160b4d710e2a22b6900e25301075c34cb3
   SDWebImageAVIFCoder: 00310d246aab3232ce77f1d8f0076f8c4b021d90
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
-  Sentry: 54d0fe6c0df448497c8ed4cce66ccf7027e1823e
+  Sentry: 532b281a53b1b45a523fd592f608956fb36e577c
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: 7548e4449365bf0ef60db4aefe58abff37fcabec
 
 PODFILE CHECKSUM: 5c2c37a09ce4f184dfc12be8241fbd567315e00e

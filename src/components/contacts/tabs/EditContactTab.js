@@ -2,11 +2,10 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
-import { launchImageLibrary } from 'react-native-image-picker';
+import ImagePicker from 'react-native-image-crop-picker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
-import AutoDismissModalContainer from '../../../components/general/AutoDismissModalContainer';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
 import RelationshipPicker from '../../general/RelationshipPicker';
 import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
@@ -86,41 +85,37 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 	const handleEditPhotoUpload = async () => {
 		try {
-			const options = {
-				mediaType: 'photo',
-				maxWidth: 500,
-				quality: 0.8,
-			};
-
-			launchImageLibrary(options, async (response) => {
-				if (response.didCancel) {
-					console.log('User canceled image picker');
-					return;
-				} else if (response.errorMessage) {
-					console.error('Image Picker Error: ', response.errorMessage);
-					Alert.alert('Error', 'Failed to pick an image.');
-					return;
-				} else {
-					const photoURL = await uploadContactPhoto(contact.user_id, response.assets[0].uri);
-					const updatedContact = { ...contact, photo_url: photoURL };
-
-					// Update local state immediately
-					setFormData((prev) => ({
-						...prev,
-						photo_url: photoURL,
-					}));
-					setSelectedContact(updatedContact);
-
-					// Update Firestore
-					await updateContact(contact.id, updatedContact);
-				}
+			// Image picker with cropping
+			const image = await ImagePicker.openPicker({
+				width: 500, // Final width
+				height: 500, // Final height
+				cropping: true,
+				cropperToolbarTitle: 'Crop Your Photo', // Toolbar title
+				cropperCircleOverlay: true,
+				compressImageQuality: 0.6,
 			});
+
+			// Upload the cropped image
+			const uploadedPhotoURL = await uploadContactPhoto(contact.user_id, image.path);
+
+			// Update the contact with the uploaded photo URL
+			const updatedContact = { ...contact, photo_url: uploadedPhotoURL };
+
+			// Update local state immediately
+			setFormData((prev) => ({
+				...prev,
+				photo_url: uploadedPhotoURL,
+			}));
+			setSelectedContact(updatedContact);
+
+			// Update Firestore
+			await updateContact(contact.id, updatedContact);
 		} catch (error) {
+			if (error.code === 'E_PICKER_CANCELLED') {
+				return;
+			}
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');
-			// Revert local state on error
-			setFormData({ ...contact });
-			setSelectedContact(contact);
 		}
 	};
 
