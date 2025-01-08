@@ -7,6 +7,7 @@ import { calculateStats } from './stats/statsCalculator';
 import { useTheme } from '../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
+import { cacheManager } from '../utils/cache';
 
 // Helper to convert day number to name
 const getDayName = (dayNum) => {
@@ -30,8 +31,18 @@ export default function StatsScreen() {
 		if (!user) return;
 		try {
 			setError(null);
+
+			// Try to get cached stats first
+			const cachedStats = await cacheManager.getCachedStats(user.uid);
+			if (cachedStats) {
+				setStats(cachedStats);
+				setLoading(false);
+			}
+
+			// Then fetch fresh stats
 			const calculatedStats = await calculateStats(user.uid);
 			setStats(calculatedStats);
+			await cacheManager.saveStats(user.uid, calculatedStats);
 		} catch (error) {
 			setError('Unable to load stats. Please try again.');
 			console.error('Error loading stats:', error);
