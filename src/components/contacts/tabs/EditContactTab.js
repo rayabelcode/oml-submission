@@ -171,9 +171,12 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 												style={styles.photoImage}
 												cachePolicy="memory-disk"
 											/>
-											<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
-												<Icon name="create-outline" size={20} color="#FFFFFF" />
-											</TouchableOpacity>
+											{!isEditing && (
+												<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
+													<Icon name="create-outline" size={20} color="#FFFFFF" />
+												</TouchableOpacity>
+											)}
+
 											{isEditing && (
 												<TouchableOpacity
 													style={styles.removePhotoButton}
