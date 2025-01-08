@@ -3,9 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'reac
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Image } from 'expo-image';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
-import * as ImagePicker from 'expo-image-picker';
 import { getUserProfile, updateUserProfile, uploadProfilePhoto } from '../../utils/firestore';
 
 const ProfileScreen = ({ navigation }) => {
@@ -37,27 +36,30 @@ const ProfileScreen = ({ navigation }) => {
 
 	const handleProfilePhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission needed', 'Please grant permission to access your photos');
-				return;
-			}
-
-			const result = await ImagePicker.launchImageLibraryAsync({
-				allowsEditing: true,
-				aspect: [1, 1],
+			const options = {
+				mediaType: 'photo',
+				maxWidth: 300,
 				quality: 0.5,
-			});
+			};
 
-			if (!result.canceled && result.assets && result.assets[0]) {
-				const photoUrl = await uploadProfilePhoto(user.uid, result.assets[0].uri);
-				if (photoUrl) {
-					setProfilePhoto(photoUrl);
-					await updateUserProfile(user.uid, { photo_url: photoUrl });
+			launchImageLibrary(options, async (response) => {
+				if (response.didCancel) {
+					console.log('User canceled image picker');
+					return;
+				} else if (response.errorMessage) {
+					console.error('Image Picker Error: ', response.errorMessage);
+					Alert.alert('Error', 'Failed to pick an image.');
+					return;
 				} else {
-					throw new Error('Failed to get download URL');
+					const photoUrl = await uploadProfilePhoto(user.uid, response.assets[0].uri);
+					if (photoUrl) {
+						setProfilePhoto(photoUrl);
+						await updateUserProfile(user.uid, { photo_url: photoUrl });
+					} else {
+						throw new Error('Failed to get download URL');
+					}
 				}
-			}
+			});
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');

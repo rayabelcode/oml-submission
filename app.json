@@ -71,12 +71,6 @@
 					"contactsPermission": "Allow OnMyList to access your contacts."
 				}
 			],
-			[
-				"expo-image-picker",
-				{
-					"photosPermission": "Allow OnMyList to access your photos for profile pictures."
-				}
-			],
 			"expo-notifications"
 		],
 		"extra": {

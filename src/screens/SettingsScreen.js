@@ -4,8 +4,7 @@ import { useStyles } from '../styles/screens/settings';
 import { useTheme } from '../context/ThemeContext'; // Dark mode
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { launchImageLibrary } from 'react-native-image-picker';
 import * as MailComposer from 'expo-mail-composer';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
@@ -110,33 +109,29 @@ export default function SettingsScreen({ navigation }) {
 
 	const handleProfilePhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission needed', 'Please grant permission to access your photos');
-				return;
-			}
+			const options = {
+				mediaType: 'photo',
+				maxWidth: 300,
+				quality: 0.7,
+			};
 
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ['images'],
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 0.5,
-			});
-
-			if (!result.canceled && result.assets[0].uri) {
-				const manipResult = await ImageManipulator.manipulateAsync(
-					result.assets[0].uri,
-					[{ resize: { width: 300, height: 300 } }],
-					{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-				);
-
-				const photoUrl = await uploadProfilePhoto(user.uid, manipResult.uri);
-				if (photoUrl) {
-					await loadUserProfile();
+			launchImageLibrary(options, async (response) => {
+				if (response.didCancel) {
+					console.log('User canceled image picker');
+					return;
+				} else if (response.errorMessage) {
+					console.error('Image Picker Error: ', response.errorMessage);
+					Alert.alert('Error', 'Failed to pick an image.');
+					return;
 				} else {
-					Alert.alert('Error', 'Failed to upload photo');
+					const photoUrl = await uploadProfilePhoto(user.uid, response.assets[0].uri);
+					if (photoUrl) {
+						await loadUserProfile();
+					} else {
+						Alert.alert('Error', 'Failed to upload photo');
+					}
 				}
-			}
+			});
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');

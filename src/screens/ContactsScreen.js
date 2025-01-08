@@ -31,7 +31,7 @@ import {
 } from '../utils/firestore';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
-import * as ImagePicker from 'expo-image-picker';
+import { launchImageLibrary } from 'react-native-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
@@ -299,7 +299,6 @@ export default function ContactsScreen({ navigation }) {
 				Contacts.Fields.LastName,
 				Contacts.Fields.PhoneNumbers,
 				Contacts.Fields.Emails,
-				Contacts.Fields.Image,
 			]);
 
 			const phoneNumber = contact.phoneNumbers?.[0]?.number;
@@ -319,31 +318,36 @@ export default function ContactsScreen({ navigation }) {
 					: `+${cleanedPhone}`;
 
 			const existingContact = await checkForExistingContact(formattedPhone);
-
 			if (existingContact) {
 				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 				return;
 			}
 
 			let photoUrl = null;
-			if (fullContact.imageAvailable && fullContact.image) {
-				try {
-					const manipResult = await ImageManipulator.manipulateAsync(
-						fullContact.image.uri,
-						[{ resize: { width: 300, height: 300 } }],
-						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-					);
+			const options = {
+				mediaType: 'photo',
+				maxWidth: 300,
+				maxHeight: 300,
+				quality: 0.7,
+			};
 
-					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
-					if (!photoUrl || photoUrl.startsWith('file://')) {
-						photoUrl = null;
+			launchImageLibrary(options, async (response) => {
+				if (response.didCancel) {
+					console.log('User cancelled image picker');
+				} else if (response.errorMessage) {
+					console.error('Image Picker Error: ', response.errorMessage);
+				} else {
+					try {
+						photoUrl = await uploadContactPhoto(user.uid, response.assets[0].uri);
+						if (!photoUrl || photoUrl.startsWith('file://')) {
+							photoUrl = null;
+						}
+					} catch (photoError) {
+						console.error('Photo processing error:', photoError);
 					}
-				} catch (photoError) {
-					console.error('Photo processing error:', photoError);
 				}
-			}
+			});
 
-			// Store the pending contact data and show relationship modal
 			setPendingContact({
 				first_name: contact.firstName || '',
 				last_name: contact.lastName || '',

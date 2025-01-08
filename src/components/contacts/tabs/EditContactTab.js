@@ -2,8 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -87,42 +86,35 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 	const handleEditPhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission Denied', 'Permission to access media library is required!');
-				return;
-			}
+			const options = {
+				mediaType: 'photo',
+				maxWidth: 500,
+				quality: 0.8,
+			};
 
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 1,
+			launchImageLibrary(options, async (response) => {
+				if (response.didCancel) {
+					console.log('User canceled image picker');
+					return;
+				} else if (response.errorMessage) {
+					console.error('Image Picker Error: ', response.errorMessage);
+					Alert.alert('Error', 'Failed to pick an image.');
+					return;
+				} else {
+					const photoURL = await uploadContactPhoto(contact.user_id, response.assets[0].uri);
+					const updatedContact = { ...contact, photo_url: photoURL };
+
+					// Update local state immediately
+					setFormData((prev) => ({
+						...prev,
+						photo_url: photoURL,
+					}));
+					setSelectedContact(updatedContact);
+
+					// Update Firestore
+					await updateContact(contact.id, updatedContact);
+				}
 			});
-
-			if (!result.canceled) {
-				const manipResult = await ImageManipulator.manipulateAsync(
-					result.assets[0].uri,
-					[{ resize: { width: 500 } }],
-					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-				);
-
-				const photoURL = await uploadContactPhoto(contact.user_id, manipResult.uri);
-				const updatedContact = {
-					...contact,
-					photo_url: photoURL,
-				};
-
-				// Update local state immediately
-				setFormData((prev) => ({
-					...prev,
-					photo_url: photoURL,
-				}));
-				setSelectedContact(updatedContact);
-
-				// Update Firestore
-				await updateContact(contact.id, updatedContact);
-			}
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');
