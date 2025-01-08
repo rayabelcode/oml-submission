@@ -16,7 +16,7 @@ import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
 import { navigationRef } from './src/navigation/RootNavigation';
 import { PreloadProvider } from './src/context/PreloadContext';
-import { fetchContacts, fetchUpcomingContacts } from './src/utils/firestore';
+import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
 import { cacheManager } from './src/utils/cache';
 
 SplashScreen.preventAutoHideAsync();
@@ -57,26 +57,40 @@ function AppContent() {
 
 	useEffect(() => {
 		async function preloadData() {
-			if (user && !isDataPreloaded) {
+			if (user) {
 				try {
-					// Fetch and cache in parallel
+					// Try cached data first
+					const [cachedContacts, cachedUpcoming, cachedProfile] = await Promise.all([
+						cacheManager.getCachedContacts(user.uid),
+						cacheManager.getCachedUpcomingContacts(user.uid),
+						cacheManager.getCachedProfile(user.uid),
+					]);
+
+					// Fetch fresh data
 					await Promise.all([
 						fetchContacts(user.uid).then((contacts) => cacheManager.saveContacts(user.uid, contacts)),
 						fetchUpcomingContacts(user.uid).then((contacts) =>
 							cacheManager.saveUpcomingContacts(user.uid, contacts)
 						),
+						getUserProfile(user.uid).then((profile) => cacheManager.saveProfile(user.uid, profile)),
 					]);
-
-					setIsDataPreloaded(true);
 				} catch (error) {
 					console.error('Error preloading data:', error);
-					setIsDataPreloaded(true); // Continue even if preload fails
+				} finally {
+					setIsDataPreloaded(true);
 				}
+			} else {
+				setIsDataPreloaded(true);
 			}
 		}
 
 		preloadData();
 	}, [user]);
+
+	// Don't render the app until preload is complete
+	if (!isDataPreloaded) {
+		return null;
+	}
 
 	return (
 		<NavigationContainer ref={navigationRef}>

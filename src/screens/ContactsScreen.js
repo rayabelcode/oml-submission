@@ -38,6 +38,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
+import { cacheManager } from '../utils/cache';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -220,13 +221,22 @@ export default function ContactsScreen({ navigation }) {
 				return;
 			}
 
+			// Try to get cached data first
+			const cachedContacts = await cacheManager.getCachedContacts(user.uid);
+			if (cachedContacts) {
+				setContacts(cachedContacts);
+				setLoading(false);
+			}
+
 			// Clean up existing subscription if any
 			if (unsubscribeRef) {
 				unsubscribeRef();
 			}
 
+			// Then set up real-time subscription
 			const unsubscribe = subscribeToContacts(user.uid, (contactsList) => {
 				setContacts(contactsList);
+				cacheManager.saveContacts(user.uid, contactsList);
 				setLoading(false);
 			});
 

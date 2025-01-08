@@ -22,6 +22,7 @@ import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
 import { useFocusEffect } from '@react-navigation/native';
+import { cacheManager } from '../utils/cache';
 
 export default function SettingsScreen({ navigation }) {
 	const styles = useStyles();
@@ -35,19 +36,86 @@ export default function SettingsScreen({ navigation }) {
 	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
 	const { theme, toggleTheme, colors } = useTheme();
 	const isDarkMode = theme === 'dark';
+	const [initialProfileLoaded, setInitialProfileLoaded] = useState(false);
+	const [isScreenReady, setIsScreenReady] = useState(false);
+	const [themeReady, setThemeReady] = useState(false);
+
+	console.log('SettingsScreen render start');
 
 	useEffect(() => {
-		if (user) {
-			loadUserProfile();
-			checkNotificationStatus();
-		}
-	}, [user]);
+		console.log('useEffect triggered, user:', !!user);
+		let mounted = true;
+
+		const init = async () => {
+			if (!mounted) return;
+			setThemeReady(false);
+			setIsScreenReady(false);
+
+			if (user) {
+				console.log('loadInitialData started');
+				try {
+					const cachedProfile = await cacheManager.getCachedProfile(user.uid);
+					console.log('cached profile loaded:', !!cachedProfile);
+					if (cachedProfile && mounted) {
+						setUserProfile(cachedProfile);
+					}
+				} catch (error) {
+					console.error('Error loading cached profile:', error);
+				}
+			}
+
+			if (mounted) {
+				setThemeReady(true);
+				setIsScreenReady(true);
+			}
+		};
+
+		init();
+
+		return () => {
+			mounted = false;
+		};
+	}, [user, colors]);
 
 	useFocusEffect(
 		React.useCallback(() => {
-			if (user) {
-				loadUserProfile();
-			}
+			console.log('useFocusEffect triggered');
+			let isActive = true;
+
+			const loadData = async () => {
+				console.log('loadData started');
+				if (!user) {
+					console.log('no user, setting screen ready');
+					setIsScreenReady(true);
+					return;
+				}
+
+				try {
+					const [profile, notificationStatus] = await Promise.all([
+						getUserProfile(user.uid),
+						Notifications.getPermissionsAsync(),
+					]);
+
+					if (!isActive) return;
+
+					setUserProfile(profile);
+					setNotificationsEnabled(notificationStatus.status === 'granted');
+					await cacheManager.saveProfile(user.uid, profile);
+				} catch (error) {
+					console.error('Error loading data:', error);
+				} finally {
+					if (isActive) {
+						setInitialProfileLoaded(true);
+						setIsScreenReady(true);
+					}
+				}
+			};
+
+			loadData();
+			return () => {
+				console.log('useFocusEffect cleanup');
+				isActive = false;
+			};
 		}, [user])
 	);
 
@@ -55,14 +123,10 @@ export default function SettingsScreen({ navigation }) {
 		try {
 			const profile = await getUserProfile(user.uid);
 			setUserProfile(profile);
+			await cacheManager.saveProfile(user.uid, profile);
 		} catch (error) {
 			console.error('Error loading profile:', error);
 		}
-	};
-
-	const checkNotificationStatus = async () => {
-		const { status } = await Notifications.getPermissionsAsync();
-		setNotificationsEnabled(status === 'granted');
 	};
 
 	const handleProfilePress = () => {
@@ -347,6 +411,11 @@ export default function SettingsScreen({ navigation }) {
 		}
 	}
 
+	if (!isScreenReady || !themeReady) {
+		console.log('Screen not ready', { isScreenReady, themeReady });
+		return null;
+	}
+
 	if (!user) {
 		return (
 			<AuthSection
@@ -362,6 +431,11 @@ export default function SettingsScreen({ navigation }) {
 				signInWithApple={signInWithApple}
 			/>
 		);
+	}
+
+	// Don't render until initial profile data
+	if (!initialProfileLoaded) {
+		return null;
 	}
 
 	return (
