@@ -54,7 +54,6 @@
     "expo-mail-composer": "~14.0.1",
     "expo-notifications": "~0.29.11",
     "expo-sharing": "~13.0.0",
-    "expo-splash-screen": "^0.29.18",
     "expo-status-bar": "~2.0.0",
     "expo-system-ui": "~4.0.6",
     "expo-updates": "~0.26.10",

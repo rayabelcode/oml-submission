@@ -68,8 +68,6 @@ PODS:
     - Yoga
   - ExpoSharing (13.0.0):
     - ExpoModulesCore
-  - ExpoSplashScreen (0.29.18):
-    - ExpoModulesCore
   - ExpoSystemUI (4.0.6):
     - ExpoModulesCore
   - ExpoWebBrowser (14.0.1):
@@ -2074,7 +2072,6 @@ DEPENDENCIES:
   - ExpoMailComposer (from `../node_modules/expo-mail-composer/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
-  - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
@@ -2218,8 +2215,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
-  ExpoSplashScreen:
-    :path: "../node_modules/expo-splash-screen/ios"
   ExpoSystemUI:
     :path: "../node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
@@ -2407,7 +2402,6 @@ SPEC CHECKSUMS:
   ExpoMailComposer: f82da39ce31e55f6cfa487fd9fc52849837a658c
   ExpoModulesCore: 6efc19ba9a67277c5ea3a8f0bb2e7dcd2146ecf0
   ExpoSharing: cfc87a3a494eb071f8814b79649ba78d135cc424
-  ExpoSplashScreen: 5397c2419fb3ca0788de37ea2547deac376aad83
   ExpoSystemUI: 778d700c6f38d3d7b8794460f50c1ca05c4f7462
   ExpoWebBrowser: b658ba8a9161f1b54afb279591cfce2cb73330fa
   EXStructuredHeaders: 09c70347b282e3d2507e25fb4c747b1b885f87f6
@@ -2501,6 +2495,6 @@ SPEC CHECKSUMS:
   TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: 7548e4449365bf0ef60db4aefe58abff37fcabec
 
-PODFILE CHECKSUM: 5c2c37a09ce4f184dfc12be8241fbd567315e00e
+PODFILE CHECKSUM: 34d0b9fb6b50ff7021e0e5c3a93e16295f859863
 
 COCOAPODS: 1.16.2
