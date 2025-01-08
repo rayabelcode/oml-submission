@@ -3,7 +3,7 @@ import 'react-native-gesture-handler';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import SharedNavigator from './src/navigation/SharedNavigator';
 import * as Sentry from '@sentry/react-native';
@@ -15,6 +15,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
 import { navigationRef } from './src/navigation/RootNavigation';
+import { PreloadProvider } from './src/context/PreloadContext';
+import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
+import { cacheManager } from './src/utils/cache';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,17 +51,68 @@ async function registerForPushNotificationsAsync() {
 	return token;
 }
 
+function AppContent() {
+	const { user } = useAuth();
+	const [isDataPreloaded, setIsDataPreloaded] = useState(false);
+
+	useEffect(() => {
+		async function preloadData() {
+			if (user) {
+				try {
+					// Try cached data first
+					const [cachedContacts, cachedUpcoming, cachedProfile] = await Promise.all([
+						cacheManager.getCachedContacts(user.uid),
+						cacheManager.getCachedUpcomingContacts(user.uid),
+						cacheManager.getCachedProfile(user.uid),
+					]);
+
+					// Fetch fresh data
+					await Promise.all([
+						fetchContacts(user.uid).then((contacts) => cacheManager.saveContacts(user.uid, contacts)),
+						fetchUpcomingContacts(user.uid).then((contacts) =>
+							cacheManager.saveUpcomingContacts(user.uid, contacts)
+						),
+						getUserProfile(user.uid).then((profile) => cacheManager.saveProfile(user.uid, profile)),
+					]);
+				} catch (error) {
+					console.error('Error preloading data:', error);
+				} finally {
+					setIsDataPreloaded(true);
+				}
+			} else {
+				setIsDataPreloaded(true);
+			}
+		}
+
+		preloadData();
+	}, [user]);
+
+	// Don't render the app until preload is complete
+	if (!isDataPreloaded) {
+		return null;
+	}
+
+	return (
+		<NavigationContainer ref={navigationRef}>
+			<SafeAreaWrapper>
+				<SharedNavigator />
+			</SafeAreaWrapper>
+		</NavigationContainer>
+	);
+}
+
 function App() {
 	const [appIsReady, setAppIsReady] = useState(false);
 
 	useEffect(() => {
 		async function prepare() {
 			try {
-				await Font.loadAsync({
-					'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
-				});
-
-				await notificationService.initialize();
+				await Promise.all([
+					Font.loadAsync({
+						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
+					}),
+					notificationService.initialize(),
+				]);
 
 				Notifications.addNotificationReceivedListener((notification) => {});
 			} catch (e) {
@@ -85,11 +139,9 @@ function App() {
 		<View style={{ flex: 1 }} onLayout={onLayoutRootView}>
 			<ThemeProvider>
 				<AuthProvider>
-					<NavigationContainer ref={navigationRef}>
-						<SafeAreaWrapper>
-							<SharedNavigator />
-						</SafeAreaWrapper>
-					</NavigationContainer>
+					<PreloadProvider>
+						<AppContent />
+					</PreloadProvider>
 				</AuthProvider>
 			</ThemeProvider>
 		</View>

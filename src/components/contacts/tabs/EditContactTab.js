@@ -26,13 +26,12 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			relationship_type: contact.scheduling?.relationship_type || 'friend',
 		},
 	});
-	const [showSuccess, setShowSuccess] = useState(false);
 
 	const handleAddTag = async () => {
 		if (!newTag.trim()) return;
 
 		const normalizedNewTag = newTag.trim().toLowerCase();
-		const existingTags = contact.tags || [];
+		const existingTags = formData.tags || [];
 		if (existingTags.some((tag) => tag.toLowerCase() === normalizedNewTag)) {
 			Alert.alert('Duplicate Tag', 'This tag already exists.');
 			setNewTag('');
@@ -40,45 +39,49 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 		}
 
 		const updatedTags = [...existingTags, newTag.trim()];
-		const updatedContact = {
-			...contact,
-			tags: updatedTags,
-		};
 
 		try {
-			// Update local state immediately
-			setSelectedContact(updatedContact);
-			setNewTag('');
-			inputRef.current?.focus();
-
-			// Update Firestore
+			// Update Firestore first
 			await updateContact(contact.id, { tags: updatedTags });
-		} catch (error) {
-			Alert.alert('Error', 'Failed to add tag');
-			console.error('Error adding tag:', error);
-			// Revert local state on error
-			setSelectedContact(contact);
-		}
-	};
 
-	const handleDeleteTag = async (tagToDelete) => {
-		try {
-			const updatedTags = (contact.tags || []).filter((tag) => tag !== tagToDelete);
+			// Then update both local states
 			const updatedContact = {
 				...contact,
 				tags: updatedTags,
 			};
-
-			// Update local state immediately
 			setSelectedContact(updatedContact);
+			setFormData((prev) => ({
+				...prev,
+				tags: updatedTags,
+			}));
+			setNewTag('');
+			inputRef.current?.focus();
+		} catch (error) {
+			Alert.alert('Error', 'Failed to add tag');
+			console.error('Error adding tag:', error);
+		}
+	};
 
-			// Update Firestore
+	const handleDeleteTag = async (tagToDelete) => {
+		const updatedTags = formData.tags.filter((tag) => tag !== tagToDelete);
+
+		try {
+			// Update Firestore first
 			await updateContact(contact.id, { tags: updatedTags });
+
+			// Then update both local states
+			const updatedContact = {
+				...contact,
+				tags: updatedTags,
+			};
+			setSelectedContact(updatedContact);
+			setFormData((prev) => ({
+				...prev,
+				tags: updatedTags,
+			}));
 		} catch (error) {
 			Alert.alert('Error', 'Failed to delete tag');
 			console.error('Error deleting tag:', error);
-			// Revert local state on error
-			setSelectedContact(contact);
 		}
 	};
 
@@ -162,8 +165,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 			// Update Firestore
 			await updateContact(contact.id, updatedContact);
 			setIsEditing(false);
-			setShowSuccess(true);
-			setTimeout(() => setShowSuccess(false), 2000);
 		} catch (error) {
 			console.error('Error updating contact:', error);
 			Alert.alert('Error', 'Failed to update contact');
@@ -433,7 +434,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 										<Text style={styles.tagInputHelper}>Tags help you remember what matters most.</Text>
 									</View>
 									<View style={styles.tagsContainer}>
-										{(contact.tags || []).map((tag, index) => (
+										{(formData.tags || []).map((tag, index) => (
 											<View key={index} style={styles.tagBubble}>
 												<Text style={styles.tagText}>{tag}</Text>
 												<TouchableOpacity
@@ -464,7 +465,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 					</TouchableOpacity>
 				</ScrollView>
 			</View>
-			<AutoDismissModalContainer message="Contact Updated" isVisible={showSuccess} />
 		</>
 	);
 };

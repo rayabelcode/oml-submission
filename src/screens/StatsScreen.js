@@ -7,6 +7,7 @@ import { calculateStats } from './stats/statsCalculator';
 import { useTheme } from '../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useIsFocused } from '@react-navigation/native';
+import { cacheManager } from '../utils/cache';
 
 // Helper to convert day number to name
 const getDayName = (dayNum) => {
@@ -14,40 +15,58 @@ const getDayName = (dayNum) => {
 	return days[dayNum] || 'Not enough data';
 };
 
+const StatBox = ({ icon, title, value, colors, styles }) => (
+	<View style={styles.statBox}>
+		<Icon name={icon} size={24} color={colors.primary} />
+		<Text style={styles.statTitle}>{title}</Text>
+		<Text style={styles.statValue}>{value || 0}</Text>
+	</View>
+);
+
 export default function StatsScreen() {
 	const { user } = useAuth();
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles(colors);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
 	const [stats, setStats] = useState(null);
 	const [error, setError] = useState(null);
 	const scrollViewRef = useRef(null);
 	const isFocused = useIsFocused();
 
-	const loadStats = async () => {
+	const loadStats = async (showLoading = false) => {
 		if (!user) return;
 		try {
 			setError(null);
+			if (showLoading) setLoading(true);
+
+			// Try to get cached stats first
+			const cachedStats = await cacheManager.getCachedStats(user.uid);
+			if (cachedStats) {
+				setStats(cachedStats);
+			}
+
+			// Then fetch fresh stats
 			const calculatedStats = await calculateStats(user.uid);
 			setStats(calculatedStats);
+			await cacheManager.saveStats(user.uid, calculatedStats);
 		} catch (error) {
 			setError('Unable to load stats. Please try again.');
 			console.error('Error loading stats:', error);
 		} finally {
-			setLoading(false);
+			if (showLoading) setLoading(false);
 		}
 	};
 
 	const onRefresh = async () => {
 		setRefreshing(true);
-		await loadStats();
+		await loadStats(false);
 		setRefreshing(false);
 	};
 
 	useEffect(() => {
-		loadStats();
+		loadStats(false);
 	}, [user]);
 
 	useEffect(() => {
@@ -56,7 +75,7 @@ export default function StatsScreen() {
 		}
 	}, [isFocused]);
 
-	if (loading) {
+	if (loading && !stats) {
 		return (
 			<View style={[commonStyles.container, commonStyles.centered]}>
 				<ActivityIndicator size="large" color={colors.primary} />
@@ -69,7 +88,7 @@ export default function StatsScreen() {
 			<View style={[commonStyles.container, commonStyles.centered]}>
 				<Icon name="alert-circle" size={48} color={colors.danger} />
 				<Text style={[styles.message, { color: colors.danger }]}>{error}</Text>
-				<TouchableOpacity style={styles.retryButton} onPress={loadStats}>
+				<TouchableOpacity style={styles.retryButton} onPress={() => loadStats(true)}>
 					<Text style={styles.retryText}>Retry</Text>
 				</TouchableOpacity>
 			</View>
@@ -122,10 +141,10 @@ export default function StatsScreen() {
 
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Needs Attention</Text>
-					{stats?.detailed.needsAttention.length === 0 ? (
+					{!stats?.detailed.needsAttention?.length ? (
 						<Text style={styles.message}>All caught up! No contacts need attention.</Text>
 					) : (
-						stats?.detailed.needsAttention.map((contact, index) => (
+						stats.detailed.needsAttention.map((contact, index) => (
 							<View key={index} style={styles.contactRow}>
 								<Text style={styles.contactName}>{contact.name}</Text>
 								<Text style={styles.lastContact}>
@@ -140,10 +159,10 @@ export default function StatsScreen() {
 
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Frequent Contacts</Text>
-					{stats?.detailed.frequentContacts.length === 0 ? (
+					{!stats?.detailed.frequentContacts?.length ? (
 						<Text style={styles.message}>No contacts in the last 30 days</Text>
 					) : (
-						stats?.detailed.frequentContacts.map((contact, index) => (
+						stats.detailed.frequentContacts.map((contact, index) => (
 							<View key={index} style={styles.frequencyRow}>
 								<Text style={styles.contactName}>{contact.name}</Text>
 								<Text style={styles.frequencyCount}>{contact.thirtyDayCount} calls</Text>
@@ -171,11 +190,3 @@ export default function StatsScreen() {
 		</ScrollView>
 	);
 }
-
-const StatBox = ({ icon, title, value, colors, styles }) => (
-	<View style={styles.statBox}>
-		<Icon name={icon} size={24} color={colors.primary} />
-		<Text style={styles.statTitle}>{title}</Text>
-		<Text style={styles.statValue}>{value || 0}</Text>
-	</View>
-);

@@ -22,6 +22,7 @@ import AuthSection from '../components/settings/AuthSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import SettingsList from '../components/settings/SettingsList';
 import { useFocusEffect } from '@react-navigation/native';
+import { cacheManager } from '../utils/cache';
 
 export default function SettingsScreen({ navigation }) {
 	const styles = useStyles();
@@ -35,34 +36,42 @@ export default function SettingsScreen({ navigation }) {
 	const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
 	const { theme, toggleTheme, colors } = useTheme();
 	const isDarkMode = theme === 'dark';
+	const [initialProfileLoaded, setInitialProfileLoaded] = useState(false);
 
 	useEffect(() => {
-		if (user) {
-			loadUserProfile();
-			checkNotificationStatus();
+		if (!user) {
+			setInitialProfileLoaded(true);
+			return;
 		}
-	}, [user]);
 
-	useFocusEffect(
-		React.useCallback(() => {
-			if (user) {
-				loadUserProfile();
+		const loadInitialData = async () => {
+			try {
+				const [profile, notificationStatus] = await Promise.all([
+					getUserProfile(user.uid),
+					Notifications.getPermissionsAsync(),
+				]);
+
+				setUserProfile(profile);
+				setNotificationsEnabled(notificationStatus.status === 'granted');
+				await cacheManager.saveProfile(user.uid, profile);
+				setInitialProfileLoaded(true);
+			} catch (error) {
+				console.error('Error loading data:', error);
+				setInitialProfileLoaded(true);
 			}
-		}, [user])
-	);
+		};
+
+		loadInitialData();
+	}, [user]);
 
 	const loadUserProfile = async () => {
 		try {
 			const profile = await getUserProfile(user.uid);
 			setUserProfile(profile);
+			await cacheManager.saveProfile(user.uid, profile);
 		} catch (error) {
 			console.error('Error loading profile:', error);
 		}
-	};
-
-	const checkNotificationStatus = async () => {
-		const { status } = await Notifications.getPermissionsAsync();
-		setNotificationsEnabled(status === 'granted');
 	};
 
 	const handleProfilePress = () => {
@@ -361,6 +370,14 @@ export default function SettingsScreen({ navigation }) {
 				onForgotPassword={handleForgotPassword}
 				signInWithApple={signInWithApple}
 			/>
+		);
+	}
+
+	if (!initialProfileLoaded) {
+		return (
+			<View style={[styles.container, styles.loadingOverlay]}>
+				<ActivityIndicator size="large" color={colors.primary} />
+			</View>
 		);
 	}
 

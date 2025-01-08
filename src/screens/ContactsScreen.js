@@ -27,6 +27,7 @@ import {
 	addContactHistory,
 	fetchContactHistory,
 	uploadContactPhoto,
+	subscribeToContacts,
 } from '../utils/firestore';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
@@ -37,6 +38,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
+import { cacheManager } from '../utils/cache';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -210,16 +212,38 @@ export default function ContactsScreen({ navigation }) {
 	const [deviceContacts, setDeviceContacts] = useState([]);
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
 	const [showAddModal, setShowAddModal] = useState(false);
+	const [unsubscribeRef, setUnsubscribeRef] = useState(null);
 
 	async function loadContacts() {
 		try {
-			if (!user) return;
-			const contactsList = await fetchContacts(user.uid);
-			setContacts(contactsList);
+			if (!user) {
+				setLoading(false);
+				return;
+			}
+
+			// Try to get cached data first
+			const cachedContacts = await cacheManager.getCachedContacts(user.uid);
+			if (cachedContacts) {
+				setContacts(cachedContacts);
+				setLoading(false);
+			}
+
+			// Clean up existing subscription if any
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+
+			// Then set up real-time subscription
+			const unsubscribe = subscribeToContacts(user.uid, (contactsList) => {
+				setContacts(contactsList);
+				cacheManager.saveContacts(user.uid, contactsList);
+				setLoading(false);
+			});
+
+			setUnsubscribeRef(() => unsubscribe);
 		} catch (error) {
-			console.error('Error loading contacts:', error);
+			console.error('Error in loadContacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
-		} finally {
 			setLoading(false);
 		}
 	}
@@ -355,6 +379,11 @@ export default function ContactsScreen({ navigation }) {
 
 	useEffect(() => {
 		loadContacts();
+		return () => {
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+		};
 	}, [user]);
 
 	// Reset editing state when leaving the screen

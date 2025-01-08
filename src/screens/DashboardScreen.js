@@ -14,6 +14,7 @@ import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { cacheManager } from '../utils/cache';
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -144,6 +145,15 @@ export default function DashboardScreen({ navigation, route }) {
 	async function loadContacts() {
 		try {
 			if (!user) return;
+
+			// Try to get cached data first
+			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
+			if (cachedContacts) {
+				setContacts(cachedContacts.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
+				setLoading(false);
+			}
+
+			// Then fetch fresh data
 			const contactsList = await fetchUpcomingContacts(user.uid);
 			setContacts(contactsList.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
 		} catch (error) {

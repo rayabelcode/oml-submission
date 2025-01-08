@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
@@ -7,7 +7,7 @@ import CallNotesTab from '../../components/contacts/tabs/CallNotesTab';
 import EditContactTab from '../../components/contacts/tabs/EditContactTab';
 import ScheduleTab from '../../components/contacts/tabs/ScheduleTab';
 import CallOptions from '../../components/general/CallOptions';
-import { fetchContactHistory, fetchContacts } from '../../utils/firestore';
+import { subscribeToContactDetails, updateContact } from '../../utils/firestore';
 import { useFocusEffect } from '@react-navigation/native';
 
 const ContactDetailsScreen = ({ route, navigation }) => {
@@ -20,36 +20,108 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 	const [selectedIndex, setSelectedIndex] = useState(
 		initialTab === 'Notes' ? 0 : initialTab === 'Schedule' ? 1 : 2
 	);
+	const [unsubscribeRef, setUnsubscribeRef] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState(null);
 
+	useEffect(() => {
+		if (contact?.contact_history) {
+			setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+		}
+	}, [contact]);
+
+	// Set up real-time subscription
 	const loadContactData = useCallback(async () => {
 		try {
-			const contactsList = await fetchContacts(contact.user_id);
-			const updatedContact = [...contactsList.scheduledContacts, ...contactsList.unscheduledContacts].find(
-				(c) => c.id === contact.id
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+
+			// Set initial history from contact
+			if (contact?.contact_history) {
+				setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+			}
+
+			// Set loading to false after initial history is set
+			setIsLoading(false);
+
+			const unsubscribe = subscribeToContactDetails(
+				contact.id,
+				(updatedContact) => {
+					if (updatedContact) {
+						setContact(updatedContact);
+						setHistory(
+							updatedContact.contact_history?.sort((a, b) => new Date(b.date) - new Date(a.date)) || []
+						);
+						setError(null);
+					}
+				},
+				(error) => {
+					console.error('Contact subscription error:', error);
+					setError('Failed to load contact updates');
+				}
 			);
 
-			if (updatedContact) {
-				setContact(updatedContact);
-				const fetchedHistory = await fetchContactHistory(updatedContact.id);
-				setHistory(fetchedHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
-			}
+			setUnsubscribeRef(unsubscribe);
 		} catch (error) {
-			console.error('Error loading contact data:', error);
+			console.error('Error in loadContactData:', error);
+			setError('Failed to set up contact updates');
+			setIsLoading(false);
 		}
-	}, [contact?.id, contact?.user_id]);
+	}, [contact?.id]);
 
 	useFocusEffect(
 		useCallback(() => {
 			loadContactData();
+			return () => {
+				if (unsubscribeRef) {
+					unsubscribeRef();
+				}
+			};
 		}, [loadContactData])
 	);
 
-	const handleUpdateContact = async (updatedContact) => {
-		setContact(updatedContact);
-		await loadContactData();
+	useEffect(() => {
+		return () => {
+			if (unsubscribeRef) {
+				unsubscribeRef();
+			}
+		};
+	}, []);
+
+	const handleUpdateContact = async (updatedData) => {
+		try {
+			// Update local state immediately
+			const updatedContact = {
+				...contact,
+				...updatedData,
+			};
+			setContact(updatedContact);
+
+			// Update Firestore
+			await updateContact(contact.id, updatedData);
+			setError(null);
+		} catch (error) {
+			console.error('Error updating contact:', error);
+			setError('Failed to update contact');
+			Alert.alert('Error', 'Failed to update contact. Please try again.');
+			// Revert on error
+			setContact(contact);
+		}
 	};
 
 	const renderContent = () => {
+		if (error) {
+			return (
+				<View style={styles.errorContainer}>
+					<Text style={styles.errorText}>{error}</Text>
+					<TouchableOpacity style={styles.retryButton} onPress={loadContactData}>
+						<Text style={styles.retryButtonText}>Retry</Text>
+					</TouchableOpacity>
+				</View>
+			);
+		}
+
 		switch (selectedIndex) {
 			case 0:
 				return (
@@ -128,6 +200,27 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 			color: colors.primary,
 			fontWeight: '600',
 		},
+		errorContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+			padding: 20,
+		},
+		errorText: {
+			color: colors.error,
+			marginBottom: 15,
+			textAlign: 'center',
+		},
+		retryButton: {
+			backgroundColor: colors.primary,
+			paddingHorizontal: 20,
+			paddingVertical: 10,
+			borderRadius: 8,
+		},
+		retryButtonText: {
+			color: '#FFFFFF',
+			fontWeight: '600',
+		},
 	});
 
 	return (
@@ -149,7 +242,15 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				)}
 			</View>
 
-			<View style={localStyles.contentContainer}>{renderContent()}</View>
+			<View style={localStyles.contentContainer}>
+				{isLoading ? (
+					<View style={localStyles.errorContainer}>
+						<Text>Loading...</Text>
+					</View>
+				) : (
+					renderContent()
+				)}
+			</View>
 
 			<View style={localStyles.segmentedControlContainer}>
 				<View style={localStyles.segmentedWrapper}>
