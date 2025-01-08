@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
-import ImagePicker from 'react-native-image-crop-picker';
+import ImagePickerComponent from '../../general/ImagePicker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -85,37 +85,27 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 	const handleEditPhotoUpload = async () => {
 		try {
-			// Image picker with cropping
-			const image = await ImagePicker.openPicker({
-				width: 500, // Final width
-				height: 500, // Final height
-				cropping: true,
-				cropperToolbarTitle: 'Crop Your Photo', // Toolbar title
-				cropperCircleOverlay: true,
-				compressImageQuality: 0.6,
+			// ImagePickerComponent
+			await ImagePickerComponent(async (croppedImagePath) => {
+				// Upload cropped image
+				const uploadedPhotoURL = await uploadContactPhoto(contact.user_id, croppedImagePath);
+
+				// Update the contact with the uploaded photo URL
+				const updatedContact = { ...contact, photo_url: uploadedPhotoURL };
+
+				// Update local state immediately
+				setFormData((prev) => ({
+					...prev,
+					photo_url: uploadedPhotoURL,
+				}));
+				setSelectedContact(updatedContact);
+
+				// Update Firestore
+				await updateContact(contact.id, updatedContact);
 			});
-
-			// Upload the cropped image
-			const uploadedPhotoURL = await uploadContactPhoto(contact.user_id, image.path);
-
-			// Update the contact with the uploaded photo URL
-			const updatedContact = { ...contact, photo_url: uploadedPhotoURL };
-
-			// Update local state immediately
-			setFormData((prev) => ({
-				...prev,
-				photo_url: uploadedPhotoURL,
-			}));
-			setSelectedContact(updatedContact);
-
-			// Update Firestore
-			await updateContact(contact.id, updatedContact);
 		} catch (error) {
-			if (error.code === 'E_PICKER_CANCELLED') {
-				return;
-			}
 			console.error('Error uploading photo:', error);
-			Alert.alert('Error', 'Failed to upload photo');
+			Alert.alert('Error', 'Failed to upload photo.');
 		}
 	};
 
