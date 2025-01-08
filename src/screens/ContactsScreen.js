@@ -31,8 +31,7 @@ import {
 } from '../utils/firestore';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
-import { launchImageLibrary } from 'react-native-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import ImagePickerComponent from '../components/general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
@@ -324,27 +323,17 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			let photoUrl = null;
-			const options = {
-				mediaType: 'photo',
-				maxWidth: 300,
-				maxHeight: 300,
-				quality: 0.7,
-			};
 
-			launchImageLibrary(options, async (response) => {
-				if (response.didCancel) {
-					console.log('User cancelled image picker');
-				} else if (response.errorMessage) {
-					console.error('Image Picker Error: ', response.errorMessage);
-				} else {
-					try {
-						photoUrl = await uploadContactPhoto(user.uid, response.assets[0].uri);
-						if (!photoUrl || photoUrl.startsWith('file://')) {
-							photoUrl = null;
-						}
-					} catch (photoError) {
-						console.error('Photo processing error:', photoError);
+			// Use the ImagePickerComponent for cropping and uploading
+			await ImagePickerComponent(async (croppedImagePath) => {
+				try {
+					photoUrl = await uploadContactPhoto(user.uid, croppedImagePath);
+					if (!photoUrl || photoUrl.startsWith('file://')) {
+						photoUrl = null;
 					}
+				} catch (photoError) {
+					console.error('Photo processing error:', photoError);
+					photoUrl = null;
 				}
 			});
 

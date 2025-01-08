@@ -12,7 +12,7 @@ import {
 	Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
+import ImagePickerComponent from '../general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { useStyles } from '../../styles/screens/contacts';
 import { useCommonStyles } from '../../styles/common';
@@ -48,27 +48,12 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 
 	const handlePhotoUpload = async () => {
 		try {
-			const options = {
-				mediaType: 'photo',
-				maxWidth: 500,
-				quality: 0.8,
-			};
-
-			launchImageLibrary(options, async (response) => {
-				if (response.didCancel) {
-					console.log('User canceled image picker');
-					return;
-				} else if (response.errorMessage) {
-					console.error('Image Picker Error: ', response.errorMessage);
-					Alert.alert('Error', 'Failed to pick an image.');
-					return;
+			await ImagePickerComponent(async (croppedImagePath) => {
+				const photoUrl = await uploadContactPhoto(user.uid, croppedImagePath);
+				if (photoUrl) {
+					setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
 				} else {
-					const photoUrl = await uploadContactPhoto(user.uid, response.assets[0].uri);
-					if (photoUrl) {
-						setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
-					} else {
-						Alert.alert('Error', 'Failed to upload photo.');
-					}
+					Alert.alert('Error', 'Failed to upload photo.');
 				}
 			});
 		} catch (error) {

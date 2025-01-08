@@ -4,7 +4,7 @@ import { useStyles } from '../styles/screens/settings';
 import { useTheme } from '../context/ThemeContext'; // Dark mode
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
-import { launchImageLibrary } from 'react-native-image-picker';
+import ImagePickerComponent from '../components/general/ImagePicker';
 import * as MailComposer from 'expo-mail-composer';
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
@@ -109,27 +109,12 @@ export default function SettingsScreen({ navigation }) {
 
 	const handleProfilePhotoUpload = async () => {
 		try {
-			const options = {
-				mediaType: 'photo',
-				maxWidth: 300,
-				quality: 0.7,
-			};
-
-			launchImageLibrary(options, async (response) => {
-				if (response.didCancel) {
-					console.log('User canceled image picker');
-					return;
-				} else if (response.errorMessage) {
-					console.error('Image Picker Error: ', response.errorMessage);
-					Alert.alert('Error', 'Failed to pick an image.');
-					return;
+			await ImagePickerComponent(async (croppedImagePath) => {
+				const photoUrl = await uploadProfilePhoto(user.uid, croppedImagePath);
+				if (photoUrl) {
+					await loadUserProfile();
 				} else {
-					const photoUrl = await uploadProfilePhoto(user.uid, response.assets[0].uri);
-					if (photoUrl) {
-						await loadUserProfile();
-					} else {
-						Alert.alert('Error', 'Failed to upload photo');
-					}
+					Alert.alert('Error', 'Failed to upload photo');
 				}
 			});
 		} catch (error) {
