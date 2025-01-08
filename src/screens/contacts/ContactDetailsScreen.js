@@ -14,7 +14,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact, initialTab = 'Notes' } = route.params;
 	const { colors, theme } = useTheme();
 	const styles = useContactDetailsStyles();
-	const [contact, setContact] = useState(initialContact);
+	const [contact, setContact] = useState({ ...initialContact });
 	const [history, setHistory] = useState([]);
 	const [showCallOptions, setShowCallOptions] = useState(false);
 	const [selectedIndex, setSelectedIndex] = useState(
@@ -26,7 +26,11 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 
 	useEffect(() => {
 		if (contact?.contact_history) {
-			setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+			// Clone and sort the history
+			const sortedHistory = Array.isArray(contact.contact_history)
+				? [...contact.contact_history].sort((a, b) => new Date(b.date) - new Date(a.date))
+				: [];
+			setHistory(sortedHistory);
 		}
 	}, [contact]);
 
@@ -39,7 +43,10 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 
 			// Set initial history from contact
 			if (contact?.contact_history) {
-				setHistory(contact.contact_history.sort((a, b) => new Date(b.date) - new Date(a.date)) || []);
+				const sortedHistory = Array.isArray(contact.contact_history)
+					? [...contact.contact_history].sort((a, b) => new Date(b.date) - new Date(a.date))
+					: [];
+				setHistory(sortedHistory);
 			}
 
 			// Set loading to false after initial history is set
@@ -49,10 +56,14 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				contact.id,
 				(updatedContact) => {
 					if (updatedContact) {
-						setContact(updatedContact);
-						setHistory(
-							updatedContact.contact_history?.sort((a, b) => new Date(b.date) - new Date(a.date)) || []
-						);
+						// Shallow clone for immutability
+						const clonedContact = { ...updatedContact };
+						setContact(clonedContact);
+
+						const sortedHistory = Array.isArray(clonedContact.contact_history)
+							? [...clonedContact.contact_history].sort((a, b) => new Date(b.date) - new Date(a.date))
+							: [];
+						setHistory(sortedHistory);
 						setError(null);
 					}
 				},
@@ -91,11 +102,10 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 
 	const handleUpdateContact = async (updatedData) => {
 		try {
-			// Update local state immediately
-			const updatedContact = {
-				...contact,
-				...updatedData,
-			};
+			// Clone contact and apply updates immutably
+			const updatedContact = { ...contact, ...updatedData };
+
+			// Update state
 			setContact(updatedContact);
 
 			// Update Firestore
@@ -105,8 +115,6 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 			console.error('Error updating contact:', error);
 			setError('Failed to update contact');
 			Alert.alert('Error', 'Failed to update contact. Please try again.');
-			// Revert on error
-			setContact(contact);
 		}
 	};
 
