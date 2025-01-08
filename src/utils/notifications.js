@@ -11,6 +11,7 @@ import {
 } from './firestore';
 import { auth } from '../config/firebase';
 import { navigate } from '../navigation/RootNavigation';
+import { getContactById } from './firestore';
 
 const NOTIFICATION_MAP_KEY = 'notification_map';
 
@@ -62,14 +63,15 @@ class NotificationService {
 	handleNotificationResponse = async (response) => {
 		try {
 			const data = response.notification.request.content.data;
-			if (data.type === 'call_follow_up' && data.firestoreId) {
-				navigate('Dashboard', {
-					screen: 'Dashboard',
-					params: {
-						initialView: 'notifications',
-						highlightReminderId: data.firestoreId,
-					},
-				});
+			if (data.type === 'call_follow_up' && data.firestoreId && data.contactId) {
+				const contact = await getContactById(data.contactId);
+				if (contact) {
+					navigate('ContactDetails', {
+						contact: contact,
+						initialTab: 'Notes',
+						reminderId: data.firestoreId,
+					});
+				}
 			}
 		} catch (error) {
 			console.error('[NotificationService] Error handling notification response:', error);

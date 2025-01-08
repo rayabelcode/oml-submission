@@ -159,6 +159,23 @@ export const fetchContacts = async (userId) => {
 	}
 };
 
+export const getContactById = async (contactId) => {
+	try {
+		const contactRef = doc(db, 'contacts', contactId);
+		const contactSnap = await getDoc(contactRef);
+
+		if (!contactSnap.exists()) {
+			console.error('Contact not found:', contactId);
+			return null;
+		}
+
+		return { id: contactSnap.id, ...contactSnap.data() };
+	} catch (error) {
+		console.error('Error getting contact by ID:', error);
+		return null;
+	}
+};
+
 export const addContact = async (userId, contactData) => {
 	try {
 		const contactsRef = collection(db, 'contacts');
