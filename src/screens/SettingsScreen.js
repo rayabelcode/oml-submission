@@ -37,87 +37,32 @@ export default function SettingsScreen({ navigation }) {
 	const { theme, toggleTheme, colors } = useTheme();
 	const isDarkMode = theme === 'dark';
 	const [initialProfileLoaded, setInitialProfileLoaded] = useState(false);
-	const [isScreenReady, setIsScreenReady] = useState(false);
-	const [themeReady, setThemeReady] = useState(false);
-
-	console.log('SettingsScreen render start');
 
 	useEffect(() => {
-		console.log('useEffect triggered, user:', !!user);
-		let mounted = true;
+		if (!user) {
+			setInitialProfileLoaded(true);
+			return;
+		}
 
-		const init = async () => {
-			if (!mounted) return;
-			setThemeReady(false);
-			setIsScreenReady(false);
+		const loadInitialData = async () => {
+			try {
+				const [profile, notificationStatus] = await Promise.all([
+					getUserProfile(user.uid),
+					Notifications.getPermissionsAsync(),
+				]);
 
-			if (user) {
-				console.log('loadInitialData started');
-				try {
-					const cachedProfile = await cacheManager.getCachedProfile(user.uid);
-					console.log('cached profile loaded:', !!cachedProfile);
-					if (cachedProfile && mounted) {
-						setUserProfile(cachedProfile);
-					}
-				} catch (error) {
-					console.error('Error loading cached profile:', error);
-				}
-			}
-
-			if (mounted) {
-				setThemeReady(true);
-				setIsScreenReady(true);
+				setUserProfile(profile);
+				setNotificationsEnabled(notificationStatus.status === 'granted');
+				await cacheManager.saveProfile(user.uid, profile);
+				setInitialProfileLoaded(true);
+			} catch (error) {
+				console.error('Error loading data:', error);
+				setInitialProfileLoaded(true);
 			}
 		};
 
-		init();
-
-		return () => {
-			mounted = false;
-		};
-	}, [user, colors]);
-
-	useFocusEffect(
-		React.useCallback(() => {
-			console.log('useFocusEffect triggered');
-			let isActive = true;
-
-			const loadData = async () => {
-				console.log('loadData started');
-				if (!user) {
-					console.log('no user, setting screen ready');
-					setIsScreenReady(true);
-					return;
-				}
-
-				try {
-					const [profile, notificationStatus] = await Promise.all([
-						getUserProfile(user.uid),
-						Notifications.getPermissionsAsync(),
-					]);
-
-					if (!isActive) return;
-
-					setUserProfile(profile);
-					setNotificationsEnabled(notificationStatus.status === 'granted');
-					await cacheManager.saveProfile(user.uid, profile);
-				} catch (error) {
-					console.error('Error loading data:', error);
-				} finally {
-					if (isActive) {
-						setInitialProfileLoaded(true);
-						setIsScreenReady(true);
-					}
-				}
-			};
-
-			loadData();
-			return () => {
-				console.log('useFocusEffect cleanup');
-				isActive = false;
-			};
-		}, [user])
-	);
+		loadInitialData();
+	}, [user]);
 
 	const loadUserProfile = async () => {
 		try {
@@ -411,11 +356,6 @@ export default function SettingsScreen({ navigation }) {
 		}
 	}
 
-	if (!isScreenReady || !themeReady) {
-		console.log('Screen not ready', { isScreenReady, themeReady });
-		return null;
-	}
-
 	if (!user) {
 		return (
 			<AuthSection
@@ -433,9 +373,12 @@ export default function SettingsScreen({ navigation }) {
 		);
 	}
 
-	// Don't render until initial profile data
 	if (!initialProfileLoaded) {
-		return null;
+		return (
+			<View style={[styles.container, styles.loadingOverlay]}>
+				<ActivityIndicator size="large" color={colors.primary} />
+			</View>
+		);
 	}
 
 	return (
