@@ -53,6 +53,12 @@ function AppContent() {
 	const [isDataPreloaded, setIsDataPreloaded] = useState(false);
 
 	useEffect(() => {
+		if (Platform.OS === 'ios') {
+			Notifications.setBadgeCountAsync(0);
+		}
+	}, [user]);
+
+	useEffect(() => {
 		async function preloadData() {
 			if (user) {
 				try {
@@ -109,7 +115,17 @@ function App() {
 						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 					}),
 					notificationService.initialize(),
+					// Clear badges when app opens
+					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);
+
+				Notifications.setNotificationHandler({
+					handleNotification: async () => ({
+						shouldShowAlert: true,
+						shouldPlaySound: true,
+						shouldSetBadge: true,
+					}),
+				});
 
 				Notifications.addNotificationReceivedListener((notification) => {});
 			} catch (e) {
