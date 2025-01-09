@@ -13,9 +13,11 @@ const ImagePickerComponent = async (onImagePicked) => {
 			width: 400, // Cropped image width
 			height: 400, // Cropped image height
 			cropping: true, // Enable cropping
-			cropperCircleOverlay: true, // Disable circular cropping
+			cropperCircleOverlay: true, // Circular cropping
 			compressImageQuality: 0.4, // Compress image quality
 			cropperToolbarTitle: 'Crop Your Photo', // Toolbar title
+			loadingLabelText: '', // Loading text
+			cropperRotateButtonsHidden: true, // Hide rotate buttons
 		});
 
 		// Pass the selected/cropped image path back to the caller

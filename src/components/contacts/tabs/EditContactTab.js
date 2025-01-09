@@ -162,64 +162,63 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 				>
 					<TouchableOpacity activeOpacity={1}>
 						<View style={styles.contactHeader}>
-							<View style={styles.photoWrapper}>
-								<View style={styles.photoContainer}>
-									{formData.photo_url ? (
-										<View style={styles.photoPreview}>
-											<ExpoImage
-												source={{ uri: formData.photo_url }}
-												style={styles.photoImage}
-												cachePolicy="memory-disk"
-											/>
-											{!isEditing && (
-												<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
-													<Icon name="create-outline" size={20} color="#FFFFFF" />
-												</TouchableOpacity>
-											)}
-
-											{isEditing && (
-												<TouchableOpacity
-													style={styles.removePhotoButton}
-													onPress={() => {
-														Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
-															{ text: 'Cancel', style: 'cancel' },
-															{
-																text: 'Remove',
-																style: 'destructive',
-																onPress: async () => {
-																	try {
-																		await updateContact(contact.id, {
-																			...contact,
-																			photo_url: null,
-																		});
-																		setFormData((prev) => ({
-																			...prev,
-																			photo_url: null,
-																		}));
-																		setSelectedContact({
-																			...contact,
-																			photo_url: null,
-																		});
-																		loadContacts();
-																	} catch (error) {
-																		Alert.alert('Error', 'Failed to remove photo');
-																	}
-																},
+							<View style={styles.photoContainer}>
+								{formData.photo_url ? (
+									<View style={styles.photoPreview}>
+										<ExpoImage
+											source={{ uri: formData.photo_url }}
+											style={styles.photoImage}
+											cachePolicy="memory-disk"
+										/>
+										{isEditing && (
+											<TouchableOpacity
+												style={styles.removePhotoButton}
+												onPress={() => {
+													Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+														{ text: 'Cancel', style: 'cancel' },
+														{
+															text: 'Remove',
+															style: 'destructive',
+															onPress: async () => {
+																try {
+																	await updateContact(contact.id, {
+																		...contact,
+																		photo_url: null,
+																	});
+																	setFormData((prev) => ({
+																		...prev,
+																		photo_url: null,
+																	}));
+																	setSelectedContact({
+																		...contact,
+																		photo_url: null,
+																	});
+																	loadContacts();
+																} catch (error) {
+																	Alert.alert('Error', 'Failed to remove photo');
+																}
 															},
-														]);
-													}}
-												>
-													<Icon name="close-circle" size={28} color="#FF6B6B" />
-												</TouchableOpacity>
-											)}
-										</View>
-									) : (
-										<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
-											<Icon name="camera-outline" size={24} color={colors.primary} />
-											<Text style={styles.uploadButtonText}>Add Photo</Text>
-										</TouchableOpacity>
-									)}
-								</View>
+														},
+													]);
+												}}
+											>
+												<Icon name="close-circle" size={28} color="#FF6B6B" />
+											</TouchableOpacity>
+										)}
+									</View>
+								) : (
+									<TouchableOpacity
+										style={styles.uploadButton}
+										onPress={isEditing ? handleEditPhotoUpload : null}
+									>
+										<Icon name="camera-outline" size={50} color={colors.primary} />
+									</TouchableOpacity>
+								)}
+								{!isEditing && (
+									<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
+										<Icon name="create-outline" size={20} color="#FFFFFF" />
+									</TouchableOpacity>
+								)}
 							</View>
 
 							<View style={styles.headerButtons}>
