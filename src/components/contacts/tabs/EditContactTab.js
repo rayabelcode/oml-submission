@@ -2,17 +2,15 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import ImagePickerComponent from '../../general/ImagePicker';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
-import AutoDismissModalContainer from '../../../components/general/AutoDismissModalContainer';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
 import RelationshipPicker from '../../general/RelationshipPicker';
 import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
 
-const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) => {
+const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cleanupSubscription }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
@@ -87,48 +85,27 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 
 	const handleEditPhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission Denied', 'Permission to access media library is required!');
-				return;
-			}
+			// ImagePickerComponent
+			await ImagePickerComponent(async (croppedImagePath) => {
+				// Upload cropped image
+				const uploadedPhotoURL = await uploadContactPhoto(contact.user_id, croppedImagePath);
 
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ImagePicker.MediaTypeOptions.Images,
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 1,
-			});
-
-			if (!result.canceled) {
-				const manipResult = await ImageManipulator.manipulateAsync(
-					result.assets[0].uri,
-					[{ resize: { width: 500 } }],
-					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-				);
-
-				const photoURL = await uploadContactPhoto(contact.user_id, manipResult.uri);
-				const updatedContact = {
-					...contact,
-					photo_url: photoURL,
-				};
+				// Update the contact with the uploaded photo URL
+				const updatedContact = { ...contact, photo_url: uploadedPhotoURL };
 
 				// Update local state immediately
 				setFormData((prev) => ({
 					...prev,
-					photo_url: photoURL,
+					photo_url: uploadedPhotoURL,
 				}));
 				setSelectedContact(updatedContact);
 
 				// Update Firestore
 				await updateContact(contact.id, updatedContact);
-			}
+			});
 		} catch (error) {
 			console.error('Error uploading photo:', error);
-			Alert.alert('Error', 'Failed to upload photo');
-			// Revert local state on error
-			setFormData({ ...contact });
-			setSelectedContact(contact);
+			Alert.alert('Error', 'Failed to upload photo.');
 		}
 	};
 
@@ -185,61 +162,63 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 				>
 					<TouchableOpacity activeOpacity={1}>
 						<View style={styles.contactHeader}>
-							<View style={styles.photoWrapper}>
-								<View style={styles.photoContainer}>
-									{formData.photo_url ? (
-										<View style={styles.photoPreview}>
-											<ExpoImage
-												source={{ uri: formData.photo_url }}
-												style={styles.photoImage}
-												cachePolicy="memory-disk"
-											/>
-											<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
-												<Icon name="create-outline" size={20} color="#FFFFFF" />
-											</TouchableOpacity>
-											{isEditing && (
-												<TouchableOpacity
-													style={styles.removePhotoButton}
-													onPress={() => {
-														Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
-															{ text: 'Cancel', style: 'cancel' },
-															{
-																text: 'Remove',
-																style: 'destructive',
-																onPress: async () => {
-																	try {
-																		await updateContact(contact.id, {
-																			...contact,
-																			photo_url: null,
-																		});
-																		setFormData((prev) => ({
-																			...prev,
-																			photo_url: null,
-																		}));
-																		setSelectedContact({
-																			...contact,
-																			photo_url: null,
-																		});
-																		loadContacts();
-																	} catch (error) {
-																		Alert.alert('Error', 'Failed to remove photo');
-																	}
-																},
+							<View style={styles.photoContainer}>
+								{formData.photo_url ? (
+									<View style={styles.photoPreview}>
+										<ExpoImage
+											source={{ uri: formData.photo_url }}
+											style={styles.photoImage}
+											cachePolicy="memory-disk"
+										/>
+										{isEditing && (
+											<TouchableOpacity
+												style={styles.removePhotoButton}
+												onPress={() => {
+													Alert.alert('Remove Photo', 'Are you sure you want to remove this photo?', [
+														{ text: 'Cancel', style: 'cancel' },
+														{
+															text: 'Remove',
+															style: 'destructive',
+															onPress: async () => {
+																try {
+																	await updateContact(contact.id, {
+																		...contact,
+																		photo_url: null,
+																	});
+																	setFormData((prev) => ({
+																		...prev,
+																		photo_url: null,
+																	}));
+																	setSelectedContact({
+																		...contact,
+																		photo_url: null,
+																	});
+																	loadContacts();
+																} catch (error) {
+																	Alert.alert('Error', 'Failed to remove photo');
+																}
 															},
-														]);
-													}}
-												>
-													<Icon name="close-circle" size={28} color="#FF6B6B" />
-												</TouchableOpacity>
-											)}
-										</View>
-									) : (
-										<TouchableOpacity style={styles.uploadButton} onPress={handleEditPhotoUpload}>
-											<Icon name="camera-outline" size={24} color={colors.primary} />
-											<Text style={styles.uploadButtonText}>Add Photo</Text>
-										</TouchableOpacity>
-									)}
-								</View>
+														},
+													]);
+												}}
+											>
+												<Icon name="close-circle" size={28} color="#FF6B6B" />
+											</TouchableOpacity>
+										)}
+									</View>
+								) : (
+									<TouchableOpacity
+										style={styles.uploadButton}
+										onPress={isEditing ? handleEditPhotoUpload : null}
+									>
+										<Icon name="camera-outline" size={50} color={colors.primary} />
+									</TouchableOpacity>
+								)}
+								{!isEditing && (
+									<TouchableOpacity style={styles.editAvatarButton} onPress={() => setIsEditing(true)}>
+										<Icon name="create-outline" size={20} color="#FFFFFF" />
+									</TouchableOpacity>
+								)}
 							</View>
 
 							<View style={styles.headerButtons}>
@@ -374,26 +353,39 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 										<TouchableOpacity
 											style={styles.dangerButton}
 											onPress={() => {
-												Alert.alert(
-													'Delete Contact',
-													'Are you sure you want to delete this contact? This action cannot be undone.',
-													[
-														{ text: 'Cancel', style: 'cancel' },
-														{
-															text: 'Delete',
-															style: 'destructive',
-															onPress: async () => {
-																try {
-																	await deleteContact(contact.id);
-																	await loadContacts();
-																	onClose();
-																} catch (error) {
-																	Alert.alert('Error', 'Unable to delete contact');
-																}
-															},
+												Alert.alert('Delete Contact', 'Are you sure you want to delete this contact?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Delete',
+														style: 'destructive',
+														onPress: () => {
+															Alert.alert(
+																'Confirm Deletion',
+																'All data and call history for this contact will be permanently deleted. This action cannot be undone.',
+																[
+																	{ text: 'Cancel', style: 'cancel' },
+																	{
+																		text: 'Delete Permanently',
+																		style: 'destructive',
+																		onPress: async () => {
+																			try {
+																				// Close the contact details
+																				onClose();
+																				// Delete the contact
+																				await deleteContact(contact.id);
+																				// Refresh the contacts list
+																				await loadContacts();
+																			} catch (error) {
+																				console.error('Delete error:', error);
+																				Alert.alert('Error', 'Unable to delete contact');
+																			}
+																		},
+																	},
+																]
+															);
 														},
-													]
-												);
+													},
+												]);
 											}}
 										>
 											<Icon name="trash-outline" size={24} color={colors.danger} />

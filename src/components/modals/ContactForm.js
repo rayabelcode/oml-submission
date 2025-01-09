@@ -12,8 +12,7 @@ import {
 	Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import ImagePickerComponent from '../general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { useStyles } from '../../styles/screens/contacts';
 import { useCommonStyles } from '../../styles/common';
@@ -49,33 +48,14 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 
 	const handlePhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission needed', 'Please grant permission to access your photos');
-				return;
-			}
-
-			const result = await ImagePicker.launchImageLibraryAsync({
-				mediaTypes: ['images'],
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 1,
-			});
-
-			if (!result.canceled && result.assets && result.assets[0]) {
-				const manipResult = await ImageManipulator.manipulateAsync(
-					result.assets[0].uri,
-					[{ resize: { width: 500 } }],
-					{ compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-				);
-
-				const photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
+			await ImagePickerComponent(async (croppedImagePath) => {
+				const photoUrl = await uploadContactPhoto(user.uid, croppedImagePath);
 				if (photoUrl) {
 					setFormData((prev) => ({ ...prev, photo_url: photoUrl }));
 				} else {
-					Alert.alert('Error', 'Failed to upload photo');
+					Alert.alert('Error', 'Failed to upload photo.');
 				}
-			}
+			});
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo. Please try again.');

@@ -31,8 +31,7 @@ import {
 } from '../utils/firestore';
 import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
+import ImagePickerComponent from '../components/general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
 import { serverTimestamp } from 'firebase/firestore';
 import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers';
@@ -68,7 +67,6 @@ const ContactCard = ({
 	const { colors } = useTheme();
 	const styles = useStyles();
 
-	// Sync with global editing state
 	useEffect(() => {
 		if (!isAnyEditing) {
 			setIsEditing(false);
@@ -117,8 +115,23 @@ const ContactCard = ({
 		]);
 	};
 
+	const handlePress = () => {
+		if (!isEditing) {
+			onPress(contact);
+		}
+	};
+
 	return (
-		<View style={[styles.card, { alignItems: 'center' }]}>
+		<TouchableOpacity
+			style={[styles.card, { alignItems: 'center' }]}
+			onPress={handlePress}
+			onLongPress={() => {
+				setIsEditing(true);
+				setIsAnyEditing(true);
+				setEditingContact(contact);
+			}}
+			activeOpacity={0.7}
+		>
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
 					<View style={styles.scheduleDot} />
@@ -127,17 +140,10 @@ const ContactCard = ({
 
 			<WobbleEffect
 				isEditing={isEditing}
-				onLongPress={() => {
-					setIsEditing(true);
-					setIsAnyEditing(true);
-					setEditingContact(contact);
-				}}
-				onPress={() => {
-					!isEditing && onPress(contact);
-				}}
 				onDeletePress={handleDeletePress}
 				onMeasureDeleteButton={setDeleteButtonPosition}
 				style={{ alignItems: 'center' }}
+				pointerEvents="none"
 			>
 				<View style={styles.cardAvatar}>
 					{contact.photo_url ? (
@@ -174,7 +180,7 @@ const ContactCard = ({
 					</Text>
 				</View>
 			</WobbleEffect>
-		</View>
+		</TouchableOpacity>
 	);
 };
 
@@ -302,12 +308,12 @@ export default function ContactsScreen({ navigation }) {
 				Contacts.Fields.Image,
 			]);
 
-			const phoneNumber = contact.phoneNumbers?.[0]?.number;
-			if (!phoneNumber) {
+			if (!fullContact.phoneNumbers?.length) {
 				Alert.alert('Invalid Contact', 'Selected contact must have a phone number');
 				return;
 			}
 
+			const phoneNumber = fullContact.phoneNumbers[0].number;
 			const cleanedPhone = phoneNumber.replace(/\D/g, '');
 			const formattedPhone =
 				cleanedPhone.length === 10
@@ -319,36 +325,26 @@ export default function ContactsScreen({ navigation }) {
 					: `+${cleanedPhone}`;
 
 			const existingContact = await checkForExistingContact(formattedPhone);
-
 			if (existingContact) {
 				Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 				return;
 			}
 
 			let photoUrl = null;
-			if (fullContact.imageAvailable && fullContact.image) {
+			if (fullContact.image?.uri) {
 				try {
-					const manipResult = await ImageManipulator.manipulateAsync(
-						fullContact.image.uri,
-						[{ resize: { width: 300, height: 300 } }],
-						{ compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-					);
-
-					photoUrl = await uploadContactPhoto(user.uid, manipResult.uri);
-					if (!photoUrl || photoUrl.startsWith('file://')) {
-						photoUrl = null;
-					}
+					photoUrl = await uploadContactPhoto(user.uid, fullContact.image.uri);
 				} catch (photoError) {
-					console.error('Photo processing error:', photoError);
+					console.error('Error uploading contact photo:', photoError);
+					photoUrl = null;
 				}
 			}
 
-			// Store the pending contact data and show relationship modal
 			setPendingContact({
-				first_name: contact.firstName || '',
-				last_name: contact.lastName || '',
+				first_name: fullContact.firstName || '',
+				last_name: fullContact.lastName || '',
 				phone: formattedPhone,
-				email: contact.emails?.[0]?.email || '',
+				email: fullContact.emails?.[0]?.email || '',
 				photo_url: photoUrl,
 			});
 			setShowRelationshipModal(true);
@@ -488,9 +484,9 @@ export default function ContactsScreen({ navigation }) {
 
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
-					{/* Smaller logo */}
+					{/* Logo */}
 					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-					{/* Icons closer together */}
+					{/* Icons */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
@@ -610,16 +606,32 @@ export default function ContactsScreen({ navigation }) {
 									{
 										text: 'Delete',
 										style: 'destructive',
-										onPress: async () => {
-											try {
-												await deleteContact(editingContact.id);
-												setIsAnyEditing(false);
-												setEditingContact(null);
-												await loadContacts();
-											} catch (error) {
-												console.error('Delete error:', error);
-												Alert.alert('Error', 'Unable to delete contact');
-											}
+										onPress: () => {
+											Alert.alert(
+												'Confirm Delete',
+												'All data and call history for this contact will be permanently deleted. This action cannot be undone.',
+												[
+													{
+														text: 'Cancel',
+														style: 'cancel',
+													},
+													{
+														text: 'Delete Permanently',
+														style: 'destructive',
+														onPress: async () => {
+															try {
+																await deleteContact(editingContact.id);
+																setIsAnyEditing(false);
+																setEditingContact(null);
+																await loadContacts();
+															} catch (error) {
+																console.error('Delete error:', error);
+																Alert.alert('Error', 'Unable to delete contact');
+															}
+														},
+													},
+												]
+											);
 										},
 									},
 									{
@@ -706,9 +718,32 @@ export default function ContactsScreen({ navigation }) {
 					setShowRelationshipModal(false);
 					setPendingContact(null);
 				}}
-				onSelect={async (relationshipType) => {
+				onSelect={(relationshipType) => {
 					setShowRelationshipModal(false);
-					await processPendingContact(relationshipType);
+					processPendingContact(relationshipType);
+				}}
+			/>
+			<AddContactModal
+				show={showAddModal}
+				onClose={() => setShowAddModal(false)}
+				onImport={() => {
+					setShowAddModal(false);
+					handleImportContacts();
+				}}
+				onNew={() => {
+					setShowAddModal(false);
+					setIsFormVisible(true);
+				}}
+			/>
+			<RelationshipTypeModal
+				visible={showRelationshipModal}
+				onClose={() => {
+					setShowRelationshipModal(false);
+					setPendingContact(null);
+				}}
+				onSelect={(relationshipType) => {
+					setShowRelationshipModal(false);
+					processPendingContact(relationshipType);
 				}}
 			/>
 		</SafeAreaView>

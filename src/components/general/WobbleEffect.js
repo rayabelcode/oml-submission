@@ -50,40 +50,26 @@ const WobbleEffect = ({
 		).start();
 	};
 
-	const handlePress = (e) => {
-		if (!isEditing) {
-			onPress();
-		}
-	};
-
 	return (
 		<View style={[styles.container, style]}>
-			<TouchableOpacity
-				onLongPress={onLongPress}
-				onPress={handlePress}
-				delayLongPress={500}
-				disabled={disabled}
-				activeOpacity={0.7}
-				style={styles.mainTouchable}
+			<Animated.View
+				style={[
+					styles.content,
+					{
+						transform: [
+							{
+								rotate: rotation.interpolate({
+									inputRange: [-1, 1],
+									outputRange: ['-1rad', '1rad'],
+								}),
+							},
+						],
+					},
+					{ alignItems: 'center' },
+				]}
 			>
-				<Animated.View
-					style={[
-						styles.content,
-						{
-							transform: [
-								{
-									rotate: rotation.interpolate({
-										inputRange: [-1, 1],
-										outputRange: ['-1rad', '1rad'],
-									}),
-								},
-							],
-						},
-					]}
-				>
-					{children}
-				</Animated.View>
-			</TouchableOpacity>
+				{children}
+			</Animated.View>
 			{isEditing && (
 				<TouchableOpacity
 					ref={deleteButtonRef}
@@ -104,18 +90,22 @@ const WobbleEffect = ({
 const styles = StyleSheet.create({
 	container: {
 		position: 'relative',
+		width: '100%',
+		alignItems: 'center',
 	},
 	content: {
 		position: 'relative',
+		width: '100%',
+		alignItems: 'center',
 	},
 	deleteButton: {
 		position: 'absolute',
 		top: -18,
 		right: -18,
 		zIndex: 1000,
-		elevation: 5, // Android
-		backgroundColor: 'transparent', // Touch events on iOS
-		padding: 10, // Add padding for easier touching
+		elevation: 5,
+		backgroundColor: 'transparent',
+		padding: 10,
 	},
 });
 

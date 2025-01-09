@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Image } from 'expo-image';
+import ImagePickerComponent from '../../components/general/ImagePicker';
 import { useAuth } from '../../context/AuthContext';
-import * as ImagePicker from 'expo-image-picker';
 import { getUserProfile, updateUserProfile, uploadProfilePhoto } from '../../utils/firestore';
+import { cacheManager } from '../../utils/cache';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -14,62 +14,81 @@ const ProfileScreen = ({ navigation }) => {
 	const { user } = useAuth();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
-	const [profilePhoto, setProfilePhoto] = useState(null);
+	const profilePhotoRef = useRef(null); // Ref for profile photo to avoid re-renders
 	const [hasChanges, setHasChanges] = useState(false);
 	const lastNameInputRef = useRef(null);
 
-	useEffect(() => {
-		loadUserProfile();
-	}, []);
-
-	const loadUserProfile = async () => {
+	// Fetch and load user profile
+	const loadUserProfile = useCallback(async () => {
 		try {
-			const profile = await getUserProfile(user.uid);
-			if (profile) {
-				setFirstName(profile.first_name || '');
-				setLastName(profile.last_name || '');
-				setProfilePhoto(profile.photo_url);
+			const cachedProfile = await cacheManager.getCachedProfile(user.uid);
+
+			if (cachedProfile) {
+				// Use cached profile data if available
+				setFirstName((prev) => (prev !== cachedProfile.first_name ? cachedProfile.first_name || '' : prev));
+				setLastName((prev) => (prev !== cachedProfile.last_name ? cachedProfile.last_name || '' : prev));
+
+				if (profilePhotoRef.current !== cachedProfile.photo_url) {
+					profilePhotoRef.current = cachedProfile.photo_url;
+				}
+			} else {
+				// Fetch from the backend if the cache is invalid or missing
+				const profile = await getUserProfile(user.uid);
+				if (profile) {
+					setFirstName(profile.first_name || '');
+					setLastName(profile.last_name || '');
+					profilePhotoRef.current = profile.photo_url;
+
+					// Save the fetched profile data to the cache
+					await cacheManager.saveProfile(user.uid, profile);
+				}
 			}
 		} catch (error) {
 			console.error('Error loading profile:', error);
 		}
-	};
+	}, [user.uid]);
 
+	// Load profile once on component mount
+	useEffect(() => {
+		loadUserProfile();
+	}, [loadUserProfile]);
+
+	// Handle photo upload
 	const handleProfilePhotoUpload = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-			if (status !== 'granted') {
-				Alert.alert('Permission needed', 'Please grant permission to access your photos');
-				return;
-			}
-
-			const result = await ImagePicker.launchImageLibraryAsync({
-				allowsEditing: true,
-				aspect: [1, 1],
-				quality: 0.5,
-			});
-
-			if (!result.canceled && result.assets && result.assets[0]) {
-				const photoUrl = await uploadProfilePhoto(user.uid, result.assets[0].uri);
+			await ImagePickerComponent(async (croppedImagePath) => {
+				const photoUrl = await uploadProfilePhoto(user.uid, croppedImagePath);
 				if (photoUrl) {
-					setProfilePhoto(photoUrl);
+					profilePhotoRef.current = photoUrl;
 					await updateUserProfile(user.uid, { photo_url: photoUrl });
+
+					const updatedProfile = { first_name: firstName, last_name: lastName, photo_url: photoUrl };
+					await cacheManager.saveProfile(user.uid, updatedProfile);
 				} else {
 					throw new Error('Failed to get download URL');
 				}
-			}
+			});
 		} catch (error) {
 			console.error('Error uploading photo:', error);
 			Alert.alert('Error', 'Failed to upload photo');
 		}
 	};
 
+	// Handle saving profile changes
 	const handleSaveProfile = async () => {
 		try {
 			await updateUserProfile(user.uid, {
 				first_name: firstName.trim(),
 				last_name: lastName.trim(),
 			});
+
+			// Update the cached profile
+			await cacheManager.saveProfile(user.uid, {
+				first_name: firstName.trim(),
+				last_name: lastName.trim(),
+				photo_url: profilePhotoRef.current,
+			});
+
 			setHasChanges(false);
 			Alert.alert('Success', 'Profile updated successfully');
 		} catch (error) {
@@ -78,6 +97,7 @@ const ProfileScreen = ({ navigation }) => {
 		}
 	};
 
+	// Handle text input changes
 	const handleTextChange = (text, field) => {
 		if (field === 'firstName') {
 			setFirstName(text);
@@ -104,9 +124,9 @@ const ProfileScreen = ({ navigation }) => {
 			>
 				<View style={styles.profileImageSection}>
 					<View style={styles.profileImageContainer}>
-						{profilePhoto ? (
+						{profilePhotoRef.current ? (
 							<Image
-								source={{ uri: profilePhoto }}
+								source={{ uri: profilePhotoRef.current }}
 								style={styles.profileImage}
 								contentFit="cover"
 								cachePolicy="memory-disk"

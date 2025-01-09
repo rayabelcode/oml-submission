@@ -11,15 +11,12 @@ import Constants from 'expo-constants';
 import { Alert, LogBox, Platform, View } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from './src/utils/notifications';
-import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
 import { navigationRef } from './src/navigation/RootNavigation';
 import { PreloadProvider } from './src/context/PreloadContext';
 import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
 import { cacheManager } from './src/utils/cache';
-
-SplashScreen.preventAutoHideAsync();
 
 Sentry.init({
 	dsn: Constants.expoConfig?.extra?.SENTRY_DSN || Constants.manifest?.extra?.SENTRY_DSN,
@@ -54,6 +51,12 @@ async function registerForPushNotificationsAsync() {
 function AppContent() {
 	const { user } = useAuth();
 	const [isDataPreloaded, setIsDataPreloaded] = useState(false);
+
+	useEffect(() => {
+		if (Platform.OS === 'ios') {
+			Notifications.setBadgeCountAsync(0);
+		}
+	}, [user]);
 
 	useEffect(() => {
 		async function preloadData() {
@@ -112,7 +115,17 @@ function App() {
 						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 					}),
 					notificationService.initialize(),
+					// Clear badges when app opens
+					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);
+
+				Notifications.setNotificationHandler({
+					handleNotification: async () => ({
+						shouldShowAlert: true,
+						shouldPlaySound: true,
+						shouldSetBadge: true,
+					}),
+				});
 
 				Notifications.addNotificationReceivedListener((notification) => {});
 			} catch (e) {
@@ -127,7 +140,6 @@ function App() {
 
 	const onLayoutRootView = useCallback(async () => {
 		if (appIsReady) {
-			await SplashScreen.hideAsync();
 		}
 	}, [appIsReady]);
 

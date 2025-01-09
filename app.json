@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.45",
+		"version": "1.0.48",
 		"runtimeVersion": {
 			"policy": "sdkVersion"
 		},
@@ -13,11 +13,6 @@
 		},
 		"scheme": "onmylist",
 		"userInterfaceStyle": "automatic",
-		"splash": {
-			"image": "./assets/splash.png",
-			"resizeMode": "contain",
-			"backgroundColor": "#000000"
-		},
 		"assetBundlePatterns": ["**/*"],
 		"ios": {
 			"supportsTablet": true,
@@ -69,12 +64,6 @@
 				"expo-contacts",
 				{
 					"contactsPermission": "Allow OnMyList to access your contacts."
-				}
-			],
-			[
-				"expo-image-picker",
-				{
-					"photosPermission": "Allow OnMyList to access your photos for profile pictures."
 				}
 			],
 			"expo-notifications"

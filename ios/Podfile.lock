@@ -37,8 +37,6 @@ PODS:
     - EXImageLoader
     - ExpoModulesCore
     - SDWebImageWebPCoder
-  - ExpoImagePicker (16.0.3):
-    - ExpoModulesCore
   - ExpoKeepAwake (14.0.1):
     - ExpoModulesCore
   - ExpoLinking (7.0.3):
@@ -69,8 +67,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - Yoga
   - ExpoSharing (13.0.0):
-    - ExpoModulesCore
-  - ExpoSplashScreen (0.29.18):
     - ExpoModulesCore
   - ExpoSystemUI (4.0.6):
     - ExpoModulesCore
@@ -1367,6 +1363,27 @@ PODS:
     - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
+  - react-native-image-picker (7.2.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
   - react-native-safe-area-context (4.12.0):
@@ -1725,7 +1742,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNCPicker (2.10.2):
+  - RNCPicker (2.11.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1788,6 +1805,15 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNImageCropPicker (0.41.6):
+    - React-Core
+    - React-RCTImage
+    - RNImageCropPicker/QBImagePickerController (= 0.41.6)
+    - TOCropViewController (~> 2.7.4)
+  - RNImageCropPicker/QBImagePickerController (0.41.6):
+    - React-Core
+    - React-RCTImage
+    - TOCropViewController (~> 2.7.4)
   - RNReanimated (3.16.6):
     - DoubleConversion
     - glog
@@ -1920,7 +1946,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNSentry (6.4.0):
+  - RNSentry (6.5.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1941,7 +1967,7 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - Sentry/HybridSDK (= 8.41.0)
+    - Sentry/HybridSDK (= 8.43.0)
     - Yoga
   - RNSVG (15.10.1):
     - DoubleConversion
@@ -2018,8 +2044,9 @@ PODS:
   - SDWebImageWebPCoder (0.14.6):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
-  - Sentry/HybridSDK (8.41.0)
+  - Sentry/HybridSDK (8.43.0)
   - SocketRocket (0.7.1)
+  - TOCropViewController (2.7.4)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -2040,13 +2067,11 @@ DEPENDENCIES:
   - ExpoFont (from `../node_modules/expo-font/ios`)
   - ExpoImage (from `../node_modules/expo-image/ios`)
   - ExpoImageManipulator (from `../node_modules/expo-image-manipulator/ios`)
-  - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoMailComposer (from `../node_modules/expo-mail-composer/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
-  - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
@@ -2088,6 +2113,7 @@ DEPENDENCIES:
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
+  - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - "react-native-segmented-control (from `../node_modules/@react-native-segmented-control/segmented-control`)"
@@ -2122,6 +2148,7 @@ DEPENDENCIES:
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
+  - RNImageCropPicker (from `../node_modules/react-native-image-crop-picker`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - "RNSentry (from `../node_modules/@sentry/react-native`)"
@@ -2141,6 +2168,7 @@ SPEC REPOS:
     - SDWebImageWebPCoder
     - Sentry
     - SocketRocket
+    - TOCropViewController
 
 EXTERNAL SOURCES:
   boost:
@@ -2177,8 +2205,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-image/ios"
   ExpoImageManipulator:
     :path: "../node_modules/expo-image-manipulator/ios"
-  ExpoImagePicker:
-    :path: "../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../node_modules/expo-keep-awake/ios"
   ExpoLinking:
@@ -2189,8 +2215,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-modules-core"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
-  ExpoSplashScreen:
-    :path: "../node_modules/expo-splash-screen/ios"
   ExpoSystemUI:
     :path: "../node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
@@ -2270,6 +2294,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
+  react-native-image-picker:
+    :path: "../node_modules/react-native-image-picker"
   react-native-netinfo:
     :path: "../node_modules/@react-native-community/netinfo"
   react-native-safe-area-context:
@@ -2338,6 +2364,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-community/datetimepicker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
+  RNImageCropPicker:
+    :path: "../node_modules/react-native-image-crop-picker"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -2369,13 +2397,11 @@ SPEC CHECKSUMS:
   ExpoFont: b089994dac1fe603deda1cec151e32c81f46c2f1
   ExpoImage: 7f0f4381c75054b4c4a5a0e2cf474b67e9fb2dc0
   ExpoImageManipulator: 797e6f2eb209cc47bda2fd12904c96787b94dd5d
-  ExpoImagePicker: 4eff722eec3f969b3978a8a3b64efbe52f800905
   ExpoKeepAwake: 22173f45d767c7d37403fdf48292726901d69ce7
   ExpoLinking: 40e30b571ffb77b280a38bed137d89b21f46f2a0
   ExpoMailComposer: f82da39ce31e55f6cfa487fd9fc52849837a658c
   ExpoModulesCore: 6efc19ba9a67277c5ea3a8f0bb2e7dcd2146ecf0
   ExpoSharing: cfc87a3a494eb071f8814b79649ba78d135cc424
-  ExpoSplashScreen: 5397c2419fb3ca0788de37ea2547deac376aad83
   ExpoSystemUI: 778d700c6f38d3d7b8794460f50c1ca05c4f7462
   ExpoWebBrowser: b658ba8a9161f1b54afb279591cfce2cb73330fa
   EXStructuredHeaders: 09c70347b282e3d2507e25fb4c747b1b885f87f6
@@ -2419,6 +2445,7 @@ SPEC CHECKSUMS:
   React-Mapbuffer: f0c766c9dfb313c91b07457beb4e4ec9b2e02435
   React-microtasksnativemodule: 23565fc14a9588c3116cdf279c8124d7285856cc
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
+  react-native-image-picker: 3d0b0a3d29c978434e810e92b5da40c995d16a04
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
   react-native-safe-area-context: db6ad47f9354809886d34e349a0809b0580712ea
   react-native-segmented-control: 7578bb8808205cc5d09fbb026eb32829d7b0b56f
@@ -2450,22 +2477,24 @@ SPEC CHECKSUMS:
   ReactCodegen: 28abe92ea9a1e277edc25d02d7d53ab3acf5cc07
   ReactCommon: 7da12c0f59956995a153de45835b64c89e0a4a57
   RNCAsyncStorage: d2806c4f4c8555fb3ca3fe5759e2f5e5ef74efe4
-  RNCPicker: 5d3866a625683cec4ba77771330f4383ad376940
+  RNCPicker: 1a44b9398c53f672d80773df7cc54f2126bbe35a
   RNDateTimePicker: dd58d8235c3d12d349c043c2d9bcedcbb513f106
   RNGestureHandler: 1e33ee267aaf61bbab6089d32df3b38c3024e3dd
+  RNImageCropPicker: d5387003612dd08d52fb062760136e0e473df186
   RNReanimated: fb3896d9010787799eb5748e50fd59746a503001
   RNScreens: f5762e2dd74e365dcee2007dc96942a528ac25d4
-  RNSentry: aec22806237ebac3afa7f3ed4c00352f372a3992
+  RNSentry: bd9d15d37733a485519d08eebba55a223823e059
   RNSVG: fda2fb96dd529a22bf8cf9a38fc051378fd4866e
   RNVectorIcons: 959270651e3b1bd49d6c469fc9ac52149f67f55c
   SDWebImage: 8a6b7b160b4d710e2a22b6900e25301075c34cb3
   SDWebImageAVIFCoder: 00310d246aab3232ce77f1d8f0076f8c4b021d90
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
-  Sentry: 54d0fe6c0df448497c8ed4cce66ccf7027e1823e
+  Sentry: 532b281a53b1b45a523fd592f608956fb36e577c
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
+  TOCropViewController: 80b8985ad794298fb69d3341de183f33d1853654
   Yoga: 7548e4449365bf0ef60db4aefe58abff37fcabec
 
-PODFILE CHECKSUM: 5c2c37a09ce4f184dfc12be8241fbd567315e00e
+PODFILE CHECKSUM: 34d0b9fb6b50ff7021e0e5c3a93e16295f859863
 
 COCOAPODS: 1.16.2
