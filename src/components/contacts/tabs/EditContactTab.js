@@ -10,7 +10,7 @@ import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from
 import RelationshipPicker from '../../general/RelationshipPicker';
 import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
 
-const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) => {
+const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cleanupSubscription }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
@@ -353,26 +353,39 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose }) 
 										<TouchableOpacity
 											style={styles.dangerButton}
 											onPress={() => {
-												Alert.alert(
-													'Delete Contact',
-													'Are you sure you want to delete this contact? This action cannot be undone.',
-													[
-														{ text: 'Cancel', style: 'cancel' },
-														{
-															text: 'Delete',
-															style: 'destructive',
-															onPress: async () => {
-																try {
-																	await deleteContact(contact.id);
-																	await loadContacts();
-																	onClose();
-																} catch (error) {
-																	Alert.alert('Error', 'Unable to delete contact');
-																}
-															},
+												Alert.alert('Delete Contact', 'Are you sure you want to delete this contact?', [
+													{ text: 'Cancel', style: 'cancel' },
+													{
+														text: 'Delete',
+														style: 'destructive',
+														onPress: () => {
+															Alert.alert(
+																'Confirm Deletion',
+																'All data and call history for this contact will be permanently deleted. This action cannot be undone.',
+																[
+																	{ text: 'Cancel', style: 'cancel' },
+																	{
+																		text: 'Delete Permanently',
+																		style: 'destructive',
+																		onPress: async () => {
+																			try {
+																				// Close the contact details
+																				onClose();
+																				// Delete the contact
+																				await deleteContact(contact.id);
+																				// Refresh the contacts list
+																				await loadContacts();
+																			} catch (error) {
+																				console.error('Delete error:', error);
+																				Alert.alert('Error', 'Unable to delete contact');
+																			}
+																		},
+																	},
+																]
+															);
 														},
-													]
-												);
+													},
+												]);
 											}}
 										>
 											<Icon name="trash-outline" size={24} color={colors.danger} />

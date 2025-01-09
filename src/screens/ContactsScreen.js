@@ -115,10 +115,21 @@ const ContactCard = ({
 		]);
 	};
 
+	const handlePress = () => {
+		if (!isEditing) {
+			onPress(contact);
+		}
+	};
+
 	return (
 		<TouchableOpacity
 			style={[styles.card, { alignItems: 'center' }]}
-			onPress={() => !isEditing && onPress(contact)}
+			onPress={handlePress}
+			onLongPress={() => {
+				setIsEditing(true);
+				setIsAnyEditing(true);
+				setEditingContact(contact);
+			}}
 			activeOpacity={0.7}
 		>
 			{contact.next_contact && (
@@ -129,14 +140,10 @@ const ContactCard = ({
 
 			<WobbleEffect
 				isEditing={isEditing}
-				onLongPress={() => {
-					setIsEditing(true);
-					setIsAnyEditing(true);
-					setEditingContact(contact);
-				}}
 				onDeletePress={handleDeletePress}
 				onMeasureDeleteButton={setDeleteButtonPosition}
 				style={{ alignItems: 'center' }}
+				pointerEvents="none"
 			>
 				<View style={styles.cardAvatar}>
 					{contact.photo_url ? (
@@ -603,16 +610,32 @@ export default function ContactsScreen({ navigation }) {
 									{
 										text: 'Delete',
 										style: 'destructive',
-										onPress: async () => {
-											try {
-												await deleteContact(editingContact.id);
-												setIsAnyEditing(false);
-												setEditingContact(null);
-												await loadContacts();
-											} catch (error) {
-												console.error('Delete error:', error);
-												Alert.alert('Error', 'Unable to delete contact');
-											}
+										onPress: () => {
+											Alert.alert(
+												'Confirm Delete',
+												'All data and call history for this contact will be permanently deleted. This action cannot be undone.',
+												[
+													{
+														text: 'Cancel',
+														style: 'cancel',
+													},
+													{
+														text: 'Delete Permanently',
+														style: 'destructive',
+														onPress: async () => {
+															try {
+																await deleteContact(editingContact.id);
+																setIsAnyEditing(false);
+																setEditingContact(null);
+																await loadContacts();
+															} catch (error) {
+																console.error('Delete error:', error);
+																Alert.alert('Error', 'Unable to delete contact');
+															}
+														},
+													},
+												]
+											);
 										},
 									},
 									{

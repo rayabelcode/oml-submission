@@ -313,13 +313,16 @@ export const subscribeToContactDetails = (contactId, callback, onError) => {
 		const unsubscribe = onSnapshot(
 			contactRef,
 			(doc) => {
-				if (doc.exists()) {
-					const contactData = { id: doc.id, ...doc.data() };
-					callback(contactData);
-				} else {
-					console.error('Contact document does not exist:', contactId);
-					onError && onError(new Error('Contact not found'));
+				if (!doc.exists()) {
+					// Contact has been deleted, cleanup subscription
+					if (activeSubscriptions.has(`contact_${contactId}`)) {
+						activeSubscriptions.get(`contact_${contactId}`)();
+						activeSubscriptions.delete(`contact_${contactId}`);
+					}
+					return; // Exit quietly without error
 				}
+				const contactData = { id: doc.id, ...doc.data() };
+				callback(contactData);
 			},
 			(error) => {
 				console.error('Error in contact details subscription:', error);
