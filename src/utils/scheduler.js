@@ -149,7 +149,7 @@ export class SchedulingService {
 
 		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
 
-		// Check for schedule saturation first
+		// Check for schedule overload first
 		const workingSlots = new Set(
 			this.reminders.map((r) => {
 				const d = DateTime.fromJSDate(r.date.toDate());
@@ -207,29 +207,33 @@ export class SchedulingService {
 
 	async scheduleReminder(contact, lastContactDate, frequency) {
 		try {
-			const nextDate = this.calculatePreliminaryDate(lastContactDate, frequency);
+			const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+			if (typePrefs?.active_hours) {
+				const [startHour] = typePrefs.active_hours.start.split(':').map(Number);
+				const [endHour] = typePrefs.active_hours.end.split(':').map(Number);
+				const workingMinutes = (endHour - startHour) * 60;
+				const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
 
-			// First check if we're at capacity
-			const workingHours = this.relationshipPreferences[contact.scheduling?.relationship_type]?.active_hours;
-			if (workingHours) {
-				const [startHour] = workingHours.start.split(':').map(Number);
-				const [endHour] = workingHours.end.split(':').map(Number);
-				const totalPossibleSlots = (endHour - startHour) * 2; // 30-min slots
-
-				if (this.reminders.length >= totalPossibleSlots) {
+				if (this.reminders.length >= availableSlots) {
 					throw new Error('No available time slots found within working hours');
 				}
+			}
+
+			const nextDate = this.calculatePreliminaryDate(lastContactDate, frequency);
+			let scheduledDate = nextDate;
+
+			if (this.hasTimeConflict(nextDate) || this.isTimeBlocked(nextDate, contact)) {
+				scheduledDate = await this.resolveConflict(nextDate, contact);
 			}
 
 			const idNum = parseInt(contact.id.match(/\d+/)?.[0] || '0');
 			const targetHour = 9 + Math.floor(idNum / 2);
 			const targetMinute = (idNum % 2) * 30;
 
-			const targetTime = DateTime.fromJSDate(nextDate)
+			const targetTime = DateTime.fromJSDate(scheduledDate)
 				.set({ hour: targetHour, minute: targetMinute })
 				.toJSDate();
 
-			// Add to reminders list for gap tracking
 			this.reminders.push({
 				date: {
 					toDate: () => targetTime,
@@ -246,8 +250,8 @@ export class SchedulingService {
 				snoozed: false,
 				follow_up: false,
 				ai_suggestions: [],
-				score: 1,
-				flexibility_used: false,
+				score: this.calculateTimeSlotScore(targetTime, contact),
+				flexibility_used: targetTime.getTime() !== nextDate.getTime(),
 			};
 		} catch (error) {
 			throw error;
@@ -349,5 +353,155 @@ export class SchedulingService {
 			low: 0.3,
 		};
 		return priorityScores[priority] || 0.5;
+	}
+
+	async resolveConflict(date, contact, attempts = 0) {
+		if (attempts >= MAX_ATTEMPTS) {
+			throw new Error('Maximum scheduling attempts exceeded');
+		}
+
+		// Check if all slots are filled first
+		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		if (typePrefs?.active_hours) {
+			const [startHour] = typePrefs.active_hours.start.split(':').map(Number);
+			const [endHour] = typePrefs.active_hours.end.split(':').map(Number);
+			const workingMinutes = (endHour - startHour) * 60;
+			const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
+
+			const existingSlots = new Set(
+				this.reminders.map((r) => {
+					const d = DateTime.fromJSDate(r.date.toDate());
+					return `${d.hour}:${d.minute}`;
+				})
+			);
+
+			if (existingSlots.size >= availableSlots) {
+				throw new Error('Maximum scheduling attempts exceeded');
+			}
+		}
+
+		// First try afternoon shift explicitly
+		const afternoonSlot = await this.shiftWithinDay(date, contact);
+		if (afternoonSlot) {
+			return afternoonSlot;
+		}
+
+		// Then try other strategies
+		const strategies = [
+			this.findNearestPreferredDay.bind(this),
+			this.expandTimeRange.bind(this),
+			this.adjustForPriority.bind(this),
+		];
+
+		for (const strategy of strategies) {
+			try {
+				const resolvedDate = await strategy(date, contact);
+				if (
+					resolvedDate &&
+					!this.hasTimeConflict(resolvedDate) &&
+					!this.isTimeBlocked(resolvedDate, contact)
+				) {
+					// For any resolved date, try to shift it to afternoon
+					const shiftedDate = await this.shiftWithinDay(resolvedDate, contact);
+					if (shiftedDate) {
+						return shiftedDate;
+					}
+					return resolvedDate;
+				}
+			} catch (error) {
+				continue;
+			}
+		}
+
+		// If we reached max attempts or no strategies worked, throw
+		throw new Error('Maximum scheduling attempts exceeded');
+	}
+
+	async findNearestPreferredDay(date, contact) {
+		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		if (!typePrefs?.preferred_days?.length) return null;
+
+		const priority = contact.scheduling?.priority?.toLowerCase() || 'normal';
+		const flexibility = PRIORITY_FLEXIBILITY[priority];
+		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
+
+		for (let i = 0; i <= flexibility; i++) {
+			for (const direction of [1, -1]) {
+				const checkDate = dt.plus({ days: i * direction });
+				const dayName = checkDate.weekdayLong.toLowerCase();
+
+				if (typePrefs.preferred_days.includes(dayName)) {
+					const candidateDate = this.findAvailableTimeSlot(checkDate.toJSDate(), contact);
+					if (candidateDate) return candidateDate;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	async shiftWithinDay(date, contact) {
+		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		if (!typePrefs?.active_hours) return null;
+
+		const { start, end } = typePrefs.active_hours;
+		const [startHour, startMinute] = start.split(':').map(Number);
+		const [endHour, endMinute] = end.split(':').map(Number);
+
+		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
+		const dayEnd = dt.set({ hour: endHour, minute: endMinute });
+
+		// Try afternoon slots only (14:00 onwards)
+		let current = dt.set({ hour: 14, minute: 0 });
+
+		while (current <= dayEnd) {
+			const testTime = current.toJSDate();
+			if (!this.hasTimeConflict(testTime) && !this.isTimeBlocked(testTime, contact)) {
+				return testTime;
+			}
+			current = current.plus({ minutes: TIME_SLOT_INTERVAL });
+		}
+
+		// If afternoon slots are full, return null
+		return null;
+	}
+
+	async expandTimeRange(date, contact) {
+		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		if (!typePrefs?.active_hours) return null;
+
+		const { start, end } = typePrefs.active_hours;
+		const [startHour, startMinute] = start.split(':').map(Number);
+		const [endHour, endMinute] = end.split(':').map(Number);
+
+		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
+		const expandedStart = dt.set({ hour: startHour - 1, minute: startMinute });
+		const expandedEnd = dt.set({ hour: endHour + 1, minute: endMinute });
+
+		let current = expandedStart;
+		while (current <= expandedEnd) {
+			if (!this.hasTimeConflict(current.toJSDate()) && !this.isTimeBlocked(current.toJSDate(), contact)) {
+				return current.toJSDate();
+			}
+			current = current.plus({ minutes: TIME_SLOT_INTERVAL });
+		}
+
+		return null;
+	}
+
+	async adjustForPriority(date, contact) {
+		const priority = contact.scheduling?.priority?.toLowerCase() || 'normal';
+		const flexibility = PRIORITY_FLEXIBILITY[priority];
+		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
+
+		for (let i = 1; i <= flexibility; i++) {
+			for (const direction of [1, -1]) {
+				const checkDate = dt.plus({ days: i * direction });
+				const candidateDate = this.findAvailableTimeSlot(checkDate.toJSDate(), contact);
+				if (candidateDate) return candidateDate;
+			}
+		}
+
+		return null;
 	}
 }

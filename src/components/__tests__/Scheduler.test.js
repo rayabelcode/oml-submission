@@ -196,12 +196,11 @@ describe('SchedulingService', () => {
 		});
 
 		it('should handle concurrent scheduling requests', async () => {
-			schedulingService.reminders = []; // Clear any existing reminders
+			schedulingService.reminders = [];
 
 			const baseDate = DateTime.now().set({ hour: 9, minute: 0 }).toJSDate();
 			const promises = [];
 
-			// Create 10 different time slots spread across the day
 			for (let i = 0; i < 10; i++) {
 				const requestedTime = DateTime.fromJSDate(baseDate)
 					.plus({ hours: Math.floor(i / 2), minutes: (i % 2) * 30 })
@@ -229,7 +228,6 @@ describe('SchedulingService', () => {
 
 			expect(uniqueTimes.size).toBe(10);
 
-			// Verify minimum gaps
 			for (let i = 0; i < times.length; i++) {
 				for (let j = i + 1; j < times.length; j++) {
 					const gap = Math.abs(times[i] - times[j]) / (1000 * 60);
@@ -243,9 +241,8 @@ describe('SchedulingService', () => {
 
 			schedulingService.reminders = [];
 
-			// Fill every 15-minute slot from 9 AM to 5 PM
-			const slotsPerHour = 4; // 15-minute intervals
-			const workingHours = 8; // 9 AM to 5 PM
+			const slotsPerHour = 4;
+			const workingHours = 8;
 			const totalSlots = slotsPerHour * workingHours;
 
 			for (let i = 0; i < totalSlots; i++) {
@@ -288,7 +285,6 @@ describe('SchedulingService', () => {
 		});
 	});
 
-	// Performance tests
 	describe('Performance', () => {
 		const createMockContact = (id) => ({
 			id: `test-id-${id}`,
@@ -296,13 +292,12 @@ describe('SchedulingService', () => {
 				relationship_type: 'friend',
 				priority: 'normal',
 				custom_preferences: {
-					active_hours: { start: '09:00', end: '23:00' }, // Extended hours for testing
+					active_hours: { start: '09:00', end: '23:00' },
 				},
 			},
 		});
 
 		beforeEach(() => {
-			// Reset reminders before each test
 			schedulingService.reminders = [];
 		});
 
@@ -310,59 +305,58 @@ describe('SchedulingService', () => {
 			const startTime = performance.now();
 			const batchSize = 10;
 			const promises = [];
-		
+
 			for (let i = 0; i < batchSize; i++) {
 				const contact = createMockContact(i);
 				const requestedTime = DateTime.now()
-					.plus({ days: i }) // Each reminder on a different day
-					.set({ hour: 9 + (i % 4), minute: 0 }) // Spread across 4 hours each day
+					.plus({ days: i })
+					.set({ hour: 9 + (i % 4), minute: 0 })
 					.toJSDate();
-		
+
 				promises.push(schedulingService.scheduleReminder(contact, requestedTime, 'daily'));
 			}
-		
+
 			const results = await Promise.all(promises);
 			const endTime = performance.now();
 			const timePerOperation = (endTime - startTime) / batchSize;
-		
+
 			console.log('Batch processing performance:', {
 				totalTime: `${(endTime - startTime).toFixed(2)}ms`,
 				operationsPerSecond: `${(1000 / timePerOperation).toFixed(2)}`,
 				timePerOperation: `${timePerOperation.toFixed(2)}ms`,
-				batchSize
+				batchSize,
 			});
-		
+
 			expect(timePerOperation).toBeLessThan(50);
 			expect(results.length).toBe(batchSize);
 		});
-		
 
 		it('should maintain performance with increasing workload', async () => {
 			const workloads = [5, 10, 15];
 			const timings = [];
-		
+
 			for (let size of workloads) {
 				schedulingService.reminders = [];
-				await new Promise(resolve => setTimeout(resolve, 1));
-				
+				await new Promise((resolve) => setTimeout(resolve, 1));
+
 				const startTime = performance.now();
 				const promises = [];
-		
+
 				for (let i = 0; i < size; i++) {
 					const contact = createMockContact(i);
 					const requestedTime = DateTime.now()
 						.plus({ days: Math.floor(i / 4) })
 						.set({ hour: 9 + (i % 4) * 2, minute: 0 })
 						.toJSDate();
-		
+
 					promises.push(schedulingService.scheduleReminder(contact, requestedTime, 'daily'));
 				}
-		
+
 				await Promise.all(promises);
 				const endTime = performance.now();
 				timings.push({ size, time: Math.max(endTime - startTime, 0.1) });
 			}
-		
+
 			console.log(
 				'Scaling performance:',
 				timings.map(({ size, time }) => ({
@@ -371,16 +365,15 @@ describe('SchedulingService', () => {
 					timePerOperation: `${(time / size).toFixed(2)}ms`,
 				}))
 			);
-		
+
 			const baselineTimePerOp = Math.max(timings[0].time / timings[0].size, 0.1);
 			const maxAllowedDeviation = 2.0;
-		
+
 			for (let i = 1; i < timings.length; i++) {
 				const timePerOp = timings[i].time / timings[i].size;
 				expect(timePerOp).toBeLessThan(baselineTimePerOp * maxAllowedDeviation);
 			}
 		});
-		
 
 		it('should handle concurrent modifications efficiently', async () => {
 			const iterations = 10;
@@ -388,7 +381,7 @@ describe('SchedulingService', () => {
 			const startTime = performance.now();
 
 			for (let i = 0; i < iterations; i++) {
-				schedulingService.reminders = []; // Reset for each iteration
+				schedulingService.reminders = [];
 				const operations = [];
 
 				operations.push(
@@ -414,6 +407,125 @@ describe('SchedulingService', () => {
 			});
 
 			expect(totalTime / iterations).toBeLessThan(100);
+		});
+	});
+
+	describe('Conflict Resolution', () => {
+		it('should resolve conflicts using preferred day strategy', async () => {
+			const contact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'friend',
+					priority: 'high',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			schedulingService.reminders = [
+				{
+					date: {
+						toDate: () => DateTime.now().set({ hour: 10, minute: 0 }).toJSDate(),
+					},
+				},
+			];
+
+			const conflictDate = DateTime.now().set({ hour: 10, minute: 15 }).toJSDate();
+			const resolvedDate = await schedulingService.resolveConflict(conflictDate, contact);
+
+			expect(resolvedDate).toBeDefined();
+			expect(schedulingService.hasTimeConflict(resolvedDate)).toBeFalsy();
+			expect(schedulingService.isTimeBlocked(resolvedDate, contact)).toBeFalsy();
+		});
+
+		it('should resolve conflicts by shifting within day', async () => {
+			const contact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'friend',
+					priority: 'normal',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			// Block morning hours
+			schedulingService.reminders = Array.from({ length: 8 }, (_, i) => ({
+				date: {
+					toDate: () =>
+						DateTime.now()
+							.set({ hour: 9 + Math.floor(i / 2), minute: (i % 2) * 30 })
+							.toJSDate(),
+				},
+			}));
+
+			const conflictDate = DateTime.now().set({ hour: 9, minute: 30 }).toJSDate();
+			const resolvedDate = await schedulingService.resolveConflict(conflictDate, contact);
+
+			expect(resolvedDate).toBeDefined();
+			const resolvedTime = DateTime.fromJSDate(resolvedDate);
+			expect(resolvedTime.hour).toBeGreaterThan(13);
+		});
+
+		it('should resolve conflicts by expanding time range', async () => {
+			const contact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'friend',
+					priority: 'low',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			// Fill normal hours
+			schedulingService.reminders = Array.from({ length: 16 }, (_, i) => ({
+				date: {
+					toDate: () =>
+						DateTime.now()
+							.set({ hour: 9 + i, minute: 0 })
+							.toJSDate(),
+				},
+			}));
+
+			const conflictDate = DateTime.now().set({ hour: 12, minute: 0 }).toJSDate();
+			const resolvedDate = await schedulingService.resolveConflict(conflictDate, contact);
+
+			expect(resolvedDate).toBeDefined();
+			const resolvedTime = DateTime.fromJSDate(resolvedDate);
+			expect(resolvedTime.hour).toBeGreaterThanOrEqual(8);
+			expect(resolvedTime.hour).toBeLessThanOrEqual(18);
+		});
+
+		it('should throw error when no resolution is possible', async () => {
+			const contact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'friend',
+					priority: 'normal',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			// Fill all possible slots
+			schedulingService.reminders = Array.from({ length: 32 }, (_, i) => ({
+				date: {
+					toDate: () =>
+						DateTime.now()
+							.set({ hour: 9 + Math.floor(i / 4), minute: (i % 4) * 15 })
+							.toJSDate(),
+				},
+			}));
+
+			const conflictDate = DateTime.now().set({ hour: 12, minute: 0 }).toJSDate();
+			await expect(schedulingService.resolveConflict(conflictDate, contact)).rejects.toThrow(
+				'Maximum scheduling attempts exceeded'
+			);
 		});
 	});
 });
