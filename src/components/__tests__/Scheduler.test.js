@@ -287,4 +287,133 @@ describe('SchedulingService', () => {
 			expect(schedulingService.hasTimeConflict(justRight)).toBeFalsy();
 		});
 	});
+
+	// Performance tests
+	describe('Performance', () => {
+		const createMockContact = (id) => ({
+			id: `test-id-${id}`,
+			scheduling: {
+				relationship_type: 'friend',
+				priority: 'normal',
+				custom_preferences: {
+					active_hours: { start: '09:00', end: '23:00' }, // Extended hours for testing
+				},
+			},
+		});
+
+		beforeEach(() => {
+			// Reset reminders before each test
+			schedulingService.reminders = [];
+		});
+
+		it('should handle batch scheduling efficiently', async () => {
+			const startTime = performance.now();
+			const batchSize = 10;
+			const promises = [];
+		
+			for (let i = 0; i < batchSize; i++) {
+				const contact = createMockContact(i);
+				const requestedTime = DateTime.now()
+					.plus({ days: i }) // Each reminder on a different day
+					.set({ hour: 9 + (i % 4), minute: 0 }) // Spread across 4 hours each day
+					.toJSDate();
+		
+				promises.push(schedulingService.scheduleReminder(contact, requestedTime, 'daily'));
+			}
+		
+			const results = await Promise.all(promises);
+			const endTime = performance.now();
+			const timePerOperation = (endTime - startTime) / batchSize;
+		
+			console.log('Batch processing performance:', {
+				totalTime: `${(endTime - startTime).toFixed(2)}ms`,
+				operationsPerSecond: `${(1000 / timePerOperation).toFixed(2)}`,
+				timePerOperation: `${timePerOperation.toFixed(2)}ms`,
+				batchSize
+			});
+		
+			expect(timePerOperation).toBeLessThan(50);
+			expect(results.length).toBe(batchSize);
+		});
+		
+
+		it('should maintain performance with increasing workload', async () => {
+			const workloads = [5, 10, 15];
+			const timings = [];
+		
+			for (let size of workloads) {
+				schedulingService.reminders = [];
+				await new Promise(resolve => setTimeout(resolve, 1));
+				
+				const startTime = performance.now();
+				const promises = [];
+		
+				for (let i = 0; i < size; i++) {
+					const contact = createMockContact(i);
+					const requestedTime = DateTime.now()
+						.plus({ days: Math.floor(i / 4) })
+						.set({ hour: 9 + (i % 4) * 2, minute: 0 })
+						.toJSDate();
+		
+					promises.push(schedulingService.scheduleReminder(contact, requestedTime, 'daily'));
+				}
+		
+				await Promise.all(promises);
+				const endTime = performance.now();
+				timings.push({ size, time: Math.max(endTime - startTime, 0.1) });
+			}
+		
+			console.log(
+				'Scaling performance:',
+				timings.map(({ size, time }) => ({
+					workloadSize: size,
+					totalTime: `${time.toFixed(2)}ms`,
+					timePerOperation: `${(time / size).toFixed(2)}ms`,
+				}))
+			);
+		
+			const baselineTimePerOp = Math.max(timings[0].time / timings[0].size, 0.1);
+			const maxAllowedDeviation = 2.0;
+		
+			for (let i = 1; i < timings.length; i++) {
+				const timePerOp = timings[i].time / timings[i].size;
+				expect(timePerOp).toBeLessThan(baselineTimePerOp * maxAllowedDeviation);
+			}
+		});
+		
+
+		it('should handle concurrent modifications efficiently', async () => {
+			const iterations = 10;
+			const concurrentOps = 2;
+			const startTime = performance.now();
+
+			for (let i = 0; i < iterations; i++) {
+				schedulingService.reminders = []; // Reset for each iteration
+				const operations = [];
+
+				operations.push(
+					schedulingService.scheduleReminder(
+						createMockContact(`new-${i}`),
+						DateTime.now()
+							.plus({ days: i, hours: i * 2 })
+							.toJSDate(),
+						'daily'
+					)
+				);
+
+				await Promise.all(operations);
+			}
+
+			const endTime = performance.now();
+			const totalTime = endTime - startTime;
+
+			console.log('Concurrent operations performance:', {
+				totalTime: `${totalTime.toFixed(2)}ms`,
+				operationsPerSecond: `${((iterations * concurrentOps) / (totalTime / 1000)).toFixed(2)}`,
+				averageTime: `${(totalTime / (iterations * concurrentOps)).toFixed(2)}ms`,
+			});
+
+			expect(totalTime / iterations).toBeLessThan(100);
+		});
+	});
 });
