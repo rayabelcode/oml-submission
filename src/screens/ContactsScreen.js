@@ -305,14 +305,15 @@ export default function ContactsScreen({ navigation }) {
 				Contacts.Fields.LastName,
 				Contacts.Fields.PhoneNumbers,
 				Contacts.Fields.Emails,
+				Contacts.Fields.Image,
 			]);
 
-			const phoneNumber = contact.phoneNumbers?.[0]?.number;
-			if (!phoneNumber) {
+			if (!fullContact.phoneNumbers?.length) {
 				Alert.alert('Invalid Contact', 'Selected contact must have a phone number');
 				return;
 			}
 
+			const phoneNumber = fullContact.phoneNumbers[0].number;
 			const cleanedPhone = phoneNumber.replace(/\D/g, '');
 			const formattedPhone =
 				cleanedPhone.length === 10
@@ -330,25 +331,20 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			let photoUrl = null;
-
-			// Use the ImagePickerComponent for cropping and uploading
-			await ImagePickerComponent(async (croppedImagePath) => {
+			if (fullContact.image?.uri) {
 				try {
-					photoUrl = await uploadContactPhoto(user.uid, croppedImagePath);
-					if (!photoUrl || photoUrl.startsWith('file://')) {
-						photoUrl = null;
-					}
+					photoUrl = await uploadContactPhoto(user.uid, fullContact.image.uri);
 				} catch (photoError) {
-					console.error('Photo processing error:', photoError);
+					console.error('Error uploading contact photo:', photoError);
 					photoUrl = null;
 				}
-			});
+			}
 
 			setPendingContact({
-				first_name: contact.firstName || '',
-				last_name: contact.lastName || '',
+				first_name: fullContact.firstName || '',
+				last_name: fullContact.lastName || '',
 				phone: formattedPhone,
-				email: contact.emails?.[0]?.email || '',
+				email: fullContact.emails?.[0]?.email || '',
 				photo_url: photoUrl,
 			});
 			setShowRelationshipModal(true);
@@ -488,9 +484,9 @@ export default function ContactsScreen({ navigation }) {
 
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
-					{/* Smaller logo */}
+					{/* Logo */}
 					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-					{/* Icons closer together */}
+					{/* Icons */}
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
@@ -722,9 +718,32 @@ export default function ContactsScreen({ navigation }) {
 					setShowRelationshipModal(false);
 					setPendingContact(null);
 				}}
-				onSelect={async (relationshipType) => {
+				onSelect={(relationshipType) => {
 					setShowRelationshipModal(false);
-					await processPendingContact(relationshipType);
+					processPendingContact(relationshipType);
+				}}
+			/>
+			<AddContactModal
+				show={showAddModal}
+				onClose={() => setShowAddModal(false)}
+				onImport={() => {
+					setShowAddModal(false);
+					handleImportContacts();
+				}}
+				onNew={() => {
+					setShowAddModal(false);
+					setIsFormVisible(true);
+				}}
+			/>
+			<RelationshipTypeModal
+				visible={showRelationshipModal}
+				onClose={() => {
+					setShowRelationshipModal(false);
+					setPendingContact(null);
+				}}
+				onSelect={(relationshipType) => {
+					setShowRelationshipModal(false);
+					processPendingContact(relationshipType);
 				}}
 			/>
 		</SafeAreaView>
