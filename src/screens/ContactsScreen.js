@@ -67,7 +67,6 @@ const ContactCard = ({
 	const { colors } = useTheme();
 	const styles = useStyles();
 
-	// Sync with global editing state
 	useEffect(() => {
 		if (!isAnyEditing) {
 			setIsEditing(false);
@@ -117,7 +116,11 @@ const ContactCard = ({
 	};
 
 	return (
-		<View style={[styles.card, { alignItems: 'center' }]}>
+		<TouchableOpacity
+			style={[styles.card, { alignItems: 'center' }]}
+			onPress={() => !isEditing && onPress(contact)}
+			activeOpacity={0.7}
+		>
 			{contact.next_contact && (
 				<View style={styles.scheduleBadge}>
 					<View style={styles.scheduleDot} />
@@ -130,9 +133,6 @@ const ContactCard = ({
 					setIsEditing(true);
 					setIsAnyEditing(true);
 					setEditingContact(contact);
-				}}
-				onPress={() => {
-					!isEditing && onPress(contact);
 				}}
 				onDeletePress={handleDeletePress}
 				onMeasureDeleteButton={setDeleteButtonPosition}
@@ -173,7 +173,7 @@ const ContactCard = ({
 					</Text>
 				</View>
 			</WobbleEffect>
-		</View>
+		</TouchableOpacity>
 	);
 };
 
