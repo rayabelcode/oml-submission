@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
-import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
 import {
 	Text,
