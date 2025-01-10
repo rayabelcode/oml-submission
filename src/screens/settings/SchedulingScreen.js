@@ -18,8 +18,6 @@ import TimeRangeSelector from '../../components/settings/TimeRangeSelector';
 import DaySelector from '../../components/settings/DaySelector';
 import TimePickerModal from '../../components/modals/TimePickerModal';
 
-const RELATIONSHIP_TYPES = ['work', 'family', 'friend', 'personal'];
-
 const DURATION_OPTIONS = {
 	minimumGap: [
 		{ label: '5 minutes', value: 5 },
@@ -48,7 +46,6 @@ const SchedulingScreen = ({ navigation }) => {
 	const [minGap, setMinGap] = useState(DEFAULT_MIN_GAP);
 	const [optimalGap, setOptimalGap] = useState(DEFAULT_OPTIMAL_GAP);
 	const [globalExcludedTimes, setGlobalExcludedTimes] = useState([]);
-	const [relationshipSettings, setRelationshipSettings] = useState({});
 	const [expandedSection, setExpandedSection] = useState(null);
 	const [timePickerVisible, setTimePickerVisible] = useState(false);
 	const [activeTimePicker, setActiveTimePicker] = useState(null);
@@ -62,12 +59,81 @@ const SchedulingScreen = ({ navigation }) => {
 			const prefs = await getUserPreferences(user.uid);
 			setMinGap(prefs.minimumGapMinutes || DEFAULT_MIN_GAP);
 			setOptimalGap(prefs.optimalGapMinutes || DEFAULT_OPTIMAL_GAP);
-			setGlobalExcludedTimes(prefs.scheduling_preferences?.global_excluded_times || []);
-			setRelationshipSettings(prefs.scheduling_preferences?.relationship_types || {});
+			setGlobalExcludedTimes(
+				prefs.global_excluded_times || [
+					{
+						days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+						start: '23:00',
+						end: '07:00',
+					},
+				]
+			);
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading preferences:', error);
 			setLoading(false);
+		}
+	};
+
+	const handleTimeSelect = (hour) => {
+		const timeString = `${hour.toString().padStart(2, '0')}:00`;
+		const index = activeTimePicker.index;
+		const timeType = activeTimePicker.timeType;
+
+		const updatedTimes = [...globalExcludedTimes];
+		if (!updatedTimes[index]) {
+			updatedTimes[index] = {
+				days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+				start: '23:00',
+				end: '07:00',
+			};
+		}
+		updatedTimes[index][timeType] = timeString;
+
+		handleGlobalExcludedTimeChange(updatedTimes);
+		setTimePickerVisible(false);
+	};
+
+	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
+		try {
+			setGlobalExcludedTimes(updatedTimes);
+			await updateUserPreferences(user.uid, {
+				'scheduling_preferences.global_excluded_times': updatedTimes,
+			});
+		} catch (error) {
+			console.error('Error updating global excluded times:', error);
+			Alert.alert('Error', 'Failed to update excluded times');
+		}
+	};
+
+	const showTimePicker = (index, timeType) => {
+		setActiveTimePicker({ index, timeType });
+		setTimePickerVisible(true);
+	};
+
+	const handleMinGapChange = async (value) => {
+		try {
+			setMinGap(value);
+			await updateUserPreferences(user.uid, {
+				'scheduling_preferences.minimumGapMinutes': value,
+			});
+		} catch (error) {
+			console.error('Error updating minimum gap:', error);
+			setMinGap(minGap);
+			Alert.alert('Error', 'Failed to update minimum gap');
+		}
+	};
+
+	const handleOptimalGapChange = async (value) => {
+		try {
+			setOptimalGap(value);
+			await updateUserPreferences(user.uid, {
+				'scheduling_preferences.optimalGapMinutes': value,
+			});
+		} catch (error) {
+			console.error('Error updating optimal gap:', error);
+			setOptimalGap(optimalGap);
+			Alert.alert('Error', 'Failed to update optimal gap');
 		}
 	};
 
@@ -108,67 +174,6 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
-	const handleMinGapChange = async (value) => {
-		try {
-			setMinGap(value);
-			await updateUserPreferences(user.uid, {
-				minimumGapMinutes: value,
-			});
-		} catch (error) {
-			console.error('Error updating minimum gap:', error);
-			setMinGap(minGap);
-			Alert.alert('Error', 'Failed to update minimum gap');
-		}
-	};
-
-	const handleOptimalGapChange = async (value) => {
-		try {
-			setOptimalGap(value);
-			await updateUserPreferences(user.uid, {
-				optimalGapMinutes: value,
-			});
-		} catch (error) {
-			console.error('Error updating optimal gap:', error);
-			setOptimalGap(optimalGap);
-			Alert.alert('Error', 'Failed to update optimal gap');
-		}
-	};
-
-	const handleGlobalExcludedTimeChange = async (index, field, value) => {
-		try {
-			const updatedTimes = [...globalExcludedTimes];
-			updatedTimes[index] = { ...updatedTimes[index], [field]: value };
-			setGlobalExcludedTimes(updatedTimes);
-
-			await updateUserPreferences(user.uid, {
-				'scheduling_preferences.global_excluded_times': updatedTimes,
-			});
-		} catch (error) {
-			console.error('Error updating global excluded times:', error);
-			Alert.alert('Error', 'Failed to update excluded times');
-		}
-	};
-
-	const handleRelationshipSettingChange = async (type, field, value) => {
-		try {
-			const updatedSettings = {
-				...relationshipSettings,
-				[type]: {
-					...relationshipSettings[type],
-					[field]: value,
-				},
-			};
-			setRelationshipSettings(updatedSettings);
-
-			await updateUserPreferences(user.uid, {
-				'scheduling_preferences.relationship_types': updatedSettings,
-			});
-		} catch (error) {
-			console.error('Error updating relationship settings:', error);
-			Alert.alert('Error', 'Failed to update relationship settings');
-		}
-	};
-
 	const formatDuration = (minutes) => {
 		if (minutes < 60) return `${minutes} minutes`;
 		const hours = Math.floor(minutes / 60);
@@ -176,37 +181,6 @@ const SchedulingScreen = ({ navigation }) => {
 		return remainingMinutes > 0
 			? `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} minutes`
 			: `${hours} hour${hours > 1 ? 's' : ''}`;
-	};
-
-	const toggleSection = (section) => {
-		setExpandedSection(expandedSection === section ? null : section);
-	};
-
-	const showTimePicker = (type, relationshipType = null, timeType = 'start') => {
-		setActiveTimePicker({ type, relationshipType, timeType });
-		setTimePickerVisible(true);
-	};
-
-	const handleTimeSelect = (hour) => {
-		const timeString = `${hour.toString().padStart(2, '0')}:00`;
-
-		if (activeTimePicker.type === 'global') {
-			const index = activeTimePicker.relationshipType;
-			const updatedTimes = [...globalExcludedTimes];
-			updatedTimes[index] = {
-				...updatedTimes[index],
-				[activeTimePicker.timeType]: timeString,
-			};
-			handleGlobalExcludedTimeChange(index, activeTimePicker.timeType, timeString);
-		} else {
-			const type = activeTimePicker.relationshipType;
-			const currentSettings = relationshipSettings[type]?.active_hours || { start: '09:00', end: '17:00' };
-			const updatedHours = {
-				...currentSettings,
-				[activeTimePicker.timeType]: timeString,
-			};
-			handleRelationshipSettingChange(type, 'active_hours', updatedHours);
-		}
 	};
 
 	if (loading) {
@@ -227,50 +201,69 @@ const SchedulingScreen = ({ navigation }) => {
 			</View>
 
 			<ScrollView style={styles.settingsList}>
+				{/* Call Gap Section */}
 				<View style={styles.formSection}>
-					<View style={styles.inputGroup}>
-						<Text style={[styles.label, { fontSize: 18 }]}>Time Between Calls</Text>
-						<Text style={[styles.settingText, { fontSize: 16, lineHeight: 22, marginBottom: 20 }]}>
-							Set the minimum and optimal time gaps between scheduled calls to better manage your contact
-							schedule.
-						</Text>
+					<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
+					<Text style={[styles.label, { fontSize: 18, textAlign: 'center', marginTop: spacing.md }]}>
+						Time Between Calls
+					</Text>
+					<Text
+						style={[
+							styles.settingText,
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+						]}
+					>
+						Minimum time between scheduled calls.
+					</Text>
 
-						<TouchableOpacity
-							style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border }]}
-							onPress={() => showDurationPicker('minimum')}
-						>
-							<View style={styles.settingItemLeft}>
-								<Icon name="time-outline" size={24} color={colors.text.secondary} />
-								<View style={{ marginLeft: 15 }}>
-									<Text style={[styles.settingText, { fontSize: 18 }]}>Minimum Gap</Text>
-									<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
-										{formatDuration(minGap)}
-									</Text>
-								</View>
+					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('minimum')}>
+						<View style={styles.settingItemLeft}>
+							<Icon name="time-outline" size={24} color={colors.text.secondary} />
+							<View style={{ marginLeft: 15 }}>
+								<Text style={[styles.settingText, { fontSize: 18 }]}>Minimum Gap</Text>
+								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
+									{formatDuration(minGap)}
+								</Text>
 							</View>
-							<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
-						</TouchableOpacity>
+						</View>
+						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
+					</TouchableOpacity>
 
-						<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('optimal')}>
-							<View style={styles.settingItemLeft}>
-								<Icon name="timer-outline" size={24} color={colors.text.secondary} />
-								<View style={{ marginLeft: 15 }}>
-									<Text style={[styles.settingText, { fontSize: 18 }]}>Optimal Gap</Text>
-									<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
-										{formatDuration(optimalGap)}
-									</Text>
-								</View>
+					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('optimal')}>
+						<View style={styles.settingItemLeft}>
+							<Icon name="timer-outline" size={24} color={colors.text.secondary} />
+							<View style={{ marginLeft: 15 }}>
+								<Text style={[styles.settingText, { fontSize: 18 }]}>Optimal Gap</Text>
+								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
+									{formatDuration(optimalGap)}
+								</Text>
 							</View>
-							<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
-						</TouchableOpacity>
-					</View>
+						</View>
+						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
+					</TouchableOpacity>
 				</View>
 
+				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
+
+				{/* Global Excluded Times Section */}
 				<View style={styles.formSection}>
-					<TouchableOpacity style={styles.settingItem} onPress={() => toggleSection('globalExcluded')}>
+					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Global Excluded Times</Text>
+					<Text
+						style={[
+							styles.settingText,
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+						]}
+					>
+						When calls should not be scheduled.
+					</Text>
+
+					<TouchableOpacity
+						style={styles.settingItem}
+						onPress={() => setExpandedSection(expandedSection === 'globalExcluded' ? null : 'globalExcluded')}
+					>
 						<View style={styles.settingItemLeft}>
 							<Icon name="moon-outline" size={24} color={colors.text.secondary} />
-							<Text style={[styles.settingText, { fontSize: 18 }]}>Global Excluded Times</Text>
+							<Text style={[styles.settingText, { fontSize: 18 }]}>Excluded Times</Text>
 						</View>
 						<Icon
 							name={expandedSection === 'globalExcluded' ? 'chevron-up' : 'chevron-down'}
@@ -285,75 +278,50 @@ const SchedulingScreen = ({ navigation }) => {
 								<TimeRangeSelector
 									startTime={time.start}
 									endTime={time.end}
-									onStartTimePress={() => showTimePicker('global', index, 'start')}
-									onEndTimePress={() => showTimePicker('global', index, 'end')}
-									label={`Excluded Time ${index + 1}`}
+									onStartTimePress={() => showTimePicker(index, 'start')}
+									onEndTimePress={() => showTimePicker(index, 'end')}
+									label=""
 								/>
 								<DaySelector
-									selectedDays={time.days}
+									selectedDays={time.days || []}
 									onDayPress={(day) => {
-										const updatedDays = time.days.includes(day)
+										const updatedTimes = [...globalExcludedTimes];
+										const updatedDays = time.days?.includes(day)
 											? time.days.filter((d) => d !== day)
-											: [...time.days, day];
-										handleGlobalExcludedTimeChange(index, 'days', updatedDays);
+											: [...(time.days || []), day];
+										updatedTimes[index] = { ...time, days: updatedDays };
+										handleGlobalExcludedTimeChange(updatedTimes);
 									}}
 								/>
 							</View>
 						))}
 				</View>
 
-				{RELATIONSHIP_TYPES.map((type) => (
-					<View key={type} style={styles.formSection}>
-						<TouchableOpacity style={styles.settingItem} onPress={() => toggleSection(type)}>
-							<View style={styles.settingItemLeft}>
-								<Icon
-									name={
-										type === 'work'
-											? 'briefcase-outline'
-											: type === 'family'
-											? 'people-outline'
-											: type === 'friend'
-											? 'heart-outline'
-											: 'person-outline'
-									}
-									size={24}
-									color={colors.text.secondary}
-								/>
-								<Text style={[styles.settingText, { fontSize: 18 }]}>
-									{type.charAt(0).toUpperCase() + type.slice(1)} Settings
-								</Text>
-							</View>
-							<Icon
-								name={expandedSection === type ? 'chevron-up' : 'chevron-down'}
-								size={24}
-								color={colors.text.secondary}
-							/>
-						</TouchableOpacity>
+				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
 
-						{expandedSection === type && (
-							<View style={{ marginTop: spacing.md }}>
-								<TimeRangeSelector
-									startTime={relationshipSettings[type]?.active_hours?.start || '09:00'}
-									endTime={relationshipSettings[type]?.active_hours?.end || '17:00'}
-									onStartTimePress={() => showTimePicker('relationship', type, 'start')}
-									onEndTimePress={() => showTimePicker('relationship', type, 'end')}
-									label="Active Hours"
-								/>
-								<Text style={[styles.label, { marginTop: spacing.md }]}>Preferred Days</Text>
-								<DaySelector
-									selectedDays={relationshipSettings[type]?.preferred_days || []}
-									onDayPress={(day) => {
-										const current = relationshipSettings[type]?.preferred_days || [];
-										const updated = current.includes(day)
-											? current.filter((d) => d !== day)
-											: [...current, day];
-										handleRelationshipSettingChange(type, 'preferred_days', updated);
-									}}
-								/>
-							</View>
-						)}
-					</View>
-				))}
+				{/* Relationship Settings Section */}
+				<View style={styles.formSection}>
+					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Relationship Settings</Text>
+					<Text
+						style={[
+							styles.settingText,
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+						]}
+					>
+						Set preferences by relationship type.
+					</Text>
+
+					<TouchableOpacity
+						style={styles.settingItem}
+						onPress={() => navigation.navigate('RelationshipTypeSettings')}
+					>
+						<View style={styles.settingItemLeft}>
+							<Icon name="people-outline" size={24} color={colors.text.secondary} />
+							<Text style={[styles.settingText, { fontSize: 18 }]}>Manage Relationship Types</Text>
+						</View>
+						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
+					</TouchableOpacity>
+				</View>
 			</ScrollView>
 
 			<TimePickerModal
@@ -361,15 +329,11 @@ const SchedulingScreen = ({ navigation }) => {
 				onClose={() => setTimePickerVisible(false)}
 				onSelect={handleTimeSelect}
 				initialHour={
-					activeTimePicker?.type === 'global'
+					activeTimePicker
 						? parseInt(
-								globalExcludedTimes[activeTimePicker?.relationshipType]?.[activeTimePicker?.timeType] || '9'
+								globalExcludedTimes[activeTimePicker.index]?.[activeTimePicker.timeType]?.split(':')[0] || '9'
 						  )
-						: parseInt(
-								relationshipSettings[activeTimePicker?.relationshipType]?.active_hours?.[
-									activeTimePicker?.timeType
-								] || '9'
-						  )
+						: 9
 				}
 				title={`Select ${activeTimePicker?.timeType === 'start' ? 'Start' : 'End'} Time`}
 			/>
