@@ -497,26 +497,13 @@ export const fetchPastContacts = async (userId) => {
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
-		const defaultScheduling = {
-			relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
-			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
-			custom_schedule: false,
-			custom_preferences: {
-				preferred_days: [],
-				active_hours: {
-					start: '09:00',
-					end: '17:00',
-				},
-				excluded_times: [],
-			},
-			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
-			minimum_gap: 30,
-		};
+		const contactDoc = await getDoc(contactRef);
+		const existingScheduling = contactDoc.data().scheduling;
 
 		await updateDoc(contactRef, {
 			scheduling: {
-				...defaultScheduling,
-				...schedulingData,
+				...existingScheduling, // Keep existing values
+				...schedulingData, // Apply new values
 				updated_at: serverTimestamp(),
 			},
 		});

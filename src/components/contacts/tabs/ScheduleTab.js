@@ -112,40 +112,31 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const currentScheduling = schedulingData || contact.scheduling;
 			const scheduler = new SchedulingService(
-				currentScheduling?.custom_preferences,
+				contact.scheduling.custom_preferences,
 				[],
 				Intl.DateTimeFormat().resolvedOptions().timeZone
 			);
 
-			const lastContact = contact.last_contacted || new Date();
 			let reminderDetails;
-
 			if (customDate) {
-				reminderDetails = await scheduler.scheduleCustomDate(
-					{ ...contact, scheduling: currentScheduling },
-					customDate
-				);
-			} else if (currentScheduling?.frequency) {
+				reminderDetails = await scheduler.scheduleCustomDate({ ...contact }, customDate);
+			} else if (contact.scheduling?.frequency) {
 				reminderDetails = await scheduler.scheduleReminder(
-					{ ...contact, scheduling: currentScheduling },
-					lastContact,
-					currentScheduling.frequency
+					{ ...contact },
+					contact.last_contacted || new Date(),
+					contact.scheduling.frequency
 				);
 			} else {
 				throw new Error('No scheduling parameters provided');
 			}
 
 			const nextContactDate = new Date(reminderDetails.date.toDate());
-			const updatedContact = {
-				...contact,
-				next_contact: nextContactDate.toISOString(),
-				scheduling: currentScheduling,
-			};
-
-			setSelectedContact(updatedContact);
 			await updateNextContact(contact.id, nextContactDate);
+
+			if (loadContacts) {
+				await loadContacts();
+			}
 		} catch (error) {
 			setError('Failed to schedule contact');
 			console.error('Error scheduling contact:', error);
@@ -156,19 +147,21 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 	// Handle recurring off
 	const handleRecurringOff = async () => {
+		setLoading(true);
 		try {
-			const schedulingUpdate = {
-				...contact.scheduling,
-				frequency: null,
-			};
 			setFrequency(null);
+			const schedulingUpdate = {
+				frequency: null, // Only send what's changing
+			};
 			await updateContactScheduling(contact.id, schedulingUpdate);
-			setSelectedContact((prev) => ({
-				...prev,
-				scheduling: schedulingUpdate,
-			}));
+			if (loadContacts) {
+				await loadContacts();
+			}
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
+			setError('Failed to turn off recurring');
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -197,20 +190,24 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								loading && styles.disabledButton,
 							]}
 							onPress={async () => {
-								setFrequency(option.value);
-								const schedulingUpdate = {
-									...contact.scheduling,
-									frequency: option.value,
-									custom_schedule: true,
-								};
+								setLoading(true);
 								try {
+									setFrequency(option.value);
+									const schedulingUpdate = {
+										frequency: option.value, // Only send what's changing
+									};
+
 									await updateContactScheduling(contact.id, schedulingUpdate);
-									setSelectedContact((prev) => ({
-										...prev,
-										scheduling: schedulingUpdate,
-									}));
+
+									// After successful update, fetch fresh contact data
+									if (loadContacts) {
+										await loadContacts(); // Refresh parent's data
+									}
 								} catch (error) {
 									console.error('Error updating frequency:', error);
+									setError('Failed to update frequency');
+								} finally {
+									setLoading(false);
 								}
 							}}
 							disabled={loading}
@@ -270,19 +267,26 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 										priority === option.value && styles.priorityButtonActive,
 										loading && styles.disabledButton,
 									]}
-									onPress={() => {
-										setPriority(option.value);
-										const schedulingUpdate = {
-											...contact.scheduling,
-											priority: option.value,
-											custom_schedule: true,
-										};
-										updateContactScheduling(contact.id, schedulingUpdate).then(() => {
-											setSelectedContact((prev) => ({
-												...prev,
-												scheduling: schedulingUpdate,
-											}));
-										});
+									onPress={async () => {
+										setLoading(true);
+										try {
+											setPriority(option.value);
+											const schedulingUpdate = {
+												priority: option.value, // Only send what's changing
+											};
+
+											await updateContactScheduling(contact.id, schedulingUpdate);
+
+											// After successful update, fetch fresh contact data
+											if (loadContacts) {
+												await loadContacts(); // Refresh parent's data
+											}
+										} catch (error) {
+											console.error('Error updating priority:', error);
+											setError('Failed to update priority');
+										} finally {
+											setLoading(false);
+										}
 									}}
 									disabled={loading}
 								>
@@ -308,25 +312,28 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											isSelected && styles.dayButtonActive,
 											loading && styles.disabledButton,
 										]}
-										onPress={() => {
-											const updatedDays = isSelected
-												? selectedDays.filter((d) => d !== day.value)
-												: [...selectedDays, day.value];
-											setSelectedDays(updatedDays);
-											const schedulingUpdate = {
-												...contact.scheduling,
-												custom_preferences: {
-													...contact.scheduling.custom_preferences,
-													preferred_days: updatedDays,
-												},
-												custom_schedule: true,
-											};
-											updateContactScheduling(contact.id, schedulingUpdate).then(() => {
-												setSelectedContact((prev) => ({
-													...prev,
-													scheduling: schedulingUpdate,
-												}));
-											});
+										onPress={async () => {
+											setLoading(true);
+											try {
+												const updatedDays = isSelected
+													? selectedDays.filter((d) => d !== day.value)
+													: [...selectedDays, day.value];
+												setSelectedDays(updatedDays);
+												const schedulingUpdate = {
+													preferred_days: updatedDays, // Only send what's changing
+												};
+
+												await updateContactScheduling(contact.id, schedulingUpdate);
+
+												if (loadContacts) {
+													await loadContacts();
+												}
+											} catch (error) {
+												console.error('Error updating preferred days:', error);
+												setError('Failed to update preferred days');
+											} finally {
+												setLoading(false);
+											}
 										}}
 										disabled={loading}
 									>
@@ -369,12 +376,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			)}
 
 			{/* Modals */}
+			{/*} Start Time */}
 			<TimePickerModal
 				visible={showStartTimePicker}
 				onClose={() => setShowStartTimePicker(false)}
 				initialHour={getHourFromTimeString(activeHours.start)}
 				title="Earliest Call Time"
-				onSelect={(hour) => {
+				onSelect={async (hour) => {
 					const newTime = formatHourToTimeString(hour);
 					const endHour = getHourFromTimeString(activeHours.end);
 
@@ -383,23 +391,37 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						return;
 					}
 
-					setActiveHours((prev) => ({ ...prev, start: newTime }));
-					handleUpdateScheduling(
-						{
-							active_hours: { ...activeHours, start: newTime },
-						},
-						false
-					);
-					setShowStartTimePicker(false);
+					setLoading(true);
+					try {
+						setActiveHours((prev) => ({ ...prev, start: newTime }));
+						const schedulingUpdate = {
+							active_hours: {
+								start: newTime,
+							},
+						};
+						console.log('Start time update:', JSON.stringify(schedulingUpdate, null, 2));
+						await updateContactScheduling(contact.id, schedulingUpdate);
+
+						if (loadContacts) {
+							await loadContacts();
+						}
+					} catch (error) {
+						console.error('Error updating start time:', error);
+						setError('Failed to update start time');
+					} finally {
+						setLoading(false);
+						setShowStartTimePicker(false);
+					}
 				}}
 			/>
 
+			{/*} End Time */}
 			<TimePickerModal
 				visible={showEndTimePicker}
 				onClose={() => setShowEndTimePicker(false)}
 				initialHour={getHourFromTimeString(activeHours.end)}
 				title="Latest Call Time"
-				onSelect={(hour) => {
+				onSelect={async (hour) => {
 					const newTime = formatHourToTimeString(hour);
 					const startHour = getHourFromTimeString(activeHours.start);
 
@@ -408,14 +430,27 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						return;
 					}
 
-					setActiveHours((prev) => ({ ...prev, end: newTime }));
-					handleUpdateScheduling(
-						{
-							active_hours: { ...activeHours, end: newTime },
-						},
-						false
-					);
-					setShowEndTimePicker(false);
+					setLoading(true);
+					try {
+						setActiveHours((prev) => ({ ...prev, end: newTime }));
+						const schedulingUpdate = {
+							active_hours: {
+								end: newTime,
+							},
+						};
+						console.log('End time update:', JSON.stringify(schedulingUpdate, null, 2));
+						await updateContactScheduling(contact.id, schedulingUpdate);
+
+						if (loadContacts) {
+							await loadContacts();
+						}
+					} catch (error) {
+						console.error('Error updating end time:', error);
+						setError('Failed to update end time');
+					} finally {
+						setLoading(false);
+						setShowEndTimePicker(false);
+					}
 				}}
 			/>
 
