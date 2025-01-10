@@ -156,26 +156,19 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 	// Handle recurring off
 	const handleRecurringOff = async () => {
-		setLoading(true);
-		setError(null);
 		try {
 			const schedulingUpdate = {
 				...contact.scheduling,
 				frequency: null,
 			};
-
-			await updateContactScheduling(contact.id, schedulingUpdate);
 			setFrequency(null);
-
-			setSelectedContact({
-				...contact,
+			await updateContactScheduling(contact.id, schedulingUpdate);
+			setSelectedContact((prev) => ({
+				...prev,
 				scheduling: schedulingUpdate,
-			});
+			}));
 		} catch (error) {
-			setError('Failed to turn off recurring schedule');
-			console.error('Error turning off recurring schedule:', error);
-		} finally {
-			setLoading(false);
+			console.error('Error turning off recurring:', error);
 		}
 	};
 
@@ -203,9 +196,22 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								frequency === option.value && styles.frequencyButtonActive,
 								loading && styles.disabledButton,
 							]}
-							onPress={() => {
+							onPress={async () => {
 								setFrequency(option.value);
-								handleUpdateScheduling({ frequency: option.value }, true);
+								const schedulingUpdate = {
+									...contact.scheduling,
+									frequency: option.value,
+									custom_schedule: true,
+								};
+								try {
+									await updateContactScheduling(contact.id, schedulingUpdate);
+									setSelectedContact((prev) => ({
+										...prev,
+										scheduling: schedulingUpdate,
+									}));
+								} catch (error) {
+									console.error('Error updating frequency:', error);
+								}
 							}}
 							disabled={loading}
 						>
@@ -266,7 +272,17 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									]}
 									onPress={() => {
 										setPriority(option.value);
-										handleUpdateScheduling({ priority: option.value }, false);
+										const schedulingUpdate = {
+											...contact.scheduling,
+											priority: option.value,
+											custom_schedule: true,
+										};
+										updateContactScheduling(contact.id, schedulingUpdate).then(() => {
+											setSelectedContact((prev) => ({
+												...prev,
+												scheduling: schedulingUpdate,
+											}));
+										});
 									}}
 									disabled={loading}
 								>
@@ -297,12 +313,20 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 												? selectedDays.filter((d) => d !== day.value)
 												: [...selectedDays, day.value];
 											setSelectedDays(updatedDays);
-											handleUpdateScheduling(
-												{
+											const schedulingUpdate = {
+												...contact.scheduling,
+												custom_preferences: {
+													...contact.scheduling.custom_preferences,
 													preferred_days: updatedDays,
 												},
-												false
-											);
+												custom_schedule: true,
+											};
+											updateContactScheduling(contact.id, schedulingUpdate).then(() => {
+												setSelectedContact((prev) => ({
+													...prev,
+													scheduling: schedulingUpdate,
+												}));
+											});
 										}}
 										disabled={loading}
 									>
@@ -391,12 +415,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 			<DatePickerModal
 				visible={showDatePicker}
-				selectedDate={new Date()}
+				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
 				onClose={() => setShowDatePicker(false)}
-				onDateSelect={(event, date) => {
+				onDateSelect={async (event, date) => {
 					setShowDatePicker(false);
 					if (date) {
-						handleScheduleContact(date);
+						try {
+							await handleScheduleContact(date);
+						} catch (error) {
+							console.error('Error scheduling custom date:', error);
+						}
 					}
 				}}
 			/>
