@@ -373,13 +373,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				visible={showStartTimePicker}
 				onClose={() => setShowStartTimePicker(false)}
 				initialHour={getHourFromTimeString(activeHours.start)}
-				title="Select Start Time"
+				title="Earliest Call Time"
 				onSelect={(hour) => {
 					const newTime = formatHourToTimeString(hour);
-					if (hour >= getHourFromTimeString(activeHours.end)) {
-						setError('Start time must be before end time');
+					const endHour = getHourFromTimeString(activeHours.end);
+
+					if (hour >= endHour) {
+						Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
 						return;
 					}
+
 					setActiveHours((prev) => ({ ...prev, start: newTime }));
 					handleUpdateScheduling(
 						{
@@ -395,13 +398,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				visible={showEndTimePicker}
 				onClose={() => setShowEndTimePicker(false)}
 				initialHour={getHourFromTimeString(activeHours.end)}
-				title="Select End Time"
+				title="Latest Call Time"
 				onSelect={(hour) => {
 					const newTime = formatHourToTimeString(hour);
-					if (hour <= getHourFromTimeString(activeHours.start)) {
-						setError('End time must be after start time');
+					const startHour = getHourFromTimeString(activeHours.start);
+
+					if (hour <= startHour) {
+						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
 						return;
 					}
+
 					setActiveHours((prev) => ({ ...prev, end: newTime }));
 					handleUpdateScheduling(
 						{
