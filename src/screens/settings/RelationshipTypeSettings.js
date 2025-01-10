@@ -43,7 +43,10 @@ const RelationshipTypeSettings = ({ navigation }) => {
 			...relationshipSettings,
 			[type]: {
 				...relationshipSettings[type],
-				[timeType]: timeString,
+				active_hours: {
+					...relationshipSettings[type]?.active_hours,
+					[timeType === 'activeHoursStart' ? 'start' : 'end']: timeString,
+				},
 			},
 		};
 
@@ -110,16 +113,16 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						{expandedType === type && (
 							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
 								<TimeRangeSelector
-									startTime={relationshipSettings[type]?.activeHoursStart || '09:00'}
-									endTime={relationshipSettings[type]?.activeHoursEnd || '17:00'}
+									startTime={relationshipSettings[type]?.active_hours?.start || '09:00'}
+									endTime={relationshipSettings[type]?.active_hours?.end || '17:00'}
 									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
 									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
 									label="Active Hours"
 								/>
 								<DaySelector
-									selectedDays={relationshipSettings[type]?.preferredDays || []}
+									selectedDays={relationshipSettings[type]?.preferred_days || []}
 									onDayPress={(day) => {
-										const currentDays = relationshipSettings[type]?.preferredDays || [];
+										const currentDays = relationshipSettings[type]?.preferred_days || [];
 										const updatedDays = currentDays.includes(day)
 											? currentDays.filter((d) => d !== day)
 											: [...currentDays, day];
@@ -128,7 +131,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 											...relationshipSettings,
 											[type]: {
 												...relationshipSettings[type],
-												preferredDays: updatedDays,
+												preferred_days: updatedDays,
 											},
 										});
 									}}
