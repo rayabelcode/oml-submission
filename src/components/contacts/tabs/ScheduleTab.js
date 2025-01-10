@@ -313,7 +313,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											try {
 												setSelectedDays(updatedDays);
 												const schedulingUpdate = {
-													...contact.scheduling,
 													custom_preferences: {
 														...contact.scheduling?.custom_preferences,
 														preferred_days: updatedDays,
@@ -322,7 +321,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 												await updateContactScheduling(contact.id, schedulingUpdate);
 												setSelectedContact((prev) => ({
 													...prev,
-													scheduling: schedulingUpdate,
+													scheduling: {
+														...prev.scheduling,
+														custom_preferences: {
+															...prev.scheduling?.custom_preferences,
+															preferred_days: updatedDays,
+														},
+													},
 												}));
 											} catch (error) {
 												console.error('Error updating preferred days:', error);
@@ -393,7 +398,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								start: newTime,
 							},
 						};
-						console.log('Start time update:', JSON.stringify(schedulingUpdate, null, 2));
 						await updateContactScheduling(contact.id, schedulingUpdate);
 
 						if (loadContacts) {
@@ -432,7 +436,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								end: newTime,
 							},
 						};
-						console.log('End time update:', JSON.stringify(schedulingUpdate, null, 2));
 						await updateContactScheduling(contact.id, schedulingUpdate);
 
 						if (loadContacts) {
