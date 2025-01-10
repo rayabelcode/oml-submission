@@ -49,6 +49,7 @@ const SchedulingScreen = ({ navigation }) => {
 	const [expandedSection, setExpandedSection] = useState(null);
 	const [timePickerVisible, setTimePickerVisible] = useState(false);
 	const [activeTimePicker, setActiveTimePicker] = useState(null);
+	const [allPreferences, setAllPreferences] = useState(null);
 
 	useEffect(() => {
 		loadPreferences();
@@ -57,6 +58,7 @@ const SchedulingScreen = ({ navigation }) => {
 	const loadPreferences = async () => {
 		try {
 			const prefs = await getUserPreferences(user.uid);
+			setAllPreferences(prefs);
 			setMinGap(prefs.minimumGapMinutes || DEFAULT_MIN_GAP);
 			setOptimalGap(prefs.optimalGapMinutes || DEFAULT_OPTIMAL_GAP);
 			setGlobalExcludedTimes(
@@ -97,8 +99,13 @@ const SchedulingScreen = ({ navigation }) => {
 	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
 		try {
 			setGlobalExcludedTimes(updatedTimes);
+			const updatedPreferences = {
+				...allPreferences,
+				global_excluded_times: updatedTimes,
+			};
+			setAllPreferences(updatedPreferences);
 			await updateUserPreferences(user.uid, {
-				'scheduling_preferences.global_excluded_times': updatedTimes,
+				scheduling_preferences: updatedPreferences,
 			});
 		} catch (error) {
 			console.error('Error updating global excluded times:', error);
@@ -114,8 +121,13 @@ const SchedulingScreen = ({ navigation }) => {
 	const handleMinGapChange = async (value) => {
 		try {
 			setMinGap(value);
+			const updatedPreferences = {
+				...allPreferences,
+				minimumGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
 			await updateUserPreferences(user.uid, {
-				'scheduling_preferences.minimumGapMinutes': value,
+				scheduling_preferences: updatedPreferences,
 			});
 		} catch (error) {
 			console.error('Error updating minimum gap:', error);
@@ -127,8 +139,13 @@ const SchedulingScreen = ({ navigation }) => {
 	const handleOptimalGapChange = async (value) => {
 		try {
 			setOptimalGap(value);
+			const updatedPreferences = {
+				...allPreferences,
+				optimalGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
 			await updateUserPreferences(user.uid, {
-				'scheduling_preferences.optimalGapMinutes': value,
+				scheduling_preferences: updatedPreferences,
 			});
 		} catch (error) {
 			console.error('Error updating optimal gap:', error);

@@ -5,41 +5,34 @@ export const getUserPreferences = async (userId) => {
 	try {
 		const userDoc = await getDoc(doc(db, 'users', userId));
 		if (!userDoc.exists()) {
-			throw new Error('User document not found');
+			throw new Error('User preferences not found');
 		}
-		const userData = userDoc.data();
-		return {
-			minimumGapMinutes: userData.scheduling_preferences?.minimumGapMinutes || 30,
-			optimalGapMinutes: userData.scheduling_preferences?.optimalGapMinutes || 120,
-			...userData.scheduling_preferences,
-		};
+		return userDoc.data().scheduling_preferences || {};
 	} catch (error) {
 		console.error('Error getting user preferences:', error);
 		throw error;
 	}
 };
 
-export const updateUserPreferences = async (userId, newPreferences) => {
+export const updateUserPreferences = async (userId, updates) => {
 	try {
 		const userRef = doc(db, 'users', userId);
-		const userDoc = await getDoc(userRef);
 
-		if (!userDoc.exists()) {
-			throw new Error('User document not found');
-		}
+		// Convert dot notation to nested object
+		const formattedUpdates = {};
+		Object.entries(updates).forEach(([key, value]) => {
+			if (key.includes('.')) {
+				const [parent, child] = key.split('.');
+				if (!formattedUpdates[parent]) {
+					formattedUpdates[parent] = {};
+				}
+				formattedUpdates[parent][child] = value;
+			} else {
+				formattedUpdates[key] = value;
+			}
+		});
 
-		const updates = {};
-
-		if (newPreferences.minimumGapMinutes !== undefined) {
-			updates['scheduling_preferences.minimumGapMinutes'] = newPreferences.minimumGapMinutes;
-		}
-
-		if (newPreferences.optimalGapMinutes !== undefined) {
-			updates['scheduling_preferences.optimalGapMinutes'] = newPreferences.optimalGapMinutes;
-		}
-
-		await updateDoc(userRef, updates);
-		return true;
+		await updateDoc(userRef, formattedUpdates);
 	} catch (error) {
 		console.error('Error updating user preferences:', error);
 		throw error;

@@ -7,8 +7,8 @@ export const RELATIONSHIP_TYPES = {
 	},
 	friend: {
 		label: 'Friend',
-		icon: 'heart',
-		color: '#FFE6E6',
+		icon: 'person',
+		color: '#F2E6FF',
 	},
 	work: {
 		label: 'Work',
@@ -17,7 +17,7 @@ export const RELATIONSHIP_TYPES = {
 	},
 	personal: {
 		label: 'Personal',
-		icon: 'person',
-		color: '#F2E6FF',
+		icon: 'heart',
+		color: '#FFE6E6',
 	},
 };
