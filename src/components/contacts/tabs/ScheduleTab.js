@@ -70,7 +70,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		setLoading(true);
 		try {
 			let schedulingUpdate = {
-				...contact.scheduling,
 				custom_schedule: true,
 			};
 
@@ -81,10 +80,10 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			if (updates.priority) {
 				schedulingUpdate.priority = updates.priority;
 			}
-			// Handle other custom preference updates
+			// Handle custom preference updates
 			else if (!updates.frequency) {
 				schedulingUpdate.custom_preferences = {
-					...schedulingUpdate.custom_preferences,
+					...contact.scheduling?.custom_preferences,
 					...updates,
 				};
 			}
@@ -97,7 +96,10 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 			setSelectedContact({
 				...contact,
-				scheduling: schedulingUpdate,
+				scheduling: {
+					...contact.scheduling,
+					...schedulingUpdate,
+				},
 			});
 		} catch (error) {
 			setError('Failed to update scheduling preferences');
@@ -109,8 +111,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 	// Handle scheduling
 	const handleScheduleContact = async (customDate = null, schedulingData = null) => {
-		setLoading(true);
-		setError(null);
 		try {
 			const scheduler = new SchedulingService(
 				contact.scheduling.custom_preferences,
@@ -134,34 +134,37 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			const nextContactDate = new Date(reminderDetails.date.toDate());
 			await updateNextContact(contact.id, nextContactDate);
 
-			if (loadContacts) {
-				await loadContacts();
-			}
+			// Update UI immediately
+			setSelectedContact((prev) => ({
+				...prev,
+				next_contact: nextContactDate.toISOString(),
+			}));
 		} catch (error) {
 			setError('Failed to schedule contact');
 			console.error('Error scheduling contact:', error);
-		} finally {
-			setLoading(false);
 		}
 	};
 
 	// Handle recurring off
 	const handleRecurringOff = async () => {
-		setLoading(true);
 		try {
 			setFrequency(null);
 			const schedulingUpdate = {
-				frequency: null, // Only send what's changing
+				frequency: null,
 			};
 			await updateContactScheduling(contact.id, schedulingUpdate);
-			if (loadContacts) {
-				await loadContacts();
-			}
+			setSelectedContact((prev) => ({
+				...prev,
+				scheduling: {
+					...prev.scheduling,
+					frequency: null,
+				},
+			}));
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');
-		} finally {
-			setLoading(false);
+			// Revert on failure
+			setFrequency(contact?.scheduling?.frequency || null);
 		}
 	};
 
@@ -190,24 +193,24 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								loading && styles.disabledButton,
 							]}
 							onPress={async () => {
-								setLoading(true);
 								try {
 									setFrequency(option.value);
 									const schedulingUpdate = {
-										frequency: option.value, // Only send what's changing
+										frequency: option.value,
 									};
-
 									await updateContactScheduling(contact.id, schedulingUpdate);
-
-									// After successful update, fetch fresh contact data
-									if (loadContacts) {
-										await loadContacts(); // Refresh parent's data
-									}
+									setSelectedContact((prev) => ({
+										...prev,
+										scheduling: {
+											...prev.scheduling,
+											frequency: option.value,
+										},
+									}));
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setError('Failed to update frequency');
-								} finally {
-									setLoading(false);
+									// Revert on failure
+									setFrequency(contact?.scheduling?.frequency || null);
 								}
 							}}
 							disabled={loading}
@@ -262,33 +265,28 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							{PRIORITY_OPTIONS.map((option) => (
 								<TouchableOpacity
 									key={option.value}
-									style={[
-										styles.priorityButton,
-										priority === option.value && styles.priorityButtonActive,
-										loading && styles.disabledButton,
-									]}
+									style={[styles.priorityButton, priority === option.value && styles.priorityButtonActive]}
 									onPress={async () => {
-										setLoading(true);
 										try {
 											setPriority(option.value);
 											const schedulingUpdate = {
-												priority: option.value, // Only send what's changing
+												priority: option.value,
 											};
-
 											await updateContactScheduling(contact.id, schedulingUpdate);
-
-											// After successful update, fetch fresh contact data
-											if (loadContacts) {
-												await loadContacts(); // Refresh parent's data
-											}
+											setSelectedContact((prev) => ({
+												...prev,
+												scheduling: {
+													...prev.scheduling,
+													priority: option.value,
+												},
+											}));
 										} catch (error) {
 											console.error('Error updating priority:', error);
 											setError('Failed to update priority');
-										} finally {
-											setLoading(false);
+											// Revert on failure
+											setPriority(contact?.scheduling?.priority || 'normal');
 										}
 									}}
-									disabled={loading}
 								>
 									<Text style={[styles.priorityText, priority === option.value && styles.priorityTextActive]}>
 										{option.label}
@@ -307,35 +305,31 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								return (
 									<TouchableOpacity
 										key={day.value}
-										style={[
-											styles.dayButton,
-											isSelected && styles.dayButtonActive,
-											loading && styles.disabledButton,
-										]}
+										style={[styles.dayButton, isSelected && styles.dayButtonActive]}
 										onPress={async () => {
-											setLoading(true);
+											const updatedDays = isSelected
+												? selectedDays.filter((d) => d !== day.value)
+												: [...selectedDays, day.value];
 											try {
-												const updatedDays = isSelected
-													? selectedDays.filter((d) => d !== day.value)
-													: [...selectedDays, day.value];
 												setSelectedDays(updatedDays);
 												const schedulingUpdate = {
-													preferred_days: updatedDays, // Only send what's changing
+													...contact.scheduling,
+													custom_preferences: {
+														...contact.scheduling?.custom_preferences,
+														preferred_days: updatedDays,
+													},
 												};
-
 												await updateContactScheduling(contact.id, schedulingUpdate);
-
-												if (loadContacts) {
-													await loadContacts();
-												}
+												setSelectedContact((prev) => ({
+													...prev,
+													scheduling: schedulingUpdate,
+												}));
 											} catch (error) {
 												console.error('Error updating preferred days:', error);
 												setError('Failed to update preferred days');
-											} finally {
-												setLoading(false);
+												setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
 											}
 										}}
-										disabled={loading}
 									>
 										<Text style={[styles.dayText, isSelected && styles.dayTextActive]}>{day.label}</Text>
 									</TouchableOpacity>
