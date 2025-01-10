@@ -1,4 +1,5 @@
 import { serverTimestamp } from 'firebase/firestore';
+import { RELATIONSHIP_TYPES } from '../../constants/relationships';
 
 const standardizePhoneNumber = (phone) => {
 	const cleaned = phone.replace(/\D/g, '');
@@ -26,7 +27,7 @@ export const SCHEDULING_CONSTANTS = {
 		NORMAL: 'normal',
 		HIGH: 'high',
 	},
-	RELATIONSHIP_TYPES: ['friend', 'family', 'personal', 'work'],
+	RELATIONSHIP_TYPES: Object.keys(RELATIONSHIP_TYPES),
 };
 
 export const createContactData = (basicData, userId) => {

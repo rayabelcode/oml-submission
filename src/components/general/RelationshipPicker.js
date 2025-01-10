@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { useTheme, spacing } from '../../../src/context/ThemeContext';
-import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
+import { RELATIONSHIP_TYPES, RELATIONSHIP_TYPE_ARRAY } from '../../../constants/relationships';
 import { useCommonStyles } from '../../../src/styles/common';
 
 const RelationshipPicker = ({ value, onChange, showLabel = true, style = {} }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
+
+	const relationshipLabels = RELATIONSHIP_TYPE_ARRAY.map((type) => RELATIONSHIP_TYPES[type].label);
 
 	return (
 		<View style={style}>
@@ -27,16 +29,16 @@ const RelationshipPicker = ({ value, onChange, showLabel = true, style = {} }) =
 				</Text>
 			)}
 			<SegmentedControl
-				values={RELATIONSHIP_TYPES.map((type) => type.charAt(0).toUpperCase() + type.slice(1))}
-				selectedIndex={RELATIONSHIP_TYPES.indexOf(value)}
+				values={relationshipLabels}
+				selectedIndex={RELATIONSHIP_TYPE_ARRAY.indexOf(value)}
 				onChange={(event) => {
 					const index = event.nativeEvent.selectedSegmentIndex;
-					onChange(RELATIONSHIP_TYPES[index]);
+					onChange(RELATIONSHIP_TYPE_ARRAY[index]);
 				}}
 				tintColor={colors.primary}
 				backgroundColor={colors.background.primary}
-				fontStyle={{ color: colors.text.primary }}  // Add this line
-				activeFontStyle={{ color: colors.background.primary }}  // Add this line
+				fontStyle={{ color: colors.text.primary }}
+				activeFontStyle={{ color: colors.background.primary }}
 				style={{
 					height: 45,
 					marginBottom: spacing.xl,

@@ -1,23 +1,26 @@
-// constants/relationships.js
 export const RELATIONSHIP_TYPES = {
 	family: {
 		label: 'Family',
 		icon: 'home',
-		color: '#E6F3FF',
+		color: '#4A90E2', // Blue
 	},
 	friend: {
 		label: 'Friend',
 		icon: 'person',
-		color: '#F2E6FF',
+		color: '#9C27B0', // Purple
 	},
 	work: {
 		label: 'Work',
 		icon: 'briefcase',
-		color: '#E6FFE6',
+		color: '#4CAF50', // Green
 	},
 	personal: {
 		label: 'Personal',
 		icon: 'heart',
-		color: '#FFE6E6',
+		color: '#E26B6B', // Red
 	},
 };
+
+export const RELATIONSHIP_TYPE_ARRAY = Object.keys(RELATIONSHIP_TYPES);
+
+export const DEFAULT_RELATIONSHIP_TYPE = 'friend';

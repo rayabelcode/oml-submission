@@ -75,94 +75,85 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		);
 	}
 
-    return (
-        <View style={styles.container}>
-            <View style={[styles.headerSettingsPages, { flexDirection: 'row', alignItems: 'center' }]}>
-                <TouchableOpacity 
-                    style={[styles.settingItemLeft, { flex: 1 }]} 
-                    onPress={() => navigation.goBack()}
-                >
-                    <Icon name="chevron-back" size={24} color={colors.text.primary} />
-                    <Text style={[styles.profileName, { fontSize: 20 }]}>Relationship Types</Text>
-                </TouchableOpacity>
-            </View>
+	return (
+		<View style={styles.container}>
+			<View style={[styles.headerSettingsPages, { flexDirection: 'row', alignItems: 'center' }]}>
+				<TouchableOpacity style={[styles.settingItemLeft, { flex: 1 }]} onPress={() => navigation.goBack()}>
+					<Icon name="chevron-back" size={24} color={colors.text.primary} />
+					<Text style={[styles.profileName, { fontSize: 20 }]}>Relationship Types</Text>
+				</TouchableOpacity>
+			</View>
 
-            <ScrollView style={styles.settingsList}>
-                {Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
-                    <View
-                        key={type}
-                        style={[styles.formSection, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
-                    >
-                        <TouchableOpacity
-                            activeOpacity={1}
-                            style={[styles.settingItem, { paddingVertical: 15 }]}
-                            onPress={() => setExpandedType(expandedType === type ? null : type)}
-                        >
-                            <View style={styles.settingItemLeft}>
-                                <Icon 
-                                    name={icon} 
-                                    size={24} 
-                                    color={type === 'family' ? '#4A90E2' : 
-                                           type === 'friend' ? '#E26B6B' :
-                                           type === 'work' ? '#4CAF50' :
-                                           '#9C27B0'} 
-                                />
-                                <Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>{label}</Text>
-                            </View>
-                            <Icon
-                                name={expandedType === type ? 'chevron-up' : 'chevron-down'}
-                                size={24}
-                                color={colors.text.secondary}
-                            />
-                        </TouchableOpacity>
+			<ScrollView style={styles.settingsList}>
+				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
+					<View
+						key={type}
+						style={[styles.formSection, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
+					>
+						<TouchableOpacity
+							activeOpacity={1}
+							style={[styles.settingItem, { paddingVertical: 15 }]}
+							onPress={() => setExpandedType(expandedType === type ? null : type)}
+						>
+							<View style={styles.settingItemLeft}>
+								<Icon name={icon} size={24} color={RELATIONSHIP_TYPES[type].color} />
 
-                        {expandedType === type && (
-                            <View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
-                                <TimeRangeSelector
-                                    startTime={relationshipSettings[type]?.activeHoursStart || '09:00'}
-                                    endTime={relationshipSettings[type]?.activeHoursEnd || '17:00'}
-                                    onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
-                                    onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
-                                    label="Active Hours"
-                                />
-                                <DaySelector
-                                    selectedDays={relationshipSettings[type]?.preferredDays || []}
-                                    onDayPress={(day) => {
-                                        const currentDays = relationshipSettings[type]?.preferredDays || [];
-                                        const updatedDays = currentDays.includes(day)
-                                            ? currentDays.filter((d) => d !== day)
-                                            : [...currentDays, day];
+								<Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>{label}</Text>
+							</View>
+							<Icon
+								name={expandedType === type ? 'chevron-up' : 'chevron-down'}
+								size={24}
+								color={colors.text.secondary}
+							/>
+						</TouchableOpacity>
 
-                                        handleSettingsChange({
-                                            ...relationshipSettings,
-                                            [type]: {
-                                                ...relationshipSettings[type],
-                                                preferredDays: updatedDays,
-                                            },
-                                        });
-                                    }}
-                                />
-                            </View>
-                        )}
-                    </View>
-                ))}
-            </ScrollView>
+						{expandedType === type && (
+							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
+								<TimeRangeSelector
+									startTime={relationshipSettings[type]?.activeHoursStart || '09:00'}
+									endTime={relationshipSettings[type]?.activeHoursEnd || '17:00'}
+									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
+									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
+									label="Active Hours"
+								/>
+								<DaySelector
+									selectedDays={relationshipSettings[type]?.preferredDays || []}
+									onDayPress={(day) => {
+										const currentDays = relationshipSettings[type]?.preferredDays || [];
+										const updatedDays = currentDays.includes(day)
+											? currentDays.filter((d) => d !== day)
+											: [...currentDays, day];
 
-            <TimePickerModal
-                visible={timePickerVisible}
-                onClose={() => setTimePickerVisible(false)}
-                onSelect={handleTimeSelect}
-                initialHour={
-                    activeTimePicker
-                        ? parseInt(
-                            relationshipSettings[activeTimePicker.type]?.[activeTimePicker.timeType]?.split(':')[0] || '9'
-                        )
-                        : 9
-                }
-                title={`Select ${activeTimePicker?.timeType === 'activeHoursStart' ? 'Start' : 'End'} Time`}
-            />
-        </View>
-    );
+										handleSettingsChange({
+											...relationshipSettings,
+											[type]: {
+												...relationshipSettings[type],
+												preferredDays: updatedDays,
+											},
+										});
+									}}
+								/>
+							</View>
+						)}
+					</View>
+				))}
+			</ScrollView>
+
+			<TimePickerModal
+				visible={timePickerVisible}
+				onClose={() => setTimePickerVisible(false)}
+				onSelect={handleTimeSelect}
+				initialHour={
+					activeTimePicker
+						? parseInt(
+								relationshipSettings[activeTimePicker.type]?.[activeTimePicker.timeType]?.split(':')[0] || '9'
+						  )
+						: 9
+				}
+				title={`Select ${activeTimePicker?.timeType === 'activeHoursStart' ? 'Start' : 'End'} Time`}
+			/>
+		</View>
+	);
 };
 
 export default RelationshipTypeSettings;
