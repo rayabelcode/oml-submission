@@ -40,7 +40,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	// State management
 	const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 	const [frequency, setFrequency] = useState(contact?.scheduling?.frequency || null);
-	const [priority, setPriority] = useState(contact?.scheduling?.custom_preferences?.priority || 'normal');
+	const [priority, setPriority] = useState(contact?.scheduling?.priority || 'normal');
 	const [selectedDays, setSelectedDays] = useState(
 		contact?.scheduling?.custom_preferences?.preferred_days || []
 	);
@@ -69,16 +69,27 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		setError(null);
 		setLoading(true);
 		try {
-			const updatedPreferences = {
-				...contact?.scheduling?.custom_preferences,
-				...updates,
-			};
-
-			await updateContactScheduling(contact.id, {
+			let schedulingUpdate = {
 				...contact.scheduling,
 				custom_schedule: true,
-				custom_preferences: updatedPreferences,
-			});
+			};
+
+			// Handle frequency and priority updates at root level
+			if (updates.frequency) {
+				schedulingUpdate.frequency = updates.frequency;
+			}
+			if (updates.priority) {
+				schedulingUpdate.priority = updates.priority;
+			}
+			// Handle other custom preference updates
+			else if (!updates.frequency) {
+				schedulingUpdate.custom_preferences = {
+					...schedulingUpdate.custom_preferences,
+					...updates,
+				};
+			}
+
+			await updateContactScheduling(contact.id, schedulingUpdate);
 
 			if (shouldSchedule) {
 				await handleScheduleContact();
@@ -86,14 +97,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 			setSelectedContact({
 				...contact,
-				scheduling: {
-					...contact.scheduling,
-					custom_schedule: true,
-					custom_preferences: updatedPreferences,
-				},
+				scheduling: schedulingUpdate,
 			});
-
-			await loadContacts();
 		} catch (error) {
 			setError('Failed to update scheduling preferences');
 			console.error('Error updating scheduling preferences:', error);
@@ -183,6 +188,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 			{/* Frequency Grid */}
 			<View style={styles.gridContainer}>
+				<Text style={styles.sectionTitle}>Contact Frequency</Text>
 				<View style={styles.frequencyGrid}>
 					{FREQUENCY_OPTIONS.map((option) => (
 						<TouchableOpacity
@@ -194,7 +200,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							]}
 							onPress={() => {
 								setFrequency(option.value);
-								handleUpdateScheduling({ frequency: option.value });
+								handleUpdateScheduling({ frequency: option.value }, true);
 							}}
 							disabled={loading}
 						>
@@ -286,7 +292,12 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 												? selectedDays.filter((d) => d !== day.value)
 												: [...selectedDays, day.value];
 											setSelectedDays(updatedDays);
-											handleUpdateScheduling({ preferred_days: updatedDays }, false);
+											handleUpdateScheduling(
+												{
+													preferred_days: updatedDays,
+												},
+												false
+											);
 										}}
 										disabled={loading}
 									>

@@ -193,7 +193,6 @@ export const useScheduleStyles = () => {
 
 		// Next Contact Display
 		nextContactContainer: {
-			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
 			padding: spacing.md,
 			marginTop: spacing.lg,
@@ -202,12 +201,12 @@ export const useScheduleStyles = () => {
 			borderColor: colors.border,
 		},
 		nextContactLabel: {
-			fontSize: 14,
+			fontSize: 16,
 			color: colors.text.secondary,
 			marginBottom: spacing.xs,
 		},
 		nextContactDate: {
-			fontSize: 16,
+			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
 		},
