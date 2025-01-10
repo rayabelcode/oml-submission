@@ -447,6 +447,13 @@ const createStyles = (colors) =>
 			marginBottom: spacing.sm,
 			paddingVertical: spacing.xs,
 		},
+		iconBackground: {
+			width: 36,
+			height: 36,
+			borderRadius: 18,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
 	});
 
 export const useStyles = () => {
