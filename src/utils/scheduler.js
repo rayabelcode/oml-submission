@@ -258,6 +258,57 @@ export class SchedulingService {
 		}
 	}
 
+	async scheduleCustomDate(contact, customDate) {
+		try {
+			// Validate input
+			if (!customDate || !(customDate instanceof Date) || isNaN(customDate)) {
+				throw new Error('Invalid date provided');
+			}
+
+			const dt = DateTime.fromJSDate(customDate).setZone(this.timeZone);
+			let scheduledDate = customDate;
+
+			// Check if we have active hours for this day
+			const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+			if (typePrefs?.active_hours) {
+				const { start, end } = typePrefs.active_hours;
+				const [startHour] = start.split(':').map(Number);
+				const [endHour] = end.split(':').map(Number);
+
+				// If the date falls outside active hours, try to adjust to afternoon
+				const hour = dt.hour;
+				if (hour < startHour || hour > endHour) {
+					// Try afternoon (2 PM) first
+					const afternoonTime = dt.set({ hour: 14, minute: 0 });
+					if (
+						!this.isTimeBlocked(afternoonTime.toJSDate(), contact) &&
+						!this.hasTimeConflict(afternoonTime.toJSDate())
+					) {
+						scheduledDate = afternoonTime.toJSDate();
+					} else {
+						// If afternoon doesn't work, try to find any available slot
+						scheduledDate = this.findAvailableTimeSlot(customDate, contact);
+					}
+				}
+			}
+
+			// Create reminder object
+			return {
+				date: Timestamp.fromDate(scheduledDate),
+				contact_id: contact.id,
+				created_at: Timestamp.now(),
+				updated_at: Timestamp.now(),
+				snoozed: false,
+				follow_up: false,
+				ai_suggestions: [],
+				score: this.calculateTimeSlotScore(scheduledDate, contact),
+				flexibility_used: scheduledDate.getTime() !== customDate.getTime(),
+			};
+		} catch (error) {
+			throw new Error(`Failed to schedule custom date: ${error.message}`);
+		}
+	}
+
 	adjustForPriorityFlexibility(date, priority = 'normal') {
 		const flexibility = PRIORITY_FLEXIBILITY[priority.toLowerCase()] || PRIORITY_FLEXIBILITY.normal;
 		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
