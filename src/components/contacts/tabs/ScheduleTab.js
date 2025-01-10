@@ -92,7 +92,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			await updateContactScheduling(contact.id, schedulingUpdate);
 
 			if (shouldSchedule) {
-				await handleScheduleContact();
+				await handleScheduleContact(null, schedulingUpdate);
 			}
 
 			setSelectedContact({
@@ -108,12 +108,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	};
 
 	// Handle scheduling
-	const handleScheduleContact = async (customDate = null) => {
+	const handleScheduleContact = async (customDate = null, schedulingData = null) => {
 		setLoading(true);
 		setError(null);
 		try {
+			const currentScheduling = schedulingData || contact.scheduling;
 			const scheduler = new SchedulingService(
-				contact.scheduling?.custom_preferences,
+				currentScheduling?.custom_preferences,
 				[],
 				Intl.DateTimeFormat().resolvedOptions().timeZone
 			);
@@ -122,31 +123,28 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			let reminderDetails;
 
 			if (customDate) {
-				reminderDetails = await scheduler.scheduleCustomDate(contact, customDate);
-			} else if (frequency) {
-				reminderDetails = await scheduler.scheduleReminder(contact, lastContact, frequency);
+				reminderDetails = await scheduler.scheduleCustomDate(
+					{ ...contact, scheduling: currentScheduling },
+					customDate
+				);
+			} else if (currentScheduling?.frequency) {
+				reminderDetails = await scheduler.scheduleReminder(
+					{ ...contact, scheduling: currentScheduling },
+					lastContact,
+					currentScheduling.frequency
+				);
 			} else {
 				throw new Error('No scheduling parameters provided');
 			}
 
 			const nextContactDate = new Date(reminderDetails.date.toDate());
-
 			const updatedContact = {
 				...contact,
 				next_contact: nextContactDate.toISOString(),
-				scheduling: {
-					...contact.scheduling,
-					frequency,
-					custom_schedule: showAdvancedSettings,
-				},
+				scheduling: currentScheduling,
 			};
 
 			setSelectedContact(updatedContact);
-
-			await updateContactScheduling(contact.id, {
-				frequency,
-				custom_schedule: showAdvancedSettings,
-			});
 			await updateNextContact(contact.id, nextContactDate);
 		} catch (error) {
 			setError('Failed to schedule contact');
@@ -161,10 +159,17 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			setFrequency(null);
-			await updateContactScheduling(contact.id, {
+			const schedulingUpdate = {
 				...contact.scheduling,
 				frequency: null,
+			};
+
+			await updateContactScheduling(contact.id, schedulingUpdate);
+			setFrequency(null);
+
+			setSelectedContact({
+				...contact,
+				scheduling: schedulingUpdate,
 			});
 		} catch (error) {
 			setError('Failed to turn off recurring schedule');
