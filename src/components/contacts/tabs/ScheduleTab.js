@@ -7,6 +7,7 @@ import DatePickerModal from '../../modals/DatePickerModal';
 import { updateContact, updateContactScheduling, updateNextContact } from '../../../utils/firestore';
 import { SchedulingService } from '../../../utils/scheduler';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const FREQUENCY_OPTIONS = [
 	{ label: 'Daily', value: 'daily' },
@@ -18,6 +19,7 @@ const FREQUENCY_OPTIONS = [
 ];
 
 const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
+	const navigation = useNavigation();
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
@@ -229,17 +231,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							<Text style={[styles.sectionTitle, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
 								Schedule Settings
 							</Text>
-							<View style={styles.settingRow}>
-								<Text style={styles.scheduleLabel}>Minimum Gap Between Calls</Text>
-								<TouchableOpacity
-									style={[styles.frequencyOption]}
-									onPress={() => {
-										Alert.alert('Coming Soon', 'Gap adjustment will be added in the next update');
-									}}
-								>
-									<Text style={styles.frequencyText}>{contact?.scheduling?.minimum_gap || 30} minutes</Text>
-								</TouchableOpacity>
-							</View>
+							<View style={styles.settingRow}></View>
 
 							<TouchableOpacity
 								style={[styles.advancedSettingsButton, { marginTop: spacing.lg }]}

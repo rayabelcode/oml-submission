@@ -1,56 +1,60 @@
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-
-export const defaultPreferences = {
-	schedule: {
-		frequency: 'weekly',
-		preferredDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-		preferredTimes: {
-			start: '09:00',
-			end: '17:00',
-		},
-		excludedTimes: [
-			{
-				start: '12:00',
-				end: '13:00',
-				days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-			},
-		],
-		timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-		maxRemindersPerDay: 5,
-		minimumGapMinutes: 30,
-	},
-	notifications: {
-		enableFollowUp: true,
-		followUpDelayMinutes: 60,
-		showSuggestions: true,
-	},
-};
 
 export const getUserPreferences = async (userId) => {
 	try {
-		const userPrefsDoc = await getDoc(doc(db, 'user_preferences', userId));
-		if (!userPrefsDoc.exists()) {
-			await setDoc(doc(db, 'user_preferences', userId), defaultPreferences);
-			return defaultPreferences;
+		const userDoc = await getDoc(doc(db, 'users', userId));
+		if (!userDoc.exists()) {
+			throw new Error('User document not found');
 		}
-		return userPrefsDoc.data();
+		const userData = userDoc.data();
+		return {
+			minimumGapMinutes: userData.scheduling_preferences?.minimumGapMinutes || 30,
+			optimalGapMinutes: userData.scheduling_preferences?.optimalGapMinutes || 120,
+			...userData.scheduling_preferences,
+		};
 	} catch (error) {
 		console.error('Error getting user preferences:', error);
-		return defaultPreferences;
+		throw error;
 	}
 };
 
 export const updateUserPreferences = async (userId, newPreferences) => {
 	try {
-		await setDoc(
-			doc(db, 'user_preferences', userId),
-			{ ...defaultPreferences, ...newPreferences },
-			{ merge: true }
-		);
+		const userRef = doc(db, 'users', userId);
+		const userDoc = await getDoc(userRef);
+
+		if (!userDoc.exists()) {
+			throw new Error('User document not found');
+		}
+
+		const updates = {};
+
+		if (newPreferences.minimumGapMinutes !== undefined) {
+			updates['scheduling_preferences.minimumGapMinutes'] = newPreferences.minimumGapMinutes;
+		}
+
+		if (newPreferences.optimalGapMinutes !== undefined) {
+			updates['scheduling_preferences.optimalGapMinutes'] = newPreferences.optimalGapMinutes;
+		}
+
+		await updateDoc(userRef, updates);
 		return true;
 	} catch (error) {
 		console.error('Error updating user preferences:', error);
-		return false;
+		throw error;
 	}
+};
+
+export const defaultPreferences = {
+	minimumGapMinutes: 30,
+	optimalGapMinutes: 120,
+	global_excluded_times: [
+		{
+			days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+			end: '07:00',
+			start: '23:00',
+		},
+	],
+	max_reminders_per_day: 5,
 };

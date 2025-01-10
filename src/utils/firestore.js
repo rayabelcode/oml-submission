@@ -42,12 +42,86 @@ export const createUserDocument = async (userId, userData) => {
 			created_at: serverTimestamp(),
 			notifications_enabled: true,
 			photo_url: null,
+			scheduling_preferences: {
+				global_excluded_times: [
+					{
+						days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+						end: '07:00',
+						start: '23:00',
+					},
+				],
+				max_reminders_per_day: 5,
+				minimumGapMinutes: 30,
+				optimalGapMinutes: 120,
+				relationship_types: {
+					family: {
+						active_hours: {
+							end: '21:00',
+							start: '10:00',
+						},
+						excluded_times: [],
+						preferred_days: ['saturday', 'sunday'],
+					},
+					friend: {
+						active_hours: {
+							end: '21:00',
+							start: '17:00',
+						},
+						excluded_times: [],
+						preferred_days: ['friday', 'saturday', 'sunday'],
+					},
+					personal: {
+						active_hours: {
+							end: '21:00',
+							start: '17:00',
+						},
+						excluded_times: [],
+						preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+					},
+					work: {
+						active_hours: {
+							end: '17:00',
+							start: '09:00',
+						},
+						excluded_times: [
+							{
+								days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+								end: '13:00',
+								start: '12:00',
+							},
+						],
+						preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+					},
+				},
+				scheduling_history: {
+					enabled: true,
+				},
+				patterns: {},
+				snooze_options: {
+					default_options: [
+						{
+							hours: 3,
+							label: 'Later Today',
+						},
+						{
+							days: 1,
+							label: 'Tomorrow',
+						},
+						{
+							days: 7,
+							label: 'Next Week',
+						},
+					],
+					version: 2,
+				},
+			},
 		});
 	} catch (error) {
 		console.error('Error creating user document:', error);
 		throw error;
 	}
 };
+
 // Contact functions with real-time capabilities
 export const subscribeToContacts = (userId, callback) => {
 	if (!userId) {

@@ -71,5 +71,9 @@ service cloud.firestore {
     allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
 }
 
+    match /user_preferences/{userId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
   }
 }
