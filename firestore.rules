@@ -21,7 +21,7 @@ service cloud.firestore {
             .hasAny(['user_id', 'created_at']) || 
             request.resource.data.user_id == request.auth.uid ||
             request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['contact_history', 'last_updated'])
+            .hasOnly(['contact_history', 'last_updated', 'scheduling'])
         );
     allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
 }
