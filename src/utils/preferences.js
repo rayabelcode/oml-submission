@@ -16,9 +16,14 @@ export const getUserPreferences = async (userId) => {
 
 export const updateUserPreferences = async (userId, updates) => {
 	try {
+		// Remove all undefined values
+		const sanitizedUpdates = JSON.parse(
+			JSON.stringify(updates, (key, value) => (value === undefined ? null : value))
+		);
+
 		const userRef = doc(db, 'users', userId);
 		await updateDoc(userRef, {
-			scheduling_preferences: updates.scheduling_preferences,
+			scheduling_preferences: sanitizedUpdates.scheduling_preferences,
 			last_updated: serverTimestamp(),
 		});
 	} catch (error) {
