@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext'; // Import ThemeContext
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePickerComponent from '../../components/general/ImagePicker';
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +15,7 @@ import { cacheManager } from '../../utils/cache';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors } = useTheme();
+	const { colors, spacing, layout } = useTheme(); // Access colors, spacing, and layout from ThemeContext
 	const { user, signOut } = useAuth();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
@@ -165,53 +165,82 @@ const ProfileScreen = ({ navigation }) => {
 					</View>
 				</View>
 
-				<View style={styles.formSection}>
-					<View style={styles.inputGroup}>
-						<Text style={styles.label}>First Name</Text>
-						<TextInput
-							style={[styles.input, styles.inputText]}
-							value={firstName}
-							onChangeText={(text) => handleTextChange(text, 'firstName')}
-							placeholder="Enter first name"
-							placeholderTextColor={colors.text.secondary}
-							returnKeyType="next"
-							onSubmitEditing={() => {
-								lastNameInputRef.current.focus();
-							}}
-							blurOnSubmit={false}
-							autoCorrect={false}
-							autoCapitalize="none"
-						/>
-					</View>
+				{/* Card Section for First Name, Last Name, and Save Changes */}
+				<View
+					style={{
+						backgroundColor: colors.background.secondary,
+						padding: spacing.md,
+						marginHorizontal: spacing.md,
+						marginBottom: spacing.lg,
+						borderRadius: layout.borderRadius.md,
+					}}
+				>
+					<View style={styles.formSection}>
+						<View style={styles.inputGroup}>
+							<Text style={styles.label}>First Name</Text>
+							<TextInput
+								style={[
+									styles.input,
+									styles.inputText,
+									{
+										borderWidth: 1,
+										borderColor: colors.border,
+										borderRadius: layout.borderRadius.sm,
+										padding: spacing.sm,
+									},
+								]}
+								value={firstName}
+								onChangeText={(text) => handleTextChange(text, 'firstName')}
+								placeholder="Enter first name"
+								placeholderTextColor={colors.text.secondary}
+								returnKeyType="next"
+								onSubmitEditing={() => {
+									lastNameInputRef.current.focus();
+								}}
+								blurOnSubmit={false}
+								autoCorrect={false}
+								autoCapitalize="none"
+							/>
+						</View>
 
-					<View style={styles.inputGroup}>
-						<Text style={styles.label}>Last Name</Text>
-						<TextInput
-							ref={lastNameInputRef}
-							style={[styles.input, styles.inputText]}
-							value={lastName}
-							onChangeText={(text) => handleTextChange(text, 'lastName')}
-							placeholder="Enter last name"
-							placeholderTextColor={colors.text.secondary}
-							returnKeyType="done"
-							onSubmitEditing={handleSaveProfile}
-							autoCorrect={false}
-							autoCapitalize="none"
-						/>
-					</View>
+						<View style={styles.inputGroup}>
+							<Text style={styles.label}>Last Name</Text>
+							<TextInput
+								ref={lastNameInputRef}
+								style={[
+									styles.input,
+									styles.inputText,
+									{
+										borderWidth: 1,
+										borderColor: colors.border,
+										borderRadius: layout.borderRadius.sm,
+										padding: spacing.sm,
+									},
+								]}
+								value={lastName}
+								onChangeText={(text) => handleTextChange(text, 'lastName')}
+								placeholder="Enter last name"
+								placeholderTextColor={colors.text.secondary}
+								returnKeyType="done"
+								onSubmitEditing={handleSaveProfile}
+								autoCorrect={false}
+								autoCapitalize="none"
+							/>
+						</View>
 
-					<View style={{ alignItems: 'center' }}>
-						<TouchableOpacity
-							style={[
-								styles.saveButton,
-								!hasChanges && styles.saveButtonDisabled,
-								{ width: 'auto', minWidth: 200 },
-							]}
-							onPress={handleSaveProfile}
-							disabled={!hasChanges}
-						>
-							<Text style={styles.saveButtonText}>Save Changes</Text>
-						</TouchableOpacity>
+						<View style={{ alignItems: 'center' }}>
+							<TouchableOpacity
+								style={[
+									styles.saveButton,
+									!hasChanges && styles.saveButtonDisabled,
+									{ width: 'auto', minWidth: 200 },
+								]}
+								onPress={handleSaveProfile}
+								disabled={!hasChanges}
+							>
+								<Text style={styles.saveButtonText}>Save Changes</Text>
+							</TouchableOpacity>
+						</View>
 					</View>
 				</View>
 

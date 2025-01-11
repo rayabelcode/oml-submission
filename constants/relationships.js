@@ -39,13 +39,7 @@ export const RELATIONSHIP_DEFAULTS = {
 		friend: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
 	},
 	excluded_times: {
-		work: [
-			{
-				days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-				start: '12:00',
-				end: '13:00',
-			},
-		],
+		work: [],
 		personal: [],
 		family: [],
 		friend: [],

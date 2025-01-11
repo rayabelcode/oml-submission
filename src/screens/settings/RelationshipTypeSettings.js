@@ -12,7 +12,7 @@ import { RELATIONSHIP_TYPES, RELATIONSHIP_DEFAULTS } from '../../../constants/re
 
 const RelationshipTypeSettings = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing } = useTheme();
+	const { colors, spacing, layout } = useTheme();
 	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [expandedType, setExpandedType] = useState(null);
@@ -20,36 +20,63 @@ const RelationshipTypeSettings = ({ navigation }) => {
 	const [timePickerVisible, setTimePickerVisible] = useState(false);
 	const [activeTimePicker, setActiveTimePicker] = useState(null);
 
+	// Load preferences on initial mount
 	useEffect(() => {
 		loadPreferences();
 	}, [user.uid]);
 
+	// Load user preferences
 	const loadPreferences = async () => {
 		try {
+			setLoading(true);
 			const prefs = await getUserPreferences(user.uid);
-			const initializedSettings = {};
-			Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
-				initializedSettings[type] = {
-					active_hours: {
-						start: prefs[type]?.active_hours?.start || RELATIONSHIP_DEFAULTS.active_hours[type].start,
-						end: prefs[type]?.active_hours?.end || RELATIONSHIP_DEFAULTS.active_hours[type].end,
-					},
-					preferred_days: prefs[type]?.preferred_days || RELATIONSHIP_DEFAULTS.preferred_days[type],
-					excluded_times: prefs[type]?.excluded_times || RELATIONSHIP_DEFAULTS.excluded_times[type],
-				};
-			});
-			setRelationshipSettings(initializedSettings);
-			setLoading(false);
+			setRelationshipSettings(initializeSettings(prefs));
 		} catch (error) {
 			console.error('Error loading preferences:', error);
+		} finally {
 			setLoading(false);
 		}
 	};
 
+	// Initialize settings with defaults for missing fields
+	const initializeSettings = (prefs) => {
+		const relationshipTypes = prefs.relationship_types || {};
+		const initializedSettings = {};
+
+		Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
+			const typeData = relationshipTypes[type] || {};
+			initializedSettings[type] = {
+				active_hours: {
+					start: typeData.active_hours?.start || RELATIONSHIP_DEFAULTS.active_hours[type].start,
+					end: typeData.active_hours?.end || RELATIONSHIP_DEFAULTS.active_hours[type].end,
+				},
+				preferred_days: typeData.preferred_days || RELATIONSHIP_DEFAULTS.preferred_days[type],
+				excluded_times: typeData.excluded_times || RELATIONSHIP_DEFAULTS.excluded_times[type],
+			};
+		});
+		return initializedSettings;
+	};
+
+	// Validate time ranges and update settings
 	const handleTimeSelect = (hour) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const { type, timeType } = activeTimePicker;
 
+		const start =
+			timeType === 'activeHoursStart' ? timeString : relationshipSettings[type]?.active_hours?.start;
+		const end = timeType === 'activeHoursEnd' ? timeString : relationshipSettings[type]?.active_hours?.end;
+
+		// Validate time range
+		if (timeType === 'activeHoursStart' && end && hour >= parseInt(end.split(':')[0])) {
+			Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
+			return;
+		}
+		if (timeType === 'activeHoursEnd' && start && hour <= parseInt(start.split(':')[0])) {
+			Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
+			return;
+		}
+
+		// Update settings optimistically
 		const updatedSettings = {
 			...relationshipSettings,
 			[type]: {
@@ -65,38 +92,51 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		setTimePickerVisible(false);
 	};
 
+	// Handle settings change
 	const handleSettingsChange = async (updatedSettings) => {
+		setRelationshipSettings(updatedSettings);
 		try {
-			setRelationshipSettings(updatedSettings);
 			await updateUserPreferences(user.uid, {
-				relationship_types: updatedSettings,
+				scheduling_preferences: {
+					relationship_types: updatedSettings,
+				},
 			});
 		} catch (error) {
 			console.error('Error updating relationship settings:', error);
+			loadPreferences();
 		}
 	};
 
+	// Handle day toggling
+	const toggleDaySelection = (type, day) => {
+		const currentDays = relationshipSettings[type]?.preferred_days || [];
+		const updatedDays = currentDays.includes(day)
+			? currentDays.filter((d) => d !== day)
+			: [...currentDays, day];
+
+		const updatedSettings = {
+			...relationshipSettings,
+			[type]: {
+				...relationshipSettings[type],
+				preferred_days: updatedDays,
+			},
+		};
+
+		handleSettingsChange(updatedSettings);
+	};
+
+	// Reset settings to defaults
 	const handleResetToDefault = () => {
 		Alert.alert(
 			'Reset to Default',
 			'This will reset all relationship type settings to their default values. This action cannot be undone.',
 			[
-				{
-					text: 'Cancel',
-					style: 'cancel',
-				},
+				{ text: 'Cancel', style: 'cancel' },
 				{
 					text: 'Reset',
 					style: 'destructive',
 					onPress: async () => {
-						const defaultSettings = {};
-						Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
-							defaultSettings[type] = {
-								active_hours: RELATIONSHIP_DEFAULTS.active_hours[type],
-								preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[type],
-								excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[type],
-							};
-						});
+						const defaultSettings = initializeSettings({});
 						await handleSettingsChange(defaultSettings);
 					},
 				},
@@ -104,6 +144,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		);
 	};
 
+	// Show time picker
 	const showTimePicker = (type, timeType) => {
 		setActiveTimePicker({ type, timeType });
 		setTimePickerVisible(true);
@@ -127,24 +168,21 @@ const RelationshipTypeSettings = ({ navigation }) => {
 			</View>
 
 			<ScrollView style={styles.settingsList}>
-				<View style={styles.relationshipIntroContainer}>
+				<View style={[styles.relationshipIntroContainer, styles.card]}>
 					<Text style={styles.relationshipIntroText}>
 						Set preferred contact times and days for each of your relationship types.
 					</Text>
 				</View>
 
 				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
-					<View
-						key={type}
-						style={[styles.formSection, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
-					>
+					<View key={type} style={[styles.formSection, styles.card]}>
 						<TouchableOpacity
 							activeOpacity={1}
 							style={[styles.settingItem, { paddingVertical: spacing.md }]}
 							onPress={() => setExpandedType(expandedType === type ? null : type)}
 						>
 							<View style={styles.settingItemLeft}>
-								<Icon name={icon} size={24} color={RELATIONSHIP_TYPES[type].color} />
+								<Icon name={icon} size={24} color={color} />
 								<Text style={[styles.settingText, { fontSize: 18 }]}>{label}</Text>
 							</View>
 							<Icon
@@ -157,41 +195,22 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						{expandedType === type && (
 							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
 								<TimeRangeSelector
-									startTime={
-										relationshipSettings[type]?.active_hours?.start ||
-										RELATIONSHIP_DEFAULTS.active_hours[type].start
-									}
-									endTime={
-										relationshipSettings[type]?.active_hours?.end ||
-										RELATIONSHIP_DEFAULTS.active_hours[type].end
-									}
+									startTime={relationshipSettings[type]?.active_hours?.start}
+									endTime={relationshipSettings[type]?.active_hours?.end}
 									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
 									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
 									label="Active Hours"
 								/>
 								<DaySelector
 									selectedDays={relationshipSettings[type]?.preferred_days || []}
-									onDayPress={(day) => {
-										const currentDays = relationshipSettings[type]?.preferred_days || [];
-										const updatedDays = currentDays.includes(day)
-											? currentDays.filter((d) => d !== day)
-											: [...currentDays, day];
-
-										handleSettingsChange({
-											...relationshipSettings,
-											[type]: {
-												...relationshipSettings[type],
-												preferred_days: updatedDays,
-											},
-										});
-									}}
+									onDayPress={(day) => toggleDaySelection(type, day)}
 								/>
 							</View>
 						)}
 					</View>
 				))}
 
-				<View style={styles.resetContainer}>
+				<View style={[styles.resetContainer]}>
 					<TouchableOpacity style={styles.resetButton} onPress={handleResetToDefault}>
 						<Text style={styles.resetButtonText}>Reset to Default</Text>
 					</TouchableOpacity>
@@ -207,10 +226,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						? parseInt(
 								relationshipSettings[activeTimePicker.type]?.active_hours?.[
 									activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
-								]?.split(':')[0] ||
-									RELATIONSHIP_DEFAULTS.active_hours[activeTimePicker.type][
-										activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
-									].split(':')[0]
+								]?.split(':')[0]
 						  )
 						: 9
 				}

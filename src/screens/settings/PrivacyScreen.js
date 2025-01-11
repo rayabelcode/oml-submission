@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +10,7 @@ import { exportUserData, deleteUserAccount } from '../../utils/firestore';
 
 const PrivacyScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors } = useTheme();
+	const { colors, spacing, layout } = useTheme();
 	const { user, signOut } = useAuth();
 
 	const handleExport = async (contactsOnly) => {
@@ -44,14 +44,7 @@ const PrivacyScreen = ({ navigation }) => {
 
 			await FileSystem.writeAsStringAsync(fileUri, csvContent);
 
-			if (Platform.OS === 'ios') {
-				await Sharing.shareAsync(fileUri);
-			} else {
-				await Sharing.shareAsync(fileUri, {
-					mimeType: 'text/csv',
-					dialogTitle: `Export OnMyList ${contactsOnly ? 'Contacts' : 'Full'} Data`,
-				});
-			}
+			await Sharing.shareAsync(fileUri);
 		} catch (error) {
 			console.error('Error exporting data:', error);
 			Alert.alert('Error', 'Failed to export data');
@@ -84,6 +77,7 @@ const PrivacyScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
+			{/* Header */}
 			<View style={styles.headerSettingsPages}>
 				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
@@ -92,60 +86,67 @@ const PrivacyScreen = ({ navigation }) => {
 			</View>
 
 			<ScrollView style={styles.settingsList}>
-				<View style={styles.formSection}>
-					<View style={styles.inputGroup}>
-						<Text style={[styles.label, { fontSize: 18 }]}>Export Data</Text>
-						<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(false)}>
-							<View style={styles.settingItemLeft}>
-								<Icon name="download-outline" size={24} color={colors.text.secondary} />
-								<Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>Export All Data</Text>
-							</View>
-						</TouchableOpacity>
-						<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(true)}>
-							<View style={styles.settingItemLeft}>
-								<Icon name="people-outline" size={24} color={colors.text.secondary} />
-								<Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>
-									Export Contacts Only
-								</Text>
-							</View>
-						</TouchableOpacity>
-					</View>
+				{/* Export Data Section */}
+				<View style={[styles.formSection, styles.card]}>
+					<Text style={[styles.sectionTitle, { textAlign: 'center' }]}>Export Data</Text>
+					<Text style={[styles.sectionDescription, { textAlign: 'center' }]}>
+						Download your data for backup or transfer.
+					</Text>
 
-					<View style={[styles.inputGroup, { marginTop: 30 }]}>
-						<Text style={[styles.label, { fontSize: 18 }]}>Delete Account</Text>
-						<Text
-							style={[
-								styles.settingText,
-								{
-									color: colors.danger,
-									marginBottom: 20,
-									fontSize: 16,
-									lineHeight: 22,
-								},
-							]}
-						>
-							Warning: This action cannot be undone. All your contacts, history, and personal data will be
-							permanently deleted.
-						</Text>
+					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(false)}>
+						<View style={styles.settingItemLeft}>
+							<Icon name="download-outline" size={24} color={colors.text.primary} />
+							<Text style={styles.settingText}>Export All Data</Text>
+						</View>
+					</TouchableOpacity>
+
+					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(true)}>
+						<View style={styles.settingItemLeft}>
+							<Icon name="people-outline" size={24} color={colors.text.secondary} />
+							<Text style={styles.settingText}>Export Contacts Only</Text>
+						</View>
+					</TouchableOpacity>
+				</View>
+
+				{/* Delete Account Section */}
+				<View style={[styles.formSection, styles.card]}>
+					<Text style={[styles.sectionTitle, { textAlign: 'center', color: colors.danger }]}>
+						Delete Account
+					</Text>
+					<Text
+						style={[
+							styles.sectionDescription,
+							{ textAlign: 'center', marginBottom: spacing.lg, color: colors.text.secondary },
+						]}
+					>
+						Warning: This action is irreversible and will delete all your data.
+					</Text>
+
+					{/* Delete Account Button */}
+					<View style={{ alignItems: 'center', marginVertical: spacing.md }}>
 						<TouchableOpacity
-							style={[styles.settingItem, { borderTopWidth: 1, borderTopColor: colors.border }]}
+							style={{
+								backgroundColor: colors.danger,
+								paddingVertical: spacing.sm,
+								paddingHorizontal: spacing.md,
+								borderRadius: layout.borderRadius.md,
+								flexDirection: 'row',
+								alignItems: 'center',
+								justifyContent: 'center',
+							}}
 							onPress={handleDelete}
 						>
-							<View style={styles.settingItemLeft}>
-								<Icon name="trash-outline" size={24} color={colors.danger} />
-								<Text
-									style={[
-										styles.settingText,
-										{
-											color: colors.danger,
-											fontSize: 18,
-											marginLeft: 15,
-										},
-									]}
-								>
-									Delete Account
-								</Text>
-							</View>
+							<Icon name="trash-outline" size={24} color={colors.background.primary} />
+							<Text
+								style={{
+									color: colors.background.primary,
+									fontSize: 18,
+									fontWeight: '600',
+									marginLeft: spacing.sm,
+								}}
+							>
+								Delete Account
+							</Text>
 						</TouchableOpacity>
 					</View>
 				</View>

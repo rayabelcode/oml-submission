@@ -40,7 +40,7 @@ const DEFAULT_OPTIMAL_GAP = defaultPreferences.optimalGapMinutes;
 
 const SchedulingScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing } = useTheme();
+	const { colors, spacing, layout } = useTheme();
 	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [minGap, setMinGap] = useState(DEFAULT_MIN_GAP);
@@ -70,11 +70,46 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
+	const handleMinGapChange = async (value) => {
+		try {
+			setMinGap(value); // Update the state
+			const updatedPreferences = {
+				...allPreferences,
+				minimumGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
+			await updateUserPreferences(user.uid, {
+				scheduling_preferences: updatedPreferences,
+			});
+		} catch (error) {
+			console.error('Error updating minimum gap:', error);
+			Alert.alert('Error', 'Failed to update minimum gap. Please try again.');
+		}
+	};
+
+	const handleOptimalGapChange = async (value) => {
+		try {
+			setOptimalGap(value); // Update the state
+			const updatedPreferences = {
+				...allPreferences,
+				optimalGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
+			await updateUserPreferences(user.uid, {
+				scheduling_preferences: updatedPreferences,
+			});
+		} catch (error) {
+			console.error('Error updating optimal gap:', error);
+			Alert.alert('Error', 'Failed to update optimal gap. Please try again.');
+		}
+	};
+
 	const handleTimeSelect = (hour) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const index = activeTimePicker.index;
 		const timeType = activeTimePicker.timeType;
-
+	
+		// Clone the current times to avoid direct mutation
 		const updatedTimes = [...globalExcludedTimes];
 		if (!updatedTimes[index]) {
 			updatedTimes[index] = {
@@ -84,10 +119,55 @@ const SchedulingScreen = ({ navigation }) => {
 			};
 		}
 		updatedTimes[index][timeType] = timeString;
-
-		handleGlobalExcludedTimeChange(updatedTimes);
+	
+		// Temporarily save the updated time without validating yet
+		setGlobalExcludedTimes(updatedTimes);
+	
+		// Validate the full range only if both times are set
+		const { start, end } = updatedTimes[index];
+		if (start && end) {
+			const [startHour, startMinute] = start.split(':').map(Number);
+			const [endHour, endMinute] = end.split(':').map(Number);
+	
+			const startInMinutes = startHour * 60 + startMinute;
+			const endInMinutes = endHour * 60 + endMinute;
+	
+			let excludedDuration;
+			if (startInMinutes < endInMinutes) {
+				// Normal case: same day exclusion
+				excludedDuration = endInMinutes - startInMinutes;
+			} else {
+				// Overnight case: spans two days
+				excludedDuration = 1440 - startInMinutes + endInMinutes; // Total minutes in a day = 1440
+			}
+	
+			const allowedDuration = 1440 - excludedDuration; // Total minutes in a day minus excluded time
+	
+			// Check if allowed duration is less than 8 hours
+			if (allowedDuration < 480) {
+				Alert.alert(
+					'Invalid Time Range',
+					'Excluded time range leaves less than 8 hours for scheduling calls. Please adjust your times.',
+					[
+						{
+							text: 'OK',
+							onPress: () => {
+								// Revert the change if validation fails
+								setGlobalExcludedTimes(globalExcludedTimes);
+							},
+						},
+					]
+				);
+				setTimePickerVisible(false);
+				return;
+			}
+		}
+	
+		// Close the picker after saving the temporary change
 		setTimePickerVisible(false);
+		handleGlobalExcludedTimeChange(updatedTimes);
 	};
+	
 
 	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
 		try {
@@ -103,47 +183,6 @@ const SchedulingScreen = ({ navigation }) => {
 		} catch (error) {
 			console.error('Error updating global excluded times:', error);
 			Alert.alert('Error', 'Failed to update excluded times');
-		}
-	};
-
-	const showTimePicker = (index, timeType) => {
-		setActiveTimePicker({ index, timeType });
-		setTimePickerVisible(true);
-	};
-
-	const handleMinGapChange = async (value) => {
-		try {
-			setMinGap(value);
-			const updatedPreferences = {
-				...allPreferences,
-				minimumGapMinutes: value,
-			};
-			setAllPreferences(updatedPreferences);
-			await updateUserPreferences(user.uid, {
-				scheduling_preferences: updatedPreferences,
-			});
-		} catch (error) {
-			console.error('Error updating minimum gap:', error);
-			setMinGap(minGap);
-			Alert.alert('Error', 'Failed to update minimum gap');
-		}
-	};
-
-	const handleOptimalGapChange = async (value) => {
-		try {
-			setOptimalGap(value);
-			const updatedPreferences = {
-				...allPreferences,
-				optimalGapMinutes: value,
-			};
-			setAllPreferences(updatedPreferences);
-			await updateUserPreferences(user.uid, {
-				scheduling_preferences: updatedPreferences,
-			});
-		} catch (error) {
-			console.error('Error updating optimal gap:', error);
-			setOptimalGap(optimalGap);
-			Alert.alert('Error', 'Failed to update optimal gap');
 		}
 	};
 
@@ -184,6 +223,11 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
+	const showTimePicker = (index, timeType) => {
+		setActiveTimePicker({ index, timeType });
+		setTimePickerVisible(true);
+	};
+
 	const formatDuration = (minutes) => {
 		if (minutes < 60) return `${minutes} minutes`;
 		const hours = Math.floor(minutes / 60);
@@ -212,15 +256,14 @@ const SchedulingScreen = ({ navigation }) => {
 
 			<ScrollView style={styles.settingsList}>
 				{/* Call Gap Section */}
-				<View style={styles.formSection}>
-					<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
+				<View style={[styles.formSection, styles.card]}>
 					<Text style={[styles.label, { fontSize: 18, textAlign: 'center', marginTop: spacing.md }]}>
 						Time Between Calls
 					</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
 						Minimum time between scheduled calls.
@@ -229,7 +272,7 @@ const SchedulingScreen = ({ navigation }) => {
 					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('minimum')}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="time-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: 15 }}>
+							<View style={{ marginLeft: spacing.sm }}>
 								<Text style={[styles.settingText, { fontSize: 18 }]}>Minimum Gap</Text>
 								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
 									{formatDuration(minGap)}
@@ -242,7 +285,7 @@ const SchedulingScreen = ({ navigation }) => {
 					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('optimal')}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="timer-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: 15 }}>
+							<View style={{ marginLeft: spacing.sm }}>
 								<Text style={[styles.settingText, { fontSize: 18 }]}>Optimal Gap</Text>
 								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
 									{formatDuration(optimalGap)}
@@ -253,18 +296,16 @@ const SchedulingScreen = ({ navigation }) => {
 					</TouchableOpacity>
 				</View>
 
-				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
-
 				{/* Global Excluded Times Section */}
-				<View style={styles.formSection}>
-					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Global Excluded Times</Text>
+				<View style={[styles.formSection, styles.card]}>
+					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Sleep Hours</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
-						When calls should not be scheduled.
+						Set your sleeping hours so calls are not scheduled during this time.
 					</Text>
 
 					<TouchableOpacity
@@ -273,7 +314,7 @@ const SchedulingScreen = ({ navigation }) => {
 					>
 						<View style={styles.settingItemLeft}>
 							<Icon name="moon-outline" size={24} color={colors.text.secondary} />
-							<Text style={[styles.settingText, { fontSize: 18 }]}>Excluded Times</Text>
+							<Text style={[styles.settingText, { fontSize: 18 }]}>Pick Your Times</Text>
 						</View>
 						<Icon
 							name={expandedSection === 'globalExcluded' ? 'chevron-up' : 'chevron-down'}
@@ -307,15 +348,13 @@ const SchedulingScreen = ({ navigation }) => {
 						))}
 				</View>
 
-				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
-
 				{/* Relationship Settings Section */}
-				<View style={styles.formSection}>
+				<View style={[styles.formSection, styles.card]}>
 					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Relationship Settings</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
 						Set preferences by relationship type.

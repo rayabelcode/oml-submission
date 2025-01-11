@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
 	const signOut = async () => {
 		try {
 			await firebaseSignOut(auth);
+			setUser(null); // Clear user state on sign out
 			return { error: null };
 		} catch (error) {
 			return { error };
@@ -102,6 +103,7 @@ export const AuthProvider = ({ children }) => {
 
 	const value = {
 		user,
+		setUser, // Expose setUser
 		signUp,
 		signIn,
 		signOut,
