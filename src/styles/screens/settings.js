@@ -162,7 +162,7 @@ const createStyles = (colors) =>
 			fontWeight: '600',
 		},
 		logoutContainer: {
-			padding: spacing.md,
+			padding: spacing.xs,
 			marginTop: spacing.xs,
 			marginBottom: spacing.xs,
 		},
