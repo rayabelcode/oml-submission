@@ -454,6 +454,39 @@ const createStyles = (colors) =>
 			justifyContent: 'center',
 			alignItems: 'center',
 		},
+		// RelationshipTypeSettings.js
+		relationshipIntroContainer: {
+			backgroundColor: colors.background.secondary,
+			padding: spacing.md,
+			marginTop: spacing.md,
+			marginBottom: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginHorizontal: spacing.md,
+		},
+		relationshipIntroText: {
+			fontSize: 18,
+			lineHeight: 24,
+			color: colors.text.secondary,
+			textAlign: 'center',
+		},
+		resetContainer: {
+			padding: spacing.md,
+			alignItems: 'center',
+			marginTop: spacing.md,
+			marginBottom: spacing.xl,
+		},
+		resetButton: {
+			backgroundColor: '#ff7770',
+			marginTop: spacing.lg,
+			paddingVertical: spacing.md,
+			paddingHorizontal: spacing.lg,
+			borderRadius: layout.borderRadius.md,
+		},
+		resetButtonText: {
+			color: colors.background.primary,
+			fontSize: 16,
+			fontWeight: '700',
+		},
 	});
 
 export const useStyles = () => {

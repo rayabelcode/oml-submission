@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -8,14 +8,7 @@ import { getUserPreferences, updateUserPreferences } from '../../utils/preferenc
 import TimeRangeSelector from '../../components/settings/TimeRangeSelector';
 import DaySelector from '../../components/settings/DaySelector';
 import TimePickerModal from '../../components/modals/TimePickerModal';
-import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
-
-const DEFAULT_ACTIVE_HOURS = {
-	work: { start: '09:00', end: '17:00' },
-	personal: { start: '17:00', end: '21:00' },
-	family: { start: '10:00', end: '21:00' },
-	friend: { start: '17:00', end: '21:00' },
-};
+import { RELATIONSHIP_TYPES, RELATIONSHIP_DEFAULTS } from '../../../constants/relationships';
 
 const RelationshipTypeSettings = ({ navigation }) => {
 	const styles = useStyles();
@@ -38,11 +31,11 @@ const RelationshipTypeSettings = ({ navigation }) => {
 			Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
 				initializedSettings[type] = {
 					active_hours: {
-						start: prefs[type]?.active_hours?.start || DEFAULT_ACTIVE_HOURS[type].start,
-						end: prefs[type]?.active_hours?.end || DEFAULT_ACTIVE_HOURS[type].end,
+						start: prefs[type]?.active_hours?.start || RELATIONSHIP_DEFAULTS.active_hours[type].start,
+						end: prefs[type]?.active_hours?.end || RELATIONSHIP_DEFAULTS.active_hours[type].end,
 					},
-					preferred_days: prefs[type]?.preferred_days || [],
-					excluded_times: prefs[type]?.excluded_times || [],
+					preferred_days: prefs[type]?.preferred_days || RELATIONSHIP_DEFAULTS.preferred_days[type],
+					excluded_times: prefs[type]?.excluded_times || RELATIONSHIP_DEFAULTS.excluded_times[type],
 				};
 			});
 			setRelationshipSettings(initializedSettings);
@@ -83,6 +76,34 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		}
 	};
 
+	const handleResetToDefault = () => {
+		Alert.alert(
+			'Reset to Default',
+			'This will reset all relationship type settings to their default values. This action cannot be undone.',
+			[
+				{
+					text: 'Cancel',
+					style: 'cancel',
+				},
+				{
+					text: 'Reset',
+					style: 'destructive',
+					onPress: async () => {
+						const defaultSettings = {};
+						Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
+							defaultSettings[type] = {
+								active_hours: RELATIONSHIP_DEFAULTS.active_hours[type],
+								preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[type],
+								excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[type],
+							};
+						});
+						await handleSettingsChange(defaultSettings);
+					},
+				},
+			]
+		);
+	};
+
 	const showTimePicker = (type, timeType) => {
 		setActiveTimePicker({ type, timeType });
 		setTimePickerVisible(true);
@@ -106,6 +127,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 			</View>
 
 			<ScrollView style={styles.settingsList}>
+				<View style={styles.relationshipIntroContainer}>
+					<Text style={styles.relationshipIntroText}>
+						Set preferred contact times and days for each of your relationship types.
+					</Text>
+				</View>
+
 				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
 					<View
 						key={type}
@@ -113,12 +140,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 					>
 						<TouchableOpacity
 							activeOpacity={1}
-							style={[styles.settingItem, { paddingVertical: 15 }]}
+							style={[styles.settingItem, { paddingVertical: spacing.md }]}
 							onPress={() => setExpandedType(expandedType === type ? null : type)}
 						>
 							<View style={styles.settingItemLeft}>
 								<Icon name={icon} size={24} color={RELATIONSHIP_TYPES[type].color} />
-								<Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>{label}</Text>
+								<Text style={[styles.settingText, { fontSize: 18 }]}>{label}</Text>
 							</View>
 							<Icon
 								name={expandedType === type ? 'chevron-up' : 'chevron-down'}
@@ -131,9 +158,13 @@ const RelationshipTypeSettings = ({ navigation }) => {
 							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
 								<TimeRangeSelector
 									startTime={
-										relationshipSettings[type]?.active_hours?.start || DEFAULT_ACTIVE_HOURS[type].start
+										relationshipSettings[type]?.active_hours?.start ||
+										RELATIONSHIP_DEFAULTS.active_hours[type].start
 									}
-									endTime={relationshipSettings[type]?.active_hours?.end || DEFAULT_ACTIVE_HOURS[type].end}
+									endTime={
+										relationshipSettings[type]?.active_hours?.end ||
+										RELATIONSHIP_DEFAULTS.active_hours[type].end
+									}
 									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
 									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
 									label="Active Hours"
@@ -159,6 +190,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						)}
 					</View>
 				))}
+
+				<View style={styles.resetContainer}>
+					<TouchableOpacity style={styles.resetButton} onPress={handleResetToDefault}>
+						<Text style={styles.resetButtonText}>Reset to Default</Text>
+					</TouchableOpacity>
+				</View>
 			</ScrollView>
 
 			<TimePickerModal
@@ -171,7 +208,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 								relationshipSettings[activeTimePicker.type]?.active_hours?.[
 									activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
 								]?.split(':')[0] ||
-									DEFAULT_ACTIVE_HOURS[activeTimePicker.type][
+									RELATIONSHIP_DEFAULTS.active_hours[activeTimePicker.type][
 										activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
 									].split(':')[0]
 						  )
