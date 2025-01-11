@@ -8,7 +8,7 @@ import { ThemeProvider } from './src/context/ThemeContext';
 import SharedNavigator from './src/navigation/SharedNavigator';
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
-import { Alert, LogBox, Platform, View } from 'react-native';
+import { Alert, LogBox, Platform, View, ScrollView } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from './src/utils/notifications';
 import * as Font from 'expo-font';
@@ -17,6 +17,15 @@ import { navigationRef } from './src/navigation/RootNavigation';
 import { PreloadProvider } from './src/context/PreloadContext';
 import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
 import { cacheManager } from './src/utils/cache';
+
+// Disable ScrollView scrollbar globally
+const originalScrollViewRender = ScrollView.render;
+ScrollView.render = function render(props) {
+	return originalScrollViewRender.call(this, {
+		...props,
+		showsVerticalScrollIndicator: false, // Disable vertical scrollbar
+	});
+};
 
 Sentry.init({
 	dsn: Constants.expoConfig?.extra?.SENTRY_DSN || Constants.manifest?.extra?.SENTRY_DSN,
