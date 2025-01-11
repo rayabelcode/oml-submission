@@ -93,11 +93,6 @@ const SettingsList = ({
 					</View>
 				</TouchableOpacity>
 			</View>
-
-			<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-				<Icon name="log-out-outline" size={20} color={colors.danger} />
-				<Text style={styles.logoutText}>Log Out</Text>
-			</TouchableOpacity>
 		</ScrollView>
 	);
 };
