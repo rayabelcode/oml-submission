@@ -77,7 +77,7 @@ const createStyles = (colors) =>
 			borderBottomColor: colors.border,
 		},
 		sectionTitle: {
-			fontSize: 16,
+			fontSize: 20,
 			fontWeight: '500',
 			marginBottom: spacing.sm,
 			color: colors.text.secondary,
@@ -94,7 +94,8 @@ const createStyles = (colors) =>
 		},
 		settingText: {
 			marginLeft: spacing.md,
-			fontSize: 16,
+			fontSize: 18,
+			fontWeight: '500',
 			color: colors.text.primary,
 		},
 		loginContainer: {
@@ -273,16 +274,27 @@ const createStyles = (colors) =>
 		},
 		card: {
 			backgroundColor: colors.background.secondary,
-			borderRadius: layout.borderRadius.lg,
-			padding: spacing.lg,
+			borderRadius: layout.borderRadius.md,
+			padding: spacing.md,
+			marginVertical: spacing.md,
 			shadowColor: '#000',
-			shadowOffset: {
-				width: 0,
-				height: 2,
-			},
+			shadowOffset: { width: 0, height: 2 },
 			shadowOpacity: 0.1,
-			shadowRadius: 3.84,
-			elevation: 5,
+			shadowRadius: 4,
+			elevation: 2,
+		},
+		// Section Descriptions
+		sectionDescription: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+		},
+		// Highlighted actionable items
+		settingHighlighted: {
+			backgroundColor: colors.primary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.sm,
+			marginBottom: spacing.sm,
 		},
 		socialButton: {
 			flexDirection: 'row',
@@ -368,6 +380,7 @@ const createStyles = (colors) =>
 			borderColor: colors.background.primary,
 		},
 		formSection: {
+			paddingVertical: spacing.lg,
 			padding: spacing.md,
 		},
 		inputGroup: {
