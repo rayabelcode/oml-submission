@@ -179,6 +179,11 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
+	const showTimePicker = (index, timeType) => {
+		setActiveTimePicker({ index, timeType });
+		setTimePickerVisible(true);
+	};
+
 	const formatDuration = (minutes) => {
 		if (minutes < 60) return `${minutes} minutes`;
 		const hours = Math.floor(minutes / 60);
