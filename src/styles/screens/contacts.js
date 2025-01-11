@@ -408,11 +408,11 @@ const useStyles = () => {
 		historyDate: {
 			fontSize: 14,
 			color: colors.text.secondary,
-			marginBottom: 5,
 		},
 		historyNotes: {
 			fontSize: 16,
 			color: colors.text.primary,
+			marginTop: spacing.sm,
 		},
 		historyNotesInput: {
 			borderWidth: 1,
@@ -424,12 +424,19 @@ const useStyles = () => {
 		},
 		historyActions: {
 			flexDirection: 'row',
-			justifyContent: 'flex-end',
-			marginTop: spacing.sm,
+			alignItems: 'center',
 		},
 		historyActionButton: {
-			padding: 8,
-			marginLeft: 8,
+			marginLeft: spacing.sm,
+		},
+		historyEntryHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingBottom: spacing.xs,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			marginBottom: spacing.sm,
 		},
 		emptyHistoryText: {
 			textAlign: 'center',
@@ -773,23 +780,18 @@ const useStyles = () => {
 		aiButton: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			justifyContent: 'center',
 			backgroundColor: colors.primary,
-			padding: spacing.md,
-			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.sm,
-			marginBottom: spacing.lg,
-			gap: spacing.sm,
-			elevation: 2,
-			shadowColor: '#000',
-			shadowOffset: { width: 0, height: 2 },
-			shadowOpacity: 0.2,
-			shadowRadius: 2,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.sm,
+			justifyContent: 'center',
+			width: 100,
+			marginRight: spacing.sm,
 		},
 		aiButtonText: {
 			color: colors.background.primary,
-			fontSize: 18,
-			fontWeight: '600',
+			fontSize: 14,
+			marginLeft: spacing.xs,
 		},
 		aiModalContainer: {
 			position: 'absolute',

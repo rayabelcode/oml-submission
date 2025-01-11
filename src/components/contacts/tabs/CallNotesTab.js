@@ -200,6 +200,16 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					placeholderTextColor={colors.text.secondary}
 				/>
 				<View style={styles.callNotesControls}>
+					<TouchableOpacity
+						style={styles.aiButton}
+						onPress={() => {
+							handleGetSuggestions();
+							setShowAISuggestions(true);
+						}}
+					>
+						<Icon name="bulb-outline" size={18} color="#FFFFFF" />
+						<Text style={styles.aiButtonText}>AI Topics</Text>
+					</TouchableOpacity>
 					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
 						<Text style={styles.dateButtonText}>
 							{callDate.toDateString() === new Date().toDateString()
@@ -214,60 +224,52 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						<Text style={commonStyles.primaryButtonText}>Submit</Text>
 					</TouchableOpacity>
 				</View>
-
-				<TouchableOpacity
-					style={styles.aiButton}
-					onPress={() => {
-						handleGetSuggestions();
-						setShowAISuggestions(true);
-					}}
-				>
-					<Icon name="bulb-outline" size={22} color="#FFFFFF" />
-					<Text style={styles.aiButtonText}>Get Conversation Topics</Text>
-				</TouchableOpacity>
 			</View>
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
 				<Text style={styles.sectionTitle}>Contact History</Text>
 				{history.length > 0 ? (
 					history.map((entry, index) => (
-						<View key={index} style={styles.historyEntry}>
-							<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-							{editMode === index ? (
-								<TextInput
-									style={[styles.historyNotesInput, { color: colors.text.primary }]}
-									value={entry.notes}
-									onChangeText={(text) => {
-										const updatedHistory = [...history];
-										updatedHistory[index].notes = text;
-										setHistory(updatedHistory);
-									}}
-									multiline
-								/>
-							) : (
-								<Text style={styles.historyNotes}>{entry.notes}</Text>
-							)}
-							<View style={styles.historyActions}>
-								<TouchableOpacity
-									style={styles.historyActionButton}
-									onPress={() =>
-										editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-									}
-								>
-									<Icon
-										name={editMode === index ? 'checkmark-outline' : 'create-outline'}
-										size={20}
-										color={colors.primary}
-									/>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={styles.historyActionButton}
-									onPress={() => handleDeleteHistory(index)}
-								>
-									<Icon name="trash-outline" size={20} color={colors.danger} />
-								</TouchableOpacity>
-							</View>
-						</View>
+<View key={index} style={styles.historyEntry}>
+	<View style={styles.historyEntryHeader}>
+		<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+		<View style={styles.historyActions}>
+			<TouchableOpacity
+				style={styles.historyActionButton}
+				onPress={() =>
+					editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
+				}
+			>
+				<Icon
+					name={editMode === index ? 'checkmark-outline' : 'create-outline'}
+					size={20}
+					color={colors.primary}
+				/>
+			</TouchableOpacity>
+			<TouchableOpacity
+				style={styles.historyActionButton}
+				onPress={() => handleDeleteHistory(index)}
+			>
+				<Icon name="trash-outline" size={20} color={colors.danger} />
+			</TouchableOpacity>
+		</View>
+	</View>
+	{editMode === index ? (
+		<TextInput
+			style={[styles.historyNotesInput, { color: colors.text.primary }]}
+			value={entry.notes}
+			onChangeText={(text) => {
+				const updatedHistory = [...history];
+				updatedHistory[index].notes = text;
+				setHistory(updatedHistory);
+			}}
+			multiline
+		/>
+	) : (
+		<Text style={styles.historyNotes}>{entry.notes}</Text>
+	)}
+</View>
+
 					))
 				) : (
 					<Text style={styles.emptyHistoryText}>
