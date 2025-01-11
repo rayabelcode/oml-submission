@@ -13,7 +13,7 @@ import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { getUserPreferences, updateUserPreferences } from '../../utils/preferences';
+import { getUserPreferences, updateUserPreferences, defaultPreferences } from '../../utils/preferences';
 import TimeRangeSelector from '../../components/settings/TimeRangeSelector';
 import DaySelector from '../../components/settings/DaySelector';
 import TimePickerModal from '../../components/modals/TimePickerModal';
@@ -35,8 +35,8 @@ const DURATION_OPTIONS = {
 	],
 };
 
-const DEFAULT_MIN_GAP = 30;
-const DEFAULT_OPTIMAL_GAP = 120;
+const DEFAULT_MIN_GAP = defaultPreferences.minimumGapMinutes;
+const DEFAULT_OPTIMAL_GAP = defaultPreferences.optimalGapMinutes;
 
 const SchedulingScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -61,15 +61,8 @@ const SchedulingScreen = ({ navigation }) => {
 			setAllPreferences(prefs);
 			setMinGap(prefs.minimumGapMinutes || DEFAULT_MIN_GAP);
 			setOptimalGap(prefs.optimalGapMinutes || DEFAULT_OPTIMAL_GAP);
-			setGlobalExcludedTimes(
-				prefs.global_excluded_times || [
-					{
-						days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-						start: '23:00',
-						end: '07:00',
-					},
-				]
-			);
+			setGlobalExcludedTimes(prefs.global_excluded_times || defaultPreferences.global_excluded_times);
+
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading preferences:', error);

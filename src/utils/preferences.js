@@ -7,7 +7,7 @@ export const getUserPreferences = async (userId) => {
 		if (!userDoc.exists()) {
 			throw new Error('User preferences not found');
 		}
-		return userDoc.data().scheduling_preferences?.relationship_types || {};
+		return userDoc.data().scheduling_preferences || defaultPreferences;
 	} catch (error) {
 		console.error('Error getting user preferences:', error);
 		throw error;
@@ -18,7 +18,7 @@ export const updateUserPreferences = async (userId, updates) => {
 	try {
 		const userRef = doc(db, 'users', userId);
 		await updateDoc(userRef, {
-			'scheduling_preferences.relationship_types': updates.relationship_types,
+			scheduling_preferences: updates.scheduling_preferences,
 			last_updated: serverTimestamp(),
 		});
 	} catch (error) {
