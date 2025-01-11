@@ -22,6 +22,7 @@ import { auth } from '../config/firebase';
 import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './contactHelpers';
 import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
+import { RELATIONSHIP_DEFAULTS } from '../../constants/relationships';
 
 // Store active subscriptions
 const activeSubscriptions = new Map();
@@ -53,46 +54,7 @@ export const createUserDocument = async (userId, userData) => {
 				max_reminders_per_day: 5,
 				minimumGapMinutes: 30,
 				optimalGapMinutes: 120,
-				relationship_types: {
-					family: {
-						active_hours: {
-							end: '21:00',
-							start: '10:00',
-						},
-						excluded_times: [],
-						preferred_days: ['saturday', 'sunday'],
-					},
-					friend: {
-						active_hours: {
-							end: '21:00',
-							start: '17:00',
-						},
-						excluded_times: [],
-						preferred_days: ['friday', 'saturday', 'sunday'],
-					},
-					personal: {
-						active_hours: {
-							end: '21:00',
-							start: '17:00',
-						},
-						excluded_times: [],
-						preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-					},
-					work: {
-						active_hours: {
-							end: '17:00',
-							start: '09:00',
-						},
-						excluded_times: [
-							{
-								days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-								end: '13:00',
-								start: '12:00',
-							},
-						],
-						preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-					},
-				},
+				relationship_types: RELATIONSHIP_DEFAULTS,
 				scheduling_history: {
 					enabled: true,
 				},
