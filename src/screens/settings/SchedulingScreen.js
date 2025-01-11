@@ -81,7 +81,6 @@ const SchedulingScreen = ({ navigation }) => {
 			await updateUserPreferences(user.uid, {
 				scheduling_preferences: updatedPreferences,
 			});
-			Alert.alert('Success', 'Minimum gap updated successfully.');
 		} catch (error) {
 			console.error('Error updating minimum gap:', error);
 			Alert.alert('Error', 'Failed to update minimum gap. Please try again.');
@@ -99,7 +98,6 @@ const SchedulingScreen = ({ navigation }) => {
 			await updateUserPreferences(user.uid, {
 				scheduling_preferences: updatedPreferences,
 			});
-			Alert.alert('Success', 'Optimal gap updated successfully.');
 		} catch (error) {
 			console.error('Error updating optimal gap:', error);
 			Alert.alert('Error', 'Failed to update optimal gap. Please try again.');
@@ -110,7 +108,8 @@ const SchedulingScreen = ({ navigation }) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const index = activeTimePicker.index;
 		const timeType = activeTimePicker.timeType;
-
+	
+		// Clone the current times to avoid direct mutation
 		const updatedTimes = [...globalExcludedTimes];
 		if (!updatedTimes[index]) {
 			updatedTimes[index] = {
@@ -120,10 +119,55 @@ const SchedulingScreen = ({ navigation }) => {
 			};
 		}
 		updatedTimes[index][timeType] = timeString;
-
-		handleGlobalExcludedTimeChange(updatedTimes);
+	
+		// Temporarily save the updated time without validating yet
+		setGlobalExcludedTimes(updatedTimes);
+	
+		// Validate the full range only if both times are set
+		const { start, end } = updatedTimes[index];
+		if (start && end) {
+			const [startHour, startMinute] = start.split(':').map(Number);
+			const [endHour, endMinute] = end.split(':').map(Number);
+	
+			const startInMinutes = startHour * 60 + startMinute;
+			const endInMinutes = endHour * 60 + endMinute;
+	
+			let excludedDuration;
+			if (startInMinutes < endInMinutes) {
+				// Normal case: same day exclusion
+				excludedDuration = endInMinutes - startInMinutes;
+			} else {
+				// Overnight case: spans two days
+				excludedDuration = 1440 - startInMinutes + endInMinutes; // Total minutes in a day = 1440
+			}
+	
+			const allowedDuration = 1440 - excludedDuration; // Total minutes in a day minus excluded time
+	
+			// Check if allowed duration is less than 8 hours
+			if (allowedDuration < 480) {
+				Alert.alert(
+					'Invalid Time Range',
+					'Excluded time range leaves less than 8 hours for scheduling calls. Please adjust your times.',
+					[
+						{
+							text: 'OK',
+							onPress: () => {
+								// Revert the change if validation fails
+								setGlobalExcludedTimes(globalExcludedTimes);
+							},
+						},
+					]
+				);
+				setTimePickerVisible(false);
+				return;
+			}
+		}
+	
+		// Close the picker after saving the temporary change
 		setTimePickerVisible(false);
+		handleGlobalExcludedTimeChange(updatedTimes);
 	};
+	
 
 	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
 		try {
@@ -254,14 +298,14 @@ const SchedulingScreen = ({ navigation }) => {
 
 				{/* Global Excluded Times Section */}
 				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Global Excluded Times</Text>
+					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Sleep Hours</Text>
 					<Text
 						style={[
 							styles.settingText,
 							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
-						When calls should not be scheduled.
+						Set your sleeping hours so calls are not scheduled during this time.
 					</Text>
 
 					<TouchableOpacity
@@ -270,7 +314,7 @@ const SchedulingScreen = ({ navigation }) => {
 					>
 						<View style={styles.settingItemLeft}>
 							<Icon name="moon-outline" size={24} color={colors.text.secondary} />
-							<Text style={[styles.settingText, { fontSize: 18 }]}>Excluded Times</Text>
+							<Text style={[styles.settingText, { fontSize: 18 }]}>Pick Your Times</Text>
 						</View>
 						<Icon
 							name={expandedSection === 'globalExcluded' ? 'chevron-up' : 'chevron-down'}
