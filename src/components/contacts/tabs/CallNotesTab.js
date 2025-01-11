@@ -10,7 +10,7 @@ import {
 	Modal,
 	ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '../../../context/ThemeContext';
+import { useTheme, spacing } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
@@ -32,6 +32,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 	const [suggestionCache, setSuggestionCache] = useState({});
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+	const [editingText, setEditingText] = useState('');
 
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
@@ -120,11 +121,20 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 		]);
 	};
 
-	const handleEditHistory = async (index, updatedNote) => {
+	const handleEditHistory = async (index) => {
 		try {
-			// Update local state immediately
-			const updatedHistory = [...history];
-			updatedHistory[index].notes = updatedNote;
+			// Prevent unnecessary updates
+			if (history[index].notes === editingText) {
+				setEditMode(null);
+				return;
+			}
+
+			// Create a deep copy of the history array
+			const updatedHistory = history.map((entry, i) =>
+				i === index ? { ...entry, notes: editingText } : { ...entry }
+			);
+
+			// Update the state
 			setHistory(updatedHistory);
 
 			// Update Firestore
@@ -139,7 +149,8 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			};
 			setSelectedContact(updatedContact);
 
-			setEditMode(null);
+			setEditMode(null); // Exit edit mode
+			setEditingText(''); // Clear temporary state
 		} catch (error) {
 			console.error('Error editing history:', error);
 			Alert.alert('Error', 'Failed to edit history');
@@ -230,46 +241,47 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				<Text style={styles.sectionTitle}>Contact History</Text>
 				{history.length > 0 ? (
 					history.map((entry, index) => (
-<View key={index} style={styles.historyEntry}>
-	<View style={styles.historyEntryHeader}>
-		<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-		<View style={styles.historyActions}>
-			<TouchableOpacity
-				style={styles.historyActionButton}
-				onPress={() =>
-					editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-				}
-			>
-				<Icon
-					name={editMode === index ? 'checkmark-outline' : 'create-outline'}
-					size={20}
-					color={colors.primary}
-				/>
-			</TouchableOpacity>
-			<TouchableOpacity
-				style={styles.historyActionButton}
-				onPress={() => handleDeleteHistory(index)}
-			>
-				<Icon name="trash-outline" size={20} color={colors.danger} />
-			</TouchableOpacity>
-		</View>
-	</View>
-	{editMode === index ? (
-		<TextInput
-			style={[styles.historyNotesInput, { color: colors.text.primary }]}
-			value={entry.notes}
-			onChangeText={(text) => {
-				const updatedHistory = [...history];
-				updatedHistory[index].notes = text;
-				setHistory(updatedHistory);
-			}}
-			multiline
-		/>
-	) : (
-		<Text style={styles.historyNotes}>{entry.notes}</Text>
-	)}
-</View>
+						<View key={index} style={styles.historyEntry}>
+							<View style={styles.historyEntryHeader}>
+								<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+								<View style={styles.historyActions}>
+									<TouchableOpacity
+										style={styles.historyActionButton}
+										onPress={() => {
+											if (editMode === index) {
+												handleEditHistory(index);
+											} else {
+												setEditMode(index);
+												setEditingText(entry.notes);
+											}
+										}}
+									>
+										<Icon
+											name={editMode === index ? 'checkmark-outline' : 'create'}
+											size={30}
+											color={colors.primary}
+										/>
+									</TouchableOpacity>
 
+									<TouchableOpacity
+										style={[styles.historyActionButton, { marginLeft: spacing.md }]}
+										onPress={() => handleDeleteHistory(index)}
+									>
+										<Icon name="trash-outline" size={24} color={colors.danger} />
+									</TouchableOpacity>
+								</View>
+							</View>
+							{editMode === index ? (
+								<TextInput
+									style={[styles.historyNotesInput, { color: colors.text.primary }]}
+									value={editingText}
+									onChangeText={setEditingText}
+									multiline
+								/>
+							) : (
+								<Text style={styles.historyNotes}>{entry.notes}</Text>
+							)}
+						</View>
 					))
 				) : (
 					<Text style={styles.emptyHistoryText}>
