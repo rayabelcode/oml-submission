@@ -375,82 +375,107 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			)}
 
 			{/* Modals */}
-			{/*} Start Time */}
-			<TimePickerModal
-				visible={showStartTimePicker}
-				onClose={() => setShowStartTimePicker(false)}
-				initialHour={getHourFromTimeString(activeHours.start)}
-				title="Earliest Call Time"
-				onSelect={async (hour) => {
-					const newTime = formatHourToTimeString(hour);
-					const endHour = getHourFromTimeString(activeHours.end);
+{/* Start Time */}
+<TimePickerModal
+    visible={showStartTimePicker}
+    onClose={() => setShowStartTimePicker(false)}
+    initialHour={getHourFromTimeString(activeHours.start)}
+    title="Earliest Call Time"
+    onSelect={async (hour) => {
+        const newTime = formatHourToTimeString(hour);
+        const endHour = getHourFromTimeString(activeHours.end);
 
-					if (hour >= endHour) {
-						Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
-						return;
-					}
+        if (hour >= endHour) {
+            Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
+            return;
+        }
 
-					setLoading(true);
-					try {
-						setActiveHours((prev) => ({ ...prev, start: newTime }));
-						const schedulingUpdate = {
-							active_hours: {
-								start: newTime,
-							},
-						};
-						await updateContactScheduling(contact.id, schedulingUpdate);
+        try {
+            setActiveHours(prev => ({ ...prev, start: newTime }));
+            const schedulingUpdate = {
+                custom_preferences: {
+                    ...contact.scheduling?.custom_preferences,
+                    active_hours: {
+                        ...contact.scheduling?.custom_preferences?.active_hours,
+                        start: newTime,
+                        end: activeHours.end
+                    }
+                }
+            };
+            await updateContactScheduling(contact.id, schedulingUpdate);
+            setSelectedContact(prev => ({
+                ...prev,
+                scheduling: {
+                    ...prev.scheduling,
+                    custom_preferences: {
+                        ...prev.scheduling?.custom_preferences,
+                        active_hours: {
+                            ...prev.scheduling?.custom_preferences?.active_hours,
+                            start: newTime,
+                            end: activeHours.end
+                        }
+                    }
+                }
+            }));
+        } catch (error) {
+            console.error('Error updating start time:', error);
+            setError('Failed to update start time');
+        } finally {
+            setShowStartTimePicker(false);
+        }
+    }}
+/>
 
-						if (loadContacts) {
-							await loadContacts();
-						}
-					} catch (error) {
-						console.error('Error updating start time:', error);
-						setError('Failed to update start time');
-					} finally {
-						setLoading(false);
-						setShowStartTimePicker(false);
-					}
-				}}
-			/>
+{/* End Time */}
+<TimePickerModal
+    visible={showEndTimePicker}
+    onClose={() => setShowEndTimePicker(false)}
+    initialHour={getHourFromTimeString(activeHours.end)}
+    title="Latest Call Time"
+    onSelect={async (hour) => {
+        const newTime = formatHourToTimeString(hour);
+        const startHour = getHourFromTimeString(activeHours.start);
 
-			{/*} End Time */}
-			<TimePickerModal
-				visible={showEndTimePicker}
-				onClose={() => setShowEndTimePicker(false)}
-				initialHour={getHourFromTimeString(activeHours.end)}
-				title="Latest Call Time"
-				onSelect={async (hour) => {
-					const newTime = formatHourToTimeString(hour);
-					const startHour = getHourFromTimeString(activeHours.start);
+        if (hour <= startHour) {
+            Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
+            return;
+        }
 
-					if (hour <= startHour) {
-						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
-						return;
-					}
-
-					setLoading(true);
-					try {
-						setActiveHours((prev) => ({ ...prev, end: newTime }));
-						const schedulingUpdate = {
-							active_hours: {
-								end: newTime,
-							},
-						};
-						await updateContactScheduling(contact.id, schedulingUpdate);
-
-						if (loadContacts) {
-							await loadContacts();
-						}
-					} catch (error) {
-						console.error('Error updating end time:', error);
-						setError('Failed to update end time');
-					} finally {
-						setLoading(false);
-						setShowEndTimePicker(false);
-					}
-				}}
-			/>
-
+        try {
+            setActiveHours(prev => ({ ...prev, end: newTime }));
+            const schedulingUpdate = {
+                custom_preferences: {
+                    ...contact.scheduling?.custom_preferences,
+                    active_hours: {
+                        ...contact.scheduling?.custom_preferences?.active_hours,
+                        start: activeHours.start,
+                        end: newTime
+                    }
+                }
+            };
+            await updateContactScheduling(contact.id, schedulingUpdate);
+            setSelectedContact(prev => ({
+                ...prev,
+                scheduling: {
+                    ...prev.scheduling,
+                    custom_preferences: {
+                        ...prev.scheduling?.custom_preferences,
+                        active_hours: {
+                            ...prev.scheduling?.custom_preferences?.active_hours,
+                            start: activeHours.start,
+                            end: newTime
+                        }
+                    }
+                }
+            }));
+        } catch (error) {
+            console.error('Error updating end time:', error);
+            setError('Failed to update end time');
+        } finally {
+            setShowEndTimePicker(false);
+        }
+    }}
+/>
 			<DatePickerModal
 				visible={showDatePicker}
 				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
