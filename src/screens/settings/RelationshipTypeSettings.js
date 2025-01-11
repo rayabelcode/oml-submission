@@ -25,16 +25,11 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		loadPreferences();
 	}, [user.uid]);
 
-	// Function to load user preferences
+	// Load user preferences
 	const loadPreferences = async () => {
 		try {
 			setLoading(true);
 			const prefs = await getUserPreferences(user.uid);
-
-			// Debugging: Check the fetched preferences
-			console.log('Fetched preferences from Firebase:', prefs);
-
-			// Initialize the settings with fetched data
 			setRelationshipSettings(initializeSettings(prefs));
 		} catch (error) {
 			console.error('Error loading preferences:', error);
@@ -43,14 +38,13 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		}
 	};
 
-	// Function to initialize settings with defaults only for missing fields
+	// Initialize settings with defaults for missing fields
 	const initializeSettings = (prefs) => {
-		const relationshipTypes = prefs.relationship_types || {}; // Access the key or use an empty object as fallback
-
+		const relationshipTypes = prefs.relationship_types || {};
 		const initializedSettings = {};
-		Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
-			const typeData = relationshipTypes[type] || {}; // Get the data for the current type or fallback to empty object
 
+		Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
+			const typeData = relationshipTypes[type] || {};
 			initializedSettings[type] = {
 				active_hours: {
 					start: typeData.active_hours?.start || RELATIONSHIP_DEFAULTS.active_hours[type].start,
@@ -60,36 +54,29 @@ const RelationshipTypeSettings = ({ navigation }) => {
 				excluded_times: typeData.excluded_times || RELATIONSHIP_DEFAULTS.excluded_times[type],
 			};
 		});
-
-		console.log('Initialized settings with defaults:', initializedSettings);
 		return initializedSettings;
 	};
 
-	// Handle optimistic updates and Firebase save
-	const handleSettingsChange = async (updatedSettings) => {
-		// Optimistically update local state
-		setRelationshipSettings(updatedSettings);
-
-		try {
-			// Save changes to Firebase
-			await updateUserPreferences(user.uid, {
-				scheduling_preferences: {
-					relationship_types: updatedSettings,
-				},
-			});
-		} catch (error) {
-			console.error('Error updating relationship settings:', error);
-
-			// Revert to the latest Firebase data if the update fails
-			loadPreferences();
-		}
-	};
-
-	// Handle time selection (e.g., active hours)
+	// Validate time ranges and update settings
 	const handleTimeSelect = (hour) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const { type, timeType } = activeTimePicker;
 
+		const start =
+			timeType === 'activeHoursStart' ? timeString : relationshipSettings[type]?.active_hours?.start;
+		const end = timeType === 'activeHoursEnd' ? timeString : relationshipSettings[type]?.active_hours?.end;
+
+		// Validate time range
+		if (timeType === 'activeHoursStart' && end && hour >= parseInt(end.split(':')[0])) {
+			Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
+			return;
+		}
+		if (timeType === 'activeHoursEnd' && start && hour <= parseInt(start.split(':')[0])) {
+			Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
+			return;
+		}
+
+		// Update settings optimistically
 		const updatedSettings = {
 			...relationshipSettings,
 			[type]: {
@@ -105,7 +92,22 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		setTimePickerVisible(false);
 	};
 
-	// Handle day selection toggle
+	// Handle settings change
+	const handleSettingsChange = async (updatedSettings) => {
+		setRelationshipSettings(updatedSettings);
+		try {
+			await updateUserPreferences(user.uid, {
+				scheduling_preferences: {
+					relationship_types: updatedSettings,
+				},
+			});
+		} catch (error) {
+			console.error('Error updating relationship settings:', error);
+			loadPreferences();
+		}
+	};
+
+	// Handle day toggling
 	const toggleDaySelection = (type, day) => {
 		const currentDays = relationshipSettings[type]?.preferred_days || [];
 		const updatedDays = currentDays.includes(day)
@@ -123,16 +125,13 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		handleSettingsChange(updatedSettings);
 	};
 
-	// Reset all settings to defaults
+	// Reset settings to defaults
 	const handleResetToDefault = () => {
 		Alert.alert(
 			'Reset to Default',
 			'This will reset all relationship type settings to their default values. This action cannot be undone.',
 			[
-				{
-					text: 'Cancel',
-					style: 'cancel',
-				},
+				{ text: 'Cancel', style: 'cancel' },
 				{
 					text: 'Reset',
 					style: 'destructive',
@@ -145,7 +144,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 		);
 	};
 
-	// Show the time picker modal
+	// Show time picker
 	const showTimePicker = (type, timeType) => {
 		setActiveTimePicker({ type, timeType });
 		setTimePickerVisible(true);
