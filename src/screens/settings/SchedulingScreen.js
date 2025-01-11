@@ -70,6 +70,42 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
+	const handleMinGapChange = async (value) => {
+		try {
+			setMinGap(value); // Update the state
+			const updatedPreferences = {
+				...allPreferences,
+				minimumGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
+			await updateUserPreferences(user.uid, {
+				scheduling_preferences: updatedPreferences,
+			});
+			Alert.alert('Success', 'Minimum gap updated successfully.');
+		} catch (error) {
+			console.error('Error updating minimum gap:', error);
+			Alert.alert('Error', 'Failed to update minimum gap. Please try again.');
+		}
+	};
+
+	const handleOptimalGapChange = async (value) => {
+		try {
+			setOptimalGap(value); // Update the state
+			const updatedPreferences = {
+				...allPreferences,
+				optimalGapMinutes: value,
+			};
+			setAllPreferences(updatedPreferences);
+			await updateUserPreferences(user.uid, {
+				scheduling_preferences: updatedPreferences,
+			});
+			Alert.alert('Success', 'Optimal gap updated successfully.');
+		} catch (error) {
+			console.error('Error updating optimal gap:', error);
+			Alert.alert('Error', 'Failed to update optimal gap. Please try again.');
+		}
+	};
+
 	const handleTimeSelect = (hour) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const index = activeTimePicker.index;
