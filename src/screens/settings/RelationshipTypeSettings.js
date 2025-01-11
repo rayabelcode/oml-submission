@@ -10,6 +10,13 @@ import DaySelector from '../../components/settings/DaySelector';
 import TimePickerModal from '../../components/modals/TimePickerModal';
 import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
 
+const DEFAULT_ACTIVE_HOURS = {
+	work: { start: '09:00', end: '17:00' },
+	personal: { start: '17:00', end: '21:00' },
+	family: { start: '10:00', end: '21:00' },
+	friend: { start: '17:00', end: '21:00' },
+};
+
 const RelationshipTypeSettings = ({ navigation }) => {
 	const styles = useStyles();
 	const { colors, spacing } = useTheme();
@@ -27,7 +34,18 @@ const RelationshipTypeSettings = ({ navigation }) => {
 	const loadPreferences = async () => {
 		try {
 			const prefs = await getUserPreferences(user.uid);
-			setRelationshipSettings(prefs.relationship_types || {});
+			const initializedSettings = {};
+			Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
+				initializedSettings[type] = {
+					active_hours: {
+						start: prefs[type]?.active_hours?.start || DEFAULT_ACTIVE_HOURS[type].start,
+						end: prefs[type]?.active_hours?.end || DEFAULT_ACTIVE_HOURS[type].end,
+					},
+					preferred_days: prefs[type]?.preferred_days || [],
+					excluded_times: prefs[type]?.excluded_times || [],
+				};
+			});
+			setRelationshipSettings(initializedSettings);
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading preferences:', error);
@@ -100,7 +118,6 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						>
 							<View style={styles.settingItemLeft}>
 								<Icon name={icon} size={24} color={RELATIONSHIP_TYPES[type].color} />
-
 								<Text style={[styles.settingText, { fontSize: 18, marginLeft: 15 }]}>{label}</Text>
 							</View>
 							<Icon
@@ -113,8 +130,10 @@ const RelationshipTypeSettings = ({ navigation }) => {
 						{expandedType === type && (
 							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
 								<TimeRangeSelector
-									startTime={relationshipSettings[type]?.active_hours?.start || '09:00'}
-									endTime={relationshipSettings[type]?.active_hours?.end || '17:00'}
+									startTime={
+										relationshipSettings[type]?.active_hours?.start || DEFAULT_ACTIVE_HOURS[type].start
+									}
+									endTime={relationshipSettings[type]?.active_hours?.end || DEFAULT_ACTIVE_HOURS[type].end}
 									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
 									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
 									label="Active Hours"
@@ -149,7 +168,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 				initialHour={
 					activeTimePicker
 						? parseInt(
-								relationshipSettings[activeTimePicker.type]?.[activeTimePicker.timeType]?.split(':')[0] || '9'
+								relationshipSettings[activeTimePicker.type]?.active_hours?.[
+									activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
+								]?.split(':')[0] ||
+									DEFAULT_ACTIVE_HOURS[activeTimePicker.type][
+										activeTimePicker.timeType === 'activeHoursStart' ? 'start' : 'end'
+									].split(':')[0]
 						  )
 						: 9
 				}
