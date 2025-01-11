@@ -27,18 +27,61 @@ const AccountScreen = ({ navigation }) => {
 	const [usernameChanged, setUsernameChanged] = useState(false);
 	const [emailChanged, setEmailChanged] = useState(false);
 
-	useEffect(() => {
-		loadUserProfile();
-	}, []);
-
+	// Fetch the username from Firestore when the screen is focused
 	const loadUserProfile = async () => {
 		try {
 			const profile = await getUserProfile(user.uid);
-			if (profile) {
-				setUsername(profile.username || '');
+			if (profile?.username) {
+				setUsername(profile.username); // Display the username from Firestore
+			} else {
+				console.warn('No username found in Firestore.');
 			}
 		} catch (error) {
 			console.error('Error loading profile:', error);
+			Alert.alert('Error', 'Failed to load username. Please try again.');
+		}
+	};
+
+	// Trigger `loadUserProfile` when the screen is focused
+	useEffect(() => {
+		const unsubscribe = navigation.addListener('focus', loadUserProfile);
+		return unsubscribe;
+	}, [navigation]);
+
+	const handleUpdateUsername = async () => {
+		try {
+			if (!username.trim()) {
+				Alert.alert('Error', 'Username cannot be empty.');
+				return;
+			}
+
+			const lowercaseUsername = username.trim().toLowerCase();
+
+			// Check if the username is the same as the current one
+			const profile = await getUserProfile(user.uid);
+			if (profile?.username === lowercaseUsername) {
+				Alert.alert('No Changes', 'The username is already up to date.');
+				return;
+			}
+
+			// Check if the username already exists
+			const usernameExists = await checkUsernameExists(lowercaseUsername, user.uid);
+			if (usernameExists) {
+				Alert.alert('Error', 'This username is already taken.');
+				return;
+			}
+
+			// Update the username in Firestore
+			await updateUserProfile(user.uid, { username: lowercaseUsername });
+
+			// Reflect the change immediately in the UI
+			setUsername(lowercaseUsername);
+			setUsernameChanged(false);
+
+			Alert.alert('Success', 'Username updated successfully.');
+		} catch (error) {
+			console.error('Error updating username:', error);
+			Alert.alert('Error', 'Failed to update username. Please try again.');
 		}
 	};
 
@@ -98,43 +141,6 @@ const AccountScreen = ({ navigation }) => {
 		}
 	};
 
-	const handleUpdateUsername = async () => {
-		try {
-			if (!username.trim()) return;
-
-			const lowercaseUsername = username.trim().toLowerCase();
-
-			const usernameExists = await checkUsernameExists(lowercaseUsername, user.uid);
-			if (usernameExists) {
-				Alert.alert('Error', 'This username is already taken');
-				return;
-			}
-
-			setUsername(lowercaseUsername);
-
-			await updateUserProfile(user.uid, {
-				username: lowercaseUsername,
-			});
-
-			try {
-				await auth.currentUser.updateProfile({ displayName: lowercaseUsername });
-			} catch (authError) {
-				console.log('Auth profile update failed, but Firestore updated successfully');
-			}
-
-			setUsernameChanged(false);
-			Alert.alert('Success', 'Username updated successfully');
-		} catch (error) {
-			console.error('Error updating username:', error);
-			if (error.code === 'permission-denied') {
-				setUsernameChanged(false);
-				Alert.alert('Success', 'Username updated successfully');
-			} else {
-				Alert.alert('Error', 'Failed to update username');
-			}
-		}
-	};
-
 	return (
 		<View style={styles.container}>
 			<View style={styles.headerSettingsPages}>
@@ -152,9 +158,7 @@ const AccountScreen = ({ navigation }) => {
 			>
 				{/* Username Section */}
 				<View style={styles.card}>
-					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>
-						Username
-					</Text>
+					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>Username</Text>
 					<TextInput
 						style={[styles.input, styles.inputText]}
 						value={username}
@@ -178,9 +182,7 @@ const AccountScreen = ({ navigation }) => {
 
 				{/* Email Section */}
 				<View style={styles.card}>
-					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>
-						Email
-					</Text>
+					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>Email</Text>
 					<TextInput
 						style={[styles.input, styles.inputText]}
 						value={email}
@@ -203,10 +205,7 @@ const AccountScreen = ({ navigation }) => {
 						secureTextEntry
 					/>
 					<TouchableOpacity
-						style={[
-							styles.saveButton,
-							(!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled,
-						]}
+						style={[styles.saveButton, (!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled]}
 						onPress={handleChangeEmail}
 						disabled={!emailChanged || !emailCurrentPassword}
 					>

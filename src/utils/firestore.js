@@ -852,34 +852,17 @@ export const subscribeToUserProfile = (userId, callback) => {
 
 export const getUserProfile = async (userId) => {
 	try {
-		// Try to get cached profile first
-		const cachedProfile = await cacheManager.getCachedProfile(userId);
-		if (cachedProfile) {
-			return cachedProfile;
-		}
-
-		const userRef = doc(db, 'users', userId);
-		const userSnap = await getDoc(userRef);
-
-		if (!userSnap.exists()) {
+		const userDocRef = doc(db, 'users', userId);
+		// Fetch the latest data from the server, bypassing the cache
+		const userDoc = await getDoc(userDocRef);
+		if (userDoc.exists()) {
+			return userDoc.data();
+		} else {
+			console.error('User document not found in Firestore.');
 			return null;
 		}
-
-		const profileData = {
-			id: userSnap.id,
-			...userSnap.data(),
-		};
-
-		// Cache the profile data
-		await cacheManager.saveProfile(userId, profileData);
-		return profileData;
 	} catch (error) {
-		console.error('Error getting user profile:', error);
-		// Try to return cached data on error
-		const cachedProfile = await cacheManager.getCachedProfile(userId);
-		if (cachedProfile) {
-			return cachedProfile;
-		}
+		console.error('Error fetching user profile:', error);
 		throw error;
 	}
 };
