@@ -484,15 +484,17 @@ const createStyles = (colors) =>
 			marginHorizontal: spacing.md,
 		},
 		relationshipIntroText: {
-			fontSize: 18,
+			fontSize: 14,
+			fontWeight: '600',
+			fontStyle: 'italic',
 			lineHeight: 24,
-			color: colors.text.secondary,
+			color: colors.text.primary,
 			textAlign: 'center',
 		},
 		resetContainer: {
 			padding: spacing.md,
 			alignItems: 'center',
-			marginTop: spacing.md,
+			marginTop: 'none',
 			marginBottom: spacing.xl,
 		},
 		resetButton: {

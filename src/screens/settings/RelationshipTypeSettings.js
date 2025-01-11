@@ -12,7 +12,7 @@ import { RELATIONSHIP_TYPES, RELATIONSHIP_DEFAULTS } from '../../../constants/re
 
 const RelationshipTypeSettings = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing } = useTheme();
+	const { colors, spacing, layout } = useTheme();
 	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [expandedType, setExpandedType] = useState(null);
@@ -168,17 +168,14 @@ const RelationshipTypeSettings = ({ navigation }) => {
 			</View>
 
 			<ScrollView style={styles.settingsList}>
-				<View style={styles.relationshipIntroContainer}>
+				<View style={[styles.relationshipIntroContainer, styles.card]}>
 					<Text style={styles.relationshipIntroText}>
 						Set preferred contact times and days for each of your relationship types.
 					</Text>
 				</View>
 
 				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
-					<View
-						key={type}
-						style={[styles.formSection, { borderBottomWidth: 1, borderBottomColor: colors.border }]}
-					>
+					<View key={type} style={[styles.formSection, styles.card]}>
 						<TouchableOpacity
 							activeOpacity={1}
 							style={[styles.settingItem, { paddingVertical: spacing.md }]}
@@ -213,7 +210,7 @@ const RelationshipTypeSettings = ({ navigation }) => {
 					</View>
 				))}
 
-				<View style={styles.resetContainer}>
+				<View style={[styles.resetContainer]}>
 					<TouchableOpacity style={styles.resetButton} onPress={handleResetToDefault}>
 						<Text style={styles.resetButtonText}>Reset to Default</Text>
 					</TouchableOpacity>

@@ -40,7 +40,7 @@ const DEFAULT_OPTIMAL_GAP = defaultPreferences.optimalGapMinutes;
 
 const SchedulingScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing } = useTheme();
+	const { colors, spacing, layout } = useTheme();
 	const { user } = useAuth();
 	const [loading, setLoading] = useState(true);
 	const [minGap, setMinGap] = useState(DEFAULT_MIN_GAP);
@@ -103,47 +103,6 @@ const SchedulingScreen = ({ navigation }) => {
 		} catch (error) {
 			console.error('Error updating global excluded times:', error);
 			Alert.alert('Error', 'Failed to update excluded times');
-		}
-	};
-
-	const showTimePicker = (index, timeType) => {
-		setActiveTimePicker({ index, timeType });
-		setTimePickerVisible(true);
-	};
-
-	const handleMinGapChange = async (value) => {
-		try {
-			setMinGap(value);
-			const updatedPreferences = {
-				...allPreferences,
-				minimumGapMinutes: value,
-			};
-			setAllPreferences(updatedPreferences);
-			await updateUserPreferences(user.uid, {
-				scheduling_preferences: updatedPreferences,
-			});
-		} catch (error) {
-			console.error('Error updating minimum gap:', error);
-			setMinGap(minGap);
-			Alert.alert('Error', 'Failed to update minimum gap');
-		}
-	};
-
-	const handleOptimalGapChange = async (value) => {
-		try {
-			setOptimalGap(value);
-			const updatedPreferences = {
-				...allPreferences,
-				optimalGapMinutes: value,
-			};
-			setAllPreferences(updatedPreferences);
-			await updateUserPreferences(user.uid, {
-				scheduling_preferences: updatedPreferences,
-			});
-		} catch (error) {
-			console.error('Error updating optimal gap:', error);
-			setOptimalGap(optimalGap);
-			Alert.alert('Error', 'Failed to update optimal gap');
 		}
 	};
 
@@ -212,15 +171,14 @@ const SchedulingScreen = ({ navigation }) => {
 
 			<ScrollView style={styles.settingsList}>
 				{/* Call Gap Section */}
-				<View style={styles.formSection}>
-					<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
+				<View style={[styles.formSection, styles.card]}>
 					<Text style={[styles.label, { fontSize: 18, textAlign: 'center', marginTop: spacing.md }]}>
 						Time Between Calls
 					</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
 						Minimum time between scheduled calls.
@@ -229,7 +187,7 @@ const SchedulingScreen = ({ navigation }) => {
 					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('minimum')}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="time-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: 15 }}>
+							<View style={{ marginLeft: spacing.sm }}>
 								<Text style={[styles.settingText, { fontSize: 18 }]}>Minimum Gap</Text>
 								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
 									{formatDuration(minGap)}
@@ -242,7 +200,7 @@ const SchedulingScreen = ({ navigation }) => {
 					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('optimal')}>
 						<View style={styles.settingItemLeft}>
 							<Icon name="timer-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: 15 }}>
+							<View style={{ marginLeft: spacing.sm }}>
 								<Text style={[styles.settingText, { fontSize: 18 }]}>Optimal Gap</Text>
 								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
 									{formatDuration(optimalGap)}
@@ -253,15 +211,13 @@ const SchedulingScreen = ({ navigation }) => {
 					</TouchableOpacity>
 				</View>
 
-				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
-
 				{/* Global Excluded Times Section */}
-				<View style={styles.formSection}>
+				<View style={[styles.formSection, styles.card]}>
 					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Global Excluded Times</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
 						When calls should not be scheduled.
@@ -307,15 +263,13 @@ const SchedulingScreen = ({ navigation }) => {
 						))}
 				</View>
 
-				<View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}></View>
-
 				{/* Relationship Settings Section */}
-				<View style={styles.formSection}>
+				<View style={[styles.formSection, styles.card]}>
 					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Relationship Settings</Text>
 					<Text
 						style={[
 							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: 20, textAlign: 'center' },
+							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
 						]}
 					>
 						Set preferences by relationship type.
