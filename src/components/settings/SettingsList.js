@@ -64,6 +64,13 @@ const SettingsList = ({
 						thumbColor={isDarkMode ? colors.primary : '#f4f3f4'}
 					/>
 				</View>
+				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Scheduling')}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="time-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Scheduling Settings</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
 			</View>
 
 			<View style={styles.settingSection}>
@@ -86,11 +93,6 @@ const SettingsList = ({
 					</View>
 				</TouchableOpacity>
 			</View>
-
-			<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-				<Icon name="log-out-outline" size={20} color={colors.danger} />
-				<Text style={styles.logoutText}>Log Out</Text>
-			</TouchableOpacity>
 		</ScrollView>
 	);
 };

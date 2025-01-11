@@ -21,7 +21,7 @@ service cloud.firestore {
             .hasAny(['user_id', 'created_at']) || 
             request.resource.data.user_id == request.auth.uid ||
             request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['contact_history', 'last_updated'])
+            .hasOnly(['contact_history', 'last_updated', 'scheduling'])
         );
     allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
 }
@@ -70,6 +70,10 @@ service cloud.firestore {
     );
     allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
 }
+
+    match /user_preferences/{userId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
 
   }
 }

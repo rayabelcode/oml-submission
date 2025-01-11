@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { createUserDocument } from '../utils/firestore';
 
 const AuthContext = createContext({});
 
@@ -42,6 +43,11 @@ export const AuthProvider = ({ children }) => {
 			});
 
 			const { user } = await signInWithCredential(auth, authCredential);
+			await createUserDocument(user.uid, {
+				email: user.email,
+				first_name: credential.fullName?.givenName || '',
+				last_name: credential.fullName?.familyName || '',
+			});
 			return { data: user, error: null };
 		} catch (error) {
 			return { data: null, error };
@@ -51,6 +57,11 @@ export const AuthProvider = ({ children }) => {
 	const signUp = async ({ email, password }) => {
 		try {
 			const { user } = await createUserWithEmailAndPassword(auth, email, password);
+			await createUserDocument(user.uid, {
+				email: user.email,
+				first_name: '',
+				last_name: '',
+			});
 			return { data: user, error: null };
 		} catch (error) {
 			return { data: null, error };

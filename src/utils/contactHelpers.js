@@ -1,4 +1,9 @@
 import { serverTimestamp } from 'firebase/firestore';
+import {
+	RELATIONSHIP_TYPES,
+	RELATIONSHIP_DEFAULTS,
+	DEFAULT_RELATIONSHIP_TYPE,
+} from '../../constants/relationships';
 
 const standardizePhoneNumber = (phone) => {
 	const cleaned = phone.replace(/\D/g, '');
@@ -26,12 +31,13 @@ export const SCHEDULING_CONSTANTS = {
 		NORMAL: 'normal',
 		HIGH: 'high',
 	},
-	RELATIONSHIP_TYPES: ['friend', 'family', 'personal', 'work'],
+	RELATIONSHIP_TYPES: Object.keys(RELATIONSHIP_TYPES),
 };
 
 export const createContactData = (basicData, userId) => {
 	// Destructure relationship_type out of basicData and create new object without it
 	const { relationship_type, phone, ...cleanedBasicData } = basicData;
+	const contactType = relationship_type || DEFAULT_RELATIONSHIP_TYPE;
 
 	return {
 		...cleanedBasicData,
@@ -45,18 +51,15 @@ export const createContactData = (basicData, userId) => {
 		last_updated: serverTimestamp(),
 		user_id: userId,
 		scheduling: {
-			relationship_type: relationship_type || SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
+			relationship_type: contactType,
 			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
 			custom_schedule: false,
 			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
 			minimum_gap: 30,
 			custom_preferences: {
-				preferred_days: [],
-				active_hours: {
-					start: '09:00',
-					end: '17:00',
-				},
-				excluded_times: [],
+				preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[contactType],
+				active_hours: RELATIONSHIP_DEFAULTS.active_hours[contactType],
+				excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[contactType],
 			},
 		},
 	};

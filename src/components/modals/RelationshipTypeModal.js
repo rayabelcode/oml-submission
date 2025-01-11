@@ -5,22 +5,21 @@ import { useCommonStyles } from '../../styles/common';
 import { spacing } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RelationshipPicker from '../general/RelationshipPicker';
-import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
+import { RELATIONSHIP_TYPES, RELATIONSHIP_TYPE_ARRAY } from '../../../constants/relationships';
 
 const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
-	const [selectedIndex, setSelectedIndex] = React.useState(0);
-	const relationshipTypes = ['Friend', 'Family', 'Personal', 'Work'];
+	const [selectedType, setSelectedType] = React.useState(RELATIONSHIP_TYPE_ARRAY[0]);
 
 	useEffect(() => {
 		if (visible) {
-			setSelectedIndex(0);
+			setSelectedType(RELATIONSHIP_TYPE_ARRAY[0]);
 		}
 	}, [visible]);
 
 	const handleConfirm = () => {
-		onSelect(relationshipTypes[selectedIndex].toLowerCase());
+		onSelect(selectedType);
 		onClose();
 	};
 
@@ -61,12 +60,10 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 					</Text>
 					<View style={{ marginBottom: spacing.xs }}>
 						<RelationshipPicker
-							value={RELATIONSHIP_TYPES[selectedIndex]}
-							onChange={(type) => {
-								setSelectedIndex(RELATIONSHIP_TYPES.indexOf(type));
-							}}
+							value={selectedType}
+							onChange={setSelectedType}
 							style={{ marginBottom: spacing.xs }}
-							showLabel={false} // Turn off built-in 'Tag this Relationship' header
+							showLabel={false}
 						/>
 					</View>
 					<View style={{ alignItems: 'center' }}>

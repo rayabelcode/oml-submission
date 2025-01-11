@@ -9,6 +9,7 @@ import { useStyles } from '../../../styles/screens/contacts';
 import { updateContact, uploadContactPhoto, deleteContact, archiveContact } from '../../../utils/firestore';
 import RelationshipPicker from '../../general/RelationshipPicker';
 import { formatPhoneNumber } from '../../general/FormattedPhoneNumber';
+import { DEFAULT_RELATIONSHIP_TYPE } from '../../../../constants/relationships';
 
 const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cleanupSubscription }) => {
 	const { colors } = useTheme();
@@ -21,7 +22,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 		...contact,
 		scheduling: {
 			...contact.scheduling,
-			relationship_type: contact.scheduling?.relationship_type || 'friend',
+			relationship_type: contact.scheduling?.relationship_type || DEFAULT_RELATIONSHIP_TYPE,
 		},
 	});
 

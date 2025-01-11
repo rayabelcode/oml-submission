@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import DatePicker from 'react-datepicker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
@@ -9,11 +8,10 @@ import { useStyles } from '../../styles/screens/contacts';
 import { updateContact } from '../../utils/firestore';
 
 const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisible, loadContacts }) => {
-    const { colors } = useTheme();
-    const commonStyles = useCommonStyles();
-    const styles = useStyles();
+	const { colors } = useTheme();
+	const commonStyles = useCommonStyles();
+	const styles = useStyles();
 	const [selectedDate, setSelectedDate] = useState(new Date());
-	const [showPicker, setShowPicker] = useState(false);
 
 	const handleConfirm = () => {
 		onSubmit(selectedDate);
@@ -35,35 +33,21 @@ const ScheduleModal = ({ visible, contact, onClose, onSubmit, setIsDetailsVisibl
 						<Text style={styles.selectedDate}>{selectedDate.toLocaleDateString()}</Text>
 					</View>
 
-					{Platform.OS === 'web' ? (
-						<DatePicker
-							selected={selectedDate}
-							onChange={(date) => {
+					<DateTimePicker
+						value={selectedDate}
+						mode="date"
+						display="inline"
+						onChange={(event, date) => {
+							if (date) {
 								const newDate = new Date(date);
 								newDate.setHours(12, 0, 0, 0);
 								setSelectedDate(newDate);
-								setShowPicker(false);
-							}}
-							inline
-							dateFormat="MM/dd/yyyy"
-						/>
-					) : (
-						<DateTimePicker
-							value={selectedDate}
-							mode="date"
-							display="inline"
-							onChange={(event, date) => {
-								if (date) {
-									const newDate = new Date(date);
-									newDate.setHours(12, 0, 0, 0);
-									setSelectedDate(newDate);
-								}
-							}}
-							textColor={colors.text.primary}
-							accentColor={colors.primary}
-							themeVariant="light"
-						/>
-					)}
+							}
+						}}
+						textColor={colors.text.primary}
+						accentColor={colors.primary}
+						themeVariant="light"
+					/>
 
 					<TouchableOpacity style={commonStyles.primaryButton} onPress={handleConfirm}>
 						<Text style={commonStyles.primaryButtonText}>Confirm</Text>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Image, Dimensions } from 'react-native';
-import DatePicker from 'react-datepicker';
 import { SafeAreaView } from 'react-native';
 import {
 	Text,
@@ -38,6 +37,7 @@ import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
 import { cacheManager } from '../utils/cache';
+import { DEFAULT_RELATIONSHIP_TYPE } from '../../constants/relationships';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -359,7 +359,7 @@ export default function ContactsScreen({ navigation }) {
 
 		try {
 			const contactData = createContactData(
-				{ ...pendingContact, relationship_type: relationshipType },
+				{ ...pendingContact, relationship_type: relationshipType || DEFAULT_RELATIONSHIP_TYPE },
 				user.uid
 			);
 

@@ -21,6 +21,7 @@ import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
 import RelationshipPicker from '../general/RelationshipPicker';
 import { createContactData, SCHEDULING_CONSTANTS } from '../../utils/contactHelpers';
+import { DEFAULT_RELATIONSHIP_TYPE } from '../../../constants/relationships';
 import { formatPhoneNumber } from '../general/FormattedPhoneNumber';
 
 const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
@@ -39,7 +40,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 		email: '',
 		phone: '',
 		photo_url: null,
-		relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
+		relationship_type: DEFAULT_RELATIONSHIP_TYPE,
 	});
 
 	const dismissKeyboard = () => {
@@ -70,7 +71,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 				email: '',
 				phone: '',
 				photo_url: null,
-				relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
+				relationship_type: DEFAULT_RELATIONSHIP_TYPE,
 			});
 		}
 	}, [visible]);

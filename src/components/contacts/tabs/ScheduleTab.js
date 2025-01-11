@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, Platform } from 'react-native';
-import { useTheme, spacing } from '../../../context/ThemeContext';
-import { useCommonStyles } from '../../../styles/common';
-import { useStyles } from '../../../styles/screens/contacts';
-import DatePickerModal from '../../modals/DatePickerModal';
-import { updateContact, updateContactScheduling, updateNextContact } from '../../../utils/firestore';
-import { SchedulingService } from '../../../utils/scheduler';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTheme } from '../../../context/ThemeContext';
+import { useScheduleStyles } from '../../../styles/contacts/scheduleStyle';
+import { updateContactScheduling, updateNextContact } from '../../../utils/firestore';
+import { SchedulingService } from '../../../utils/scheduler';
+import TimePickerModal from '../../modals/TimePickerModal';
+import DatePickerModal from '../../modals/DatePickerModal';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '../../../config/firebase';
 
 const FREQUENCY_OPTIONS = [
 	{ label: 'Daily', value: 'daily' },
@@ -17,320 +19,523 @@ const FREQUENCY_OPTIONS = [
 	{ label: 'Yearly', value: 'yearly' },
 ];
 
-const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
-	const { colors } = useTheme();
-	const styles = useStyles();
-	const commonStyles = useCommonStyles();
+const PRIORITY_OPTIONS = [
+	{ label: 'Low', value: 'low' },
+	{ label: 'Normal', value: 'normal' },
+	{ label: 'High', value: 'high' },
+];
 
-	const [showScheduleDatePicker, setShowScheduleDatePicker] = useState(false);
-	const [selectedDate, setSelectedDate] = useState(
-		contact?.next_contact ? new Date(contact.next_contact) : new Date()
-	);
-	const [frequency, setFrequency] = useState(contact?.scheduling?.frequency || 'weekly');
+const DAYS_OF_WEEK = [
+	{ label: 'M', value: 'monday' },
+	{ label: 'T', value: 'tuesday' },
+	{ label: 'W', value: 'wednesday' },
+	{ label: 'T', value: 'thursday' },
+	{ label: 'F', value: 'friday' },
+	{ label: 'S', value: 'saturday' },
+	{ label: 'S', value: 'sunday' },
+];
+
+const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
+	const { colors, spacing } = useTheme();
+	const styles = useScheduleStyles();
+
+	// State management
 	const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+	const [frequency, setFrequency] = useState(contact?.scheduling?.frequency || null);
+	const [priority, setPriority] = useState(contact?.scheduling?.priority || 'normal');
 	const [selectedDays, setSelectedDays] = useState(
 		contact?.scheduling?.custom_preferences?.preferred_days || []
 	);
+	const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+	const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+	const [showDatePicker, setShowDatePicker] = useState(false);
+	const [activeHours, setActiveHours] = useState({
+		start: contact?.scheduling?.custom_preferences?.active_hours?.start || '09:00',
+		end: contact?.scheduling?.custom_preferences?.active_hours?.end || '17:00',
+	});
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState(null);
 
-	useEffect(() => {
-		setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
-	}, [contact]);
+	// Format time helpers
+	const getHourFromTimeString = (timeString) => parseInt(timeString.split(':')[0]);
+	const formatHourToTimeString = (hour) => `${hour.toString().padStart(2, '0')}:00`;
+	const formatTimeForDisplay = (timeString) => {
+		const hour = getHourFromTimeString(timeString);
+		const period = hour >= 12 ? 'PM' : 'AM';
+		const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+		return `${displayHour}:00 ${period}`;
+	};
 
-	const handleFrequencyChange = async (newFrequency) => {
+	// Handle scheduling updates
+	const handleUpdateScheduling = async (updates, shouldSchedule = true) => {
+		setError(null);
+		setLoading(true);
 		try {
-			const updatedContact = {
+			let schedulingUpdate = {
+				custom_schedule: true,
+			};
+
+			// Handle frequency and priority updates at root level
+			if (updates.frequency) {
+				schedulingUpdate.frequency = updates.frequency;
+			}
+			if (updates.priority) {
+				schedulingUpdate.priority = updates.priority;
+			}
+			// Handle custom preference updates
+			else if (!updates.frequency) {
+				schedulingUpdate.custom_preferences = {
+					...contact.scheduling?.custom_preferences,
+					...updates,
+				};
+			}
+
+			await updateContactScheduling(contact.id, schedulingUpdate);
+
+			if (shouldSchedule) {
+				await handleScheduleContact(null, schedulingUpdate);
+			}
+
+			setSelectedContact({
 				...contact,
 				scheduling: {
 					...contact.scheduling,
-					frequency: newFrequency,
-					custom_schedule: contact.scheduling?.custom_schedule || false,
+					...schedulingUpdate,
 				},
-			};
-
-			// Update local state immediately
-			setFrequency(newFrequency);
-			setSelectedContact(updatedContact);
-
-			// Update Firestore
-			await updateContactScheduling(contact.id, {
-				frequency: newFrequency,
-				custom_schedule: contact.scheduling?.custom_schedule || false,
 			});
 		} catch (error) {
-			console.error('Error updating frequency:', error);
-			Alert.alert('Error', 'Failed to update contact frequency');
-			// Revert local state on error
-			setFrequency(contact.scheduling?.frequency || 'weekly');
-			setSelectedContact(contact);
+			setError('Failed to update scheduling preferences');
+			console.error('Error updating scheduling preferences:', error);
+		} finally {
+			setLoading(false);
 		}
 	};
 
-	const handleScheduleContact = async () => {
+	// Handle scheduling
+	const handleScheduleContact = async (customDate = null, schedulingData = null) => {
 		try {
 			const scheduler = new SchedulingService(
-				contact.scheduling?.custom_preferences,
+				contact.scheduling.custom_preferences,
 				[],
 				Intl.DateTimeFormat().resolvedOptions().timeZone
 			);
 
-			const lastContact = contact.last_contacted || new Date();
-			const reminderDetails = await scheduler.scheduleReminder(contact, lastContact, frequency);
+			let reminderDetails;
+			if (customDate) {
+				reminderDetails = await scheduler.scheduleCustomDate({ ...contact }, customDate);
+			} else if (contact.scheduling?.frequency) {
+				reminderDetails = await scheduler.scheduleReminder(
+					{ ...contact },
+					contact.last_contacted || new Date(),
+					contact.scheduling.frequency
+				);
+			} else {
+				throw new Error('No scheduling parameters provided');
+			}
+
 			const nextContactDate = new Date(reminderDetails.date.toDate());
-
-			const updatedContact = {
-				...contact,
-				next_contact: nextContactDate.toISOString(),
-				scheduling: {
-					...contact.scheduling,
-					frequency,
-					custom_schedule: showAdvancedSettings,
-				},
-			};
-
-			// Update local state immediately
-			setSelectedContact(updatedContact);
-
-			// Update Firestore
-			await updateContactScheduling(contact.id, {
-				frequency,
-				custom_schedule: showAdvancedSettings,
-			});
 			await updateNextContact(contact.id, nextContactDate);
 
-			Alert.alert('Success', 'Contact has been scheduled');
+			// Update UI immediately
+			setSelectedContact((prev) => ({
+				...prev,
+				next_contact: nextContactDate.toISOString(),
+			}));
 		} catch (error) {
+			setError('Failed to schedule contact');
 			console.error('Error scheduling contact:', error);
-			Alert.alert('Error', 'Failed to schedule contact');
-			// Revert local state on error
-			setSelectedContact(contact);
+		}
+	};
+
+	// Handle recurring off
+	const handleRecurringOff = async () => {
+		try {
+			setFrequency(null);
+			const schedulingUpdate = {
+				frequency: null,
+			};
+			await updateContactScheduling(contact.id, schedulingUpdate);
+			setSelectedContact((prev) => ({
+				...prev,
+				scheduling: {
+					...prev.scheduling,
+					frequency: null,
+				},
+			}));
+		} catch (error) {
+			console.error('Error turning off recurring:', error);
+			setError('Failed to turn off recurring');
+			// Revert on failure
+			setFrequency(contact?.scheduling?.frequency || null);
 		}
 	};
 
 	return (
 		<ScrollView
-			style={styles.tabContent}
-			contentContainerStyle={styles.scrollContent}
-			scrollEventThrottle={16}
+			style={styles.container}
+			contentContainerStyle={{ paddingBottom: spacing.xl }}
 			showsVerticalScrollIndicator={false}
 		>
-			<TouchableOpacity activeOpacity={1}>
-				<View style={styles.scheduleContainer}>
-					<Text style={styles.scheduleLabel}>Contact Frequency</Text>
-					<View style={styles.frequencyPicker}>
-						{FREQUENCY_OPTIONS.map((option) => (
-							<TouchableOpacity
-								key={option.value}
-								style={[styles.frequencyOption, frequency === option.value && styles.frequencyOptionSelected]}
-								onPress={() => handleFrequencyChange(option.value)}
-							>
-								<Text
-									style={[styles.frequencyText, frequency === option.value && styles.frequencyTextSelected]}
+			{loading && (
+				<View style={styles.loadingOverlay}>
+					<ActivityIndicator size="large" color={colors.primary} />
+				</View>
+			)}
+
+			{/* Frequency Grid */}
+			<View style={styles.gridContainer}>
+				<Text style={styles.sectionTitle}>Contact Frequency</Text>
+				<View style={styles.frequencyGrid}>
+					{FREQUENCY_OPTIONS.map((option) => (
+						<TouchableOpacity
+							key={option.value}
+							style={[
+								styles.frequencyButton,
+								frequency === option.value && styles.frequencyButtonActive,
+								loading && styles.disabledButton,
+							]}
+							onPress={async () => {
+								try {
+									setFrequency(option.value);
+									const schedulingUpdate = {
+										frequency: option.value,
+									};
+									await updateContactScheduling(contact.id, schedulingUpdate);
+									setSelectedContact((prev) => ({
+										...prev,
+										scheduling: {
+											...prev.scheduling,
+											frequency: option.value,
+										},
+									}));
+								} catch (error) {
+									console.error('Error updating frequency:', error);
+									setError('Failed to update frequency');
+									// Revert on failure
+									setFrequency(contact?.scheduling?.frequency || null);
+								}
+							}}
+							disabled={loading}
+						>
+							<Text style={[styles.frequencyText, frequency === option.value && styles.frequencyTextActive]}>
+								{option.label}
+							</Text>
+						</TouchableOpacity>
+					))}
+				</View>
+			</View>
+
+			{/* Action Buttons */}
+			<View style={styles.actionButtonsContainer}>
+				<TouchableOpacity
+					style={[styles.customDateButton, loading && styles.disabledButton]}
+					onPress={() => setShowDatePicker(true)}
+					disabled={loading}
+				>
+					<Text style={styles.customDateText}>Add Custom Date</Text>
+				</TouchableOpacity>
+				<TouchableOpacity
+					style={[styles.recurringOffButton, loading && styles.disabledButton]}
+					onPress={handleRecurringOff}
+					disabled={loading}
+				>
+					<Text style={styles.recurringOffText}>Recurring Off</Text>
+				</TouchableOpacity>
+			</View>
+
+			{error && <Text style={styles.errorText}>{error}</Text>}
+
+			{/* Advanced Settings */}
+			<TouchableOpacity
+				style={styles.advancedSettingsButton}
+				onPress={() => setShowAdvancedSettings(!showAdvancedSettings)}
+			>
+				<Icon
+					name={showAdvancedSettings ? 'chevron-up' : 'chevron-down'}
+					size={24}
+					color={colors.text.secondary}
+				/>
+				<Text style={styles.advancedSettingsText}>Advanced Settings</Text>
+			</TouchableOpacity>
+
+			{showAdvancedSettings && (
+				<View>
+					{/* Priority Section */}
+					<View style={styles.priorityContainer}>
+						<Text style={styles.sectionTitle}>Priority</Text>
+						<View style={styles.priorityButtons}>
+							{PRIORITY_OPTIONS.map((option) => (
+								<TouchableOpacity
+									key={option.value}
+									style={[styles.priorityButton, priority === option.value && styles.priorityButtonActive]}
+									onPress={async () => {
+										try {
+											setPriority(option.value);
+											const schedulingUpdate = {
+												priority: option.value,
+											};
+											await updateContactScheduling(contact.id, schedulingUpdate);
+											setSelectedContact((prev) => ({
+												...prev,
+												scheduling: {
+													...prev.scheduling,
+													priority: option.value,
+												},
+											}));
+										} catch (error) {
+											console.error('Error updating priority:', error);
+											setError('Failed to update priority');
+											// Revert on failure
+											setPriority(contact?.scheduling?.priority || 'normal');
+										}
+									}}
 								>
-									{option.label}
-								</Text>
-							</TouchableOpacity>
-						))}
+									<Text style={[styles.priorityText, priority === option.value && styles.priorityTextActive]}>
+										{option.label}
+									</Text>
+								</TouchableOpacity>
+							))}
+						</View>
 					</View>
 
-					<TouchableOpacity
-						style={styles.advancedSettingsButton}
-						onPress={() => setShowAdvancedSettings(!showAdvancedSettings)}
-					>
-						<Icon
-							name={showAdvancedSettings ? 'chevron-up' : 'chevron-down'}
-							size={24}
-							color={colors.text.secondary}
-						/>
-						<Text style={styles.advancedSettingsText}>Advanced Settings</Text>
-					</TouchableOpacity>
-
-					{showAdvancedSettings && (
-						<View style={styles.advancedSettings}>
-							<Text style={[styles.sectionTitle, { marginBottom: spacing.md }]}>Preferred Days</Text>
-							<View style={styles.frequencyPicker}>
-								{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
-									const isSelected = selectedDays.includes(day.toLowerCase());
-									return (
-										<TouchableOpacity
-											key={day}
-											style={[styles.frequencyOption, isSelected && styles.frequencyOptionSelected]}
-											onPress={async () => {
-												try {
-													const updatedDays = isSelected
-														? selectedDays.filter((d) => d !== day.toLowerCase())
-														: [...selectedDays, day.toLowerCase()];
-
-													setSelectedDays(updatedDays);
-
-													await updateContactScheduling(contact.id, {
-														...contact.scheduling,
-														custom_schedule: true,
+					{/* Preferred Days */}
+					<View style={styles.daysContainer}>
+						<Text style={styles.sectionTitle}>Preferred Days</Text>
+						<View style={styles.daysGrid}>
+							{DAYS_OF_WEEK.map((day) => {
+								const isSelected = selectedDays.includes(day.value);
+								return (
+									<TouchableOpacity
+										key={day.value}
+										style={[styles.dayButton, isSelected && styles.dayButtonActive]}
+										onPress={async () => {
+											const updatedDays = isSelected
+												? selectedDays.filter((d) => d !== day.value)
+												: [...selectedDays, day.value];
+											try {
+												setSelectedDays(updatedDays);
+												const schedulingUpdate = {
+													custom_preferences: {
+														...contact.scheduling?.custom_preferences,
+														preferred_days: updatedDays,
+													},
+												};
+												await updateContactScheduling(contact.id, schedulingUpdate);
+												setSelectedContact((prev) => ({
+													...prev,
+													scheduling: {
+														...prev.scheduling,
 														custom_preferences: {
-															...(contact?.scheduling?.custom_preferences || {}),
+															...prev.scheduling?.custom_preferences,
 															preferred_days: updatedDays,
 														},
-													});
+													},
+												}));
+											} catch (error) {
+												console.error('Error updating preferred days:', error);
+												setError('Failed to update preferred days');
+												setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
+											}
+										}}
+									>
+										<Text style={[styles.dayText, isSelected && styles.dayTextActive]}>{day.label}</Text>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+					</View>
 
-													setSelectedContact({
-														...contact,
-														scheduling: {
-															...(contact.scheduling || {}),
-															custom_schedule: true,
-															custom_preferences: {
-																...(contact?.scheduling?.custom_preferences || {}),
-																preferred_days: updatedDays,
-															},
-														},
-													});
-													await loadContacts();
-												} catch (error) {
-													console.error('Error updating preferred days:', error);
-													Alert.alert('Error', 'Failed to update preferred days');
-													setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
-												}
-											}}
-										>
-											<Text style={[styles.frequencyText, isSelected && styles.frequencyTextSelected]}>
-												{day.substring(0, 3)}
-											</Text>
-										</TouchableOpacity>
-									);
-								})}
-							</View>
-
-							<Text style={[styles.sectionTitle, { marginTop: spacing.lg, marginBottom: spacing.sm }]}>
-								Active Hours
-							</Text>
-							<View
-								style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md }}
-							>
-								<TouchableOpacity
-									style={[styles.frequencyOption, { flex: 1, marginRight: spacing.sm }]}
-									onPress={() => {
-										Alert.alert('Coming Soon', 'Time picker will be added in the next update');
-									}}
-								>
-									<Text style={styles.frequencyText}>
-										Start: {contact?.scheduling?.custom_preferences?.active_hours?.start || '09:00'}
-									</Text>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={[styles.frequencyOption, { flex: 1 }]}
-									onPress={() => {
-										Alert.alert('Coming Soon', 'Time picker will be added in the next update');
-									}}
-								>
-									<Text style={styles.frequencyText}>
-										End: {contact?.scheduling?.custom_preferences?.active_hours?.end || '17:00'}
-									</Text>
-								</TouchableOpacity>
-							</View>
-
-							<Text style={[styles.sectionTitle, { marginTop: spacing.md, marginBottom: spacing.sm }]}>
-								Schedule Settings
-							</Text>
-							<View style={styles.settingRow}>
-								<Text style={styles.scheduleLabel}>Minimum Gap Between Calls</Text>
-								<TouchableOpacity
-									style={[styles.frequencyOption]}
-									onPress={() => {
-										Alert.alert('Coming Soon', 'Gap adjustment will be added in the next update');
-									}}
-								>
-									<Text style={styles.frequencyText}>{contact?.scheduling?.minimum_gap || 30} minutes</Text>
-								</TouchableOpacity>
-							</View>
-
+					{/* Active Hours */}
+					<View style={styles.hoursContainer}>
+						<Text style={styles.sectionTitle}>Active Hours</Text>
+						<View style={styles.hoursRow}>
 							<TouchableOpacity
-								style={[styles.advancedSettingsButton, { marginTop: spacing.lg }]}
-								onPress={() => {
-									Alert.alert(
-										'Reset Preferences',
-										'Are you sure you want to reset scheduling preferences to default?',
-										[
-											{ text: 'Cancel', style: 'cancel' },
-											{
-												text: 'Reset',
-												style: 'destructive',
-												onPress: async () => {
-													try {
-														await updateContactScheduling(contact.id, {
-															frequency,
-															custom_schedule: false,
-															custom_preferences: null,
-														});
-														setSelectedDays([]);
-														setSelectedContact({
-															...contact,
-															scheduling: {
-																frequency,
-																custom_schedule: false,
-																custom_preferences: null,
-															},
-														});
-													} catch (error) {
-														console.error('Error resetting preferences:', error);
-														Alert.alert('Error', 'Failed to reset preferences');
-													}
-												},
-											},
-										]
-									);
-								}}
+								style={[styles.timeButton, loading && styles.disabledButton]}
+								onPress={() => setShowStartTimePicker(true)}
+								disabled={loading}
 							>
-								<Icon name="refresh-outline" size={20} color={colors.text.secondary} />
-								<Text style={styles.advancedSettingsText}>Reset to Default</Text>
+								<Text style={styles.timeText}>Start: {formatTimeForDisplay(activeHours.start)}</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								style={[styles.timeButton, loading && styles.disabledButton]}
+								onPress={() => setShowEndTimePicker(true)}
+								disabled={loading}
+							>
+								<Text style={styles.timeText}>End: {formatTimeForDisplay(activeHours.end)}</Text>
 							</TouchableOpacity>
 						</View>
-					)}
-
-					{contact.next_contact && (
-						<TouchableOpacity activeOpacity={1}>
-							<View style={styles.nextContactContainer}>
-								<Text style={styles.nextContactLabel}>Next Contact</Text>
-								<Text style={styles.nextContactDate}>
-									{new Date(contact.next_contact).toLocaleDateString()}
-								</Text>
-							</View>
-						</TouchableOpacity>
-					)}
-
-					<TouchableOpacity
-						style={[commonStyles.primaryButton, { marginTop: 20 }]}
-						onPress={handleScheduleContact}
-					>
-						<Text style={commonStyles.primaryButtonText}>Schedule Contact</Text>
-					</TouchableOpacity>
-
-					{contact.next_contact && (
-						<TouchableOpacity
-							style={styles.removeScheduleButton}
-							onPress={() => {
-								Alert.alert('Remove Schedule', 'Are you sure you want to remove this schedule?', [
-									{ text: 'Cancel', style: 'cancel' },
-									{
-										text: 'Remove',
-										style: 'destructive',
-										onPress: async () => {
-											try {
-												await updateNextContact(contact.id, null);
-												setSelectedContact({
-													...contact,
-													next_contact: null,
-												});
-											} catch (error) {
-												Alert.alert('Error', 'Failed to remove schedule');
-											}
-										},
-									},
-								]);
-							}}
-						>
-							<Text style={styles.removeScheduleText}>Remove Schedule</Text>
-						</TouchableOpacity>
-					)}
+					</View>
 				</View>
-			</TouchableOpacity>
+			)}
+
+			{/* Next Contact Display */}
+			{contact.next_contact && (
+				<View style={styles.nextContactContainer}>
+					<Text style={styles.nextContactLabel}>Next Contact</Text>
+					<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
+				</View>
+			)}
+
+			{/* Modals */}
+			{/* Start Time */}
+			<TimePickerModal
+				visible={showStartTimePicker}
+				onClose={() => setShowStartTimePicker(false)}
+				initialHour={getHourFromTimeString(activeHours.start)}
+				title="Earliest Call Time"
+				onSelect={async (hour) => {
+					const newTime = formatHourToTimeString(hour);
+					const endHour = getHourFromTimeString(activeHours.end);
+
+					if (hour >= endHour) {
+						Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
+						return;
+					}
+
+					try {
+						setActiveHours((prev) => ({ ...prev, start: newTime }));
+						const schedulingUpdate = {
+							'scheduling.custom_preferences.active_hours': {
+								start: newTime,
+								end: activeHours.end,
+							},
+						};
+						await updateDoc(doc(db, 'contacts', contact.id), schedulingUpdate);
+						setSelectedContact((prev) => ({
+							...prev,
+							scheduling: {
+								...prev.scheduling,
+								custom_preferences: {
+									...prev.scheduling?.custom_preferences,
+									active_hours: {
+										...prev.scheduling?.custom_preferences?.active_hours,
+										start: newTime,
+										end: activeHours.end,
+									},
+								},
+							},
+						}));
+					} catch (error) {
+						console.error('Error updating start time:', error);
+						setError('Failed to update start time');
+					} finally {
+						setShowStartTimePicker(false);
+					}
+				}}
+			/>
+
+			{/* End Time */}
+			<TimePickerModal
+				visible={showEndTimePicker}
+				onClose={() => setShowEndTimePicker(false)}
+				initialHour={getHourFromTimeString(activeHours.end)}
+				title="Latest Call Time"
+				onSelect={async (hour) => {
+					const newTime = formatHourToTimeString(hour);
+					const startHour = getHourFromTimeString(activeHours.start);
+
+					if (hour <= startHour) {
+						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
+						return;
+					}
+
+					try {
+						setActiveHours((prev) => ({ ...prev, end: newTime }));
+						const schedulingUpdate = {
+							'scheduling.custom_preferences.active_hours': {
+								start: activeHours.start,
+								end: newTime,
+							},
+						};
+						await updateDoc(doc(db, 'contacts', contact.id), schedulingUpdate);
+						setSelectedContact((prev) => ({
+							...prev,
+							scheduling: {
+								...prev.scheduling,
+								custom_preferences: {
+									...prev.scheduling?.custom_preferences,
+									active_hours: {
+										...prev.scheduling?.custom_preferences?.active_hours,
+										start: activeHours.start,
+										end: newTime,
+									},
+								},
+							},
+						}));
+					} catch (error) {
+						console.error('Error updating end time:', error);
+						setError('Failed to update end time');
+					} finally {
+						setShowEndTimePicker(false);
+					}
+				}}
+			/>
+
+			{/* End Time */}
+			<TimePickerModal
+				visible={showEndTimePicker}
+				onClose={() => setShowEndTimePicker(false)}
+				initialHour={getHourFromTimeString(activeHours.end)}
+				title="Latest Call Time"
+				onSelect={async (hour) => {
+					const newTime = formatHourToTimeString(hour);
+					const startHour = getHourFromTimeString(activeHours.start);
+
+					if (hour <= startHour) {
+						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
+						return;
+					}
+
+					try {
+						setActiveHours((prev) => ({ ...prev, end: newTime }));
+						const schedulingUpdate = {
+							custom_preferences: {
+								...contact.scheduling?.custom_preferences,
+								active_hours: {
+									...contact.scheduling?.custom_preferences?.active_hours,
+									start: activeHours.start,
+									end: newTime,
+								},
+							},
+						};
+						await updateContactScheduling(contact.id, schedulingUpdate);
+						setSelectedContact((prev) => ({
+							...prev,
+							scheduling: {
+								...prev.scheduling,
+								custom_preferences: {
+									...prev.scheduling?.custom_preferences,
+									active_hours: {
+										...prev.scheduling?.custom_preferences?.active_hours,
+										start: activeHours.start,
+										end: newTime,
+									},
+								},
+							},
+						}));
+					} catch (error) {
+						console.error('Error updating end time:', error);
+						setError('Failed to update end time');
+					} finally {
+						setShowEndTimePicker(false);
+					}
+				}}
+			/>
+			<DatePickerModal
+				visible={showDatePicker}
+				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
+				onClose={() => setShowDatePicker(false)}
+				onDateSelect={async (event, date) => {
+					setShowDatePicker(false);
+					if (date) {
+						try {
+							await handleScheduleContact(date);
+						} catch (error) {
+							console.error('Error scheduling custom date:', error);
+						}
+					}
+				}}
+			/>
 		</ScrollView>
 	);
 };

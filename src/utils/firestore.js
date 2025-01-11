@@ -22,6 +22,7 @@ import { auth } from '../config/firebase';
 import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './contactHelpers';
 import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
+import { RELATIONSHIP_DEFAULTS } from '../../constants/relationships';
 
 // Store active subscriptions
 const activeSubscriptions = new Map();
@@ -42,12 +43,47 @@ export const createUserDocument = async (userId, userData) => {
 			created_at: serverTimestamp(),
 			notifications_enabled: true,
 			photo_url: null,
+			scheduling_preferences: {
+				global_excluded_times: [
+					{
+						days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+						end: '07:00',
+						start: '23:00',
+					},
+				],
+				max_reminders_per_day: 5,
+				minimumGapMinutes: 30,
+				optimalGapMinutes: 120,
+				relationship_types: RELATIONSHIP_DEFAULTS,
+				scheduling_history: {
+					enabled: true,
+				},
+				patterns: {},
+				snooze_options: {
+					default_options: [
+						{
+							hours: 3,
+							label: 'Later Today',
+						},
+						{
+							days: 1,
+							label: 'Tomorrow',
+						},
+						{
+							days: 7,
+							label: 'Next Week',
+						},
+					],
+					version: 2,
+				},
+			},
 		});
 	} catch (error) {
 		console.error('Error creating user document:', error);
 		throw error;
 	}
 };
+
 // Contact functions with real-time capabilities
 export const subscribeToContacts = (userId, callback) => {
 	if (!userId) {
@@ -423,26 +459,13 @@ export const fetchPastContacts = async (userId) => {
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
-		const defaultScheduling = {
-			relationship_type: SCHEDULING_CONSTANTS.RELATIONSHIP_TYPES[0],
-			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
-			custom_schedule: false,
-			custom_preferences: {
-				preferred_days: [],
-				active_hours: {
-					start: '09:00',
-					end: '17:00',
-				},
-				excluded_times: [],
-			},
-			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
-			minimum_gap: 30,
-		};
+		const contactDoc = await getDoc(contactRef);
+		const existingScheduling = contactDoc.data().scheduling;
 
 		await updateDoc(contactRef, {
 			scheduling: {
-				...defaultScheduling,
-				...schedulingData,
+				...existingScheduling, // Keep existing values
+				...schedulingData, // Apply new values
 				updated_at: serverTimestamp(),
 			},
 		});

@@ -1,4 +1,3 @@
-// src/components/__tests__/NotificationsView.test.js
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { NotificationsView } from '../dashboard/NotificationsView';

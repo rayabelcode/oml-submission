@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { useStyles } from '../styles/screens/settings';
 import { useTheme } from '../context/ThemeContext'; // Dark mode
 import { StatusBar } from 'expo-status-bar';
@@ -327,15 +327,6 @@ export default function SettingsScreen({ navigation }) {
 		}
 	};
 
-	async function handleLogout() {
-		try {
-			const { error } = await signOut();
-			if (error) throw error;
-		} catch (error) {
-			Alert.alert('Error', error.message);
-		}
-	}
-
 	if (!user) {
 		return (
 			<AuthSection
@@ -365,27 +356,35 @@ export default function SettingsScreen({ navigation }) {
 		<View style={styles.container}>
 			<StatusBar style="auto" />
 
+			{/* Static Header */}
 			<ProfileSection
 				userProfile={userProfile}
 				user={user}
 				handleProfilePhotoUpload={handleProfilePhotoUpload}
 			/>
 
-			<SettingsList
-				notificationsEnabled={notificationsEnabled}
-				handleNotificationToggle={handleNotificationToggle}
-				setIsPrivacyModalVisible={setIsPrivacyModalVisible}
-				handleSupport={handleSupport}
-				handleLogout={handleLogout}
-				isDarkMode={isDarkMode}
-				handleThemeToggle={toggleTheme}
-				onProfilePress={handleProfilePress}
-				onAccountPress={handleAccountPress}
-				navigation={navigation}
-				handleExportData={handleExportData}
-				handleDeleteAccount={handleDeleteAccount}
-			/>
+			{/* Scrollable Content */}
+			<ScrollView
+				style={{ flex: 1 }}
+				contentContainerStyle={{ paddingBottom: 20 }}
+				showsVerticalScrollIndicator={false}
+			>
+				<SettingsList
+					notificationsEnabled={notificationsEnabled}
+					handleNotificationToggle={handleNotificationToggle}
+					setIsPrivacyModalVisible={setIsPrivacyModalVisible}
+					handleSupport={handleSupport}
+					isDarkMode={isDarkMode}
+					handleThemeToggle={toggleTheme}
+					onProfilePress={handleProfilePress}
+					onAccountPress={handleAccountPress}
+					navigation={navigation}
+					handleExportData={handleExportData}
+					handleDeleteAccount={handleDeleteAccount}
+				/>
+			</ScrollView>
 
+			{/* Loading Overlay */}
 			{loading && (
 				<View style={styles.loadingOverlay}>
 					<ActivityIndicator size="large" color={colors.primary} />

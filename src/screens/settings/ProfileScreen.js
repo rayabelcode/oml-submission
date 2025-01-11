@@ -5,26 +5,57 @@ import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePickerComponent from '../../components/general/ImagePicker';
 import { useAuth } from '../../context/AuthContext';
-import { getUserProfile, updateUserProfile, uploadProfilePhoto } from '../../utils/firestore';
+import {
+	getUserProfile,
+	updateUserProfile,
+	uploadProfilePhoto,
+	cleanupSubscriptions,
+} from '../../utils/firestore';
 import { cacheManager } from '../../utils/cache';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
 	const { colors } = useTheme();
-	const { user } = useAuth();
+	const { user, signOut } = useAuth();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
-	const profilePhotoRef = useRef(null); // Ref for profile photo to avoid re-renders
+	const profilePhotoRef = useRef(null);
 	const [hasChanges, setHasChanges] = useState(false);
 	const lastNameInputRef = useRef(null);
 
-	// Fetch and load user profile
+	const handleLogout = async () => {
+		Alert.alert(
+			'Confirm Logout',
+			'Are you sure you want to log out?',
+			[
+				{
+					text: 'Cancel',
+					style: 'cancel',
+				},
+				{
+					text: 'Log Out',
+					style: 'destructive',
+					onPress: async () => {
+						try {
+							// Clean up subscriptions before signing out
+							cleanupSubscriptions();
+							const { error } = await signOut();
+							if (error) throw error;
+						} catch (error) {
+							Alert.alert('Error', error.message);
+						}
+					},
+				},
+			],
+			{ cancelable: true }
+		);
+	};
+
 	const loadUserProfile = useCallback(async () => {
 		try {
 			const cachedProfile = await cacheManager.getCachedProfile(user.uid);
 
 			if (cachedProfile) {
-				// Use cached profile data if available
 				setFirstName((prev) => (prev !== cachedProfile.first_name ? cachedProfile.first_name || '' : prev));
 				setLastName((prev) => (prev !== cachedProfile.last_name ? cachedProfile.last_name || '' : prev));
 
@@ -32,14 +63,11 @@ const ProfileScreen = ({ navigation }) => {
 					profilePhotoRef.current = cachedProfile.photo_url;
 				}
 			} else {
-				// Fetch from the backend if the cache is invalid or missing
 				const profile = await getUserProfile(user.uid);
 				if (profile) {
 					setFirstName(profile.first_name || '');
 					setLastName(profile.last_name || '');
 					profilePhotoRef.current = profile.photo_url;
-
-					// Save the fetched profile data to the cache
 					await cacheManager.saveProfile(user.uid, profile);
 				}
 			}
@@ -48,12 +76,10 @@ const ProfileScreen = ({ navigation }) => {
 		}
 	}, [user.uid]);
 
-	// Load profile once on component mount
 	useEffect(() => {
 		loadUserProfile();
 	}, [loadUserProfile]);
 
-	// Handle photo upload
 	const handleProfilePhotoUpload = async () => {
 		try {
 			await ImagePickerComponent(async (croppedImagePath) => {
@@ -74,7 +100,6 @@ const ProfileScreen = ({ navigation }) => {
 		}
 	};
 
-	// Handle saving profile changes
 	const handleSaveProfile = async () => {
 		try {
 			await updateUserProfile(user.uid, {
@@ -82,7 +107,6 @@ const ProfileScreen = ({ navigation }) => {
 				last_name: lastName.trim(),
 			});
 
-			// Update the cached profile
 			await cacheManager.saveProfile(user.uid, {
 				first_name: firstName.trim(),
 				last_name: lastName.trim(),
@@ -97,7 +121,6 @@ const ProfileScreen = ({ navigation }) => {
 		}
 	};
 
-	// Handle text input changes
 	const handleTextChange = (text, field) => {
 		if (field === 'firstName') {
 			setFirstName(text);
@@ -190,6 +213,13 @@ const ProfileScreen = ({ navigation }) => {
 							<Text style={styles.saveButtonText}>Save Changes</Text>
 						</TouchableOpacity>
 					</View>
+				</View>
+
+				<View style={styles.logoutContainer}>
+					<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+						<Icon name="log-out-outline" size={24} color={colors.danger} />
+						<Text style={styles.logoutText}>Log Out</Text>
+					</TouchableOpacity>
 				</View>
 			</ScrollView>
 		</View>
