@@ -17,6 +17,7 @@ import { navigationRef } from './src/navigation/RootNavigation';
 import { PreloadProvider } from './src/context/PreloadContext';
 import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
 import { cacheManager } from './src/utils/cache';
+import { setupAvoidSoftInputGlobalSettings } from './src/utils/componentSettings';
 
 // Disable ScrollView scrollbar globally
 const originalScrollViewRender = ScrollView.render;
@@ -145,6 +146,11 @@ function App() {
 		}
 
 		prepare();
+	}, []);
+
+	// Apply global AvoidSoftInput (react-native-avoid-softinput) settings
+	useEffect(() => {
+		setupAvoidSoftInputGlobalSettings();
 	}, []);
 
 	const onLayoutRootView = useCallback(async () => {

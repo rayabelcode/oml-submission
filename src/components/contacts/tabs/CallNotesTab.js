@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	View,
 	Text,
@@ -10,6 +10,7 @@ import {
 	Modal,
 	ActivityIndicator,
 } from 'react-native';
+import { AvoidSoftInput } from 'react-native-avoid-softinput';
 import { useTheme, spacing } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -33,6 +34,13 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 	const [editingText, setEditingText] = useState('');
+
+	useEffect(() => {
+		AvoidSoftInput.setEnabled(true); // Enable AvoidSoftInput for this page
+		return () => {
+			AvoidSoftInput.setEnabled(false); // Disable AvoidSoftInput on unmount
+		};
+	}, []);
 
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
@@ -70,7 +78,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
-			// Revert local state on error
 			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
 			const updatedHistory = await fetchContactHistory(contact.id);
@@ -86,7 +93,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				style: 'destructive',
 				onPress: async () => {
 					try {
-						// Update local state immediately
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
 						setHistory(updatedHistory);
@@ -112,7 +118,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					} catch (error) {
 						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
-						// Revert local state on error
 						const originalHistory = await fetchContactHistory(contact.id);
 						setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 					}
@@ -123,21 +128,17 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 
 	const handleEditHistory = async (index) => {
 		try {
-			// Prevent unnecessary updates
 			if (history[index].notes === editingText) {
 				setEditMode(null);
 				return;
 			}
 
-			// Create a deep copy of the history array
 			const updatedHistory = history.map((entry, i) =>
 				i === index ? { ...entry, notes: editingText } : { ...entry }
 			);
 
-			// Update the state
 			setHistory(updatedHistory);
 
-			// Update Firestore
 			await updateContact(contact.id, {
 				contact_history: updatedHistory,
 			});
@@ -149,12 +150,11 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			};
 			setSelectedContact(updatedContact);
 
-			setEditMode(null); // Exit edit mode
-			setEditingText(''); // Clear temporary state
+			setEditMode(null);
+			setEditingText('');
 		} catch (error) {
 			console.error('Error editing history:', error);
 			Alert.alert('Error', 'Failed to edit history');
-			// Revert local state on error
 			const originalHistory = await fetchContactHistory(contact.id);
 			setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 		}
@@ -168,18 +168,15 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			const cacheKey = `${contact.id}-suggestions`;
 			const cachedSuggestions = suggestionCache[cacheKey];
 
-			// If there are cached suggestions and no new calls have been added, use cache
 			if (cachedSuggestions) {
 				setSuggestions(cachedSuggestions);
 				setLoadingSuggestions(false);
 				return;
 			}
 
-			// Generate new suggestions only if no cache exists or new call was added
 			const newSuggestions = await generateTopicSuggestions(contact, history);
 			setSuggestions(newSuggestions);
 
-			// Update cache
 			const newCache = {
 				...suggestionCache,
 				[cacheKey]: newSuggestions,
@@ -198,8 +195,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 		<ScrollView
 			style={[styles.tabContent, { flex: 1 }]}
 			contentContainerStyle={{ paddingBottom: 20 }}
-			scrollEnabled={true}
-			showsVerticalScrollIndicator={false}
+			keyboardShouldPersistTaps="handled"
 		>
 			<View style={styles.callNotesSection}>
 				<TextInput
@@ -306,7 +302,9 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 							{loadingSuggestions ? (
 								<View style={styles.loadingContainer}>
 									<ActivityIndicator size="large" color={colors.primary} />
-									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>Generating suggestions...</Text>
+									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>
+										Generating suggestions...
+									</Text>
 								</View>
 							) : (
 								suggestions.map((suggestion, index) => (
