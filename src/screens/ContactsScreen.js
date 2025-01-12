@@ -497,29 +497,55 @@ export default function ContactsScreen({ navigation }) {
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
 						</TouchableOpacity>
-						<TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
-							<Icon name="search-outline" size={30} color={colors.text.primary} />
-						</TouchableOpacity>
+						<TouchableOpacity
+    onPress={() => {
+        setShowSearch(!showSearch);
+        if (showSearch) {
+            setSearchQuery('');
+            handleSearch('');
+        }
+    }}
+    style={styles.headerButton}
+>
+    <Icon 
+        name={showSearch ? "close" : "search-outline"} 
+        size={30} 
+        color={showSearch ? '#FF6B6B' : colors.text.primary} 
+    />
+</TouchableOpacity>
+
 					</View>
 				</View>
 				{showSearch && (
-					<TextInput
-						style={styles.searchInput}
-						value={searchQuery}
-						onChangeText={handleSearch}
-						placeholder="Search contacts..."
-						placeholderTextColor={colors.text.secondary}
-						autoFocus
-						autoCorrect={false}
-						spellCheck={false}
-						keyboardType="default"
-						autoCapitalize="none"
-						returnKeyType="search"
-						enablesReturnKeyAutomatically={true}
-					/>
+					<View style={styles.searchContainer}>
+						<TextInput
+							style={styles.searchInput}
+							value={searchQuery}
+							onChangeText={handleSearch}
+							placeholder="Search Contacts"
+							placeholderTextColor={colors.text.secondary}
+							autoFocus
+							autoCorrect={false}
+							spellCheck={false}
+							keyboardType="default"
+							autoCapitalize="none"
+							returnKeyType="search"
+							enablesReturnKeyAutomatically={true}
+						/>
+						{searchQuery.length > 0 && (
+							<TouchableOpacity
+								style={styles.clearSearchButton}
+								onPress={() => {
+									setSearchQuery('');
+									handleSearch('');
+								}}
+							>
+								<Icon name="close-circle" size={30} color={colors.text.secondary} />
+							</TouchableOpacity>
+						)}
+					</View>
 				)}
 			</View>
-
 			<ScrollView
 				style={styles.content}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
