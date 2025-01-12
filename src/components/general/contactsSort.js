@@ -1,144 +1,130 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
-
-const MenuOption = ({ label, selected, onPress, icon }) => {
-	const { colors } = useTheme();
-	return (
-		<TouchableOpacity
-			onPress={onPress}
-			style={{
-				flexDirection: 'row',
-				alignItems: 'center',
-				padding: 15,
-				backgroundColor: selected ? colors.background.secondary : 'transparent',
-				borderRadius: 8,
-			}}
-		>
-			{icon && (
-				<Icon
-					name={icon}
-					size={24}
-					color={selected ? colors.primary : colors.text.primary}
-					style={{ marginRight: 10 }}
-				/>
-			)}
-			<Text
-				style={{
-					color: selected ? colors.primary : colors.text.primary,
-					fontWeight: selected ? '600' : '400',
-					flex: 1,
-				}}
-			>
-				{label}
-			</Text>
-			{selected && <Icon name="checkmark" size={24} color={colors.primary} />}
-		</TouchableOpacity>
-	);
-};
-
-const SectionHeader = ({ title }) => {
-	const { colors } = useTheme();
-	return (
-		<View style={{ padding: 15, backgroundColor: colors.background.secondary }}>
-			<Text style={{ color: colors.text.secondary, fontWeight: '600' }}>{title}</Text>
-		</View>
-	);
-};
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 
 const ContactsSortMenu = ({
-	visible,
-	onClose,
-	sortType,
-	groupBy,
-	nameDisplay,
-	onSortTypeChange,
-	onGroupByChange,
-	onNameDisplayChange,
+    visible,
+    onClose,
+    sortType,
+    groupBy,
+    nameDisplay,
+    onSortTypeChange,
+    onGroupByChange,
+    onNameDisplayChange,
 }) => {
-	const { colors } = useTheme();
-	const commonStyles = useCommonStyles();
+    const { colors } = useTheme();
+    const commonStyles = useCommonStyles();
+    const windowHeight = Dimensions.get('window').height;
 
-	return (
-		<Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-			<View style={commonStyles.modalContainer}>
-				<View style={[commonStyles.modalContent, { height: '70%' }]}>
-					<View style={commonStyles.modalHeader}>
-						<Text style={commonStyles.modalTitle}>Display Options</Text>
-						<TouchableOpacity
-							onPress={onClose}
-							style={{
-								position: 'absolute',
-								right: 0,
-								padding: 15,
-							}}
-						>
-							<Icon name="close" size={24} color={colors.text.primary} />
-						</TouchableOpacity>
-					</View>
+    const styles = StyleSheet.create({
+        modalOverlay: {
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        modalContent: {
+            backgroundColor: colors.background.primary,
+            borderRadius: 20,
+            padding: 20,
+            width: '85%',
+            maxHeight: windowHeight * 0.35,
+        },
+        section: {
+            marginBottom: 15,
+        },
+        sectionTitle: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text.primary,
+            marginBottom: 8,
+        },
+        segmentedControl: {
+            height: 40,
+            marginBottom: 5,
+        },
+        header: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 15,
+            position: 'relative',
+        },
+        title: {
+            fontSize: 18,
+            fontWeight: '600',
+            color: colors.text.primary,
+        },
+        closeButton: {
+            position: 'absolute',
+            right: -10,
+            top: -10,
+            padding: 10,
+        },
+    });
 
-					<ScrollView>
-						<SectionHeader title="Sort By" />
-						<MenuOption
-							label="First Name"
-							selected={sortType === 'firstName'}
-							onPress={() => onSortTypeChange('firstName')}
-							icon="text"
-						/>
-						<MenuOption
-							label="Last Name"
-							selected={sortType === 'lastName'}
-							onPress={() => onSortTypeChange('lastName')}
-							icon="text"
-						/>
+    return (
+        <Modal visible={visible} animationType="fade" transparent={true} onRequestClose={onClose}>
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Display Options</Text>
+                        <TouchableOpacity
+                            onPress={onClose}
+                            style={styles.closeButton}
+                        >
+                            <Icon name="close" size={24} color={colors.text.primary} />
+                        </TouchableOpacity>
+                    </View>
 
-						<SectionHeader title="Group By" />
-						<MenuOption
-							label="Scheduled/Unscheduled"
-							selected={groupBy === 'schedule'}
-							onPress={() => onGroupByChange('schedule')}
-							icon="calendar"
-						/>
-						<MenuOption
-							label="Relationship Type"
-							selected={groupBy === 'relationship'}
-							onPress={() => onGroupByChange('relationship')}
-							icon="people"
-						/>
-						<MenuOption
-							label="None"
-							selected={groupBy === 'none'}
-							onPress={() => onGroupByChange('none')}
-							icon="list"
-						/>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Sort By</Text>
+                        <SegmentedControl
+                            values={['First Name', 'Last Name']}
+                            selectedIndex={sortType === 'firstName' ? 0 : 1}
+                            onChange={(event) => {
+                                onSortTypeChange(event.nativeEvent.selectedSegmentIndex === 0 ? 'firstName' : 'lastName');
+                            }}
+                            style={styles.segmentedControl}
+                        />
+                    </View>
 
-						<SectionHeader title="Name Display" />
-						<MenuOption
-							label="Full Names"
-							selected={nameDisplay === 'full'}
-							onPress={() => onNameDisplayChange('full')}
-							icon="person"
-						/>
-						<MenuOption
-							label="First Name Only"
-							selected={nameDisplay === 'firstOnly'}
-							onPress={() => onNameDisplayChange('firstOnly')}
-							icon="person-outline"
-						/>
-						<MenuOption
-							label="Initials"
-							selected={nameDisplay === 'initials'}
-							onPress={() => onNameDisplayChange('initials')}
-							icon="text"
-						/>
-					</ScrollView>
-				</View>
-			</View>
-		</Modal>
-	);
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Group By</Text>
+                        <SegmentedControl
+                            values={['Schedule', 'Relationship', 'None']}
+                            selectedIndex={
+                                groupBy === 'schedule' ? 0 : groupBy === 'relationship' ? 1 : 2
+                            }
+                            onChange={(event) => {
+                                const values = ['schedule', 'relationship', 'none'];
+                                onGroupByChange(values[event.nativeEvent.selectedSegmentIndex]);
+                            }}
+                            style={styles.segmentedControl}
+                        />
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Name Display</Text>
+                        <SegmentedControl
+                            values={['Full Name', 'First Only', 'Initials']}
+                            selectedIndex={
+                                nameDisplay === 'full' ? 0 : nameDisplay === 'firstOnly' ? 1 : 2
+                            }
+                            onChange={(event) => {
+                                const values = ['full', 'firstOnly', 'initials'];
+                                onNameDisplayChange(values[event.nativeEvent.selectedSegmentIndex]);
+                            }}
+                            style={styles.segmentedControl}
+                        />
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
 };
 
 export default ContactsSortMenu;

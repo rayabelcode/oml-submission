@@ -603,23 +603,39 @@ export default function ContactsScreen({ navigation }) {
 	const renderContacts = () => {
 		const organizedContacts = organizeContacts(searchQuery ? filteredContacts : contacts);
 
+		if (groupBy === 'none') {
+			return (
+				<View style={styles.section}>
+					<View style={styles.grid}>
+						{organizedContacts.all?.map((contact) => (
+							<ContactCard
+								key={contact.id}
+								contact={contact}
+								onPress={handleOpenDetails}
+								loadContacts={loadContacts}
+								setIsAnyEditing={setIsAnyEditing}
+								isAnyEditing={isAnyEditing}
+								setDeleteButtonPosition={setDeleteButtonPosition}
+								setEditingContact={setEditingContact}
+								nameDisplay={nameDisplay}
+							/>
+						))}
+					</View>
+				</View>
+			);
+		}
+
 		if (groupBy === 'relationship') {
 			const relationshipGroups = Object.entries(organizedContacts).map(([type, contacts]) => {
 				if (contacts.length === 0) return null;
 				return (
 					<View key={type} style={styles.section}>
-<View style={styles.groupHeader}>
-    <View style={styles.relationshipHeader}>
-        <Icon 
-            name={RELATIONSHIP_TYPES[type].icon} 
-            size={22} 
-            color={RELATIONSHIP_TYPES[type].color} 
-        />
-        <Text style={styles.relationshipTitle}>
-            {RELATIONSHIP_TYPES[type].label}
-        </Text>
-    </View>
-</View>
+						<View style={styles.groupHeader}>
+							<View style={styles.relationshipHeader}>
+								<Icon name={RELATIONSHIP_TYPES[type].icon} size={22} color={RELATIONSHIP_TYPES[type].color} />
+								<Text style={styles.relationshipTitle}>{RELATIONSHIP_TYPES[type].label}</Text>
+							</View>
+						</View>
 
 						<View style={styles.grid}>
 							{contacts.map((contact) => (
