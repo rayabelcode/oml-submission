@@ -387,6 +387,8 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.sm,
 			flex: 1,
 			marginRight: spacing.sm,
+			justifyContent: 'center',
+			alignItems: 'center',
 		},
 		dateButtonText: {
 			fontSize: 16,
@@ -399,6 +401,7 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.sm,
 			width: 100,
 			alignItems: 'center',
+			textAlign: 'center',
 		},
 		historySection: {
 			marginBottom: spacing.md,
@@ -832,19 +835,6 @@ const useStyles = () => {
 			fontWeight: '600',
 			marginLeft: spacing.xs,
 		},
-		aiModalContainer: {
-			position: 'absolute',
-			top: 0,
-			left: 0,
-			right: 0,
-			bottom: 0,
-			backgroundColor: 'rgba(0,0,0,1)',
-			justifyContent: 'center',
-			alignItems: 'center',
-			width: '100%',
-			height: '100%',
-			zIndex: 9999,
-		},
 		modalTitleContainer: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -862,6 +852,19 @@ const useStyles = () => {
 			padding: spacing.md,
 			width: '100%',
 		},
+		aiModalContainer: {
+			position: 'absolute',
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			backgroundColor: 'rgba(0,0,0,1)',
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
+			height: '100%',
+			zIndex: 9999,
+		},
 		aiModalContent: {
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
@@ -870,8 +873,27 @@ const useStyles = () => {
 			maxHeight: '80%',
 			paddingTop: spacing.md,
 		},
-		aiModalScrollContent: {
+		aiSuggestionCard: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
 			padding: spacing.md,
+			marginBottom: spacing.sm,
+		},
+		aiSuggestionText: {
+			fontSize: 16,
+			color: colors.text.primary,
+			lineHeight: 22,
+		},
+		aiModalTitle: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			textAlign: 'center',
+			marginBottom: spacing.md,
+		},
+		aiModalScrollContent: {
+			paddingHorizontal: spacing.md,
+			paddingBottom: spacing.md,
 			flexGrow: 1,
 		},
 		// Scheduling

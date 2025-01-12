@@ -293,31 +293,29 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				onRequestClose={() => setShowAISuggestions(false)}
 			>
 				<View style={styles.aiModalContainer}>
-					<View style={styles.aiModalContent}>
-						<View style={styles.modalTitleContainer}>
-							<Icon name="bulb-outline" size={24} color={colors.primary} />
-							<Text style={styles.sectionTitle}>Conversation Topics</Text>
-						</View>
-						<ScrollView style={styles.aiModalScrollContent}>
-							{loadingSuggestions ? (
-								<View style={styles.loadingContainer}>
-									<ActivityIndicator size="large" color={colors.primary} />
-									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>
-										Generating suggestions...
-									</Text>
-								</View>
-							) : (
-								suggestions.map((suggestion, index) => (
-									<Text key={index} style={styles.suggestion}>
-										{suggestion}
-									</Text>
-								))
-							)}
-						</ScrollView>
-						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-							<Icon name="close" size={24} color="#000000" />
-						</TouchableOpacity>
-					</View>
+				<View style={styles.aiModalContent}>
+    <Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
+    <ScrollView style={styles.aiModalScrollContent}>
+        {loadingSuggestions ? (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
+                    Generating suggestions...
+                </Text>
+            </View>
+        ) : (
+            suggestions.map((suggestion, index) => (
+                <View key={index} style={styles.aiSuggestionCard}>
+                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
+                </View>
+            ))
+        )}
+    </ScrollView>
+    <TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+        <Icon name="close" size={24} color={colors.text.primary} />
+    </TouchableOpacity>
+</View>
+
 				</View>
 			</Modal>
 
