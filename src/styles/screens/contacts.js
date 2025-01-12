@@ -991,7 +991,7 @@ const useStyles = () => {
 		leftHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			gap: 'none',
+			gap: spacing.xs,
 		},
 		headerActions: {
 			flexDirection: 'row',

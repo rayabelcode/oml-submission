@@ -496,39 +496,39 @@ export default function ContactsScreen({ navigation }) {
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
-				<View style={styles.headerContent}>
-					<View style={styles.leftHeader}>
-						<TouchableOpacity onPress={() => setShowSortMenu(true)} style={styles.headerButton}>
-							<Icon name="menu-outline" size={30} color={colors.text.primary} />
-						</TouchableOpacity>
-						{/* Logo */}
+			<View style={styles.headerContent}>
+    <TouchableOpacity 
+        onPress={() => setShowSortMenu(true)} 
+        style={styles.leftHeader}
+        activeOpacity={0.7}
+    >
+        <Icon name="menu" size={30} color={colors.text.primary} />
+        <Image source={logoSource} style={styles.logo} resizeMode="contain" />
+    </TouchableOpacity>
 
-						<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-					</View>
-					{/* Icons */}
+    <View style={styles.headerActions}>
+        <TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
+            <Icon name="add-outline" size={30} color={colors.text.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+            onPress={() => {
+                setShowSearch(!showSearch);
+                if (showSearch) {
+                    setSearchQuery('');
+                    handleSearch('');
+                }
+            }}
+            style={styles.headerButton}
+        >
+            <Icon
+                name={showSearch ? 'close' : 'search-outline'}
+                size={30}
+                color={showSearch ? '#FF6B6B' : colors.text.primary}
+            />
+        </TouchableOpacity>
+    </View>
+</View>
 
-					<View style={styles.headerActions}>
-						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
-							<Icon name="add-outline" size={30} color={colors.text.primary} />
-						</TouchableOpacity>
-						<TouchableOpacity
-							onPress={() => {
-								setShowSearch(!showSearch);
-								if (showSearch) {
-									setSearchQuery('');
-									handleSearch('');
-								}
-							}}
-							style={styles.headerButton}
-						>
-							<Icon
-								name={showSearch ? 'close' : 'search-outline'}
-								size={30}
-								color={showSearch ? '#FF6B6B' : colors.text.primary}
-							/>
-						</TouchableOpacity>
-					</View>
-				</View>
 				{showSearch && (
 					<View style={styles.searchContainer}>
 						<TextInput
