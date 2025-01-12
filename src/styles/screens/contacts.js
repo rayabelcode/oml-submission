@@ -398,12 +398,23 @@ const useStyles = () => {
 			marginBottom: spacing.md,
 			paddingHorizontal: 0,
 		},
+		historyEntryHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingBottom: spacing.xs,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			marginBottom: spacing.sm,
+		},
 		historyEntry: {
 			marginBottom: spacing.sm,
-			padding: spacing.sm,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
-			marginHorizontal: 0, // Full width
+			marginHorizontal: spacing.sm,
+			marginVertical: spacing.sm,
 		},
 		historyDate: {
 			fontSize: 16,
@@ -420,10 +431,14 @@ const useStyles = () => {
 			borderWidth: 1,
 			borderColor: colors.border,
 			borderRadius: 5,
-			padding: 8,
+			padding: spacing.sm,
 			marginTop: 5,
 			backgroundColor: colors.background.secondary,
+			fontSize: 16,
+			color: colors.text.primary,
+			width: '100%',
 		},
+
 		historyActions: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -433,15 +448,6 @@ const useStyles = () => {
 			height: 44,
 			justifyContent: 'center',
 			alignItems: 'center',
-		},
-		historyEntryHeader: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'space-between',
-			paddingBottom: spacing.xs,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-			marginBottom: spacing.sm,
 		},
 		emptyHistoryText: {
 			textAlign: 'center',
@@ -634,7 +640,7 @@ const useStyles = () => {
 		sectionTitle: {
 			fontSize: 17,
 			fontWeight: '700',
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 			color: colors.text.primary,
 			textAlign: 'center',
 		},
