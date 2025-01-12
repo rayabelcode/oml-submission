@@ -498,22 +498,21 @@ export default function ContactsScreen({ navigation }) {
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
 						</TouchableOpacity>
 						<TouchableOpacity
-    onPress={() => {
-        setShowSearch(!showSearch);
-        if (showSearch) {
-            setSearchQuery('');
-            handleSearch('');
-        }
-    }}
-    style={styles.headerButton}
->
-    <Icon 
-        name={showSearch ? "close" : "search-outline"} 
-        size={30} 
-        color={showSearch ? '#FF6B6B' : colors.text.primary} 
-    />
-</TouchableOpacity>
-
+							onPress={() => {
+								setShowSearch(!showSearch);
+								if (showSearch) {
+									setSearchQuery('');
+									handleSearch('');
+								}
+							}}
+							style={styles.headerButton}
+						>
+							<Icon
+								name={showSearch ? 'close' : 'search-outline'}
+								size={30}
+								color={showSearch ? '#FF6B6B' : colors.text.primary}
+							/>
+						</TouchableOpacity>
 					</View>
 				</View>
 				{showSearch && (
@@ -548,6 +547,7 @@ export default function ContactsScreen({ navigation }) {
 			</View>
 			<ScrollView
 				style={styles.content}
+				keyboardShouldPersistTaps="handled"
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 			>
 				{loading ? (
