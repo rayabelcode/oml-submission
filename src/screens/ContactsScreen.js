@@ -37,8 +37,10 @@ import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
 import { cacheManager } from '../utils/cache';
-import { DEFAULT_RELATIONSHIP_TYPE } from '../../constants/relationships';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ContactsSortMenu from '../components/general/contactsSort'; // Contacts sort menu
+import { RELATIONSHIP_TYPES } from '../../constants/relationships'; // For sorting by relationship type
+import { DEFAULT_RELATIONSHIP_TYPE } from '../../constants/relationships';
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -458,6 +460,41 @@ export default function ContactsScreen({ navigation }) {
 		};
 	}, [user]);
 
+	useEffect(() => {
+		const loadViewSettings = async () => {
+			try {
+				const settings = await AsyncStorage.getItem('contactViewSettings');
+				if (settings) {
+					const { sortType: savedSort, groupBy: savedGroup, nameDisplay: savedDisplay } = JSON.parse(settings);
+					setSortType(savedSort);
+					setGroupBy(savedGroup);
+					setNameDisplay(savedDisplay);
+				}
+			} catch (error) {
+				console.error('Error loading view settings:', error);
+			}
+		};
+		
+		loadViewSettings();
+	}, []);
+	
+	useEffect(() => {
+		const saveViewSettings = async () => {
+			try {
+				await AsyncStorage.setItem('contactViewSettings', JSON.stringify({
+					sortType,
+					groupBy,
+					nameDisplay
+				}));
+			} catch (error) {
+				console.error('Error saving view settings:', error);
+			}
+		};
+		
+		saveViewSettings();
+	}, [sortType, groupBy, nameDisplay]);
+	
+
 	// Reset editing state when leaving the screen
 	useEffect(() => {
 		const unsubscribe = navigation.addListener('blur', () => {
@@ -611,7 +648,7 @@ export default function ContactsScreen({ navigation }) {
 			<>
 				{organizedContacts.scheduledContacts.length > 0 && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Scheduled Contacts</Text>
+						<Text style={styles.sectionTitle}>Calls Scheduled</Text>
 						<View style={styles.grid}>
 							{organizedContacts.scheduledContacts.map((contact) => (
 								<ContactCard
@@ -632,7 +669,7 @@ export default function ContactsScreen({ navigation }) {
 
 				{organizedContacts.unscheduledContacts.length > 0 && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Other Contacts</Text>
+						<Text style={styles.sectionTitle}>Unscheduled</Text>
 						<View style={styles.grid}>
 							{organizedContacts.unscheduledContacts.map((contact) => (
 								<ContactCard
@@ -904,7 +941,6 @@ export default function ContactsScreen({ navigation }) {
 					processPendingContact(relationshipType);
 				}}
 			/>
-
 			<ContactsSortMenu
 				visible={showSortMenu}
 				onClose={() => setShowSortMenu(false)}

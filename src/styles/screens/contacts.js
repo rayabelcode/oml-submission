@@ -1045,6 +1045,15 @@ const useStyles = () => {
 			alignItems: 'center',
 			padding: spacing.xl,
 		},
+		// ContactsSort
+		sectionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+			paddingVertical: spacing.xs,
+			paddingHorizontal: spacing.md,
+			marginBottom: spacing.sm,
+		},
 	});
 };
 
