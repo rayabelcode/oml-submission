@@ -365,7 +365,10 @@ export default function ContactsScreen({ navigation }) {
 
 			const newContact = await addContact(user.uid, contactData);
 			await loadContacts();
-			navigation.navigate('ContactDetails', { contact: newContact });
+			navigation.navigate('ContactDetails', {
+				contact: newContact,
+				initialTab: 'Schedule', // Add this line to open the Schedule tab
+			});
 			setPendingContact(null);
 		} catch (error) {
 			console.error('Error processing contact:', error);
@@ -399,7 +402,7 @@ export default function ContactsScreen({ navigation }) {
 
 	const handleAddContact = async (contactData) => {
 		try {
-			await addContact(user.uid, contactData);
+			const newContact = await addContact(user.uid, contactData);
 
 			if (Platform.OS === 'ios') {
 				const { status } = await Contacts.requestPermissionsAsync();
@@ -425,7 +428,6 @@ export default function ContactsScreen({ navigation }) {
 						};
 
 						await Contacts.addContactAsync(contact);
-						Alert.alert('Success', 'Contact added to OnMyList and iOS Contacts');
 					} catch (error) {
 						console.error('Error adding to iOS contacts:', error);
 						Alert.alert('Partial Success', 'Contact added to OnMyList but failed to add to iOS Contacts');
@@ -434,7 +436,11 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			setIsFormVisible(false);
-			loadContacts();
+			await loadContacts();
+			navigation.navigate('ContactDetails', {
+				contact: newContact,
+				initialTab: 'Schedule',
+			});
 		} catch (error) {
 			console.error('Error adding contact:', error);
 			Alert.alert('Error', 'Failed to add contact');
