@@ -31,8 +31,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const commonStyles = useCommonStyles();
 
 	const lastNameRef = useRef();
-	const emailRef = useRef();
 	const phoneRef = useRef();
+	const emailRef = useRef();
 
 	const [formData, setFormData] = useState({
 		first_name: '',
@@ -171,28 +171,13 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 								autoCorrect={false}
 								autoCapitalize="words"
 								returnKeyType="next"
-								onSubmitEditing={() => emailRef.current?.focus()}
-								blurOnSubmit={false}
-							/>
-
-							<TextInput
-								ref={emailRef}
-								style={[commonStyles.input, { marginBottom: spacing.sm }]}
-								placeholder="Email"
-								placeholderTextColor={colors.text.secondary}
-								value={formData.email}
-								onChangeText={(text) => setFormData({ ...formData, email: text })}
-								keyboardType="email-address"
-								autoCapitalize="none"
-								autoCorrect={false}
-								returnKeyType="next"
 								onSubmitEditing={() => phoneRef.current?.focus()}
 								blurOnSubmit={false}
 							/>
 
 							<TextInput
 								ref={phoneRef}
-								style={commonStyles.input}
+								style={[commonStyles.input, { marginBottom: spacing.sm }]}
 								placeholder="Phone"
 								placeholderTextColor={colors.text.secondary}
 								value={formatPhoneNumber(formData.phone)}
@@ -201,6 +186,21 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 									setFormData({ ...formData, phone: cleaned });
 								}}
 								keyboardType="phone-pad"
+								returnKeyType="next"
+								onSubmitEditing={() => emailRef.current?.focus()}
+								blurOnSubmit={false}
+							/>
+
+							<TextInput
+								ref={emailRef}
+								style={commonStyles.input}
+								placeholder="Email"
+								placeholderTextColor={colors.text.secondary}
+								value={formData.email}
+								onChangeText={(text) => setFormData({ ...formData, email: text })}
+								keyboardType="email-address"
+								autoCapitalize="none"
+								autoCorrect={false}
 								returnKeyType="done"
 								onSubmitEditing={dismissKeyboard}
 							/>

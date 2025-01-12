@@ -124,8 +124,8 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 				...contact,
 				first_name: formData.first_name,
 				last_name: formData.last_name,
-				email: formData.email,
 				phone: formData.phone,
+				email: formData.email,
 				photo_url: formData.photo_url,
 				scheduling: {
 					...contact.scheduling,
@@ -275,16 +275,6 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 									/>
 									<TextInput
 										style={styles.editInput}
-										value={formData.email}
-										onChangeText={(text) => setFormData({ ...formData, email: text })}
-										placeholder="Email"
-										placeholderTextColor={colors.text.secondary}
-										keyboardType="email-address"
-										autoCapitalize="none"
-										autoCorrect={false}
-									/>
-									<TextInput
-										style={styles.editInput}
 										value={formatPhoneNumber(formData.phone)}
 										onChangeText={(text) => {
 											const cleaned = text.replace(/\D/g, '');
@@ -293,6 +283,16 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 										placeholder="Phone"
 										placeholderTextColor={colors.text.secondary}
 										keyboardType="phone-pad"
+									/>
+									<TextInput
+										style={styles.editInput}
+										value={formData.email}
+										onChangeText={(text) => setFormData({ ...formData, email: text })}
+										placeholder="Email"
+										placeholderTextColor={colors.text.secondary}
+										keyboardType="email-address"
+										autoCapitalize="none"
+										autoCorrect={false}
 									/>
 
 									<View style={{ marginTop: 1 }}>
@@ -405,10 +405,10 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 							) : (
 								<View style={styles.viewFields}>
 									<View style={styles.centeredDetails}>
-										{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
 										{formData.phone && (
 											<Text style={styles.contactDetail}>{formatPhoneNumber(formData.phone)}</Text>
 										)}
+										{formData.email && <Text style={styles.contactDetail}>{formData.email}</Text>}
 										{formData.scheduling?.relationship_type && (
 											<Text style={styles.contactDetail}>
 												Relationship:{' '}
