@@ -287,7 +287,7 @@ export default function ContactsScreen({ navigation }) {
 		} else if (groupBy === 'relationship') {
 			const grouped = {};
 			Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
-				grouped[type] = allContacts.filter((contact) => contact.relationship_type === type);
+				grouped[type] = allContacts.filter((contact) => contact.scheduling?.relationship_type === type);
 			});
 			return grouped;
 		} else {
@@ -465,7 +465,11 @@ export default function ContactsScreen({ navigation }) {
 			try {
 				const settings = await AsyncStorage.getItem('contactViewSettings');
 				if (settings) {
-					const { sortType: savedSort, groupBy: savedGroup, nameDisplay: savedDisplay } = JSON.parse(settings);
+					const {
+						sortType: savedSort,
+						groupBy: savedGroup,
+						nameDisplay: savedDisplay,
+					} = JSON.parse(settings);
 					setSortType(savedSort);
 					setGroupBy(savedGroup);
 					setNameDisplay(savedDisplay);
@@ -474,26 +478,28 @@ export default function ContactsScreen({ navigation }) {
 				console.error('Error loading view settings:', error);
 			}
 		};
-		
+
 		loadViewSettings();
 	}, []);
-	
+
 	useEffect(() => {
 		const saveViewSettings = async () => {
 			try {
-				await AsyncStorage.setItem('contactViewSettings', JSON.stringify({
-					sortType,
-					groupBy,
-					nameDisplay
-				}));
+				await AsyncStorage.setItem(
+					'contactViewSettings',
+					JSON.stringify({
+						sortType,
+						groupBy,
+						nameDisplay,
+					})
+				);
 			} catch (error) {
 				console.error('Error saving view settings:', error);
 			}
 		};
-		
+
 		saveViewSettings();
 	}, [sortType, groupBy, nameDisplay]);
-	
 
 	// Reset editing state when leaving the screen
 	useEffect(() => {
@@ -598,14 +604,23 @@ export default function ContactsScreen({ navigation }) {
 		const organizedContacts = organizeContacts(searchQuery ? filteredContacts : contacts);
 
 		if (groupBy === 'relationship') {
-			return Object.entries(organizedContacts).map(([type, contacts]) => {
+			const relationshipGroups = Object.entries(organizedContacts).map(([type, contacts]) => {
 				if (contacts.length === 0) return null;
 				return (
 					<View key={type} style={styles.section}>
-						<View style={styles.sectionHeader}>
-							<Icon name={RELATIONSHIP_TYPES[type].icon} size={20} color={RELATIONSHIP_TYPES[type].color} />
-							<Text style={styles.sectionTitle}>{RELATIONSHIP_TYPES[type].label}</Text>
-						</View>
+<View style={styles.groupHeader}>
+    <View style={styles.relationshipHeader}>
+        <Icon 
+            name={RELATIONSHIP_TYPES[type].icon} 
+            size={22} 
+            color={RELATIONSHIP_TYPES[type].color} 
+        />
+        <Text style={styles.relationshipTitle}>
+            {RELATIONSHIP_TYPES[type].label}
+        </Text>
+    </View>
+</View>
+
 						<View style={styles.grid}>
 							{contacts.map((contact) => (
 								<ContactCard
@@ -624,31 +639,26 @@ export default function ContactsScreen({ navigation }) {
 					</View>
 				);
 			});
-		} else if (groupBy === 'none') {
-			return (
-				<View style={styles.grid}>
-					{organizedContacts.all.map((contact) => (
-						<ContactCard
-							key={contact.id}
-							contact={contact}
-							onPress={handleOpenDetails}
-							loadContacts={loadContacts}
-							setIsAnyEditing={setIsAnyEditing}
-							isAnyEditing={isAnyEditing}
-							setDeleteButtonPosition={setDeleteButtonPosition}
-							setEditingContact={setEditingContact}
-							nameDisplay={nameDisplay}
-						/>
-					))}
-				</View>
-			);
+
+			// If all groups are empty - show message
+			if (relationshipGroups.every((group) => group === null)) {
+				return (
+					<View style={styles.section}>
+						<Text style={commonStyles.message}>Add some contacts to get started!</Text>
+					</View>
+				);
+			}
+
+			return relationshipGroups;
 		}
 
 		return (
 			<>
 				{organizedContacts.scheduledContacts.length > 0 && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Calls Scheduled</Text>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Scheduled</Text>
+						</View>
 						<View style={styles.grid}>
 							{organizedContacts.scheduledContacts.map((contact) => (
 								<ContactCard
@@ -669,7 +679,9 @@ export default function ContactsScreen({ navigation }) {
 
 				{organizedContacts.unscheduledContacts.length > 0 && (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Unscheduled</Text>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Unscheduled</Text>
+						</View>
 						<View style={styles.grid}>
 							{organizedContacts.unscheduledContacts.map((contact) => (
 								<ContactCard

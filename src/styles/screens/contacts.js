@@ -656,6 +656,14 @@ const useStyles = () => {
 			color: colors.text.secondary,
 			fontSize: 16,
 		},
+		sectionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+			paddingVertical: spacing.xs,
+			paddingHorizontal: spacing.md,
+			marginBottom: spacing.sm,
+		},
 		sectionTitle: {
 			fontSize: 17,
 			fontWeight: '700',
@@ -1045,14 +1053,33 @@ const useStyles = () => {
 			alignItems: 'center',
 			padding: spacing.xl,
 		},
-		// ContactsSort
-		sectionHeader: {
+		// Contacts Grouping - Headers
+		groupHeader: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.sm,
+			marginBottom: spacing.xs,
+		},
+		relationshipHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
 			gap: spacing.sm,
-			paddingVertical: spacing.xs,
-			paddingHorizontal: spacing.md,
-			marginBottom: spacing.sm,
+		},
+		groupTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		relationshipTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			marginLeft: spacing.xs,
+		},
+		relationshipIcon: {
+			marginTop: 4,
 		},
 	});
 };
