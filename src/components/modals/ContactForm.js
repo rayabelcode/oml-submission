@@ -110,7 +110,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 						<ScrollView
 							style={styles.formContainer}
 							contentContainerStyle={{
-								paddingBottom: Platform.OS === 'ios' ? 30 : spacing.sm, // Adjust padding for iOS email suggestions
+								paddingBottom: Platform.OS === 'ios' ? 120 : spacing.sm, // Adjust padding for iOS email suggestions
 								flexGrow: 1,
 							}}
 							keyboardShouldPersistTaps="handled"
