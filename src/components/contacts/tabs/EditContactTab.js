@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import ImagePickerComponent from '../../general/ImagePicker';
+import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import { useTheme } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
@@ -25,6 +26,13 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 			relationship_type: contact.scheduling?.relationship_type || DEFAULT_RELATIONSHIP_TYPE,
 		},
 	});
+
+	useEffect(() => {
+		AvoidSoftInput.setEnabled(true); // Enable AvoidSoftInput when the page is mounted
+		return () => {
+			AvoidSoftInput.setEnabled(false); // Disable AvoidSoftInput when the page is unmounted
+		};
+	}, []);
 
 	const handleAddTag = async () => {
 		if (!newTag.trim()) return;
@@ -154,7 +162,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 
 	return (
 		<>
-			<View style={{ flex: 1 }}>
+			<AvoidSoftInputView style={{ flex: 1 }}>
 				<ScrollView
 					style={[styles.tabContent, { flex: 1 }]}
 					contentContainerStyle={styles.scrollContent}
@@ -457,7 +465,7 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 						</View>
 					</TouchableOpacity>
 				</ScrollView>
-			</View>
+			</AvoidSoftInputView>
 		</>
 	);
 };
