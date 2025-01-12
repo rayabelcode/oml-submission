@@ -32,20 +32,8 @@ const useStyles = () => {
 			paddingHorizontal: 0,
 			justifyContent: 'flex-start',
 		},
-		header: {
-			padding: spacing.md,
-			alignItems: 'center',
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		headerActions: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'flex-end', // Icons to the right
-			gap: spacing.lg, // Spacing between icons
-		},
 		logo: {
-			width: '30%',
+			width: '50%',
 			height: 15,
 		},
 		buttonContainer: {
@@ -723,8 +711,8 @@ const useStyles = () => {
 			borderBottomColor: colors.border,
 			paddingVertical: spacing.sm,
 			marginBottom: spacing.md,
-			textAlign: 'center', // Add this line
-			width: '100%', // Add this line
+			textAlign: 'center',
+			width: '100%',
 		},
 		editActions: {
 			flexDirection: 'row',
@@ -993,12 +981,30 @@ const useStyles = () => {
 			shadowOpacity: 0.25,
 			shadowRadius: 3.84,
 		},
-		headerContent: {
+		// Contact Header
+		header: {
+			padding: spacing.md,
+			alignItems: 'center',
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		leftHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
+			gap: 'none',
+		},
+		headerActions: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.lg, // Spacing between icons
+		},
+		headerContent: {
+			flexDirection: 'row',
 			justifyContent: 'space-between',
+			alignItems: 'center',
 			width: '100%',
-			paddingHorizontal: spacing.xs,
+			paddingLeft: 'none', // Menu icon padding
+			paddingRight: spacing.sm, // Search icon padding
 		},
 		searchInput: {
 			backgroundColor: colors.background.secondary,

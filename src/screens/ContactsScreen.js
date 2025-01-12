@@ -38,6 +38,7 @@ import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
 import { cacheManager } from '../utils/cache';
 import { DEFAULT_RELATIONSHIP_TYPE } from '../../constants/relationships';
+import ContactsSortMenu from '../components/general/contactsSort'; // Contacts sort menu
 
 // Modal Imports
 import ScheduleModal from '../components/modals/ScheduleModal'; // Schedule tab (next contact date, Remove Next Call)
@@ -172,24 +173,13 @@ const ContactCard = ({
 				</View>
 
 				<View style={styles.nameContainer}>
-    <Text 
-        style={styles.firstName} 
-        numberOfLines={1} 
-        adjustsFontSizeToFit={true} // Add this
-        minimumFontScale={0.8} // Add this - controls minimum size of scaled text
-    >
-        {contact.first_name}
-    </Text>
-    <Text 
-        style={styles.lastName} 
-        numberOfLines={1}
-        adjustsFontSizeToFit={true}
-        minimumFontScale={0.8}
-    >
-        {contact.last_name || ''}
-    </Text>
-</View>
-
+					<Text style={styles.firstName} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.8}>
+						{contact.first_name}
+					</Text>
+					<Text style={styles.lastName} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.8}>
+						{contact.last_name || ''}
+					</Text>
+				</View>
 			</WobbleEffect>
 		</TouchableOpacity>
 	);
@@ -214,6 +204,12 @@ export default function ContactsScreen({ navigation }) {
 		scheduledContacts: [],
 		unscheduledContacts: [],
 	});
+
+	// contactsSort states
+	const [sortType, setSortType] = useState('firstName'); // 'firstName' or 'lastName'
+	const [groupBy, setGroupBy] = useState('schedule'); // 'schedule', 'relationship', or 'none'
+	const [nameDisplay, setNameDisplay] = useState('full'); // 'full', 'firstOnly', or 'initials'
+	const [showSortMenu, setShowSortMenu] = useState(false);
 
 	const logoSource =
 		theme === 'dark'
@@ -378,7 +374,7 @@ export default function ContactsScreen({ navigation }) {
 			await loadContacts();
 			navigation.navigate('ContactDetails', {
 				contact: newContact,
-				initialTab: 'Schedule', // Add this line to open the Schedule tab
+				initialTab: 'Schedule',
 			});
 			setPendingContact(null);
 		} catch (error) {
@@ -501,9 +497,16 @@ export default function ContactsScreen({ navigation }) {
 
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
-					{/* Logo */}
-					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+					<View style={styles.leftHeader}>
+						<TouchableOpacity onPress={() => setShowSortMenu(true)} style={styles.headerButton}>
+							<Icon name="menu-outline" size={30} color={colors.text.primary} />
+						</TouchableOpacity>
+						{/* Logo */}
+
+						<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+					</View>
 					{/* Icons */}
+
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
@@ -788,6 +791,17 @@ export default function ContactsScreen({ navigation }) {
 					setShowRelationshipModal(false);
 					processPendingContact(relationshipType);
 				}}
+			/>
+
+			<ContactsSortMenu
+				visible={showSortMenu}
+				onClose={() => setShowSortMenu(false)}
+				sortType={sortType}
+				groupBy={groupBy}
+				nameDisplay={nameDisplay}
+				onSortTypeChange={setSortType}
+				onGroupByChange={setGroupBy}
+				onNameDisplayChange={setNameDisplay}
 			/>
 		</SafeAreaView>
 	);
