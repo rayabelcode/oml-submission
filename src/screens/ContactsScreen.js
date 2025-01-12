@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Image, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native';
 import {
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	TextInput,
-	RefreshControl,
 	Alert,
+	Dimensions,
+	Image,
+	Modal,
+	Platform,
+	RefreshControl,
+	SafeAreaView,
+	ScrollView,
 	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from 'react-native';
 import { useStyles } from '../styles/screens/contacts';
 import { useCommonStyles } from '../styles/common';
@@ -28,7 +31,6 @@ import {
 	uploadContactPhoto,
 	subscribeToContacts,
 } from '../utils/firestore';
-import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import ImagePickerComponent from '../components/general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
@@ -912,19 +914,6 @@ export default function ContactsScreen({ navigation }) {
 				loadContacts={loadContacts}
 			/>
 
-			<AddContactModal
-				show={showAddModal}
-				onClose={() => setShowAddModal(false)}
-				onImport={() => {
-					setShowAddModal(false);
-					handleImportContacts();
-				}}
-				onNew={() => {
-					setShowAddModal(false);
-					setIsFormVisible(true);
-				}}
-			/>
-
 			<ContactSearchModal
 				visible={isSearchModalVisible}
 				contacts={deviceContacts}
@@ -935,17 +924,6 @@ export default function ContactsScreen({ navigation }) {
 				}}
 			/>
 
-			<RelationshipTypeModal
-				visible={showRelationshipModal}
-				onClose={() => {
-					setShowRelationshipModal(false);
-					setPendingContact(null);
-				}}
-				onSelect={(relationshipType) => {
-					setShowRelationshipModal(false);
-					processPendingContact(relationshipType);
-				}}
-			/>
 			<AddContactModal
 				show={showAddModal}
 				onClose={() => setShowAddModal(false)}
@@ -958,6 +936,7 @@ export default function ContactsScreen({ navigation }) {
 					setIsFormVisible(true);
 				}}
 			/>
+
 			<RelationshipTypeModal
 				visible={showRelationshipModal}
 				onClose={() => {
@@ -969,6 +948,7 @@ export default function ContactsScreen({ navigation }) {
 					processPendingContact(relationshipType);
 				}}
 			/>
+
 			<ContactsSortMenu
 				visible={showSortMenu}
 				onClose={() => setShowSortMenu(false)}
