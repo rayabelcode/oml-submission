@@ -172,13 +172,24 @@ const ContactCard = ({
 				</View>
 
 				<View style={styles.nameContainer}>
-					<Text style={styles.firstName} numberOfLines={1}>
-						{contact.first_name}
-					</Text>
-					<Text style={styles.lastName} numberOfLines={1}>
-						{contact.last_name || ''}
-					</Text>
-				</View>
+    <Text 
+        style={styles.firstName} 
+        numberOfLines={1} 
+        adjustsFontSizeToFit={true} // Add this
+        minimumFontScale={0.8} // Add this - controls minimum size of scaled text
+    >
+        {contact.first_name}
+    </Text>
+    <Text 
+        style={styles.lastName} 
+        numberOfLines={1}
+        adjustsFontSizeToFit={true}
+        minimumFontScale={0.8}
+    >
+        {contact.last_name || ''}
+    </Text>
+</View>
+
 			</WobbleEffect>
 		</TouchableOpacity>
 	);
