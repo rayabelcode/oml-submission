@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput } f
 import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
@@ -50,13 +51,17 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 	return (
 		<View style={styles.card}>
 			<View style={styles.cardContent}>
-				<Text style={styles.cardName}>Call Follow-up</Text>
+				<Text style={styles.cardName}>
+					{reminder.type === REMINDER_TYPES.FOLLOW_UP ? 'Call Follow-up' : 'Scheduled Call'}
+				</Text>
 				<Text style={styles.cardDate}>
-					Add notes for call with {reminder.contactName || 'Contact'} on {formattedDate}
+					{reminder.type === REMINDER_TYPES.FOLLOW_UP
+						? `Add notes for call with ${reminder.contactName || 'Contact'} on ${formattedDate}`
+						: `Call ${reminder.contactName || 'Contact'} - ${formattedDate}`}
 				</Text>
 			</View>
 
-			{isExpanded && (
+			{reminder.type === REMINDER_TYPES.FOLLOW_UP && isExpanded && (
 				<View style={styles.notesContainer}>
 					<TextInput
 						style={[
@@ -86,26 +91,37 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 			)}
 
 			<View style={styles.cardActions}>
-				<TouchableOpacity style={styles.actionButton} onPress={() => onComplete(reminder.firestoreId)}>
-					<Icon name="close-circle-outline" size={24} color={colors.danger} />
-					<Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
-				</TouchableOpacity>
+				{reminder.type === REMINDER_TYPES.FOLLOW_UP ? (
+					<>
+						<TouchableOpacity style={styles.actionButton} onPress={() => onComplete(reminder.firestoreId)}>
+							<Icon name="close-circle-outline" size={24} color={colors.danger} />
+							<Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
+						</TouchableOpacity>
 
-				<View style={styles.actionButtonSeparator} />
+						<View style={styles.actionButtonSeparator} />
 
-				<TouchableOpacity style={styles.actionButton} onPress={handleExpand}>
-					<Icon name="create-outline" size={24} color={colors.primary} />
-					<Text style={[styles.actionText, { color: colors.primary }]}>
-						{isExpanded ? 'Cancel' : 'Add Notes'}
-					</Text>
-				</TouchableOpacity>
+						<TouchableOpacity style={styles.actionButton} onPress={handleExpand}>
+							<Icon name="create-outline" size={24} color={colors.primary} />
+							<Text style={[styles.actionText, { color: colors.primary }]}>
+								{isExpanded ? 'Cancel' : 'Add Notes'}
+							</Text>
+						</TouchableOpacity>
+					</>
+				) : (
+					<>
+						<TouchableOpacity style={styles.actionButton} onPress={() => onComplete(reminder.firestoreId)}>
+							<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
+							<Text style={[styles.actionText, { color: colors.success }]}>Complete</Text>
+						</TouchableOpacity>
 
-				<View style={styles.actionButtonSeparator} />
+						<View style={styles.actionButtonSeparator} />
 
-				<TouchableOpacity style={styles.actionButton} onPress={() => onSnooze(reminder)}>
-					<Icon name="time-outline" size={24} color={colors.secondary} />
-					<Text style={[styles.actionText, { color: colors.secondary }]}>Snooze</Text>
-				</TouchableOpacity>
+						<TouchableOpacity style={styles.actionButton} onPress={() => onSnooze(reminder)}>
+							<Icon name="time-outline" size={24} color={colors.secondary} />
+							<Text style={[styles.actionText, { color: colors.secondary }]}>Snooze</Text>
+						</TouchableOpacity>
+					</>
+				)}
 			</View>
 		</View>
 	);

@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { callNotesService } from './callNotes';
 import { scheduledCallService } from './scheduledCalls';
 import { schedulingHistory } from './schedulingHistory';
-import { NOTIFICATION_MAP_KEY } from '../../constants/notificationConstants';
+import { NOTIFICATION_MAP_KEY, REMINDER_TYPES } from '../../constants/notificationConstants';
 import { notificationCoordinator } from './notificationCoordinator';
 
 class NotificationService {
@@ -166,7 +166,9 @@ class NotificationService {
 			if (!this.initialized) {
 				await this.initialize();
 			}
-			return await scheduledCallService.getActiveReminders();
+			const reminders = await scheduledCallService.getActiveReminders();
+			// Only return scheduled reminders, not follow-ups
+			return reminders.filter((reminder) => reminder.type === REMINDER_TYPES.SCHEDULED);
 		} catch (error) {
 			console.error('Error getting active reminders:', error);
 			return [];

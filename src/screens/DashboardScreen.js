@@ -33,6 +33,11 @@ export default function DashboardScreen({ navigation, route }) {
 		error: null,
 	});
 
+	const VIEW_MODES = {
+		UPCOMING: 'upcoming',
+		REMINDERS: 'reminders',
+	};
+
 	// Handle navigation from notifications
 	useEffect(() => {
 		if (route.params?.initialView === 'notifications') {
@@ -197,23 +202,23 @@ export default function DashboardScreen({ navigation, route }) {
 
 			<View style={styles.buttonContainer}>
 				<TouchableOpacity
-					style={[commonStyles.toggleButton, viewMode === 'calendar' && styles.toggleButtonActive]}
-					onPress={() => setViewMode('calendar')}
+					style={[commonStyles.toggleButton, viewMode === VIEW_MODES.UPCOMING && styles.toggleButtonActive]}
+					onPress={() => setViewMode(VIEW_MODES.UPCOMING)}
 				>
 					<Icon name="calendar-clear-outline" size={24} color={colors.primary} />
-					<Text style={styles.toggleButtonText}>Upcoming</Text>
+					<Text style={styles.toggleButtonText}>Upcoming Calls</Text>
 				</TouchableOpacity>
 
 				<TouchableOpacity
-					style={[commonStyles.toggleButton, viewMode === 'notifications' && styles.toggleButtonActive]}
-					onPress={() => setViewMode('notifications')}
+					style={[commonStyles.toggleButton, viewMode === VIEW_MODES.REMINDERS && styles.toggleButtonActive]}
+					onPress={() => setViewMode(VIEW_MODES.REMINDERS)}
 				>
 					<Icon name="notifications-outline" size={24} color={colors.primary} />
-					<Text style={styles.toggleButtonText}>Notifications</Text>
+					<Text style={styles.toggleButtonText}>Call Reminders</Text>
 				</TouchableOpacity>
 			</View>
 
-			{viewMode === 'calendar' ? (
+			{viewMode === VIEW_MODES.UPCOMING ? (
 				<ScrollView
 					style={styles.contactsList}
 					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -241,16 +246,10 @@ export default function DashboardScreen({ navigation, route }) {
 				<NotificationsView
 					reminders={remindersState.data}
 					onComplete={handleFollowUpComplete}
-					onAddNotes={(reminder) => {
-						const contact = contacts.find((c) => c.id === reminder.data?.contactId);
-						if (contact) {
-							navigation.navigate('ContactDetails', { contact });
-						}
-					}}
-					onSnooze={handleSnooze}
 					loading={remindersState.loading}
 					onRefresh={onRefresh}
 					refreshing={refreshing}
+					onSnooze={handleSnooze}
 				/>
 			)}
 

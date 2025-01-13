@@ -243,6 +243,7 @@ class ScheduledCallService {
 				firestoreId: reminder.id,
 				scheduledTime: reminder.scheduledTime,
 				contactName: reminder.contactName,
+				type: reminder.type || REMINDER_TYPES.SCHEDULED,
 				data: {
 					contactId: reminder.contact_id,
 					type: reminder.type,

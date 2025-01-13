@@ -12,7 +12,7 @@ export const REMINDER_STATUS = {
 };
 
 export const REMINDER_TYPES = {
-	REGULAR: 'regular',
+	SCHEDULED: 'scheduled',
 	FOLLOW_UP: 'follow_up',
 };
 
