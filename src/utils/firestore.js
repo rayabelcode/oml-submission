@@ -1,19 +1,20 @@
 import {
-	collection,
-	query,
-	where,
-	orderBy,
-	getDocs,
 	addDoc,
-	updateDoc,
+	arrayUnion,
+	collection,
 	deleteDoc,
 	doc,
+	getDoc,
+	getDocs,
+	onSnapshot,
+	orderBy,
+	query,
 	setDoc,
 	serverTimestamp,
-	getDoc,
-	arrayUnion,
+	Timestamp,
+	updateDoc,
+	where,
 	writeBatch,
-	onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { storage } from '../config/firebase';
@@ -509,14 +510,19 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 export const addReminder = async (reminderData) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
+		const now = Timestamp.now();
+		const scheduledTimestamp =
+			reminderData.scheduledTime instanceof Date
+				? Timestamp.fromDate(reminderData.scheduledTime)
+				: Timestamp.fromDate(new Date(reminderData.scheduledTime));
+
 		const reminderDoc = {
-			created_at: serverTimestamp(),
-			updated_at: serverTimestamp(),
+			created_at: now,
+			updated_at: now,
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
-			userId: auth.currentUser.uid,
-			date: reminderData.scheduledTime,
-			scheduledTime: reminderData.scheduledTime,
+			date: scheduledTimestamp,
+			scheduledTime: scheduledTimestamp,
 			status: reminderData.status || 'pending',
 			type: reminderData.type || 'follow_up',
 			snoozed: false,
