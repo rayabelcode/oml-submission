@@ -8,6 +8,7 @@ const CACHE_KEYS = {
 	PROFILE: 'cached_profile_',
 	STATS: 'cached_stats_',
 	LAST_UPDATED: 'last_updated_',
+	SCHEDULING_HISTORY: 'scheduling_history_',
 };
 
 const CACHE_EXPIRY = 1000 * 60 * 60; // 1 hour in milliseconds
@@ -194,6 +195,37 @@ export const cacheManager = {
 			await AsyncStorage.removeItem(CACHE_KEYS.LAST_UPDATED + CACHE_KEYS.PROFILE + userId);
 		} catch (error) {
 			console.error('Error clearing profile cache:', error);
+		}
+	},
+
+	async getSchedulingHistory(userId) {
+		try {
+			const cached = await AsyncStorage.getItem(CACHE_KEYS.SCHEDULING_HISTORY + userId);
+			if (await this.isCacheValid(userId, CACHE_KEYS.SCHEDULING_HISTORY)) {
+				return cached ? JSON.parse(cached) : null;
+			}
+			return null;
+		} catch (error) {
+			console.error('Error getting cached scheduling history:', error);
+			return null;
+		}
+	},
+
+	async saveSchedulingHistory(userId, data) {
+		try {
+			await AsyncStorage.setItem(CACHE_KEYS.SCHEDULING_HISTORY + userId, JSON.stringify(data));
+			await this.updateLastUpdated(userId, CACHE_KEYS.SCHEDULING_HISTORY);
+		} catch (error) {
+			console.error('Error saving scheduling history:', error);
+		}
+	},
+
+	async clearSchedulingHistory(userId) {
+		try {
+			await AsyncStorage.removeItem(CACHE_KEYS.SCHEDULING_HISTORY + userId);
+			await AsyncStorage.removeItem(CACHE_KEYS.LAST_UPDATED + CACHE_KEYS.SCHEDULING_HISTORY + userId);
+		} catch (error) {
+			console.error('Error clearing scheduling history cache:', error);
 		}
 	},
 };
