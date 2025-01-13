@@ -1,6 +1,6 @@
 import React from 'react';
 import Constants from 'expo-constants';
-import ActionModal from '../general/ActionModal';
+import ActionModal from './ActionModal';
 import { callHandler } from '../../../App';
 
 const CallOptions = ({ show, contact, onClose }) => {
@@ -9,14 +9,7 @@ const CallOptions = ({ show, contact, onClose }) => {
 			onClose();
 			return;
 		}
-
-		try {
-			await callHandler.initiateCall(contact, callType);
-			onClose();
-		} catch (error) {
-			console.error('[CallOptions] Error initiating call:', error);
-			onClose();
-		}
+		await callHandler.handleCallAction(contact, callType, onClose);
 	};
 
 	const options = [
