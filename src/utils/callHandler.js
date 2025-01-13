@@ -2,6 +2,7 @@ import { Platform, Linking, Alert } from 'react-native';
 import { addContactHistory, updateNextContact } from './firestore';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { REMINDER_TYPES } from '../../constants/notificationConstants';
 
 const ACTIVE_CALL_KEY = '@CallHandler:activeCall';
 
