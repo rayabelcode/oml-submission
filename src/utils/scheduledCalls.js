@@ -2,7 +2,6 @@ import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { addReminder, updateReminder, getReminder, getReminders, getContactById } from './firestore';
 import { auth } from '../config/firebase';
-import CallOptions from '../components/general/CallOptions';
 import { notificationCoordinator } from './notificationCoordinator';
 import {
 	NOTIFICATION_TYPES,
@@ -51,13 +50,10 @@ class ScheduledCallService {
 					{
 						text: 'Call',
 						onPress: () => {
-							CallOptions.show({
-								show: true,
-								contact,
-								onClose: () => {
-									this.showSnoozeOptions(reminder);
-								},
-							});
+							// Navigate to contact details
+							if (global.navigationRef) {
+								global.navigationRef.navigate('ContactDetails', { contact });
+							}
 						},
 					},
 					{
