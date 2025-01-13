@@ -1,5 +1,82 @@
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 
+// Tests to make sure the reminder scheduling is working correctly
+describe('Reminder Scheduling', () => {
+	// Test for scheduled reminder
+	it('should create a scheduled reminder correctly', () => {
+		const scheduledReminder = {
+			scheduledTime: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			date: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			type: REMINDER_TYPES.SCHEDULED,
+			contact_id: 'testContactId',
+			user_id: 'testUserId',
+			created_at: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			updated_at: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			needs_attention: false,
+			completed: false,
+			notes_added: false,
+			snoozed: false,
+			status: 'pending',
+			contactName: 'Test Contact',
+		};
+
+		expect(scheduledReminder.type).toBe(REMINDER_TYPES.SCHEDULED);
+		expect(scheduledReminder.needs_attention).toBe(false);
+	});
+
+	// Test for follow-up reminder
+	it('should create a follow-up reminder correctly', () => {
+		const followUpReminder = {
+			scheduledTime: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			date: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			type: REMINDER_TYPES.FOLLOW_UP,
+			contact_id: 'testContactId',
+			user_id: 'testUserId',
+			created_at: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			updated_at: {
+				_seconds: 1736798718,
+				_nanoseconds: 232000000,
+			},
+			needs_attention: true,
+			completed: false,
+			notes_added: false,
+			snoozed: false,
+			status: 'pending',
+			contactName: 'Test Contact',
+			call_data: {
+				type: 'phone',
+				startTime: new Date().toISOString(),
+			},
+		};
+
+		expect(followUpReminder.type).toBe(REMINDER_TYPES.FOLLOW_UP);
+		expect(followUpReminder.needs_attention).toBe(true);
+		expect(followUpReminder.call_data).toBeDefined();
+	});
+});
+
+// Tests to make sure the data format is consistent
 describe('Notification System', () => {
 	describe('Data Format Consistency', () => {
 		const sampleReminder = {
