@@ -481,6 +481,7 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
 
+		// 1. Update the contact's next_contact date
 		const updateData = {
 			next_contact: nextContactDate ? nextContactDate.toISOString() : null,
 			last_updated: serverTimestamp(),
@@ -492,13 +493,24 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 
 		await updateDoc(contactRef, updateData);
 
+		// 2. If there's an existing scheduled reminder, cancel it
+		const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+		for (const reminder of existingReminders) {
+			if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+				await deleteReminder(reminder.id);
+			}
+		}
+
+		// 3. Only create a new reminder if nextContactDate exists
 		if (nextContactDate) {
 			await addReminder({
 				contactId: contactId,
 				scheduledTime: nextContactDate,
-				type: 'regular',
+				type: REMINDER_TYPES.SCHEDULED,
+				status: REMINDER_STATUS.PENDING,
 				userId: auth.currentUser.uid,
-				notes: '',
+				needs_attention: false,
+				snoozed: false,
 			});
 		}
 	} catch (error) {
