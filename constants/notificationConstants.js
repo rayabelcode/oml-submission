@@ -32,7 +32,7 @@ export const REMINDER_STATUS = {
 
 export const REMINDER_TYPES = {
 	SCHEDULED: 'scheduled',
-	FOLLOW_UP: 'follow_up',
+	FOLLOW_UP: 'call_follow_up',
 };
 
 export const SNOOZE_OPTIONS = [
