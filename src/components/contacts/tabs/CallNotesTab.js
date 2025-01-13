@@ -203,7 +203,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					multiline
 					value={callNotes}
 					onChangeText={setCallNotes}
-					placeholder="Add a call here! What did you discuss?"
+					placeholder="Add call notes, and pick a date!"
 					placeholderTextColor={colors.text.secondary}
 				/>
 				<View style={styles.callNotesControls}>
