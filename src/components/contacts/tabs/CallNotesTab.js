@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
 	View,
 	Text,
@@ -10,7 +10,8 @@ import {
 	Modal,
 	ActivityIndicator,
 } from 'react-native';
-import { useTheme } from '../../../context/ThemeContext';
+import { AvoidSoftInput } from 'react-native-avoid-softinput';
+import { useTheme, spacing } from '../../../context/ThemeContext';
 import { useCommonStyles } from '../../../styles/common';
 import { useStyles } from '../../../styles/screens/contacts';
 import DatePickerModal from '../../modals/DatePickerModal';
@@ -32,6 +33,14 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 	const [suggestionCache, setSuggestionCache] = useState({});
 	const [suggestions, setSuggestions] = useState([]);
 	const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+	const [editingText, setEditingText] = useState('');
+
+	useEffect(() => {
+		AvoidSoftInput.setEnabled(true); // Enable AvoidSoftInput for this page
+		return () => {
+			AvoidSoftInput.setEnabled(false); // Disable AvoidSoftInput on unmount
+		};
+	}, []);
 
 	const handleAddCallNotes = async (notes, date) => {
 		if (!notes.trim()) {
@@ -69,7 +78,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
-			// Revert local state on error
 			console.error('Error adding call notes:', error);
 			Alert.alert('Error', 'Failed to add call notes');
 			const updatedHistory = await fetchContactHistory(contact.id);
@@ -85,7 +93,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				style: 'destructive',
 				onPress: async () => {
 					try {
-						// Update local state immediately
 						const updatedHistory = [...history];
 						updatedHistory.splice(index, 1);
 						setHistory(updatedHistory);
@@ -111,7 +118,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					} catch (error) {
 						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
-						// Revert local state on error
 						const originalHistory = await fetchContactHistory(contact.id);
 						setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 					}
@@ -120,14 +126,19 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 		]);
 	};
 
-	const handleEditHistory = async (index, updatedNote) => {
+	const handleEditHistory = async (index) => {
 		try {
-			// Update local state immediately
-			const updatedHistory = [...history];
-			updatedHistory[index].notes = updatedNote;
+			if (history[index].notes === editingText) {
+				setEditMode(null);
+				return;
+			}
+
+			const updatedHistory = history.map((entry, i) =>
+				i === index ? { ...entry, notes: editingText } : { ...entry }
+			);
+
 			setHistory(updatedHistory);
 
-			// Update Firestore
 			await updateContact(contact.id, {
 				contact_history: updatedHistory,
 			});
@@ -140,10 +151,10 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			setSelectedContact(updatedContact);
 
 			setEditMode(null);
+			setEditingText('');
 		} catch (error) {
 			console.error('Error editing history:', error);
 			Alert.alert('Error', 'Failed to edit history');
-			// Revert local state on error
 			const originalHistory = await fetchContactHistory(contact.id);
 			setHistory(originalHistory.sort((a, b) => new Date(b.date) - new Date(a.date)));
 		}
@@ -157,18 +168,15 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			const cacheKey = `${contact.id}-suggestions`;
 			const cachedSuggestions = suggestionCache[cacheKey];
 
-			// If there are cached suggestions and no new calls have been added, use cache
 			if (cachedSuggestions) {
 				setSuggestions(cachedSuggestions);
 				setLoadingSuggestions(false);
 				return;
 			}
 
-			// Generate new suggestions only if no cache exists or new call was added
 			const newSuggestions = await generateTopicSuggestions(contact, history);
 			setSuggestions(newSuggestions);
 
-			// Update cache
 			const newCache = {
 				...suggestionCache,
 				[cacheKey]: newSuggestions,
@@ -187,8 +195,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 		<ScrollView
 			style={[styles.tabContent, { flex: 1 }]}
 			contentContainerStyle={{ paddingBottom: 20 }}
-			scrollEnabled={true}
-			showsVerticalScrollIndicator={false}
+			keyboardShouldPersistTaps="handled"
 		>
 			<View style={styles.callNotesSection}>
 				<TextInput
@@ -196,10 +203,20 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					multiline
 					value={callNotes}
 					onChangeText={setCallNotes}
-					placeholder="Add a call here! What did you discuss?"
+					placeholder="Add call notes, and pick a date!"
 					placeholderTextColor={colors.text.secondary}
 				/>
 				<View style={styles.callNotesControls}>
+					<TouchableOpacity
+						style={styles.aiButton}
+						onPress={() => {
+							handleGetSuggestions();
+							setShowAISuggestions(true);
+						}}
+					>
+						<Icon name="bulb-outline" size={18} color="#FFFFFF" />
+						<Text style={styles.aiButtonText}>AI Topics</Text>
+					</TouchableOpacity>
 					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
 						<Text style={styles.dateButtonText}>
 							{callDate.toDateString() === new Date().toDateString()
@@ -214,17 +231,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						<Text style={commonStyles.primaryButtonText}>Submit</Text>
 					</TouchableOpacity>
 				</View>
-
-				<TouchableOpacity
-					style={styles.aiButton}
-					onPress={() => {
-						handleGetSuggestions();
-						setShowAISuggestions(true);
-					}}
-				>
-					<Icon name="bulb-outline" size={22} color="#FFFFFF" />
-					<Text style={styles.aiButtonText}>Get Conversation Topics</Text>
-				</TouchableOpacity>
 			</View>
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
@@ -232,41 +238,45 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				{history.length > 0 ? (
 					history.map((entry, index) => (
 						<View key={index} style={styles.historyEntry}>
-							<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+							<View style={styles.historyEntryHeader}>
+								<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+								<View style={styles.historyActions}>
+									<TouchableOpacity
+										style={styles.historyActionButton}
+										onPress={() => {
+											if (editMode === index) {
+												handleEditHistory(index);
+											} else {
+												setEditMode(index);
+												setEditingText(entry.notes);
+											}
+										}}
+									>
+										<Icon
+											name={editMode === index ? 'checkmark-outline' : 'create'}
+											size={30}
+											color={colors.primary}
+										/>
+									</TouchableOpacity>
+
+									<TouchableOpacity
+										style={[styles.historyActionButton, { marginLeft: spacing.md }]}
+										onPress={() => handleDeleteHistory(index)}
+									>
+										<Icon name="trash-outline" size={24} color={colors.danger} />
+									</TouchableOpacity>
+								</View>
+							</View>
 							{editMode === index ? (
 								<TextInput
 									style={[styles.historyNotesInput, { color: colors.text.primary }]}
-									value={entry.notes}
-									onChangeText={(text) => {
-										const updatedHistory = [...history];
-										updatedHistory[index].notes = text;
-										setHistory(updatedHistory);
-									}}
+									value={editingText}
+									onChangeText={setEditingText}
 									multiline
 								/>
 							) : (
 								<Text style={styles.historyNotes}>{entry.notes}</Text>
 							)}
-							<View style={styles.historyActions}>
-								<TouchableOpacity
-									style={styles.historyActionButton}
-									onPress={() =>
-										editMode === index ? handleEditHistory(index, entry.notes) : setEditMode(index)
-									}
-								>
-									<Icon
-										name={editMode === index ? 'checkmark-outline' : 'create-outline'}
-										size={20}
-										color={colors.primary}
-									/>
-								</TouchableOpacity>
-								<TouchableOpacity
-									style={styles.historyActionButton}
-									onPress={() => handleDeleteHistory(index)}
-								>
-									<Icon name="trash-outline" size={20} color={colors.danger} />
-								</TouchableOpacity>
-							</View>
 						</View>
 					))
 				) : (
@@ -283,29 +293,29 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				onRequestClose={() => setShowAISuggestions(false)}
 			>
 				<View style={styles.aiModalContainer}>
-					<View style={styles.aiModalContent}>
-						<View style={styles.modalTitleContainer}>
-							<Icon name="bulb-outline" size={24} color={colors.primary} />
-							<Text style={styles.sectionTitle}>Conversation Topics</Text>
-						</View>
-						<ScrollView style={styles.aiModalScrollContent}>
-							{loadingSuggestions ? (
-								<View style={styles.loadingContainer}>
-									<ActivityIndicator size="large" color={colors.primary} />
-									<Text style={[styles.suggestionsText, { marginTop: 20 }]}>Generating suggestions...</Text>
-								</View>
-							) : (
-								suggestions.map((suggestion, index) => (
-									<Text key={index} style={styles.suggestion}>
-										{suggestion}
-									</Text>
-								))
-							)}
-						</ScrollView>
-						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-							<Icon name="close" size={24} color="#000000" />
-						</TouchableOpacity>
-					</View>
+				<View style={styles.aiModalContent}>
+    <Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
+    <ScrollView style={styles.aiModalScrollContent}>
+        {loadingSuggestions ? (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
+                    Generating suggestions...
+                </Text>
+            </View>
+        ) : (
+            suggestions.map((suggestion, index) => (
+                <View key={index} style={styles.aiSuggestionCard}>
+                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
+                </View>
+            ))
+        )}
+    </ScrollView>
+    <TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+        <Icon name="close" size={24} color={colors.text.primary} />
+    </TouchableOpacity>
+</View>
+
 				</View>
 			</Modal>
 

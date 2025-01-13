@@ -19,6 +19,7 @@ export const useStyles = (colors) => {
 			fontWeight: 'bold',
 			marginBottom: spacing.md,
 			color: colors.text.primary,
+			textAlign: 'center',
 		},
 		statsGrid: {
 			flexDirection: 'row',
@@ -95,7 +96,7 @@ export const useStyles = (colors) => {
 		},
 		insightRow: {
 			flexDirection: 'row',
-			alignItems: 'center',
+			alignItems: 'flex-start',
 			paddingVertical: spacing.md,
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
@@ -103,8 +104,10 @@ export const useStyles = (colors) => {
 		insightText: {
 			fontSize: 16,
 			color: colors.text.primary,
-			marginLeft: spacing.md,
+		},
+		insightContent: {
 			flex: 1,
+			marginLeft: spacing.md,
 		},
 		retryButton: {
 			backgroundColor: colors.primary,
@@ -117,6 +120,30 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '500',
 			textAlign: 'center',
+		},
+		lastContactInfo: {
+			flexDirection: 'column',
+			alignItems: 'flex-end',
+		},
+		lastContactDate: {
+			fontSize: 14,
+			color: colors.text.primary,
+			marginBottom: 4,
+		},
+		lastContactDays: {
+			fontSize: 12,
+			color: colors.danger,
+		},
+		trendValue: {
+			fontSize: 22,
+			color: colors.primary,
+			fontWeight: 'bold',
+			marginTop: spacing.xs,
+		},
+		trendLabel: {
+			fontSize: 14,
+			marginTop: spacing.xs,
+			color: colors.text.secondary,
 		},
 	});
 };

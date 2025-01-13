@@ -277,6 +277,7 @@ const createStyles = (colors) =>
 			borderRadius: layout.borderRadius.md,
 			padding: spacing.md,
 			marginVertical: spacing.md,
+			marginHorizontal: spacing.md,
 			shadowColor: '#000',
 			shadowOffset: { width: 0, height: 2 },
 			shadowOpacity: 0.1,

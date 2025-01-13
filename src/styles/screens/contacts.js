@@ -32,20 +32,8 @@ const useStyles = () => {
 			paddingHorizontal: 0,
 			justifyContent: 'flex-start',
 		},
-		header: {
-			padding: spacing.md,
-			alignItems: 'center',
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		headerActions: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'flex-end', // Icons to the right
-			gap: spacing.lg, // Spacing between icons
-		},
 		logo: {
-			width: '30%',
+			width: '50%',
 			height: 15,
 		},
 		buttonContainer: {
@@ -139,13 +127,23 @@ const useStyles = () => {
 			borderColor: colors.border,
 		},
 		cardAvatar: {
-			width: 60,
-			height: 60,
-			borderRadius: 30,
+			width: 65,
+			height: 65,
+			borderRadius: 32.5,
 			backgroundColor: colors.background.primary,
 			justifyContent: 'center',
 			alignItems: 'center',
 			marginBottom: spacing.sm,
+			borderWidth: 1,
+			borderColor: colors.primary,
+			shadowColor: '#000',
+			shadowOffset: {
+				width: 0,
+				height: 1,
+			},
+			shadowOpacity: 0.1,
+			shadowRadius: 2,
+			elevation: 2,
 		},
 		avatarImage: {
 			width: 60,
@@ -160,19 +158,27 @@ const useStyles = () => {
 		nameContainer: {
 			width: '100%',
 			alignItems: 'center',
+			paddingHorizontal: 2,
 		},
 		firstName: {
-			fontSize: 14,
-			fontWeight: '500',
+			fontSize: 15,
+			fontWeight: '600',
 			textAlign: 'center',
-			marginTop: 8,
+			marginTop: 4,
 			color: colors.text.primary,
+			flexShrink: 1,
+			flexWrap: 'wrap',
+			width: '100%',
 		},
 		lastName: {
 			fontSize: 14,
 			fontWeight: '500',
 			textAlign: 'center',
-			color: colors.text.primary,
+			color: colors.text.secondary,
+			marginTop: 2,
+			flexShrink: 1,
+			flexWrap: 'wrap',
+			width: '100%',
 		},
 		scheduleBadge: {
 			position: 'absolute',
@@ -186,9 +192,9 @@ const useStyles = () => {
 			justifyContent: 'center',
 		},
 		scheduleDot: {
-			width: 8,
-			height: 8,
-			borderRadius: 4,
+			width: 6,
+			height: 6,
+			borderRadius: 3,
 			backgroundColor: colors.secondary,
 		},
 		actionsContainer: {
@@ -357,7 +363,7 @@ const useStyles = () => {
 			fontSize: 12,
 		},
 		callNotesSection: {
-			marginBottom: spacing.md,
+			marginBottom: spacing.lg,
 		},
 		callNotesInput: {
 			borderWidth: 1,
@@ -365,7 +371,7 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.md,
 			padding: spacing.sm,
 			minHeight: 100,
-			marginBottom: spacing.sm,
+			marginBottom: spacing.md,
 			fontSize: 16,
 			color: colors.text.primary,
 			backgroundColor: colors.background.primary,
@@ -381,6 +387,8 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.sm,
 			flex: 1,
 			marginRight: spacing.sm,
+			justifyContent: 'center',
+			alignItems: 'center',
 		},
 		dateButtonText: {
 			fontSize: 16,
@@ -393,43 +401,62 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.sm,
 			width: 100,
 			alignItems: 'center',
+			textAlign: 'center',
 		},
 		historySection: {
 			marginBottom: spacing.md,
 			paddingHorizontal: 0,
 		},
+		historyEntryHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingBottom: spacing.xs,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			marginBottom: spacing.sm,
+		},
 		historyEntry: {
 			marginBottom: spacing.sm,
-			padding: spacing.sm,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
-			marginHorizontal: 0, // Full width
+			marginHorizontal: spacing.sm,
+			marginVertical: spacing.sm,
 		},
 		historyDate: {
-			fontSize: 14,
+			fontSize: 16,
+			fontWeight: '600',
 			color: colors.text.secondary,
-			marginBottom: 5,
 		},
 		historyNotes: {
 			fontSize: 16,
 			color: colors.text.primary,
+			marginTop: spacing.sm,
+			marginBottom: spacing.sm,
 		},
 		historyNotesInput: {
 			borderWidth: 1,
 			borderColor: colors.border,
 			borderRadius: 5,
-			padding: 8,
+			padding: spacing.sm,
 			marginTop: 5,
 			backgroundColor: colors.background.secondary,
+			fontSize: 16,
+			color: colors.text.primary,
+			width: '100%',
 		},
+
 		historyActions: {
 			flexDirection: 'row',
-			justifyContent: 'flex-end',
-			marginTop: spacing.sm,
+			alignItems: 'center',
 		},
 		historyActionButton: {
-			padding: 8,
-			marginLeft: 8,
+			width: 44,
+			height: 44,
+			justifyContent: 'center',
+			alignItems: 'center',
 		},
 		emptyHistoryText: {
 			textAlign: 'center',
@@ -591,15 +618,28 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.md,
 			minWidth: 300,
 		},
+		searchContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginHorizontal: 16,
+			marginBottom: 8,
+			position: 'relative',
+		},
 		searchInput: {
-			borderWidth: 1,
-			borderColor: colors.border,
-			borderRadius: layout.borderRadius.md,
-			padding: spacing.md,
-			marginBottom: spacing.md,
-			fontSize: 16,
-			backgroundColor: colors.background.primary,
+			flex: 1,
+			height: 40,
+			backgroundColor: 'rgba(0, 0, 0, 0.05)',
+			borderRadius: 8,
+			paddingHorizontal: 12,
+			paddingRight: 40,
 			color: colors.text.primary,
+		},
+		clearSearchButton: {
+			position: 'absolute',
+			right: -20,
+			top: 12,
+			padding: 4,
+			zIndex: 1,
 		},
 		searchResults: {
 			maxHeight: '80%',
@@ -619,10 +659,18 @@ const useStyles = () => {
 			color: colors.text.secondary,
 			fontSize: 16,
 		},
+		sectionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+			paddingVertical: spacing.xs,
+			paddingHorizontal: spacing.md,
+			marginBottom: spacing.sm,
+		},
 		sectionTitle: {
 			fontSize: 17,
 			fontWeight: '700',
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 			color: colors.text.primary,
 			textAlign: 'center',
 		},
@@ -674,8 +722,8 @@ const useStyles = () => {
 			borderBottomColor: colors.border,
 			paddingVertical: spacing.sm,
 			marginBottom: spacing.md,
-			textAlign: 'center', // Add this line
-			width: '100%', // Add this line
+			textAlign: 'center',
+			width: '100%',
 		},
 		editActions: {
 			flexDirection: 'row',
@@ -773,36 +821,19 @@ const useStyles = () => {
 		aiButton: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			justifyContent: 'center',
 			backgroundColor: colors.primary,
-			padding: spacing.md,
-			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.sm,
-			marginBottom: spacing.lg,
-			gap: spacing.sm,
-			elevation: 2,
-			shadowColor: '#000',
-			shadowOffset: { width: 0, height: 2 },
-			shadowOpacity: 0.2,
-			shadowRadius: 2,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			justifyContent: 'center',
+			width: 125,
+			marginRight: spacing.sm,
 		},
 		aiButtonText: {
 			color: colors.background.primary,
-			fontSize: 18,
+			fontSize: 15,
 			fontWeight: '600',
-		},
-		aiModalContainer: {
-			position: 'absolute',
-			top: 0,
-			left: 0,
-			right: 0,
-			bottom: 0,
-			backgroundColor: 'rgba(0,0,0,1)',
-			justifyContent: 'center',
-			alignItems: 'center',
-			width: '100%',
-			height: '100%',
-			zIndex: 9999,
+			marginLeft: spacing.xs,
 		},
 		modalTitleContainer: {
 			flexDirection: 'row',
@@ -821,6 +852,19 @@ const useStyles = () => {
 			padding: spacing.md,
 			width: '100%',
 		},
+		aiModalContainer: {
+			position: 'absolute',
+			top: 0,
+			left: 0,
+			right: 0,
+			bottom: 0,
+			backgroundColor: 'rgba(0,0,0,1)',
+			justifyContent: 'center',
+			alignItems: 'center',
+			width: '100%',
+			height: '100%',
+			zIndex: 9999,
+		},
 		aiModalContent: {
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
@@ -829,8 +873,27 @@ const useStyles = () => {
 			maxHeight: '80%',
 			paddingTop: spacing.md,
 		},
-		aiModalScrollContent: {
+		aiSuggestionCard: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
 			padding: spacing.md,
+			marginBottom: spacing.sm,
+		},
+		aiSuggestionText: {
+			fontSize: 16,
+			color: colors.text.primary,
+			lineHeight: 22,
+		},
+		aiModalTitle: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			textAlign: 'center',
+			marginBottom: spacing.md,
+		},
+		aiModalScrollContent: {
+			paddingHorizontal: spacing.md,
+			paddingBottom: spacing.md,
 			flexGrow: 1,
 		},
 		// Scheduling
@@ -948,12 +1011,30 @@ const useStyles = () => {
 			shadowOpacity: 0.25,
 			shadowRadius: 3.84,
 		},
-		headerContent: {
+		// Contact Header
+		header: {
+			padding: spacing.md,
+			alignItems: 'center',
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		leftHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
+			gap: spacing.xs,
+		},
+		headerActions: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.lg, // Spacing between icons
+		},
+		headerContent: {
+			flexDirection: 'row',
 			justifyContent: 'space-between',
+			alignItems: 'center',
 			width: '100%',
-			paddingHorizontal: spacing.xs,
+			paddingLeft: 'none', // Menu icon padding
+			paddingRight: spacing.sm, // Search icon padding
 		},
 		searchInput: {
 			backgroundColor: colors.background.secondary,
@@ -993,6 +1074,34 @@ const useStyles = () => {
 			justifyContent: 'center',
 			alignItems: 'center',
 			padding: spacing.xl,
+		},
+		// Contacts Grouping - Headers
+		groupHeader: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.sm,
+			marginBottom: spacing.xs,
+		},
+		relationshipHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			gap: spacing.sm,
+		},
+		groupTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		relationshipTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			marginLeft: spacing.xs,
+		},
+		relationshipIcon: {
+			marginTop: 4,
 		},
 	});
 };

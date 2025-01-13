@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Image, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native';
 import {
-	Text,
-	View,
-	ScrollView,
-	TouchableOpacity,
-	TextInput,
-	RefreshControl,
 	Alert,
+	Dimensions,
+	Image,
+	Modal,
+	Platform,
+	RefreshControl,
+	SafeAreaView,
+	ScrollView,
 	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from 'react-native';
 import { useStyles } from '../styles/screens/contacts';
 import { useCommonStyles } from '../styles/common';
@@ -28,7 +31,6 @@ import {
 	uploadContactPhoto,
 	subscribeToContacts,
 } from '../utils/firestore';
-import { Platform } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import ImagePickerComponent from '../components/general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
@@ -37,6 +39,9 @@ import { createContactData, SCHEDULING_CONSTANTS } from '../utils/contactHelpers
 import { formatPhoneNumber } from '../components/general/FormattedPhoneNumber';
 import AddContactModal from '../components/contacts/AddContactModal';
 import { cacheManager } from '../utils/cache';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import ContactsSortMenu from '../components/general/contactsSort'; // Contacts sort menu
+import { RELATIONSHIP_TYPES } from '../../constants/relationships'; // For sorting by relationship type
 import { DEFAULT_RELATIONSHIP_TYPE } from '../../constants/relationships';
 
 // Modal Imports
@@ -62,6 +67,7 @@ const ContactCard = ({
 	isAnyEditing,
 	setDeleteButtonPosition,
 	setEditingContact,
+	nameDisplay,
 }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const { colors } = useTheme();
@@ -121,6 +127,23 @@ const ContactCard = ({
 		}
 	};
 
+	const getDisplayName = (contact) => {
+		switch (nameDisplay) {
+			case 'firstOnly':
+				return { firstName: contact.first_name, lastName: '' };
+			case 'initials':
+				return {
+					firstName: getInitials(contact.first_name, contact.last_name),
+					lastName: '',
+				};
+			default:
+				return {
+					firstName: contact.first_name,
+					lastName: contact.last_name || '',
+				};
+		}
+	};
+
 	return (
 		<TouchableOpacity
 			style={[styles.card, { alignItems: 'center' }]}
@@ -172,12 +195,31 @@ const ContactCard = ({
 				</View>
 
 				<View style={styles.nameContainer}>
-					<Text style={styles.firstName} numberOfLines={1}>
-						{contact.first_name}
-					</Text>
-					<Text style={styles.lastName} numberOfLines={1}>
-						{contact.last_name || ''}
-					</Text>
+					{(() => {
+						const displayName = getDisplayName(contact);
+						return (
+							<>
+								<Text
+									style={styles.firstName}
+									numberOfLines={1}
+									adjustsFontSizeToFit={true}
+									minimumFontScale={0.8}
+								>
+									{displayName.firstName}
+								</Text>
+								{displayName.lastName && (
+									<Text
+										style={styles.lastName}
+										numberOfLines={1}
+										adjustsFontSizeToFit={true}
+										minimumFontScale={0.8}
+									>
+										{displayName.lastName}
+									</Text>
+								)}
+							</>
+						);
+					})()}
 				</View>
 			</WobbleEffect>
 		</TouchableOpacity>
@@ -204,6 +246,12 @@ export default function ContactsScreen({ navigation }) {
 		unscheduledContacts: [],
 	});
 
+	// contactsSort states
+	const [sortType, setSortType] = useState('firstName'); // 'firstName' or 'lastName'
+	const [groupBy, setGroupBy] = useState('schedule'); // 'schedule', 'relationship', or 'none'
+	const [nameDisplay, setNameDisplay] = useState('full'); // 'full', 'firstOnly', or 'initials'
+	const [showSortMenu, setShowSortMenu] = useState(false);
+
 	const logoSource =
 		theme === 'dark'
 			? require('../../assets/full-logo-darkmode.png')
@@ -219,6 +267,35 @@ export default function ContactsScreen({ navigation }) {
 	const [isSearchModalVisible, setIsSearchModalVisible] = useState(false);
 	const [showAddModal, setShowAddModal] = useState(false);
 	const [unsubscribeRef, setUnsubscribeRef] = useState(null);
+
+	const organizeContacts = (contactsList) => {
+		let allContacts = [...contactsList.scheduledContacts, ...contactsList.unscheduledContacts];
+
+		// Apply sorting
+		allContacts.sort((a, b) => {
+			if (sortType === 'firstName') {
+				return a.first_name.localeCompare(b.first_name);
+			} else {
+				return (a.last_name || '').localeCompare(b.last_name || '');
+			}
+		});
+
+		// Apply grouping
+		if (groupBy === 'schedule') {
+			return {
+				scheduledContacts: allContacts.filter((contact) => contact.next_contact),
+				unscheduledContacts: allContacts.filter((contact) => !contact.next_contact),
+			};
+		} else if (groupBy === 'relationship') {
+			const grouped = {};
+			Object.keys(RELATIONSHIP_TYPES).forEach((type) => {
+				grouped[type] = allContacts.filter((contact) => contact.scheduling?.relationship_type === type);
+			});
+			return grouped;
+		} else {
+			return { all: allContacts };
+		}
+	};
 
 	async function loadContacts() {
 		try {
@@ -365,7 +442,10 @@ export default function ContactsScreen({ navigation }) {
 
 			const newContact = await addContact(user.uid, contactData);
 			await loadContacts();
-			navigation.navigate('ContactDetails', { contact: newContact });
+			navigation.navigate('ContactDetails', {
+				contact: newContact,
+				initialTab: 'Schedule',
+			});
 			setPendingContact(null);
 		} catch (error) {
 			console.error('Error processing contact:', error);
@@ -381,6 +461,47 @@ export default function ContactsScreen({ navigation }) {
 			}
 		};
 	}, [user]);
+
+	useEffect(() => {
+		const loadViewSettings = async () => {
+			try {
+				const settings = await AsyncStorage.getItem('contactViewSettings');
+				if (settings) {
+					const {
+						sortType: savedSort,
+						groupBy: savedGroup,
+						nameDisplay: savedDisplay,
+					} = JSON.parse(settings);
+					setSortType(savedSort);
+					setGroupBy(savedGroup);
+					setNameDisplay(savedDisplay);
+				}
+			} catch (error) {
+				console.error('Error loading view settings:', error);
+			}
+		};
+
+		loadViewSettings();
+	}, []);
+
+	useEffect(() => {
+		const saveViewSettings = async () => {
+			try {
+				await AsyncStorage.setItem(
+					'contactViewSettings',
+					JSON.stringify({
+						sortType,
+						groupBy,
+						nameDisplay,
+					})
+				);
+			} catch (error) {
+				console.error('Error saving view settings:', error);
+			}
+		};
+
+		saveViewSettings();
+	}, [sortType, groupBy, nameDisplay]);
 
 	// Reset editing state when leaving the screen
 	useEffect(() => {
@@ -399,7 +520,7 @@ export default function ContactsScreen({ navigation }) {
 
 	const handleAddContact = async (contactData) => {
 		try {
-			await addContact(user.uid, contactData);
+			const newContact = await addContact(user.uid, contactData);
 
 			if (Platform.OS === 'ios') {
 				const { status } = await Contacts.requestPermissionsAsync();
@@ -425,7 +546,6 @@ export default function ContactsScreen({ navigation }) {
 						};
 
 						await Contacts.addContactAsync(contact);
-						Alert.alert('Success', 'Contact added to OnMyList and iOS Contacts');
 					} catch (error) {
 						console.error('Error adding to iOS contacts:', error);
 						Alert.alert('Partial Success', 'Contact added to OnMyList but failed to add to iOS Contacts');
@@ -434,7 +554,11 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			setIsFormVisible(false);
-			loadContacts();
+			await loadContacts();
+			navigation.navigate('ContactDetails', {
+				contact: newContact,
+				initialTab: 'Schedule',
+			});
 		} catch (error) {
 			console.error('Error adding contact:', error);
 			Alert.alert('Error', 'Failed to add contact');
@@ -478,98 +602,199 @@ export default function ContactsScreen({ navigation }) {
 		setFilteredContacts(filtered);
 	};
 
+	const renderContacts = () => {
+		const organizedContacts = organizeContacts(searchQuery ? filteredContacts : contacts);
+
+		if (groupBy === 'none') {
+			return (
+				<View style={styles.section}>
+					<View style={styles.grid}>
+						{organizedContacts.all?.map((contact) => (
+							<ContactCard
+								key={contact.id}
+								contact={contact}
+								onPress={handleOpenDetails}
+								loadContacts={loadContacts}
+								setIsAnyEditing={setIsAnyEditing}
+								isAnyEditing={isAnyEditing}
+								setDeleteButtonPosition={setDeleteButtonPosition}
+								setEditingContact={setEditingContact}
+								nameDisplay={nameDisplay}
+							/>
+						))}
+					</View>
+				</View>
+			);
+		}
+
+		if (groupBy === 'relationship') {
+			const relationshipGroups = Object.entries(organizedContacts).map(([type, contacts]) => {
+				if (contacts.length === 0) return null;
+				return (
+					<View key={type} style={styles.section}>
+						<View style={styles.groupHeader}>
+							<View style={styles.relationshipHeader}>
+								<Icon name={RELATIONSHIP_TYPES[type].icon} size={22} color={RELATIONSHIP_TYPES[type].color} />
+								<Text style={styles.relationshipTitle}>{RELATIONSHIP_TYPES[type].label}</Text>
+							</View>
+						</View>
+
+						<View style={styles.grid}>
+							{contacts.map((contact) => (
+								<ContactCard
+									key={contact.id}
+									contact={contact}
+									onPress={handleOpenDetails}
+									loadContacts={loadContacts}
+									setIsAnyEditing={setIsAnyEditing}
+									isAnyEditing={isAnyEditing}
+									setDeleteButtonPosition={setDeleteButtonPosition}
+									setEditingContact={setEditingContact}
+									nameDisplay={nameDisplay}
+								/>
+							))}
+						</View>
+					</View>
+				);
+			});
+
+			// If all groups are empty - show message
+			if (relationshipGroups.every((group) => group === null)) {
+				return (
+					<View style={styles.section}>
+						<Text style={commonStyles.message}>Add some contacts to get started!</Text>
+					</View>
+				);
+			}
+
+			return relationshipGroups;
+		}
+
+		return (
+			<>
+				{organizedContacts.scheduledContacts.length > 0 && (
+					<View style={styles.section}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Scheduled</Text>
+						</View>
+						<View style={styles.grid}>
+							{organizedContacts.scheduledContacts.map((contact) => (
+								<ContactCard
+									key={contact.id}
+									contact={contact}
+									onPress={handleOpenDetails}
+									loadContacts={loadContacts}
+									setIsAnyEditing={setIsAnyEditing}
+									isAnyEditing={isAnyEditing}
+									setDeleteButtonPosition={setDeleteButtonPosition}
+									setEditingContact={setEditingContact}
+									nameDisplay={nameDisplay}
+								/>
+							))}
+						</View>
+					</View>
+				)}
+
+				{organizedContacts.unscheduledContacts.length > 0 && (
+					<View style={styles.section}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Unscheduled</Text>
+						</View>
+						<View style={styles.grid}>
+							{organizedContacts.unscheduledContacts.map((contact) => (
+								<ContactCard
+									key={contact.id}
+									contact={contact}
+									onPress={handleOpenDetails}
+									loadContacts={loadContacts}
+									setIsAnyEditing={setIsAnyEditing}
+									isAnyEditing={isAnyEditing}
+									setDeleteButtonPosition={setDeleteButtonPosition}
+									setEditingContact={setEditingContact}
+									nameDisplay={nameDisplay}
+								/>
+							))}
+						</View>
+					</View>
+				)}
+			</>
+		);
+	};
+
 	return (
 		<SafeAreaView style={commonStyles.container}>
 			<StatusBar style="auto" />
 
 			<View style={styles.header}>
 				<View style={styles.headerContent}>
-					{/* Logo */}
-					<Image source={logoSource} style={styles.logo} resizeMode="contain" />
-					{/* Icons */}
+					<TouchableOpacity
+						onPress={() => setShowSortMenu(true)}
+						style={styles.leftHeader}
+						activeOpacity={0.7}
+					>
+						<Icon name="menu" size={30} color={colors.text.primary} />
+						<Image source={logoSource} style={styles.logo} resizeMode="contain" />
+					</TouchableOpacity>
+
 					<View style={styles.headerActions}>
 						<TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.headerButton}>
 							<Icon name="add-outline" size={30} color={colors.text.primary} />
 						</TouchableOpacity>
-						<TouchableOpacity onPress={() => setShowSearch(!showSearch)} style={styles.headerButton}>
-							<Icon name="search-outline" size={30} color={colors.text.primary} />
+						<TouchableOpacity
+							onPress={() => {
+								setShowSearch(!showSearch);
+								if (showSearch) {
+									setSearchQuery('');
+									handleSearch('');
+								}
+							}}
+							style={styles.headerButton}
+						>
+							<Icon
+								name={showSearch ? 'close' : 'search-outline'}
+								size={30}
+								color={showSearch ? '#FF6B6B' : colors.text.primary}
+							/>
 						</TouchableOpacity>
 					</View>
 				</View>
+
 				{showSearch && (
-					<TextInput
-						style={styles.searchInput}
-						value={searchQuery}
-						onChangeText={handleSearch}
-						placeholder="Search contacts..."
-						placeholderTextColor={colors.text.secondary}
-						autoFocus
-						autoCorrect={false}
-						spellCheck={false}
-						keyboardType="default"
-						autoCapitalize="none"
-						returnKeyType="search"
-						enablesReturnKeyAutomatically={true}
-					/>
+					<View style={styles.searchContainer}>
+						<TextInput
+							style={styles.searchInput}
+							value={searchQuery}
+							onChangeText={handleSearch}
+							placeholder="Search Contacts"
+							placeholderTextColor={colors.text.secondary}
+							autoFocus
+							autoCorrect={false}
+							spellCheck={false}
+							keyboardType="default"
+							autoCapitalize="none"
+							returnKeyType="search"
+							enablesReturnKeyAutomatically={true}
+						/>
+						{searchQuery.length > 0 && (
+							<TouchableOpacity
+								style={styles.clearSearchButton}
+								onPress={() => {
+									setSearchQuery('');
+									handleSearch('');
+								}}
+							>
+								<Icon name="close-circle" size={30} color={colors.text.secondary} />
+							</TouchableOpacity>
+						)}
+					</View>
 				)}
 			</View>
-
 			<ScrollView
 				style={styles.content}
+				keyboardShouldPersistTaps="handled"
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 			>
-				{loading ? (
-					<Text style={commonStyles.message}>Loading contacts...</Text>
-				) : (
-					<>
-						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length > 0 && (
-							<View style={styles.section}>
-								<Text style={styles.sectionTitle}>Scheduled Contacts</Text>
-								<View style={styles.grid}>
-									{(searchQuery ? filteredContacts : contacts).scheduledContacts.map((contact) => (
-										<ContactCard
-											key={contact.id}
-											contact={contact}
-											onPress={handleOpenDetails}
-											loadContacts={loadContacts}
-											setIsAnyEditing={setIsAnyEditing}
-											isAnyEditing={isAnyEditing}
-											setDeleteButtonPosition={setDeleteButtonPosition}
-											setEditingContact={setEditingContact}
-										/>
-									))}
-								</View>
-							</View>
-						)}
-
-						{(searchQuery ? filteredContacts : contacts).unscheduledContacts.length > 0 && (
-							<View style={styles.section}>
-								<Text style={styles.sectionTitle}>Other Contacts</Text>
-								<View style={styles.grid}>
-									{(searchQuery ? filteredContacts : contacts).unscheduledContacts.map((contact) => (
-										<ContactCard
-											key={contact.id}
-											contact={contact}
-											onPress={handleOpenDetails}
-											loadContacts={loadContacts}
-											setIsAnyEditing={setIsAnyEditing}
-											isAnyEditing={isAnyEditing}
-											setDeleteButtonPosition={setDeleteButtonPosition}
-											setEditingContact={setEditingContact}
-										/>
-									))}
-								</View>
-							</View>
-						)}
-
-						{(searchQuery ? filteredContacts : contacts).scheduledContacts.length === 0 &&
-							(searchQuery ? filteredContacts : contacts).unscheduledContacts.length === 0 && (
-								<Text style={commonStyles.message}>
-									{searchQuery ? 'No matching contacts found' : 'No contacts yet'}
-								</Text>
-							)}
-					</>
-				)}
+				{loading ? <Text style={commonStyles.message}>Loading contacts...</Text> : renderContacts()}
 			</ScrollView>
 
 			{isAnyEditing && (
@@ -689,19 +914,6 @@ export default function ContactsScreen({ navigation }) {
 				loadContacts={loadContacts}
 			/>
 
-			<AddContactModal
-				show={showAddModal}
-				onClose={() => setShowAddModal(false)}
-				onImport={() => {
-					setShowAddModal(false);
-					handleImportContacts();
-				}}
-				onNew={() => {
-					setShowAddModal(false);
-					setIsFormVisible(true);
-				}}
-			/>
-
 			<ContactSearchModal
 				visible={isSearchModalVisible}
 				contacts={deviceContacts}
@@ -712,17 +924,6 @@ export default function ContactsScreen({ navigation }) {
 				}}
 			/>
 
-			<RelationshipTypeModal
-				visible={showRelationshipModal}
-				onClose={() => {
-					setShowRelationshipModal(false);
-					setPendingContact(null);
-				}}
-				onSelect={(relationshipType) => {
-					setShowRelationshipModal(false);
-					processPendingContact(relationshipType);
-				}}
-			/>
 			<AddContactModal
 				show={showAddModal}
 				onClose={() => setShowAddModal(false)}
@@ -735,6 +936,7 @@ export default function ContactsScreen({ navigation }) {
 					setIsFormVisible(true);
 				}}
 			/>
+
 			<RelationshipTypeModal
 				visible={showRelationshipModal}
 				onClose={() => {
@@ -745,6 +947,17 @@ export default function ContactsScreen({ navigation }) {
 					setShowRelationshipModal(false);
 					processPendingContact(relationshipType);
 				}}
+			/>
+
+			<ContactsSortMenu
+				visible={showSortMenu}
+				onClose={() => setShowSortMenu(false)}
+				sortType={sortType}
+				groupBy={groupBy}
+				nameDisplay={nameDisplay}
+				onSortTypeChange={setSortType}
+				onGroupByChange={setGroupBy}
+				onNameDisplayChange={setNameDisplay}
 			/>
 		</SafeAreaView>
 	);

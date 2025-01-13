@@ -176,6 +176,14 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			contentContainerStyle={{ paddingBottom: spacing.xl }}
 			showsVerticalScrollIndicator={false}
 		>
+			{/* Next Contact Display */}
+			{contact.next_contact && (
+				<View style={styles.nextContactContainer}>
+					<Text style={styles.nextContactLabel}>Next Contact</Text>
+					<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
+				</View>
+			)}
+
 			{loading && (
 				<View style={styles.loadingOverlay}>
 					<ActivityIndicator size="large" color={colors.primary} />
@@ -232,7 +240,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					onPress={() => setShowDatePicker(true)}
 					disabled={loading}
 				>
-					<Text style={styles.customDateText}>Add Custom Date</Text>
+					<Text style={styles.customDateText}>Set Custom Date</Text>
 				</TouchableOpacity>
 				<TouchableOpacity
 					style={[styles.recurringOffButton, loading && styles.disabledButton]}
@@ -365,14 +373,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							</TouchableOpacity>
 						</View>
 					</View>
-				</View>
-			)}
-
-			{/* Next Contact Display */}
-			{contact.next_contact && (
-				<View style={styles.nextContactContainer}>
-					<Text style={styles.nextContactLabel}>Next Contact</Text>
-					<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
 				</View>
 			)}
 
@@ -526,13 +526,27 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={async (event, date) => {
-					setShowDatePicker(false);
-					if (date) {
-						try {
-							await handleScheduleContact(date);
-						} catch (error) {
-							console.error('Error scheduling custom date:', error);
+					if (!date) return;
+
+					try {
+						setShowDatePicker(false);
+
+						// Update Firebase
+						await updateNextContact(contact.id, date);
+
+						// Update local state with same date
+						setSelectedContact({
+							...contact,
+							next_contact: date.toISOString(),
+						});
+
+						// Force reload all contacts
+						if (loadContacts) {
+							await loadContacts();
 						}
+					} catch (error) {
+						console.error('Error updating next contact:', error);
+						Alert.alert('Error', 'Failed to update next contact date');
 					}
 				}}
 			/>

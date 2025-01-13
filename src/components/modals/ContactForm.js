@@ -8,19 +8,19 @@ import {
 	TextInput,
 	ScrollView,
 	Alert,
-	KeyboardAvoidingView,
 	Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePickerComponent from '../general/ImagePicker';
 import { Image as ExpoImage } from 'expo-image';
+import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import { useStyles } from '../../styles/screens/contacts';
 import { useCommonStyles } from '../../styles/common';
 import { useTheme, spacing } from '../../context/ThemeContext';
 import { uploadContactPhoto } from '../../utils/firestore';
 import { useAuth } from '../../context/AuthContext';
 import RelationshipPicker from '../general/RelationshipPicker';
-import { createContactData, SCHEDULING_CONSTANTS } from '../../utils/contactHelpers';
+import { createContactData } from '../../utils/contactHelpers';
 import { DEFAULT_RELATIONSHIP_TYPE } from '../../../constants/relationships';
 import { formatPhoneNumber } from '../general/FormattedPhoneNumber';
 
@@ -31,8 +31,8 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 	const commonStyles = useCommonStyles();
 
 	const lastNameRef = useRef();
-	const emailRef = useRef();
 	const phoneRef = useRef();
+	const emailRef = useRef();
 
 	const [formData, setFormData] = useState({
 		first_name: '',
@@ -42,6 +42,26 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 		photo_url: null,
 		relationship_type: DEFAULT_RELATIONSHIP_TYPE,
 	});
+
+	useEffect(() => {
+		AvoidSoftInput.setEnabled(true);
+		return () => {
+			AvoidSoftInput.setEnabled(false);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!visible) {
+			setFormData({
+				first_name: '',
+				last_name: '',
+				email: '',
+				phone: '',
+				photo_url: null,
+				relationship_type: DEFAULT_RELATIONSHIP_TYPE,
+			});
+		}
+	}, [visible]);
 
 	const dismissKeyboard = () => {
 		Keyboard.dismiss();
@@ -63,28 +83,15 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 		}
 	};
 
-	useEffect(() => {
-		if (!visible) {
-			setFormData({
-				first_name: '',
-				last_name: '',
-				email: '',
-				phone: '',
-				photo_url: null,
-				relationship_type: DEFAULT_RELATIONSHIP_TYPE,
-			});
-		}
-	}, [visible]);
-
 	return (
 		<Modal visible={visible} animationType="fade" transparent={true}>
-			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-				<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={dismissKeyboard}>
-					<TouchableOpacity
-						activeOpacity={1}
-						style={commonStyles.modalContent}
-						onPress={(e) => e.stopPropagation()}
-					>
+			<TouchableOpacity style={commonStyles.modalContainer} activeOpacity={1} onPress={dismissKeyboard}>
+				<TouchableOpacity
+					activeOpacity={1}
+					style={commonStyles.modalContent}
+					onPress={(e) => e.stopPropagation()}
+				>
+					<AvoidSoftInputView style={{ flex: 1 }}>
 						<View
 							style={[
 								commonStyles.modalHeader,
@@ -103,7 +110,7 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 						<ScrollView
 							style={styles.formContainer}
 							contentContainerStyle={{
-								paddingBottom: spacing.sm,
+								paddingBottom: Platform.OS === 'ios' ? 120 : spacing.sm, // Adjust padding for iOS email suggestions
 								flexGrow: 1,
 							}}
 							keyboardShouldPersistTaps="handled"
@@ -171,28 +178,13 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 								autoCorrect={false}
 								autoCapitalize="words"
 								returnKeyType="next"
-								onSubmitEditing={() => emailRef.current?.focus()}
-								blurOnSubmit={false}
-							/>
-
-							<TextInput
-								ref={emailRef}
-								style={[commonStyles.input, { marginBottom: spacing.sm }]}
-								placeholder="Email"
-								placeholderTextColor={colors.text.secondary}
-								value={formData.email}
-								onChangeText={(text) => setFormData({ ...formData, email: text })}
-								keyboardType="email-address"
-								autoCapitalize="none"
-								autoCorrect={false}
-								returnKeyType="next"
 								onSubmitEditing={() => phoneRef.current?.focus()}
 								blurOnSubmit={false}
 							/>
 
 							<TextInput
 								ref={phoneRef}
-								style={commonStyles.input}
+								style={[commonStyles.input, { marginBottom: spacing.sm }]}
 								placeholder="Phone"
 								placeholderTextColor={colors.text.secondary}
 								value={formatPhoneNumber(formData.phone)}
@@ -201,35 +193,58 @@ const ContactForm = ({ visible, onClose, onSubmit, loadContacts }) => {
 									setFormData({ ...formData, phone: cleaned });
 								}}
 								keyboardType="phone-pad"
+								returnKeyType="next"
+								onSubmitEditing={() => emailRef.current?.focus()}
+								blurOnSubmit={false}
+							/>
+
+							<TextInput
+								ref={emailRef}
+								style={commonStyles.input}
+								placeholder="Email"
+								placeholderTextColor={colors.text.secondary}
+								value={formData.email}
+								onChangeText={(text) => setFormData({ ...formData, email: text })}
+								keyboardType="email-address"
+								autoCapitalize="none"
+								autoCorrect={false}
 								returnKeyType="done"
 								onSubmitEditing={dismissKeyboard}
 							/>
-						</ScrollView>
 
-						<View style={[styles.editModalActions, { justifyContent: 'center', gap: spacing.md }]}>
-							<TouchableOpacity
-								style={[commonStyles.primaryButton, styles.saveButton]}
-								onPress={() => {
-									if (!formData.first_name.trim()) {
-										Alert.alert('Error', 'First name is required');
-										return;
-									}
-									const contactData = createContactData(formData, user.uid);
-									onSubmit(contactData);
-								}}
+							<View
+								style={[
+									styles.editModalActions,
+									{ justifyContent: 'center', gap: spacing.md, marginTop: spacing.lg },
+								]}
 							>
-								<Icon name="checkmark-outline" size={24} color="#FFFFFF" />
-								<Text style={[commonStyles.primaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
-							</TouchableOpacity>
+								<TouchableOpacity
+									style={[commonStyles.primaryButton, styles.saveButton]}
+									onPress={() => {
+										if (!formData.first_name.trim()) {
+											Alert.alert('Error', 'First name is required');
+											return;
+										}
+										const contactData = createContactData(formData, user.uid);
+										onSubmit(contactData);
+									}}
+								>
+									<Icon name="checkmark-outline" size={24} color="#FFFFFF" />
+									<Text style={[commonStyles.primaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+								</TouchableOpacity>
 
-							<TouchableOpacity style={[commonStyles.secondaryButton, styles.cancelButton]} onPress={onClose}>
-								<Icon name="close-outline" size={24} color={colors.danger} />
-								<Text style={[commonStyles.secondaryButtonText, { color: colors.danger }]}>Cancel</Text>
-							</TouchableOpacity>
-						</View>
-					</TouchableOpacity>
+								<TouchableOpacity
+									style={[commonStyles.secondaryButton, styles.cancelButton]}
+									onPress={onClose}
+								>
+									<Icon name="close-outline" size={24} color={colors.danger} />
+									<Text style={[commonStyles.secondaryButtonText, { color: colors.danger }]}>Cancel</Text>
+								</TouchableOpacity>
+							</View>
+						</ScrollView>
+					</AvoidSoftInputView>
 				</TouchableOpacity>
-			</KeyboardAvoidingView>
+			</TouchableOpacity>
 		</Modal>
 	);
 };

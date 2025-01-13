@@ -25,7 +25,7 @@ const StatBox = ({ icon, title, value, colors, styles }) => (
 
 export default function StatsScreen() {
 	const { user } = useAuth();
-	const { colors } = useTheme();
+	const { colors, spacing } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles(colors);
 	const [loading, setLoading] = useState(false);
@@ -110,28 +110,28 @@ export default function StatsScreen() {
 					<View style={styles.statsGrid}>
 						<StatBox
 							icon="calendar"
-							title="Monthly"
+							title="Calls This Month"
 							value={stats?.basic.monthlyContacts}
 							colors={colors}
 							styles={styles}
 						/>
 						<StatBox
 							icon="flame"
-							title="Streak"
+							title="Days in a Row"
 							value={stats?.basic.currentStreak}
 							colors={colors}
 							styles={styles}
 						/>
 						<StatBox
 							icon="people"
-							title="Active"
+							title="Total Contacts"
 							value={stats?.basic.totalActive}
 							colors={colors}
 							styles={styles}
 						/>
 						<StatBox
 							icon="analytics"
-							title="Weekly Avg"
+							title="Avg Calls/Week"
 							value={Math.round(stats?.basic.averageContactsPerWeek)}
 							colors={colors}
 							styles={styles}
@@ -147,25 +147,18 @@ export default function StatsScreen() {
 						stats.detailed.needsAttention.map((contact, index) => (
 							<View key={index} style={styles.contactRow}>
 								<Text style={styles.contactName}>{contact.name}</Text>
-								<Text style={styles.lastContact}>
-									{contact.lastContact
-										? new Date(contact.lastContact).toLocaleDateString()
-										: 'Never contacted'}
-								</Text>
-							</View>
-						))
-					)}
-				</View>
-
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Frequent Contacts</Text>
-					{!stats?.detailed.frequentContacts?.length ? (
-						<Text style={styles.message}>No contacts in the last 30 days</Text>
-					) : (
-						stats.detailed.frequentContacts.map((contact, index) => (
-							<View key={index} style={styles.frequencyRow}>
-								<Text style={styles.contactName}>{contact.name}</Text>
-								<Text style={styles.frequencyCount}>{contact.thirtyDayCount} calls</Text>
+								<View style={styles.lastContactInfo}>
+									<Text style={styles.lastContactDate}>
+										{contact.lastContact
+											? new Date(contact.lastContact).toLocaleDateString()
+											: 'Never contacted'}
+									</Text>
+									{contact.lastContact && (
+										<Text style={styles.lastContactDays}>
+											{Math.floor((new Date() - new Date(contact.lastContact)) / 86400000)} days ago
+										</Text>
+									)}
+								</View>
 							</View>
 						))
 					)}
@@ -175,15 +168,23 @@ export default function StatsScreen() {
 					<Text style={styles.sectionTitle}>Activity Insights</Text>
 					<View style={styles.insightRow}>
 						<Icon name="trending-up" size={24} color={colors.primary} />
-						<Text style={styles.insightText}>
-							{stats?.trends.ninetyDayTrend > stats?.basic.averageContactsPerWeek
-								? 'Your activity is trending up!'
-								: 'Try to increase your contact frequency'}
-						</Text>
+						<View style={styles.insightContent}>
+							<Text style={styles.insightText}>
+								{stats?.trends.ninetyDayTrend > stats?.basic.averageContactsPerWeek
+									? "You're making more calls lately!"
+									: 'Your calls have decreased'}
+							</Text>
+							<Text style={styles.trendValue}>{Math.round(stats?.trends.ninetyDayTrend)} calls/week</Text>
+							<Text style={styles.trendLabel}>
+								vs {Math.round(stats?.basic.averageContactsPerWeek)} average
+							</Text>
+						</View>
 					</View>
 					<View style={styles.insightRow}>
 						<Icon name="time" size={24} color={colors.primary} />
-						<Text style={styles.insightText}>Most active: {getDayName(stats?.detailed.mostActiveDay)}</Text>
+						<View style={styles.insightContent}>
+							<Text style={styles.insightText}>Most active: {getDayName(stats?.detailed.mostActiveDay)}</Text>
+						</View>
 					</View>
 				</View>
 			</View>
