@@ -1,170 +1,156 @@
 import * as Notifications from 'expo-notifications';
-import { notificationService } from './notifications';
-import { addReminder, updateReminder, completeFollowUp, getReminder } from './firestore';
+import { addReminder, updateReminder, completeFollowUp, getReminder, getContactById } from './firestore';
 import { auth } from '../config/firebase';
 import { navigate } from '../navigation/RootNavigation';
-import { getContactById } from './firestore';
+import { notificationCoordinator } from './notificationCoordinator';
+import { NOTIFICATION_TYPES } from '../../constants/notificationConstants';
 
 class CallNotesService {
-	constructor() {
-		this.initialized = false;
-		// Notification tap listener
-		this.subscription = null;
-	}
+    constructor() {
+        this.initialized = false;
+        this.subscription = null;
+    }
 
-	async initialize() {
-		if (this.initialized) return;
+    async initialize() {
+        if (this.initialized) return;
 
-		try {
-			// Notification tap listener for follow-ups
-			this.subscription = Notifications.addNotificationResponseReceivedListener(
-				this.handleNotificationResponse
-			);
+        try {
+            this.subscription = Notifications.addNotificationResponseReceivedListener(
+                this.handleNotificationResponse
+            );
+            this.initialized = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize call notes service:', error);
+            return false;
+        }
+    }
 
-			this.initialized = true;
-			return true;
-		} catch (error) {
-			console.error('Failed to initialize call notes service:', error);
-			return false;
-		}
-	}
+    handleNotificationResponse = async (response) => {
+        try {
+            const data = response.notification.request.content.data;
+            if (data.type === NOTIFICATION_TYPES.CALL_FOLLOW_UP && data.firestoreId && data.contactId) {
+                const contact = await getContactById(data.contactId);
+                if (contact) {
+                    navigate('ContactDetails', {
+                        contact: contact,
+                        initialTab: 'Notes',
+                        reminderId: data.firestoreId,
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('[CallNotesService] Error handling notification response:', error);
+        }
+    };
 
-	handleNotificationResponse = async (response) => {
-		try {
-			const data = response.notification.request.content.data;
-			if (data.type === 'call_follow_up' && data.firestoreId && data.contactId) {
-				const contact = await getContactById(data.contactId);
-				if (contact) {
-					navigate('ContactDetails', {
-						contact: contact,
-						initialTab: 'Notes',
-						reminderId: data.firestoreId,
-					});
-				}
-			}
-		} catch (error) {
-			console.error('[CallNotesService] Error handling notification response:', error);
-		}
-	};
+    async scheduleFollowUp(contact, notificationTime = new Date()) {
+        try {
+            const reminderData = {
+                contactId: contact.id,
+                scheduledTime: notificationTime,
+                type: NOTIFICATION_TYPES.CALL_FOLLOW_UP,
+                status: 'pending',
+                contactName: `${contact.first_name} ${contact.last_name}`,
+                call_data: contact.callData,
+            };
 
-	async scheduleCallFollowUp(contact, notificationTime) {
-		if (!this.initialized) {
-			await this.initialize();
-		}
+            const firestoreId = await addReminder(reminderData);
 
-		try {
-			// Create reminder data with only necessary fields
-			const reminderData = {
-				contactId: contact.id,
-				scheduledTime: notificationTime,
-				type: 'follow_up',
-				status: 'pending',
-				contactName: `${contact.first_name} ${contact.last_name}`,
-				call_data: contact.callData,
-			};
+            const content = {
+                title: `Add Notes for Call with ${contact.first_name}`,
+                body: 'Tap to add notes about your recent call',
+                data: {
+                    type: NOTIFICATION_TYPES.CALL_FOLLOW_UP,
+                    contactId: contact.id,
+                    firestoreId: firestoreId,
+                    callData: contact.callData,
+                },
+                sound: true,
+            };
 
-			const firestoreId = await addReminder(reminderData);
+            const trigger = notificationTime instanceof Date ? { date: notificationTime } : null;
+            const localNotificationId = await notificationCoordinator.scheduleNotification(content, trigger);
 
-			// Schedule local notification using the core service
-			const content = {
-				title: `Add Notes for Call with ${contact.first_name}`,
-				body: 'Tap to add notes about your recent call',
-				data: {
-					type: 'call_follow_up',
-					contactId: contact.id,
-					firestoreId: firestoreId,
-					callData: contact.callData,
-				},
-				sound: true,
-			};
+            notificationCoordinator.notificationMap.set(firestoreId, {
+                localId: localNotificationId,
+                scheduledTime: notificationTime,
+            });
+            await notificationCoordinator.saveNotificationMap();
 
-			const trigger = notificationTime instanceof Date ? { date: notificationTime } : null;
-			const localNotificationId = await notificationService.scheduleNotification(content, trigger);
+            return firestoreId;
+        } catch (error) {
+            console.error('[CallNotesService] Error scheduling follow-up:', error);
+            throw error;
+        }
+    }
 
-			// Store mapping in core service
-			await notificationService.notificationMap.set(firestoreId, {
-				localId: localNotificationId,
-				scheduledTime: notificationTime,
-			});
-			await notificationService.saveNotificationMap();
+    async handleFollowUpComplete(reminderId, notes = '') {
+        try {
+            if (!auth.currentUser) {
+                throw new Error('No authenticated user');
+            }
 
-			return firestoreId;
-		} catch (error) {
-			console.error('[CallNotesService] Error scheduling call follow-up:', error);
-			throw error;
-		}
-	}
+            const mapping = notificationCoordinator.notificationMap.get(reminderId);
+            if (mapping) {
+                await notificationCoordinator.cancelNotification(mapping.localId);
+            }
 
-	async handleFollowUpComplete(reminderId, notes = '') {
-		try {
-			if (!auth.currentUser) {
-				throw new Error('No authenticated user');
-			}
+            await completeFollowUp(reminderId, notes);
 
-			const mapping = notificationService.notificationMap.get(reminderId);
-			if (mapping) {
-				await notificationService.cancelNotification(mapping.localId);
-			}
+            notificationCoordinator.notificationMap.delete(reminderId);
+            await notificationCoordinator.saveNotificationMap();
+            await notificationCoordinator.decrementBadge();
 
-			await completeFollowUp(reminderId, notes);
+            return true;
+        } catch (error) {
+            console.error('Error completing follow-up:', error);
+            throw error;
+        }
+    }
 
-			notificationService.notificationMap.delete(reminderId);
-			await notificationService.saveNotificationMap();
-			await notificationService.decrementBadge();
+    async rescheduleFollowUp(reminderId, newTime) {
+        try {
+            const reminder = await getReminder(reminderId);
+            if (!reminder) throw new Error('Reminder not found');
 
-			return true;
-		} catch (error) {
-			console.error('Error completing follow-up:', error);
-			throw error;
-		}
-	}
+            await updateReminder(reminderId, {
+                scheduledTime: newTime,
+                date: newTime,
+                status: 'pending',
+            });
 
-	async rescheduleFollowUp(reminderId, newTime) {
-		try {
-			const reminder = await getReminder(reminderId);
-			if (!reminder) throw new Error('Reminder not found');
+            const existingMapping = notificationCoordinator.notificationMap.get(reminderId);
+            if (existingMapping) {
+                await notificationCoordinator.cancelNotification(existingMapping.localId);
+            }
 
-			// Update the existing reminder
-			await updateReminder(reminderId, {
-				scheduledTime: newTime,
-				date: newTime,
-				status: 'pending',
-			});
+            const content = {
+                title: `Add Notes for Call with ${reminder.contactName}`,
+                body: 'Tap to add notes about your recent call',
+                data: {
+                    type: NOTIFICATION_TYPES.CALL_FOLLOW_UP,
+                    contactId: reminder.contact_id,
+                    firestoreId: reminderId,
+                    callData: reminder.call_data,
+                },
+                sound: true,
+            };
 
-			// Cancel existing notification if it exists
-			const existingMapping = notificationService.notificationMap.get(reminderId);
-			if (existingMapping) {
-				await notificationService.cancelNotification(existingMapping.localId);
-			}
+            const localNotificationId = await notificationCoordinator.scheduleNotification(content, { date: newTime });
 
-			// Schedule new notification
-			const content = {
-				title: `Add Notes for Call with ${reminder.contactName}`,
-				body: 'Tap to add notes about your recent call',
-				data: {
-					type: 'call_follow_up',
-					contactId: reminder.contact_id,
-					firestoreId: reminderId,
-					callData: reminder.call_data,
-				},
-				sound: true,
-			};
+            notificationCoordinator.notificationMap.set(reminderId, {
+                localId: localNotificationId,
+                scheduledTime: newTime,
+            });
+            await notificationCoordinator.saveNotificationMap();
 
-			const localNotificationId = await notificationService.scheduleNotification(content, { date: newTime });
-
-			// Update mapping
-			notificationService.notificationMap.set(reminderId, {
-				localId: localNotificationId,
-				scheduledTime: newTime,
-			});
-			await notificationService.saveNotificationMap();
-
-			return true;
-		} catch (error) {
-			console.error('Error rescheduling follow-up:', error);
-			throw error;
-		}
-	}
+            return true;
+        } catch (error) {
+            console.error('Error rescheduling follow-up:', error);
+            throw error;
+        }
+    }
 }
 
 export const callNotesService = new CallNotesService();

@@ -1,8 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth } from '../config/firebase';
 import { DateTime } from 'luxon';
+import { auth } from '../config/firebase';
+import { notificationCoordinator } from './notificationCoordinator';
 import { cacheManager } from './cache';
-import { REMINDER_STATUS, NOTIFICATION_TYPES } from '../../constants/notifications';
 
 const PATTERN_WEIGHTS = {
 	CALL_ATTEMPTS: 1.0,
@@ -10,11 +9,6 @@ const PATTERN_WEIGHTS = {
 	SKIP_PATTERNS: 0.5,
 	TIME_OF_DAY: 0.8,
 	DAY_OF_WEEK: 0.6,
-};
-
-const CACHE_KEYS = {
-	PATTERN_DATA: 'pattern_data_',
-	SCHEDULING_HISTORY: 'scheduling_history_',
 };
 
 class SchedulingHistoryService {

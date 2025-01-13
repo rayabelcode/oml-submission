@@ -1,145 +1,166 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-
-const NOTIFICATION_MAP_KEY = 'notification_map';
+import { callNotesService } from './callNotes';
+import { scheduledCallService } from './scheduledCalls';
+import { schedulingHistory } from './schedulingHistory';
+import { NOTIFICATION_MAP_KEY } from '../../constants/notificationConstants';
+import { notificationCoordinator } from './notificationCoordinator';
+import { scheduledCallService } from './scheduledCalls';
 
 class NotificationService {
-	constructor() {
-		this.badgeCount = 0;
-		this.initialized = false;
-		this.notificationMap = new Map();
-	}
+    constructor() {
+        this.badgeCount = 0;
+        this.initialized = false;
+        this.notificationMap = new Map();
+    }
 
-	async initialize() {
-		if (this.initialized) return;
+    async initialize() {
+        if (this.initialized) return;
 
-		try {
-			Notifications.setNotificationHandler({
-				handleNotification: async () => ({
-					shouldShowAlert: true,
-					shouldPlaySound: true,
-					shouldSetBadge: true,
-				}),
-			});
+        try {
+            Notifications.setNotificationHandler({
+                handleNotification: async () => ({
+                    shouldShowAlert: true,
+                    shouldPlaySound: true,
+                    shouldSetBadge: true,
+                }),
+            });
 
-			// Request permissions during initialization
-			await this.requestPermissions();
+            // Request permissions during initialization
+            await this.requestPermissions();
 
-			// Restore badge count
-			const storedBadgeCount = await AsyncStorage.getItem('badgeCount');
-			this.badgeCount = storedBadgeCount ? parseInt(storedBadgeCount, 10) : 0;
+            // Restore badge count
+            const storedBadgeCount = await AsyncStorage.getItem('badgeCount');
+            this.badgeCount = storedBadgeCount ? parseInt(storedBadgeCount, 10) : 0;
 
-			// Restore notification map
-			const storedMap = await AsyncStorage.getItem(NOTIFICATION_MAP_KEY);
-			if (storedMap) {
-				this.notificationMap = new Map(JSON.parse(storedMap));
-			}
+            // Restore notification map
+            const storedMap = await AsyncStorage.getItem(NOTIFICATION_MAP_KEY);
+            if (storedMap) {
+                this.notificationMap = new Map(JSON.parse(storedMap));
+            }
 
-			this.initialized = true;
-			return true;
-		} catch (error) {
-			console.error('Failed to initialize notification service:', error);
-			return false;
-		}
-	}
+            // Initialize sub-services
+            await Promise.all([
+                callNotesService.initialize(),
+                scheduledCallService.initialize(),
+                schedulingHistory.initialize()
+            ]);
 
-	async requestPermissions() {
-		try {
-			const { status: existingStatus } = await Notifications.getPermissionsAsync();
-			let finalStatus = existingStatus;
+            this.initialized = true;
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize notification service:', error);
+            return false;
+        }
+    }
 
-			if (existingStatus !== 'granted') {
-				const { status } = await Notifications.requestPermissionsAsync();
-				finalStatus = status;
-			}
+    async requestPermissions() {
+        try {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
 
-			if (finalStatus !== 'granted') {
-				throw new Error('Permission not granted for notifications');
-			}
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
 
-			if (Platform.OS === 'android') {
-				await Notifications.setNotificationChannelAsync('default', {
-					name: 'default',
-					importance: Notifications.AndroidImportance.MAX,
-					vibrationPattern: [0, 250, 250, 250],
-					lightColor: '#FF231F7C',
-				});
-			}
+            if (finalStatus !== 'granted') {
+                throw new Error('Permission not granted for notifications');
+            }
 
-			return true;
-		} catch (error) {
-			console.error('Error requesting notification permissions:', error);
-			return false;
-		}
-	}
+            if (Platform.OS === 'android') {
+                await Notifications.setNotificationChannelAsync('default', {
+                    name: 'default',
+                    importance: Notifications.AndroidImportance.MAX,
+                    vibrationPattern: [0, 250, 250, 250],
+                    lightColor: '#FF231F7C',
+                });
+            }
 
-	async saveNotificationMap() {
-		try {
-			await AsyncStorage.setItem(
-				NOTIFICATION_MAP_KEY,
-				JSON.stringify(Array.from(this.notificationMap.entries()))
-			);
-		} catch (error) {
-			console.error('Error saving notification map:', error);
-		}
-	}
+            return true;
+        } catch (error) {
+            console.error('Error requesting notification permissions:', error);
+            return false;
+        }
+    }
 
-	// Core scheduling method
-	async scheduleNotification(content, trigger) {
-		if (!this.initialized) {
-			await this.initialize();
-		}
+    async saveNotificationMap() {
+        try {
+            await AsyncStorage.setItem(
+                NOTIFICATION_MAP_KEY,
+                JSON.stringify(Array.from(this.notificationMap.entries()))
+            );
+        } catch (error) {
+            console.error('Error saving notification map:', error);
+        }
+    }
 
-		try {
-			const localNotificationId = await Notifications.scheduleNotificationAsync({
-				content,
-				trigger,
-			});
+    async scheduleNotification(content, trigger) {
+        if (!this.initialized) {
+            await this.initialize();
+        }
 
-			return localNotificationId;
-		} catch (error) {
-			console.error('Error scheduling notification:', error);
-			throw error;
-		}
-	}
+        try {
+            const localNotificationId = await Notifications.scheduleNotificationAsync({
+                content,
+                trigger,
+            });
 
-	async cancelNotification(localNotificationId) {
-		try {
-			await Notifications.cancelScheduledNotificationAsync(localNotificationId);
-			return true;
-		} catch (error) {
-			console.error('Error canceling notification:', error);
-			return false;
-		}
-	}
+            return localNotificationId;
+        } catch (error) {
+            console.error('Error scheduling notification:', error);
+            throw error;
+        }
+    }
 
-	async clearAllNotifications() {
-		try {
-			await Notifications.cancelAllScheduledNotificationsAsync();
-			this.badgeCount = 0;
-			await AsyncStorage.setItem('badgeCount', '0');
-			return true;
-		} catch (error) {
-			console.error('Error clearing all notifications:', error);
-			return false;
-		}
-	}
+    async scheduleCallFollowUp(contact) {
+        try {
+            if (!this.initialized) {
+                await this.initialize();
+            }
+            return await callNotesService.scheduleFollowUp(contact);
+        } catch (error) {
+            console.error('Error scheduling call follow-up:', error);
+            throw error;
+        }
+    }
 
-	// Badge management
-	async incrementBadge() {
-		this.badgeCount++;
-		await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
-		return this.badgeCount;
-	}
+    async cancelNotification(localNotificationId) {
+        try {
+            await Notifications.cancelScheduledNotificationAsync(localNotificationId);
+            return true;
+        } catch (error) {
+            console.error('Error canceling notification:', error);
+            return false;
+        }
+    }
 
-	async decrementBadge() {
-		if (this.badgeCount > 0) {
-			this.badgeCount--;
-			await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
-		}
-		return this.badgeCount;
-	}
+    async clearAllNotifications() {
+        try {
+            await Notifications.cancelAllScheduledNotificationsAsync();
+            this.badgeCount = 0;
+            await AsyncStorage.setItem('badgeCount', '0');
+            return true;
+        } catch (error) {
+            console.error('Error clearing all notifications:', error);
+            return false;
+        }
+    }
+
+    async incrementBadge() {
+        this.badgeCount++;
+        await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
+        return this.badgeCount;
+    }
+
+    async decrementBadge() {
+        if (this.badgeCount > 0) {
+            this.badgeCount--;
+            await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
+        }
+        return this.badgeCount;
+    }
 }
 
 export const notificationService = new NotificationService();

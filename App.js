@@ -18,6 +18,10 @@ import { PreloadProvider } from './src/context/PreloadContext';
 import { fetchContacts, fetchUpcomingContacts, getUserProfile } from './src/utils/firestore';
 import { cacheManager } from './src/utils/cache';
 import { setupAvoidSoftInputGlobalSettings } from './src/utils/componentSettings';
+import { notificationCoordinator } from './src/utils/notificationCoordinator';
+import { callNotesService } from './src/utils/callNotes';
+import { scheduledCallService } from './src/utils/scheduledCalls';
+import { schedulingHistory } from './src/utils/schedulingHistory';
 
 // Disable ScrollView scrollbar globally
 const originalScrollViewRender = ScrollView.render;
@@ -120,11 +124,16 @@ function App() {
 	useEffect(() => {
 		async function prepare() {
 			try {
+				// Register services
+				notificationCoordinator.registerService('callNotes', callNotesService);
+				notificationCoordinator.registerService('scheduledCalls', scheduledCallService);
+				notificationCoordinator.registerService('schedulingHistory', schedulingHistory);
+
 				await Promise.all([
 					Font.loadAsync({
 						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 					}),
-					notificationService.initialize(),
+					notificationCoordinator.initialize(),
 					// Clear badges when app opens
 					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);

@@ -1,253 +1,248 @@
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
-import { notificationService } from './notifications';
-import {
-    addReminder,
-    updateReminder,
-    getReminder,
-    getReminders,
-    getContactById,
-} from './firestore';
+import { addReminder, updateReminder, getReminder, getReminders, getContactById } from './firestore';
 import { auth } from '../config/firebase';
 import CallOptions from '../components/general/CallOptions';
-import ActionModal from '../components/general/ActionModal';
+import { notificationCoordinator } from './notificationCoordinator';
 import {
-    NOTIFICATION_TYPES,
-    REMINDER_STATUS,
-    REMINDER_TYPES,
-    SNOOZE_OPTIONS,
-    MAX_SNOOZE_ATTEMPTS,
-    NOTIFICATION_MESSAGES,
-} from '../../constants/notifications';
+	NOTIFICATION_TYPES,
+	REMINDER_STATUS,
+	REMINDER_TYPES,
+	SNOOZE_OPTIONS,
+	MAX_SNOOZE_ATTEMPTS,
+	NOTIFICATION_MESSAGES,
+} from '../../constants/notificationConstants';
 
 class ScheduledCallService {
-    constructor() {
-        this.initialized = false;
-        this.subscription = null;
-    }
+	constructor() {
+		this.initialized = false;
+		this.subscription = null;
+	}
 
-    async initialize() {
-        if (this.initialized) return;
+	async initialize() {
+		if (this.initialized) return;
 
-        try {
-            this.subscription = Notifications.addNotificationResponseReceivedListener(
-                this.handleNotificationResponse
-            );
+		try {
+			this.subscription = Notifications.addNotificationResponseReceivedListener(
+				this.handleNotificationResponse
+			);
 
-            this.initialized = true;
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize scheduled calls service:', error);
-            return false;
-        }
-    }
+			this.initialized = true;
+			return true;
+		} catch (error) {
+			console.error('Failed to initialize scheduled calls service:', error);
+			return false;
+		}
+	}
 
-    handleNotificationResponse = async (response) => {
-        try {
-            const data = response.notification.request.content.data;
-            if (data.type === NOTIFICATION_TYPES.CONTACT_REMINDER && data.firestoreId && data.contactId) {
-                const reminder = await getReminder(data.firestoreId);
-                const contact = await getContactById(data.contactId);
-                
-                if (!reminder || !contact) {
-                    console.error('Failed to load reminder or contact details');
-                    return;
-                }
+	handleNotificationResponse = async (response) => {
+		try {
+			const data = response.notification.request.content.data;
+			if (data.type === NOTIFICATION_TYPES.CONTACT_REMINDER && data.firestoreId && data.contactId) {
+				const reminder = await getReminder(data.firestoreId);
+				const contact = await getContactById(data.contactId);
 
-                Alert.alert(
-                    `Contact ${contact.first_name}`,
-                    NOTIFICATION_MESSAGES.CONTACT_ACTION.title,
-                    [
-                        {
-                            text: 'Call',
-                            onPress: () => {
-                                CallOptions.show({
-                                    show: true,
-                                    contact,
-                                    onClose: () => {
-                                        this.showSnoozeOptions(reminder);
-                                    }
-                                });
-                            }
-                        },
-                        {
-                            text: 'Snooze',
-                            onPress: () => this.showSnoozeOptions(reminder)
-                        },
-                        {
-                            text: 'Cancel',
-                            style: 'cancel'
-                        }
-                    ]
-                );
-            }
-        } catch (error) {
-            console.error('[ScheduledCallService] Error handling notification response:', error);
-        }
-    };
+				if (!reminder || !contact) {
+					console.error('Failed to load reminder or contact details');
+					return;
+				}
 
-    showSnoozeOptions = async (reminder) => {
-        const snoozeCount = reminder.snooze_history?.length || 0;
-        
-        if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
-            Alert.alert(
-                NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.title,
-                NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.message,
-                [
-                    {
-                        text: 'No, keep reminder',
-                        style: 'cancel'
-                    },
-                    {
-                        text: 'Yes, skip this call',
-                        style: 'destructive',
-                        onPress: () => this.handleSkip(reminder.id)
-                    }
-                ]
-            );
-            return;
-        }
+				Alert.alert(`Contact ${contact.first_name}`, NOTIFICATION_MESSAGES.CONTACT_ACTION.title, [
+					{
+						text: 'Call',
+						onPress: () => {
+							CallOptions.show({
+								show: true,
+								contact,
+								onClose: () => {
+									this.showSnoozeOptions(reminder);
+								},
+							});
+						},
+					},
+					{
+						text: 'Snooze',
+						onPress: () => this.showSnoozeOptions(reminder),
+					},
+					{
+						text: 'Cancel',
+						style: 'cancel',
+					},
+				]);
+			}
+		} catch (error) {
+			console.error('[ScheduledCallService] Error handling notification response:', error);
+		}
+	};
 
-        ActionModal.show({
-            show: true,
-            options: SNOOZE_OPTIONS,
-            onClose: () => {},
-            onSelect: (option) => this.handleSnooze(reminder.id, option)
-        });
-    };
+	showSnoozeOptions = async (reminder) => {
+		const snoozeCount = reminder.snooze_history?.length || 0;
 
-    async handleSnooze(reminderId, option) {
-        try {
-            const reminder = await getReminder(reminderId);
-            if (!reminder) throw new Error('Reminder not found');
+		if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
+			Alert.alert(
+				NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.title,
+				NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.message,
+				[
+					{
+						text: 'No, keep reminder',
+						style: 'cancel',
+					},
+					{
+						text: 'Yes, skip this call',
+						style: 'destructive',
+						onPress: () => this.handleSkip(reminder.id),
+					},
+				]
+			);
+			return;
+		}
 
-            let newTime = new Date();
-            if (option.hours) {
-                newTime.setHours(newTime.getHours() + option.hours);
-            } else if (option.days) {
-                newTime.setDate(newTime.getDate() + option.days);
-            }
+		CallOptions.show({
+			show: true,
+			options: SNOOZE_OPTIONS,
+			onClose: () => {},
+			onSelect: (option) => this.handleSnooze(reminder.id, option),
+		});
+	};
 
-            const snoozeHistory = reminder.snooze_history || [];
-            snoozeHistory.push({
-                from_date: reminder.scheduledTime,
-                to_date: newTime,
-                reason: option.id,
-                count: snoozeHistory.length + 1
-            });
+	async handleSnooze(reminderId, option) {
+		try {
+			const reminder = await getReminder(reminderId);
+			if (!reminder) throw new Error('Reminder not found');
 
-            await updateReminder(reminderId, {
-                scheduledTime: newTime,
-                status: REMINDER_STATUS.SNOOZED,
-                snooze_history: snoozeHistory,
-                updated_at: new Date()
-            });
+			let newTime = new Date();
+			if (option.hours) {
+				newTime.setHours(newTime.getHours() + option.hours);
+			} else if (option.days) {
+				newTime.setDate(newTime.getDate() + option.days);
+			}
 
-            const contact = await getContactById(reminder.contactId);
-            await this.scheduleContactReminder(contact, newTime, reminder.userId);
+			const snoozeHistory = reminder.snooze_history || [];
+			snoozeHistory.push({
+				from_date: reminder.scheduledTime,
+				to_date: newTime,
+				reason: option.id,
+				count: snoozeHistory.length + 1,
+			});
 
-            return { success: true };
-        } catch (error) {
-            console.error('Error handling snooze:', error);
-            throw error;
-        }
-    }
+			await updateReminder(reminderId, {
+				scheduledTime: newTime,
+				status: REMINDER_STATUS.SNOOZED,
+				snooze_history: snoozeHistory,
+				updated_at: new Date(),
+			});
 
-    async handleSkip(reminderId) {
-        try {
-            await updateReminder(reminderId, {
-                status: REMINDER_STATUS.SKIPPED,
-                updated_at: new Date()
-            });
+			const contact = await getContactById(reminder.contactId);
+			await this.scheduleContactReminder(contact, newTime, reminder.userId);
 
-            const existingMapping = notificationService.notificationMap.get(reminderId);
-            if (existingMapping) {
-                await notificationService.cancelNotification(existingMapping.localId);
-            }
+			const schedulingHistoryService = notificationCoordinator.getService('schedulingHistory');
+			await schedulingHistoryService.trackSnooze(reminderId, reminder.scheduledTime, newTime, option.id);
 
-            return true;
-        } catch (error) {
-            console.error('Error handling skip:', error);
-            throw error;
-        }
-    }
+			return { success: true };
+		} catch (error) {
+			console.error('Error handling snooze:', error);
+			throw error;
+		}
+	}
 
-    async scheduleContactReminder(contact, date, userId) {
-        if (!this.initialized) {
-            await this.initialize();
-        }
+	async handleSkip(reminderId) {
+		try {
+			await updateReminder(reminderId, {
+				status: REMINDER_STATUS.SKIPPED,
+				updated_at: new Date(),
+			});
 
-        try {
-            const reminderData = {
-                contactId: contact.id,
-                scheduledTime: date,
-                created_at: new Date(),
-                updated_at: new Date(),
-                snoozed: false,
-                follow_up: false,
-                type: REMINDER_TYPES.REGULAR,
-                status: REMINDER_STATUS.PENDING,
-                notes: contact.notes || '',
-                userId: userId,
-                contactName: `${contact.first_name} ${contact.last_name}`,
-                snooze_history: []
-            };
+			const existingMapping = notificationCoordinator.notificationMap.get(reminderId);
+			if (existingMapping) {
+				await notificationCoordinator.cancelNotification(existingMapping.localId);
+			}
 
-            const firestoreId = await addReminder(reminderData);
+			const schedulingHistoryService = notificationCoordinator.getService('schedulingHistory');
+			await schedulingHistoryService.trackSkip(reminderId, new Date());
 
-            const notificationContent = {
-                title: `Reminder: Contact ${contact.first_name}`,
-                body: contact.notes ? `Note: ${contact.notes}` : 'Time to catch up!',
-                data: {
-                    contactId: contact.id,
-                    firestoreId: firestoreId,
-                    type: NOTIFICATION_TYPES.CONTACT_REMINDER,
-                },
-                sound: true,
-            };
+			return true;
+		} catch (error) {
+			console.error('Error handling skip:', error);
+			throw error;
+		}
+	}
 
-            const trigger = date instanceof Date ? { date } : null;
-            const localNotificationId = await notificationService.scheduleNotification(
-                notificationContent, 
-                trigger
-            );
+	async scheduleContactReminder(contact, date, userId) {
+		if (!this.initialized) {
+			await this.initialize();
+		}
 
-            await notificationService.notificationMap.set(firestoreId, {
-                localId: localNotificationId,
-                scheduledTime: date,
-            });
-            await notificationService.saveNotificationMap();
-            await notificationService.incrementBadge();
+		try {
+			const reminderData = {
+				contactId: contact.id,
+				scheduledTime: date,
+				created_at: new Date(),
+				updated_at: new Date(),
+				snoozed: false,
+				follow_up: false,
+				type: REMINDER_TYPES.REGULAR,
+				status: REMINDER_STATUS.PENDING,
+				notes: contact.notes || '',
+				userId: userId,
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				snooze_history: [],
+			};
 
-            return { firestoreId, localNotificationId };
-        } catch (error) {
-            console.error('Error scheduling contact reminder:', error);
-            return null;
-        }
-    }
+			const firestoreId = await addReminder(reminderData);
 
-    async getActiveReminders() {
-        try {
-            if (!auth.currentUser) {
-                return [];
-            }
+			const notificationContent = {
+				title: `Reminder: Contact ${contact.first_name}`,
+				body: contact.notes ? `Note: ${contact.notes}` : 'Time to catch up!',
+				data: {
+					contactId: contact.id,
+					firestoreId: firestoreId,
+					type: NOTIFICATION_TYPES.CONTACT_REMINDER,
+				},
+				sound: true,
+			};
 
-            const reminders = await getReminders(auth.currentUser.uid, REMINDER_STATUS.PENDING);
+			const trigger = date instanceof Date ? { date } : null;
+			const localNotificationId = await notificationCoordinator.scheduleNotification(
+				notificationContent,
+				trigger
+			);
 
-            return reminders.map((reminder) => ({
-                firestoreId: reminder.id,
-                scheduledTime: reminder.scheduledTime,
-                contactName: reminder.contactName,
-                data: {
-                    contactId: reminder.contact_id,
-                    type: reminder.type,
-                },
-            }));
-        } catch (error) {
-            console.error('[ScheduledCallService] Error getting active reminders:', error);
-            return [];
-        }
-    }
+			notificationCoordinator.notificationMap.set(firestoreId, {
+				localId: localNotificationId,
+				scheduledTime: date,
+			});
+			await notificationCoordinator.saveNotificationMap();
+			await notificationCoordinator.incrementBadge();
+
+			return { firestoreId, localNotificationId };
+		} catch (error) {
+			console.error('Error scheduling contact reminder:', error);
+			return null;
+		}
+	}
+
+	async getActiveReminders() {
+		try {
+			if (!auth.currentUser) {
+				return [];
+			}
+
+			const reminders = await getReminders(auth.currentUser.uid, REMINDER_STATUS.PENDING);
+
+			return reminders.map((reminder) => ({
+				firestoreId: reminder.id,
+				scheduledTime: reminder.scheduledTime,
+				contactName: reminder.contactName,
+				data: {
+					contactId: reminder.contact_id,
+					type: reminder.type,
+				},
+			}));
+		} catch (error) {
+			console.error('[ScheduledCallService] Error getting active reminders:', error);
+			return [];
+		}
+	}
 }
 
 export const scheduledCallService = new ScheduledCallService();
