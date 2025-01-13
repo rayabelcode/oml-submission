@@ -3,7 +3,7 @@ import { addReminder, updateReminder, completeFollowUp, getReminder, getContactB
 import { auth } from '../config/firebase';
 import { navigate } from '../navigation/RootNavigation';
 import { notificationCoordinator } from './notificationCoordinator';
-import { NOTIFICATION_TYPES } from '../../constants/notificationConstants';
+import { REMINDER_STATUS, REMINDER_TYPES } from '../../constants/notificationConstants';
 
 class CallNotesService {
     constructor() {
@@ -53,6 +53,7 @@ class CallNotesService {
                 status: 'pending',
                 contactName: `${contact.first_name} ${contact.last_name}`,
                 call_data: contact.callData,
+                needs_attention: true 
             };
 
             const firestoreId = await addReminder(reminderData);

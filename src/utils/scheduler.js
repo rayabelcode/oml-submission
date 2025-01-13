@@ -248,7 +248,7 @@ export class SchedulingService {
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
 				snoozed: false,
-				follow_up: false,
+				needs_attention: false,
 				ai_suggestions: [],
 				score: this.calculateTimeSlotScore(targetTime, contact),
 				flexibility_used: targetTime.getTime() !== nextDate.getTime(),

@@ -11,7 +11,7 @@ describe('Notification System', () => {
 				_seconds: 1736798718,
 				_nanoseconds: 232000000,
 			},
-			type: 'call_follow_up',
+			type: REMINDER_TYPES.FOLLOW_UP,
 			contact_id: 'G0r88xTnw2BPy2Q34xtr',
 			user_id: 'LTQ2OSK61lTjRdyqF9qXn94HW0t1',
 			created_at: {
@@ -22,7 +22,15 @@ describe('Notification System', () => {
 				_seconds: 1736798718,
 				_nanoseconds: 232000000,
 			},
+			needs_attention: true,
+			completed: false,
+			notes_added: false,
+			snoozed: false,
 		};
+
+		it('should have correct needs_attention value based on type', () => {
+			expect(sampleReminder.needs_attention).toBe(sampleReminder.type === REMINDER_TYPES.FOLLOW_UP);
+		});
 
 		it('should have valid Timestamps', () => {
 			// Check if timestamp has correct structure
@@ -61,6 +69,10 @@ describe('Notification System', () => {
 
 		it('should have correct reminder type', () => {
 			expect([REMINDER_TYPES.SCHEDULED, REMINDER_TYPES.FOLLOW_UP]).toContain(sampleReminder.type);
+		});
+
+		it('should have correct needs_attention value based on type', () => {
+			expect(sampleReminder.needs_attention).toBe(sampleReminder.type === REMINDER_TYPES.FOLLOW_UP);
 		});
 	});
 });

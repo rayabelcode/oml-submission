@@ -1,9 +1,15 @@
 import { Timestamp } from 'firebase/firestore';
 
-// Constants for notifications (scheduledCalls.js and others)
-export const NOTIFICATION_TYPES = {
-	CONTACT_REMINDER: 'contact_reminder',
-	CALL_FOLLOW_UP: 'call_follow_up',
+export const REMINDER_TYPES = {
+	SCHEDULED: 'scheduled',
+	FOLLOW_UP: 'call_follow_up',
+};
+
+export const REMINDER_STATUS = {
+	PENDING: 'pending',
+	COMPLETED: 'completed',
+	SNOOZED: 'snoozed',
+	SKIPPED: 'skipped',
 };
 
 // Default notification format
@@ -17,22 +23,10 @@ export const REMINDER_SCHEMA = {
 	updated_at: Timestamp,
 	contactName: String,
 	notes_added: Boolean,
-	follow_up: Boolean,
+	needs_attention: Boolean,
 	snoozed: Boolean,
 	snooze_history: Array, // Optional
 	call_data: Object, // Optional
-};
-
-export const REMINDER_STATUS = {
-	PENDING: 'pending',
-	COMPLETED: 'completed',
-	SNOOZED: 'snoozed',
-	SKIPPED: 'skipped',
-};
-
-export const REMINDER_TYPES = {
-	SCHEDULED: 'scheduled',
-	FOLLOW_UP: 'call_follow_up',
 };
 
 export const SNOOZE_OPTIONS = [

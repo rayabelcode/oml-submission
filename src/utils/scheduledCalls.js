@@ -189,7 +189,7 @@ class ScheduledCallService {
 				created_at: new Date(),
 				updated_at: new Date(),
 				snoozed: false,
-				follow_up: false,
+				needs_attention: false,
 				type: REMINDER_TYPES.REGULAR,
 				status: REMINDER_STATUS.PENDING,
 				notes: contact.notes || '',
