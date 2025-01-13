@@ -97,12 +97,26 @@ class ScheduledCallService {
 			return;
 		}
 
-		CallOptions.show({
-			show: true,
-			options: SNOOZE_OPTIONS,
-			onClose: () => {},
-			onSelect: (option) => this.handleSnooze(reminder.id, option),
-		});
+		// Show snooze options directly
+		Alert.alert('Snooze Options', 'Choose when to be reminded:', [
+			{
+				text: 'In 1 hour',
+				onPress: () => this.handleSnooze(reminder.id, { hours: 1, id: '1h' }),
+			},
+			{
+				text: 'In 3 hours',
+				onPress: () => this.handleSnooze(reminder.id, { hours: 3, id: '3h' }),
+			},
+			{
+				text: 'Tomorrow',
+				onPress: () => this.handleSnooze(reminder.id, { days: 1, id: '1d' }),
+			},
+
+			{
+				text: 'Cancel',
+				style: 'cancel',
+			},
+		]);
 	};
 
 	async handleSnooze(reminderId, option) {

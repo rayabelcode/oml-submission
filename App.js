@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 import { Alert, LogBox, Platform, View, ScrollView } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { CallHandler } from './src/utils/callHandler';
 import { notificationService } from './src/utils/notifications';
 import * as Font from 'expo-font';
 import SafeAreaWrapper from './src/components/general/SafeAreaView';
@@ -22,6 +23,9 @@ import { notificationCoordinator } from './src/utils/notificationCoordinator';
 import { callNotesService } from './src/utils/callNotes';
 import { scheduledCallService } from './src/utils/scheduledCalls';
 import { schedulingHistory } from './src/utils/schedulingHistory';
+
+const callHandler = new CallHandler(notificationService);
+export { callHandler };
 
 // Disable ScrollView scrollbar globally
 const originalScrollViewRender = ScrollView.render;

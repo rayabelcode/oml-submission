@@ -172,6 +172,35 @@ class NotificationService {
 			return [];
 		}
 	}
+
+	async handleFollowUpComplete(reminderId, notes = '') {
+		try {
+			if (!this.initialized) {
+				await this.initialize();
+			}
+
+			// Cancel any existing notification
+			const mapping = this.notificationMap.get(reminderId);
+			if (mapping) {
+				await this.cancelNotification(mapping.localId);
+			}
+
+			// Update the notification map
+			this.notificationMap.delete(reminderId);
+			await this.saveNotificationMap();
+
+			// Decrease badge count
+			await this.decrementBadge();
+
+			// Update the reminder in Firestore
+			const reminder = await callNotesService.handleFollowUpComplete(reminderId, notes);
+
+			return reminder;
+		} catch (error) {
+			console.error('Error completing follow-up:', error);
+			throw error;
+		}
+	}
 }
 
 export const notificationService = new NotificationService();
