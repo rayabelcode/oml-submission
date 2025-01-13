@@ -37,7 +37,7 @@ class ScheduledCallService {
 	handleNotificationResponse = async (response) => {
 		try {
 			const data = response.notification.request.content.data;
-			if (data.type === NOTIFICATION_TYPES.CONTACT_REMINDER && data.firestoreId && data.contactId) {
+			if (data.type === REMINDER_TYPES.SCHEDULED && data.firestoreId && data.contactId) {
 				const reminder = await getReminder(data.firestoreId);
 				const contact = await getContactById(data.contactId);
 
@@ -50,7 +50,6 @@ class ScheduledCallService {
 					{
 						text: 'Call',
 						onPress: () => {
-							// Navigate to contact details
 							if (global.navigationRef) {
 								global.navigationRef.navigate('ContactDetails', { contact });
 							}
@@ -206,7 +205,7 @@ class ScheduledCallService {
 				data: {
 					contactId: contact.id,
 					firestoreId: firestoreId,
-					type: NOTIFICATION_TYPES.CONTACT_REMINDER,
+					type: REMINDER_TYPES.SCHEDULED,
 				},
 				sound: true,
 			};
