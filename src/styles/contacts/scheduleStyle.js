@@ -224,5 +224,23 @@ export const useScheduleStyles = () => {
 		disabledButton: {
 			opacity: 0.5,
 		},
+		// Animated Loading Screen
+		buttonContent: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		dotsContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginLeft: 4,
+		},
+		dot: {
+			width: 4,
+			height: 4,
+			borderRadius: 2,
+			backgroundColor: '#FFFFFF',
+			marginHorizontal: 2,
+		},
 	});
 };
