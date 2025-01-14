@@ -224,11 +224,7 @@ export class SchedulingService {
 	async scheduleReminder(contact, lastContactDate, frequency) {
 		try {
 			const preferences = this.getPreferencesForContact(contact);
-
-			// Get base next date from frequency
 			const baseNextDate = this.calculatePreliminaryDate(lastContactDate, frequency);
-
-			// Find the next preferred day after the base date
 			const dt = DateTime.fromJSDate(baseNextDate).setZone(this.timeZone);
 			let targetDate = dt;
 
@@ -247,15 +243,39 @@ export class SchedulingService {
 				const currentDayNum = dt.weekday;
 				const preferredDayNums = preferences.preferred_days
 					.map((day) => daysMap[day.toLowerCase()])
-					.filter((num) => num); // Remove any undefined values
+					.filter((num) => num);
 
 				if (preferredDayNums.length > 0) {
-					let daysToAdd = 0;
-					while (!preferredDayNums.includes(((currentDayNum + daysToAdd - 1) % 7) + 1)) {
-						daysToAdd++;
-						if (daysToAdd > 7) break;
+					// Get all possible dates in the next week for preferred days
+					const possibleDates = [];
+					for (let i = 0; i < 7; i++) {
+						const checkDate = dt.plus({ days: i });
+						if (preferredDayNums.includes(checkDate.weekday)) {
+							// Check for existing reminders on this day
+							const dayStart = checkDate.startOf('day');
+							const dayEnd = checkDate.endOf('day');
+							const hasReminder = this.reminders.some((reminder) => {
+								const reminderDate = DateTime.fromJSDate(reminder.date.toDate());
+								return reminderDate >= dayStart && reminderDate <= dayEnd;
+							});
+
+							if (!hasReminder) {
+								possibleDates.push(checkDate);
+							}
+						}
 					}
-					targetDate = dt.plus({ days: daysToAdd });
+
+					// If possible dates are found - use earliest (OR fall back to first preferred day)
+					if (possibleDates.length > 0) {
+						targetDate = possibleDates[0];
+					} else {
+						let daysToAdd = 0;
+						while (!preferredDayNums.includes(((currentDayNum + daysToAdd - 1) % 7) + 1)) {
+							daysToAdd++;
+							if (daysToAdd > 7) break;
+						}
+						targetDate = dt.plus({ days: daysToAdd });
+					}
 				}
 			}
 
