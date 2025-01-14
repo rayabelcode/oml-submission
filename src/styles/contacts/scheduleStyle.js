@@ -58,7 +58,7 @@ export const useScheduleStyles = () => {
 		customDateText: {
 			color: colors.primary,
 			fontSize: 16,
-			fontWeight: '600',
+			fontWeight: '700',
 		},
 		customDateButton: {
 			flex: 1,
@@ -71,7 +71,7 @@ export const useScheduleStyles = () => {
 			borderColor: colors.primary,
 		},
 		recurringOffText: {
-			color: colors.text.tertiary,
+			color: colors.text.lightWarning,
 			fontSize: 18,
 			fontWeight: '700',
 		},

@@ -34,12 +34,14 @@ const lightTheme = {
 	text: {
 		primary: '#000000',
 		secondary: '#666666',
+		lightWarning: '#000000',
 	},
 	primary: '#007AFF',
 	secondary: '#4CD964',
 	danger: '#FF3B30',
 	warning: '#FFCC00',
-	lightWarning: '#fa6b7e', // Lighter shade of warning
+	lightWarning: '#fa6b7e', // Lighter red warning
+	lightHighlight: '#87EF66', // Lighter green success
 	success: '#34C759',
 	border: '#E5E5EA',
 	tabBar: {
@@ -59,12 +61,14 @@ const darkTheme = {
 	text: {
 		primary: '#FFFFFF',
 		secondary: '#8E8E93',
+		lightWarning: '#bab8b8',
 	},
 	primary: '#0A84FF',
 	secondary: '#30D158',
 	danger: '#FF453A',
 	warning: '#FFD60A',
-	lightWarning: '#c44f5e', // Lighter shade of warning
+	lightWarning: '#75150D', // Lighter red warning
+	lightHighlight: '#0A5A18',	// Lighter green success
 	success: '#32D74B',
 	border: '#3A3A3C',
 	tabBar: {
