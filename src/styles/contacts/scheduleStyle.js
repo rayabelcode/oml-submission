@@ -236,7 +236,11 @@ export const useScheduleStyles = () => {
 			marginTop: spacing.xs,
 		},
 		disabledButton: {
-			opacity: 0.5,
+			opacity: 0.3,
+			pointerEvents: 'none',
+		},
+		disabledText: {
+			opacity: 0.3,
 		},
 		// SlotsFilledModal
 		modalOverlay: {

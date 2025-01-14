@@ -339,7 +339,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			{error && <Text style={styles.errorText}>{error}</Text>}
 
 			<TouchableOpacity
-				style={styles.advancedSettingsButton}
+				style={[styles.advancedSettingsButton, loading && styles.disabledButton]}
 				onPress={() => setShowAdvancedSettings(!showAdvancedSettings)}
 			>
 				<Icon
@@ -353,7 +353,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			{showAdvancedSettings && (
 				<View>
 					<View style={styles.priorityContainer}>
-						<Text style={styles.sectionTitle}>Priority</Text>
+						<Text style={[styles.sectionTitle, loading && styles.disabledText]}>Priority</Text>
 						<View style={styles.priorityButtons}>
 							{PRIORITY_OPTIONS.map((option) => (
 								<TouchableOpacity
@@ -386,7 +386,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									}}
 									disabled={loading}
 								>
-									<Text style={[styles.priorityText, priority === option.value && styles.priorityTextActive]}>
+									<Text
+										style={[
+											styles.priorityText,
+											priority === option.value && styles.priorityTextActive,
+											loading && styles.disabledText,
+										]}
+									>
 										{option.label}
 									</Text>
 								</TouchableOpacity>
@@ -395,7 +401,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					</View>
 
 					<View style={styles.daysContainer}>
-						<Text style={styles.sectionTitle}>Preferred Days</Text>
+						<Text style={[styles.sectionTitle, loading && styles.disabledText]}>Preferred Days</Text>
 						<View style={styles.daysGrid}>
 							{DAYS_OF_WEEK.map((day) => {
 								const isSelected = selectedDays.includes(day.value);
@@ -437,9 +443,17 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 												setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
 											}
 										}}
-										disabled={loading} 
+										disabled={loading}
 									>
-										<Text style={[styles.dayText, isSelected && styles.dayTextActive]}>{day.label}</Text>
+										<Text
+											style={[
+												styles.dayText,
+												isSelected && styles.dayTextActive,
+												loading && styles.disabledText,
+											]}
+										>
+											{day.label}
+										</Text>
 									</TouchableOpacity>
 								);
 							})}
@@ -447,21 +461,25 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					</View>
 
 					<View style={styles.hoursContainer}>
-						<Text style={styles.sectionTitle}>Active Hours</Text>
+						<Text style={[styles.sectionTitle, loading && styles.disabledText]}>Active Hours</Text>
 						<View style={styles.hoursRow}>
 							<TouchableOpacity
 								style={[styles.timeButton, loading && styles.disabledButton]}
 								onPress={() => setShowStartTimePicker(true)}
 								disabled={loading}
 							>
-								<Text style={styles.timeText}>Start: {formatTimeForDisplay(activeHours.start)}</Text>
+								<Text style={[styles.timeText, loading && styles.disabledText]}>
+									Start: {formatTimeForDisplay(activeHours.start)}
+								</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
 								style={[styles.timeButton, loading && styles.disabledButton]}
 								onPress={() => setShowEndTimePicker(true)}
 								disabled={loading}
 							>
-								<Text style={styles.timeText}>End: {formatTimeForDisplay(activeHours.end)}</Text>
+								<Text style={[styles.timeText, loading && styles.disabledText]}>
+									End:{formatTimeForDisplay(activeHours.end)}
+								</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
