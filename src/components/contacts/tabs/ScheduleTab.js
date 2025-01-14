@@ -358,8 +358,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							{PRIORITY_OPTIONS.map((option) => (
 								<TouchableOpacity
 									key={option.value}
-									style={[styles.priorityButton, priority === option.value && styles.priorityButtonActive]}
+									style={[
+										styles.priorityButton,
+										priority === option.value && styles.priorityButtonActive,
+										loading && styles.disabledButton,
+									]}
 									onPress={async () => {
+										if (loading) return;
 										try {
 											setPriority(option.value);
 											const schedulingUpdate = {
@@ -379,6 +384,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											setPriority(contact?.scheduling?.priority || 'normal');
 										}
 									}}
+									disabled={loading}
 								>
 									<Text style={[styles.priorityText, priority === option.value && styles.priorityTextActive]}>
 										{option.label}
@@ -396,8 +402,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								return (
 									<TouchableOpacity
 										key={day.value}
-										style={[styles.dayButton, isSelected && styles.dayButtonActive]}
+										style={[
+											styles.dayButton,
+											isSelected && styles.dayButtonActive,
+											loading && styles.disabledButton,
+										]}
 										onPress={async () => {
+											if (loading) return;
 											const updatedDays = isSelected
 												? selectedDays.filter((d) => d !== day.value)
 												: [...selectedDays, day.value];
@@ -426,6 +437,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 												setSelectedDays(contact?.scheduling?.custom_preferences?.preferred_days || []);
 											}
 										}}
+										disabled={loading} 
 									>
 										<Text style={[styles.dayText, isSelected && styles.dayTextActive]}>{day.label}</Text>
 									</TouchableOpacity>

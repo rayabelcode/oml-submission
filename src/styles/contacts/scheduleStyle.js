@@ -43,7 +43,11 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
+		buttonContent: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
 		// Action Buttons
 		actionButtonsContainer: {
 			flexDirection: 'row',
@@ -80,7 +84,6 @@ export const useScheduleStyles = () => {
 			color: colors.text.secondary,
 			fontSize: 14,
 		},
-
 		// Advanced Settings
 		advancedSettingsButton: {
 			flexDirection: 'row',
@@ -94,7 +97,6 @@ export const useScheduleStyles = () => {
 			marginLeft: spacing.xs,
 			fontSize: 14,
 		},
-
 		// Priority Section
 		priorityContainer: {
 			marginBottom: spacing.lg,
@@ -134,7 +136,6 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
 		// Preferred Days
 		daysContainer: {
 			marginBottom: spacing.lg,
@@ -166,7 +167,6 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
 		// Active Hours
 		hoursContainer: {
 			marginBottom: spacing.lg,
@@ -190,7 +190,6 @@ export const useScheduleStyles = () => {
 			fontSize: 14,
 			color: colors.text.primary,
 		},
-
 		// Next Contact Display
 		nextContactContainer: {
 			marginBottom: spacing.lg,
@@ -205,8 +204,23 @@ export const useScheduleStyles = () => {
 			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
+			height: 30, // Match height of dotsContainer
+			lineHeight: 30,
 		},
-
+		// Animated Loading Screen
+		dotsContainer: {
+			height: 30, // Match height of nextContactDate
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		dot: {
+			width: 8,
+			height: 8,
+			borderRadius: 3,
+			backgroundColor: colors.text.primary,
+			marginHorizontal: 8, // Spacing between dots
+		},
 		// Loading and Error States
 		loadingOverlay: {
 			...StyleSheet.absoluteFillObject,
@@ -223,24 +237,6 @@ export const useScheduleStyles = () => {
 		},
 		disabledButton: {
 			opacity: 0.5,
-		},
-		// Animated Loading Screen
-		buttonContent: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'center',
-		},
-		dotsContainer: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			marginLeft: 4,
-		},
-		dot: {
-			width: 4,
-			height: 4,
-			borderRadius: 2,
-			backgroundColor: '#FFFFFF',
-			marginHorizontal: 2,
 		},
 		// SlotsFilledModal
 		modalOverlay: {
