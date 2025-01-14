@@ -20,37 +20,147 @@ jest.mock('firebase/firestore', () => ({
 	},
 }));
 
-describe('SchedulingService', () => {
-	let schedulingService;
-	const mockUserPreferences = {
-		scheduling_preferences: {
-			relationship_types: {
-				friend: {
-					active_hours: { start: '09:00', end: '17:00' },
-					preferred_days: ['monday', 'wednesday', 'friday'],
-					excluded_times: [],
-				},
-				work: {
-					active_hours: { start: '09:00', end: '17:00' },
-					preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-					excluded_times: [
-						{
-							days: ['monday', 'wednesday', 'friday'],
-							start: '12:00',
-							end: '13:00',
-						},
-					],
-				},
-			},
-			global_excluded_times: [
+const mockUserPreferences = {
+	relationship_types: {
+		friend: {
+			active_hours: { start: '09:00', end: '17:00' },
+			preferred_days: ['monday', 'wednesday', 'friday'],
+			excluded_times: [],
+		},
+		work: {
+			active_hours: { start: '09:00', end: '17:00' },
+			preferred_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+			excluded_times: [
 				{
-					days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-					start: '23:00',
-					end: '07:00',
+					days: ['monday', 'wednesday', 'friday'],
+					start: '12:00',
+					end: '13:00',
 				},
 			],
 		},
-	};
+	},
+	global_excluded_times: [
+		{
+			days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+			start: '23:00',
+			end: '07:00',
+		},
+	],
+};
+
+describe('Contact Spreading', () => {
+	let schedulingService;
+
+	beforeEach(() => {
+		schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+	});
+	it('should spread contacts across preferred days', async () => {
+		const baseContact = {
+			id: 'test-id',
+			scheduling: {
+				custom_schedule: true,
+				custom_preferences: {
+					active_hours: { start: '09:00', end: '17:00' },
+					preferred_days: ['tuesday', 'wednesday', 'thursday'],
+				},
+				priority: 'normal',
+				minimum_gap: 30,
+			},
+		};
+
+		// Create three contacts with same preferences
+		const contacts = Array.from({ length: 3 }, (_, i) => ({
+			...baseContact,
+			id: `test-id-${i}`,
+		}));
+
+		const lastContactDate = DateTime.now().toJSDate();
+		const results = [];
+
+		// Schedule all contacts
+		for (const contact of contacts) {
+			const result = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
+			results.push(result);
+		}
+
+		// Check that they're on different days
+		const scheduledDays = new Set(results.map((r) => DateTime.fromJSDate(r.date.toDate()).weekday));
+		expect(scheduledDays.size).toBe(3);
+	});
+
+	it('should respect minimum gaps between contacts', async () => {
+		const contact = {
+			id: 'test-id',
+			scheduling: {
+				custom_schedule: true,
+				custom_preferences: {
+					active_hours: { start: '09:00', end: '17:00' },
+					preferred_days: ['monday'],
+				},
+				minimum_gap: 120, // 2 hours
+				priority: 'normal',
+			},
+		};
+
+		const lastContactDate = DateTime.now().toJSDate();
+		const result1 = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
+		const result2 = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
+
+		const time1 = result1.date.toDate().getTime();
+		const time2 = result2.date.toDate().getTime();
+		const gap = Math.abs(time2 - time1) / (1000 * 60); // gap in minutes
+
+		expect(gap).toBeGreaterThanOrEqual(120);
+	});
+});
+
+describe('Custom Preferences', () => {
+	let schedulingService;
+
+	beforeEach(() => {
+		schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+	});
+	it('should use custom schedule when available', async () => {
+		const contact = {
+			id: 'test-id',
+			scheduling: {
+				custom_schedule: true,
+				custom_preferences: {
+					active_hours: { start: '12:00', end: '20:00' },
+					preferred_days: ['saturday', 'sunday'],
+				},
+				relationship_type: 'friend',
+			},
+		};
+
+		const result = await schedulingService.scheduleReminder(contact, DateTime.now().toJSDate(), 'weekly');
+
+		const scheduledDateTime = DateTime.fromJSDate(result.date.toDate());
+		expect(['6', '7']).toContain(scheduledDateTime.weekday.toString());
+		expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(12);
+		expect(scheduledDateTime.hour).toBeLessThan(20);
+	});
+
+	it('should fall back to relationship type preferences when no custom schedule', async () => {
+		const contact = {
+			id: 'test-id',
+			scheduling: {
+				custom_schedule: false,
+				relationship_type: 'work',
+			},
+		};
+
+		const result = await schedulingService.scheduleReminder(contact, DateTime.now().toJSDate(), 'weekly');
+
+		const scheduledDateTime = DateTime.fromJSDate(result.date.toDate());
+		expect(scheduledDateTime.weekday).toBeLessThanOrEqual(5); // Monday-Friday
+		expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(9);
+		expect(scheduledDateTime.hour).toBeLessThan(17);
+	});
+});
+
+describe('SchedulingService', () => {
+	let schedulingService;
 
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -59,14 +169,13 @@ describe('SchedulingService', () => {
 
 	describe('Basic Functionality', () => {
 		it('should initialize with correct preferences', () => {
-			expect(schedulingService.preferences).toBeDefined();
-			expect(schedulingService.relationshipPreferences).toBeDefined();
+			expect(schedulingService.userPreferences).toBeDefined();
 			expect(schedulingService.globalExcludedTimes).toBeDefined();
 		});
 
 		it('should handle missing preferences gracefully', () => {
 			const serviceWithNoPrefs = new SchedulingService(null, [], 'America/New_York');
-			expect(serviceWithNoPrefs.relationshipPreferences).toEqual({});
+			expect(serviceWithNoPrefs.userPreferences).toBeNull();
 			expect(serviceWithNoPrefs.globalExcludedTimes).toEqual([]);
 		});
 	});
@@ -105,17 +214,32 @@ describe('SchedulingService', () => {
 		});
 
 		it('should respect global excluded times', () => {
-			const nightTime = DateTime.fromObject(
-				{ hour: 23, minute: 30 },
-				{ zone: 'America/New_York' }
-			).toJSDate();
+			const mockContact = {
+				scheduling: {
+					relationship_type: 'work',
+					custom_schedule: false,
+				},
+			};
 
-			const earlyMorning = DateTime.fromObject(
-				{ hour: 6, minute: 30 },
+			// Use a specific Monday for consistent testing
+			const monday = DateTime.fromObject(
+				{ year: 2024, month: 1, day: 1 }, // This is a Monday
 				{ zone: 'America/New_York' }
-			).toJSDate();
+			);
 
-			const dayTime = DateTime.fromObject({ hour: 10, minute: 0 }, { zone: 'America/New_York' }).toJSDate();
+			// Test during excluded period (23:00-07:00)
+			const nightTime = monday.set({ hour: 23, minute: 30 }).toJSDate();
+			const earlyMorning = monday.set({ hour: 6, minute: 30 }).toJSDate();
+			const dayTime = monday.set({ hour: 10, minute: 0 }).toJSDate();
+
+			// Debug info
+			console.log('Testing excluded times:', {
+				contact: mockContact,
+				preferences: schedulingService.getPreferencesForContact(mockContact),
+				globalExcludedTimes: schedulingService.globalExcludedTimes,
+				testTime: DateTime.fromJSDate(nightTime).toFormat('cccc HH:mm'),
+				weekday: DateTime.fromJSDate(nightTime).weekdayLong.toLowerCase(),
+			});
 
 			expect(schedulingService.isTimeBlocked(nightTime, mockContact)).toBeTruthy();
 			expect(schedulingService.isTimeBlocked(earlyMorning, mockContact)).toBeTruthy();
@@ -237,36 +361,50 @@ describe('SchedulingService', () => {
 		});
 
 		it('should handle maximum scheduling attempts', async () => {
-			const workingHourStart = DateTime.now().set({ hour: 9, minute: 0, second: 0, millisecond: 0 });
+			const mockContact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'work',
+					custom_schedule: false,
+					minimum_gap: 15,
+				},
+			};
+
+			// Fill ALL possible slots for a single day
+			const targetDate = DateTime.fromObject(
+				{ year: 2024, month: 1, day: 1, hour: 9 }, // Start at 9 AM
+				{ zone: 'America/New_York' }
+			);
 
 			schedulingService.reminders = [];
 
-			const slotsPerHour = 4;
-			const workingHours = 8;
-			const totalSlots = slotsPerHour * workingHours;
-
-			for (let i = 0; i < totalSlots; i++) {
-				const reminderTime = workingHourStart.plus({ minutes: i * 15 });
+			// Fill every 15-minute slot from 9 AM to 5 PM
+			for (let minutes = 0; minutes < (17 - 9) * 60; minutes += 15) {
+				const slotTime = targetDate.plus({ minutes });
 				schedulingService.reminders.push({
 					date: {
-						toDate: () => reminderTime.toJSDate(),
-						_seconds: Math.floor(reminderTime.toSeconds()),
+						toDate: () => slotTime.toJSDate(),
+						_seconds: Math.floor(slotTime.toSeconds()),
 						_nanoseconds: 0,
 					},
 				});
 			}
 
 			console.log('Maximum scheduling test:', {
-				totalReminders: schedulingService.reminders.length,
-				timeRange: `${workingHourStart.toFormat('HH:mm')} - ${workingHourStart
-					.plus({ hours: 8 })
-					.toFormat('HH:mm')}`,
-				slots: schedulingService.reminders.map((r) => DateTime.fromJSDate(r.date.toDate()).toFormat('HH:mm')),
+				totalSlots: schedulingService.reminders.length,
+				firstSlot: DateTime.fromJSDate(schedulingService.reminders[0].date.toDate()).toFormat('HH:mm'),
+				lastSlot: DateTime.fromJSDate(
+					schedulingService.reminders[schedulingService.reminders.length - 1].date.toDate()
+				).toFormat('HH:mm'),
+				sampleSlots: schedulingService.reminders
+					.slice(0, 4)
+					.map((r) => DateTime.fromJSDate(r.date.toDate()).toFormat('HH:mm')),
 			});
 
-			await expect(
-				schedulingService.scheduleReminder(mockContact, workingHourStart.toJSDate(), 'daily')
-			).rejects.toThrow('No available time slots found within working hours');
+			// Try to find a slot - should fail as all slots are filled
+			await expect(async () => {
+				await schedulingService.findAvailableTimeSlot(targetDate.toJSDate(), mockContact);
+			}).rejects.toThrow('No available time slots found within working hours');
 		});
 
 		it('should handle minimum gap requirements strictly', () => {

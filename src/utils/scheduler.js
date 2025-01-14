@@ -46,7 +46,7 @@ export class SchedulingService {
 
 		this.userPreferences = userPreferences;
 		this.reminders = existingReminders || [];
-		this.globalExcludedTimes = userPreferences?.scheduling_preferences?.global_excluded_times || [];
+		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
 	}
 
 	getPreferencesForContact(contact) {
