@@ -39,6 +39,7 @@ const lightTheme = {
 	secondary: '#4CD964',
 	danger: '#FF3B30',
 	warning: '#FFCC00',
+	lightWarning: '#fa6b7e', // Lighter shade of warning
 	success: '#34C759',
 	border: '#E5E5EA',
 	tabBar: {
@@ -63,6 +64,7 @@ const darkTheme = {
 	secondary: '#30D158',
 	danger: '#FF453A',
 	warning: '#FFD60A',
+	lightWarning: '#c44f5e', // Lighter shade of warning
 	success: '#32D74B',
 	border: '#3A3A3C',
 	tabBar: {

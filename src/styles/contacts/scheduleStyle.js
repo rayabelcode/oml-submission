@@ -55,6 +55,11 @@ export const useScheduleStyles = () => {
 			marginBottom: spacing.lg,
 			gap: spacing.sm,
 		},
+		customDateText: {
+			color: colors.primary,
+			fontSize: 16,
+			fontWeight: '600',
+		},
 		customDateButton: {
 			flex: 1,
 			backgroundColor: colors.background.secondary,
@@ -65,24 +70,20 @@ export const useScheduleStyles = () => {
 			borderWidth: 1,
 			borderColor: colors.primary,
 		},
+		recurringOffText: {
+			color: colors.text.tertiary,
+			fontSize: 18,
+			fontWeight: '700',
+		},
 		recurringOffButton: {
 			flex: 1,
-			backgroundColor: colors.background.tertiary,
+			backgroundColor: colors.lightWarning,
 			borderRadius: layout.borderRadius.md,
 			paddingVertical: spacing.md,
 			alignItems: 'center',
 			justifyContent: 'center',
 			borderWidth: 1,
-			borderColor: colors.border,
-		},
-		customDateText: {
-			color: colors.primary,
-			fontSize: 14,
-			fontWeight: '500',
-		},
-		recurringOffText: {
-			color: colors.text.secondary,
-			fontSize: 14,
+			borderColor: colors.lightWarning,
 		},
 		// Advanced Settings
 		advancedSettingsButton: {

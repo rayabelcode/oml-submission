@@ -185,23 +185,27 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
-			const schedulingUpdate = {
+			// Use only updateContactScheduling with both updates
+			await updateContactScheduling(contact.id, {
 				frequency: null,
-			};
-			await updateContactScheduling(contact.id, schedulingUpdate);
-			setSelectedContact((prev) => ({
-				...prev,
+				next_contact: null  // Pass it here instead of separate updateNextContact call
+			});
+			
+			setSelectedContact({
+				...contact,
 				scheduling: {
-					...prev.scheduling,
+					...contact.scheduling,
 					frequency: null,
 				},
-			}));
+				next_contact: null
+			});
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');
 			setFrequency(contact?.scheduling?.frequency || null);
 		}
 	};
+	
 
 	// Handle slots filled option
 	const handleSlotsFilledOption = async (option) => {
@@ -332,7 +336,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					onPress={handleRecurringOff}
 					disabled={loading}
 				>
-					<Text style={styles.recurringOffText}>Recurring Off</Text>
+					<Text style={styles.recurringOffText}>No Contact</Text>
 				</TouchableOpacity>
 			</View>
 
