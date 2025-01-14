@@ -184,12 +184,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				</View>
 			)}
 
-			{loading && (
-				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size="large" color={colors.primary} />
-				</View>
-			)}
-
 			{/* Frequency Grid */}
 			<View style={styles.gridContainer}>
 				<Text style={styles.sectionTitle}>Contact Frequency</Text>
@@ -197,25 +191,22 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					{FREQUENCY_OPTIONS.map((option) => (
 						<TouchableOpacity
 							key={option.value}
-							style={[
-								styles.frequencyButton,
-								frequency === option.value && styles.frequencyButtonActive,
-								loading && styles.disabledButton,
-							]}
+							style={[styles.frequencyButton, frequency === option.value && styles.frequencyButtonActive]}
 							onPress={async () => {
+								if (loading) return; // Prevent multiple clicks
 								try {
+									setLoading(true); // No UI change
 									setFrequency(option.value);
-									setLoading(true);
 
 									// Create scheduling update
 									const schedulingUpdate = {
 										frequency: option.value,
 									};
 
-									// First update contact's scheduling preferences
+									// Update scheduling preferences
 									await updateContactScheduling(contact.id, schedulingUpdate);
 
-									// Then calculate and set next contact date using scheduler
+									// Calculate next contact date using scheduler
 									const scheduler = new SchedulingService(
 										contact.scheduling?.custom_preferences,
 										[],
@@ -229,31 +220,37 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 										option.value
 									);
 
-									// Update next_contact date
 									const nextContactDate = reminderDetails.date.toDate();
+
+									// Update next_contact date in Firestore
 									await updateNextContact(contact.id, nextContactDate);
 
-									// Update local state
-									setSelectedContact((prev) => ({
-										...prev,
+									// Update local state immediately
+									setSelectedContact({
+										...contact,
 										scheduling: {
-											...prev.scheduling,
+											...contact.scheduling,
 											frequency: option.value,
 										},
 										next_contact: nextContactDate.toISOString(),
-									}));
+									});
 								} catch (error) {
 									console.error('Error updating frequency:', error);
-									setError('Failed to update frequency');
-									// Revert on failure
 									setFrequency(contact?.scheduling?.frequency || null);
+									setError('Failed to update frequency');
 								} finally {
 									setLoading(false);
 								}
 							}}
-							disabled={loading}
+							disabled={loading} // Visually show it's disabled
 						>
-							<Text style={[styles.frequencyText, frequency === option.value && styles.frequencyTextActive]}>
+							<Text
+								style={[
+									styles.frequencyText,
+									frequency === option.value && styles.frequencyTextActive,
+									loading && styles.disabledText,
+								]}
+							>
 								{option.label}
 							</Text>
 						</TouchableOpacity>
