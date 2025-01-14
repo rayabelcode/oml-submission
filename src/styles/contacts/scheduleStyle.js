@@ -208,6 +208,10 @@ export const useScheduleStyles = () => {
 			height: 30, // Match height of dotsContainer
 			lineHeight: 30,
 		},
+		unscheduledText: {
+			color: colors.text.primary,
+			fontWeight: '500',
+		},		
 		// Animated Loading Screen
 		dotsContainer: {
 			height: 30, // Match height of nextContactDate

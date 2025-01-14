@@ -34,7 +34,7 @@ const lightTheme = {
 	text: {
 		primary: '#000000',
 		secondary: '#666666',
-		lightWarning: '#000000',
+		lightWarning: '#2e2b2a',
 	},
 	primary: '#007AFF',
 	secondary: '#4CD964',

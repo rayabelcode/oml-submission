@@ -188,16 +188,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			// Use only updateContactScheduling with both updates
 			await updateContactScheduling(contact.id, {
 				frequency: null,
-				next_contact: null  // Pass it here instead of separate updateNextContact call
+				next_contact: null, // Pass it here instead of separate updateNextContact call
 			});
-			
+
 			setSelectedContact({
 				...contact,
 				scheduling: {
 					...contact.scheduling,
 					frequency: null,
 				},
-				next_contact: null
+				next_contact: null,
 			});
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
@@ -205,7 +205,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			setFrequency(contact?.scheduling?.frequency || null);
 		}
 	};
-	
 
 	// Handle slots filled option
 	const handleSlotsFilledOption = async (option) => {
@@ -259,20 +258,20 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			contentContainerStyle={{ paddingBottom: spacing.xl }}
 			showsVerticalScrollIndicator={false}
 		>
-			{contact.next_contact && (
-				<View style={styles.nextContactContainer}>
-					<Text style={styles.nextContactLabel}>Next Contact</Text>
-					{loading ? (
-						<View style={styles.dotsContainer}>
-							<Animated.View style={[styles.dot, { opacity: dot1 }]} />
-							<Animated.View style={[styles.dot, { opacity: dot2 }]} />
-							<Animated.View style={[styles.dot, { opacity: dot3 }]} />
-						</View>
-					) : (
-						<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
-					)}
-				</View>
-			)}
+			<View style={styles.nextContactContainer}>
+				<Text style={styles.nextContactLabel}>Next Contact</Text>
+				{loading ? (
+					<View style={styles.dotsContainer}>
+						<Animated.View style={[styles.dot, { opacity: dot1 }]} />
+						<Animated.View style={[styles.dot, { opacity: dot2 }]} />
+						<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+					</View>
+				) : (
+					<Text style={[styles.nextContactDate, !contact.next_contact && styles.unscheduledText]}>
+						{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Unscheduled'}
+					</Text>
+				)}
+			</View>
 
 			<View style={styles.gridContainer}>
 				<Text style={styles.sectionTitle}>Contact Frequency</Text>
