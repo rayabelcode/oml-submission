@@ -242,5 +242,56 @@ export const useScheduleStyles = () => {
 			backgroundColor: '#FFFFFF',
 			marginHorizontal: 2,
 		},
+		// SlotsFilledModal
+		modalOverlay: {
+			flex: 1,
+			backgroundColor: 'rgba(0, 0, 0, 0.5)',
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		modalContent: {
+			backgroundColor: colors.background.primary,
+			borderRadius: 12,
+			padding: spacing.lg,
+			width: '90%',
+			maxWidth: 400,
+		},
+		modalTitle: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
+		},
+		modalMessage: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+			textAlign: 'center',
+		},
+		modalOptions: {
+			marginVertical: spacing.md,
+		},
+		modalOption: {
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			borderRadius: 8,
+			bbackgroundColor: colors.background.secondary,
+			marginBottom: spacing.sm,
+		},
+		modalOptionText: {
+			fontSize: 16,
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		modalCloseButton: {
+			marginTop: spacing.sm,
+			padding: spacing.sm,
+			alignItems: 'center',
+		},
+		modalCloseText: {
+			color: colors.text.secondary,
+			fontSize: 16,
+		},
 	});
 };

@@ -757,7 +757,6 @@ describe('SchedulingService', () => {
 			expect(result.options).toEqual([
 				'Try the next available day',
 				'Schedule for next week',
-				'Get suggestions for alternative times',
 			]);
 		});
 	});

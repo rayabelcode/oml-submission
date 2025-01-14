@@ -308,11 +308,7 @@ export class SchedulingService {
 				return {
 					status: 'SLOTS_FILLED',
 					message: 'This day is fully booked. Would you like to:',
-					options: [
-						'Try the next available day',
-						'Schedule for next week',
-						'Get suggestions for alternative times',
-					],
+					options: ['Try the next available day', 'Schedule for next week'],
 					details: {
 						date: targetDate.toFormat('cccc, LLLL d'),
 						workingHours: `${activeHours.start} - ${activeHours.end}`,
@@ -355,11 +351,7 @@ export class SchedulingService {
 					return {
 						status: 'SLOTS_FILLED',
 						message: 'This day is fully booked. Would you like to:',
-						options: [
-							'Try the next available day',
-							'Schedule for next week',
-							'Get suggestions for alternative times',
-						],
+						options: ['Try the next available day', 'Schedule for next week'],
 						details: {
 							date: targetDate.toFormat('cccc, LLLL d'),
 							workingHours: `${activeHours.start} - ${activeHours.end}`,
