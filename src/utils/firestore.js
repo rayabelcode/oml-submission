@@ -353,23 +353,21 @@ export const subscribeToContactDetails = (contactId, callback, onError) => {
 			contactRef,
 			(doc) => {
 				if (!doc.exists()) {
-					// Contact has been deleted, cleanup subscription
 					if (activeSubscriptions.has(`contact_${contactId}`)) {
 						activeSubscriptions.get(`contact_${contactId}`)();
 						activeSubscriptions.delete(`contact_${contactId}`);
 					}
-					return; // Exit quietly without error
+					return;
 				}
 				const contactData = { id: doc.id, ...doc.data() };
 				callback(contactData);
 			},
 			(error) => {
-				console.error('Error in contact details subscription:', error);
+				console.error('Contact subscription error:', error);
 				onError && onError(error);
 			}
 		);
 
-		// Store the unsubscribe function
 		if (activeSubscriptions.has(`contact_${contactId}`)) {
 			activeSubscriptions.get(`contact_${contactId}`)();
 		}
@@ -492,16 +490,14 @@ export async function updateContactScheduling(contactId, schedulingData) {
 		const contactDoc = await getDoc(contactRef);
 		const contact = contactDoc.data();
 
-		// Update scheduling preferences
-		await updateDoc(contactRef, {
+		let updateData = {
 			scheduling: {
 				...contact.scheduling,
 				...schedulingData,
 				updated_at: serverTimestamp(),
 			},
-		});
+		};
 
-		// Only calculate next date if frequency is being updated
 		if (schedulingData.frequency) {
 			const userPrefs = await getUserPreferences(contact.user_id);
 			const activeReminders = await getActiveReminders(contact.user_id);
@@ -519,11 +515,31 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				schedulingData.frequency
 			);
 
-			// Update next_contact date
-			await updateNextContact(contactId, nextDate.date.toDate());
+			updateData.next_contact = nextDate.date.toDate().toISOString();
+		}
+
+		await updateDoc(contactRef, updateData);
+
+		if (schedulingData.frequency) {
+			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+			for (const reminder of existingReminders) {
+				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+					await deleteReminder(reminder.id);
+				}
+			}
+
+			await addReminder({
+				contactId: contactId,
+				scheduledTime: new Date(updateData.next_contact),
+				type: REMINDER_TYPES.SCHEDULED,
+				status: REMINDER_STATUS.PENDING,
+				userId: auth.currentUser.uid,
+				needs_attention: false,
+				snoozed: false,
+			});
 		}
 	} catch (error) {
-		console.error('Error updating contact scheduling:', error);
+		console.error('Error in updateContactScheduling:', error);
 		throw error;
 	}
 }

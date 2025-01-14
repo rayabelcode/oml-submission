@@ -193,47 +193,23 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							key={option.value}
 							style={[styles.frequencyButton, frequency === option.value && styles.frequencyButtonActive]}
 							onPress={async () => {
-								if (loading) return; // Prevent multiple clicks
+								if (loading) return;
 								try {
-									setLoading(true); // No UI change
+									setLoading(true);
 									setFrequency(option.value);
 
-									// Create scheduling update
-									const schedulingUpdate = {
+									await updateContactScheduling(contact.id, {
 										frequency: option.value,
-									};
+									});
 
-									// Update scheduling preferences
-									await updateContactScheduling(contact.id, schedulingUpdate);
-
-									// Calculate next contact date using scheduler
-									const scheduler = new SchedulingService(
-										contact.scheduling?.custom_preferences,
-										[],
-										Intl.DateTimeFormat().resolvedOptions().timeZone
-									);
-
-									const lastContactDate = contact.last_contacted || new Date();
-									const reminderDetails = await scheduler.scheduleReminder(
-										{ ...contact },
-										lastContactDate,
-										option.value
-									);
-
-									const nextContactDate = reminderDetails.date.toDate();
-
-									// Update next_contact date in Firestore
-									await updateNextContact(contact.id, nextContactDate);
-
-									// Update local state immediately
-									setSelectedContact({
-										...contact,
+									// Update local state with new frequency only
+									setSelectedContact((prev) => ({
+										...prev,
 										scheduling: {
-											...contact.scheduling,
+											...prev.scheduling,
 											frequency: option.value,
 										},
-										next_contact: nextContactDate.toISOString(),
-									});
+									}));
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setFrequency(contact?.scheduling?.frequency || null);
@@ -242,7 +218,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									setLoading(false);
 								}
 							}}
-							disabled={loading} // Visually show it's disabled
+							disabled={loading}
 						>
 							<Text
 								style={[
