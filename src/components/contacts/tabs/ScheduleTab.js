@@ -205,22 +205,50 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							onPress={async () => {
 								try {
 									setFrequency(option.value);
+									setLoading(true);
+
+									// Create scheduling update
 									const schedulingUpdate = {
 										frequency: option.value,
 									};
+
+									// First update contact's scheduling preferences
 									await updateContactScheduling(contact.id, schedulingUpdate);
+
+									// Then calculate and set next contact date using scheduler
+									const scheduler = new SchedulingService(
+										contact.scheduling?.custom_preferences,
+										[],
+										Intl.DateTimeFormat().resolvedOptions().timeZone
+									);
+
+									const lastContactDate = contact.last_contacted || new Date();
+									const reminderDetails = await scheduler.scheduleReminder(
+										{ ...contact },
+										lastContactDate,
+										option.value
+									);
+
+									// Update next_contact date
+									const nextContactDate = reminderDetails.date.toDate();
+									await updateNextContact(contact.id, nextContactDate);
+
+									// Update local state
 									setSelectedContact((prev) => ({
 										...prev,
 										scheduling: {
 											...prev.scheduling,
 											frequency: option.value,
 										},
+										next_contact: nextContactDate.toISOString(),
 									}));
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setError('Failed to update frequency');
 									// Revert on failure
 									setFrequency(contact?.scheduling?.frequency || null);
+								} finally {
+									setLoading(false);
 								}
 							}}
 							disabled={loading}

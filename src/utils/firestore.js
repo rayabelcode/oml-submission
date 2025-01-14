@@ -25,6 +25,7 @@ import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
 import { RELATIONSHIP_DEFAULTS } from '../../constants/relationships';
 import { REMINDER_TYPES, REMINDER_STATUS } from '../../constants/notificationConstants';
+import { SchedulingService } from './scheduler';
 
 // Store active subscriptions
 const activeSubscriptions = new Map();
@@ -458,19 +459,69 @@ export const fetchPastContacts = async (userId) => {
 };
 
 // Scheduling Operations
+export const getUserPreferences = async (userId) => {
+	try {
+		const userDoc = await getDoc(doc(db, 'users', userId));
+		if (!userDoc.exists()) return null;
+		return userDoc.data();
+	} catch (error) {
+		console.error('Error getting user preferences:', error);
+		return null;
+	}
+};
+
+export const getActiveReminders = async (userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('user_id', '==', userId),
+			where('status', '==', REMINDER_STATUS.PENDING)
+		);
+		const snapshot = await getDocs(q);
+		return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	} catch (error) {
+		console.error('Error getting active reminders:', error);
+		return [];
+	}
+};
+
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
 		const contactDoc = await getDoc(contactRef);
-		const existingScheduling = contactDoc.data().scheduling;
+		const contact = contactDoc.data();
 
+		// Update scheduling preferences
 		await updateDoc(contactRef, {
 			scheduling: {
-				...existingScheduling, // Keep existing values
-				...schedulingData, // Apply new values
+				...contact.scheduling,
+				...schedulingData,
 				updated_at: serverTimestamp(),
 			},
 		});
+
+		// Only calculate next date if frequency is being updated
+		if (schedulingData.frequency) {
+			const userPrefs = await getUserPreferences(contact.user_id);
+			const activeReminders = await getActiveReminders(contact.user_id);
+
+			const schedulingService = new SchedulingService(
+				userPrefs?.scheduling_preferences,
+				activeReminders,
+				Intl.DateTimeFormat().resolvedOptions().timeZone
+			);
+
+			const lastContactDate = contact.last_contacted?.toDate() || new Date();
+			const nextDate = await schedulingService.scheduleReminder(
+				{ ...contact, id: contactId },
+				lastContactDate,
+				schedulingData.frequency
+			);
+
+			// Update next_contact date
+			await updateNextContact(contactId, nextDate.date.toDate());
+		}
 	} catch (error) {
 		console.error('Error updating contact scheduling:', error);
 		throw error;
