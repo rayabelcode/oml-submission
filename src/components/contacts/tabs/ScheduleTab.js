@@ -588,9 +588,14 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			<DatePickerModal
 				visible={showDatePicker}
 				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
+				minimumDate={new Date()}
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={async (event, date) => {
 					if (!date) return;
+					if (date < new Date()) {
+						Alert.alert('Invalid Date', 'Please select a date in the future');
+						return;
+					}
 
 					try {
 						setShowDatePicker(false);
