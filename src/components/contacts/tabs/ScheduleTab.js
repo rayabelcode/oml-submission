@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } fr
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useScheduleStyles } from '../../../styles/contacts/scheduleStyle';
-import { updateContactScheduling, updateNextContact } from '../../../utils/firestore';
+import { updateContactScheduling, updateNextContact, getContactById } from '../../../utils/firestore';
 import { SchedulingService } from '../../../utils/scheduler';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
@@ -137,19 +137,18 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								try {
 									setLoading(true);
 									setFrequency(option.value);
-
+							
 									await updateContactScheduling(contact.id, {
 										frequency: option.value,
 									});
-
-									// Update local state with new frequency only
-									setSelectedContact((prev) => ({
-										...prev,
-										scheduling: {
-											...prev.scheduling,
-											frequency: option.value,
-										},
-									}));
+							
+									// Add a small delay
+									await new Promise(resolve => setTimeout(resolve, 500));
+							
+									// Get fresh contact data after update
+									const updatedContact = await getContactById(contact.id);
+									setSelectedContact(updatedContact);
+							
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setFrequency(contact?.scheduling?.frequency || null);
@@ -158,6 +157,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									setLoading(false);
 								}
 							}}
+							
+
 							disabled={loading}
 						>
 							<Text

@@ -509,6 +509,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			);
 
 			const lastContactDate = contact.last_contacted?.toDate() || new Date();
+
 			const nextDate = await schedulingService.scheduleReminder(
 				{ ...contact, id: contactId },
 				lastContactDate,
@@ -522,6 +523,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		if (schedulingData.frequency) {
 			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+
 			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
 					await deleteReminder(reminder.id);
