@@ -486,6 +486,7 @@ export const getActiveReminders = async (userId) => {
 
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
+		const batch = writeBatch(db);
 		const contactRef = doc(db, 'contacts', contactId);
 		const contactDoc = await getDoc(contactRef);
 		const contact = contactDoc.data();
@@ -509,7 +510,6 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			);
 
 			const lastContactDate = contact.last_contacted?.toDate() || new Date();
-
 			const nextDate = await schedulingService.scheduleReminder(
 				{ ...contact, id: contactId },
 				lastContactDate,
@@ -519,27 +519,48 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			updateData.next_contact = nextDate.date.toDate().toISOString();
 		}
 
-		await updateDoc(contactRef, updateData);
+		batch.update(contactRef, updateData);
 
 		if (schedulingData.frequency) {
 			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
-			for (const reminder of existingReminders) {
+			existingReminders.forEach((reminder) => {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
-					await deleteReminder(reminder.id);
+					const reminderRef = doc(db, 'reminders', reminder.id);
+					batch.delete(reminderRef);
 				}
-			}
-
-			await addReminder({
-				contactId: contactId,
-				scheduledTime: new Date(updateData.next_contact),
-				type: REMINDER_TYPES.SCHEDULED,
-				status: REMINDER_STATUS.PENDING,
-				userId: auth.currentUser.uid,
-				needs_attention: false,
-				snoozed: false,
 			});
+
+			const newReminderRef = doc(collection(db, 'reminders'));
+			const now = Timestamp.now();
+			const scheduledTimestamp = Timestamp.fromDate(new Date(updateData.next_contact));
+
+			const reminderDoc = {
+				created_at: now,
+				updated_at: now,
+				contact_id: contactId,
+				user_id: auth.currentUser.uid,
+				date: scheduledTimestamp,
+				scheduledTime: scheduledTimestamp,
+				status: REMINDER_STATUS.PENDING,
+				type: REMINDER_TYPES.SCHEDULED,
+				snoozed: false,
+				needs_attention: false,
+				completed: false,
+				completion_time: null,
+				notes_added: false,
+				contactName: contact.first_name + ' ' + contact.last_name,
+			};
+
+			batch.set(newReminderRef, reminderDoc);
 		}
+
+		await batch.commit();
+
+		const updatedContactDoc = await getDoc(contactRef);
+		const updatedContact = updatedContactDoc.data();
+
+		return { ...updatedContact, id: contactId };
 	} catch (error) {
 		console.error('Error in updateContactScheduling:', error);
 		throw error;

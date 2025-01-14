@@ -137,18 +137,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								try {
 									setLoading(true);
 									setFrequency(option.value);
-							
-									await updateContactScheduling(contact.id, {
+
+									const updatedContact = await updateContactScheduling(contact.id, {
 										frequency: option.value,
 									});
-							
-									// Add a small delay
-									await new Promise(resolve => setTimeout(resolve, 500));
-							
-									// Get fresh contact data after update
-									const updatedContact = await getContactById(contact.id);
+
+									// Update the entire contact with fresh data
 									setSelectedContact(updatedContact);
-							
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setFrequency(contact?.scheduling?.frequency || null);
@@ -157,8 +152,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									setLoading(false);
 								}
 							}}
-							
-
 							disabled={loading}
 						>
 							<Text
