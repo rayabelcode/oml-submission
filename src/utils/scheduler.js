@@ -492,10 +492,10 @@ export class SchedulingService {
 			throw new Error('Maximum scheduling attempts exceeded');
 		}
 
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
-		if (typePrefs?.active_hours) {
-			const [startHour] = typePrefs.active_hours.start.split(':').map(Number);
-			const [endHour] = typePrefs.active_hours.end.split(':').map(Number);
+		const preferences = this.getPreferencesForContact(contact);
+		if (preferences?.active_hours) {
+			const [startHour] = preferences.active_hours.start.split(':').map(Number);
+			const [endHour] = preferences.active_hours.end.split(':').map(Number);
 			const workingMinutes = (endHour - startHour) * 60;
 			const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
 
@@ -545,8 +545,8 @@ export class SchedulingService {
 	}
 
 	async findNearestPreferredDay(date, contact) {
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
-		if (!typePrefs?.preferred_days?.length) return null;
+		const preferences = this.getPreferencesForContact(contact);
+		if (!preferences?.preferred_days?.length) return null;
 
 		const priority = contact.scheduling?.priority?.toLowerCase() || 'normal';
 		const flexibility = PRIORITY_FLEXIBILITY[priority];
@@ -557,7 +557,7 @@ export class SchedulingService {
 				const checkDate = dt.plus({ days: i * direction });
 				const dayName = checkDate.weekdayLong.toLowerCase();
 
-				if (typePrefs.preferred_days.includes(dayName)) {
+				if (preferences.preferred_days.includes(dayName)) {
 					const candidateDate = this.findAvailableTimeSlot(checkDate.toJSDate(), contact);
 					if (candidateDate) return candidateDate;
 				}
@@ -568,10 +568,10 @@ export class SchedulingService {
 	}
 
 	async shiftWithinDay(date, contact) {
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
-		if (!typePrefs?.active_hours) return null;
+		const preferences = this.getPreferencesForContact(contact);
+		if (!preferences?.active_hours) return null;
 
-		const { start, end } = typePrefs.active_hours;
+		const { start, end } = preferences.active_hours;
 		const [startHour, startMinute] = start.split(':').map(Number);
 		const [endHour, endMinute] = end.split(':').map(Number);
 
@@ -592,10 +592,10 @@ export class SchedulingService {
 	}
 
 	async expandTimeRange(date, contact) {
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
-		if (!typePrefs?.active_hours) return null;
+		const preferences = this.getPreferencesForContact(contact);
+		if (!preferences?.active_hours) return null;
 
-		const { start, end } = typePrefs.active_hours;
+		const { start, end } = preferences.active_hours;
 		const [startHour, startMinute] = start.split(':').map(Number);
 		const [endHour, endMinute] = end.split(':').map(Number);
 
