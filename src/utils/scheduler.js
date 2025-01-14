@@ -229,7 +229,7 @@ export class SchedulingService {
 			let targetDate = dt;
 
 			// Only adjust for preferred days if they exist
-			if (Array.isArray(preferences.preferred_days) && preferences.preferred_days.length > 0) {
+			if (Array.isArray(preferences.preferred_days) && preferences.preferred_days.length > 0 && frequency !== 'daily') {
 				const daysMap = {
 					sunday: 7,
 					monday: 1,
