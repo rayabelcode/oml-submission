@@ -958,6 +958,7 @@ const useStyles = () => {
 			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.md,
+			alignItems: 'center', 
 		},
 		nextContactLabel: {
 			fontSize: 14,

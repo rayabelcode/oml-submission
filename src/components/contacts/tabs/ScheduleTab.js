@@ -258,7 +258,15 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			{contact.next_contact && (
 				<View style={styles.nextContactContainer}>
 					<Text style={styles.nextContactLabel}>Next Contact</Text>
-					<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
+					{loading ? (
+						<View style={styles.dotsContainer}>
+							<Animated.View style={[styles.dot, { opacity: dot1 }]} />
+							<Animated.View style={[styles.dot, { opacity: dot2 }]} />
+							<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+						</View>
+					) : (
+						<Text style={styles.nextContactDate}>{new Date(contact.next_contact).toLocaleDateString()}</Text>
+					)}
 				</View>
 			)}
 
@@ -279,7 +287,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 										frequency: option.value,
 									});
 
-									// Check if we have a SLOTS_FILLED response
+									// Check for slots filled status
 									if (updatedContact.status === 'SLOTS_FILLED') {
 										setSlotsFilledDetails(updatedContact.details);
 										setShowSlotsFilledModal(true);
@@ -297,24 +305,15 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							}}
 							disabled={loading}
 						>
-							<View style={styles.buttonContent}>
-								<Text
-									style={[
-										styles.frequencyText,
-										frequency === option.value && styles.frequencyTextActive,
-										loading && styles.disabledText,
-									]}
-								>
-									{option.label}
-								</Text>
-								{option.value === frequency && loading && (
-									<View style={styles.dotsContainer}>
-										<Animated.View style={[styles.dot, { opacity: dot1 }]} />
-										<Animated.View style={[styles.dot, { opacity: dot2 }]} />
-										<Animated.View style={[styles.dot, { opacity: dot3 }]} />
-									</View>
-								)}
-							</View>
+							<Text
+								style={[
+									styles.frequencyText,
+									frequency === option.value && styles.frequencyTextActive,
+									loading && styles.disabledText,
+								]}
+							>
+								{option.label}
+							</Text>
 						</TouchableOpacity>
 					))}
 				</View>
