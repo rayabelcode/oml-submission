@@ -67,83 +67,23 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	};
 
 	// Handle scheduling updates
-	const handleUpdateScheduling = async (updates, shouldSchedule = true) => {
+	const handleUpdateScheduling = async (updates) => {
 		setError(null);
 		setLoading(true);
 		try {
-			let schedulingUpdate = {
-				custom_schedule: true,
-			};
-
-			// Handle frequency and priority updates at root level
-			if (updates.frequency) {
-				schedulingUpdate.frequency = updates.frequency;
-			}
-			if (updates.priority) {
-				schedulingUpdate.priority = updates.priority;
-			}
-			// Handle custom preference updates
-			else if (!updates.frequency) {
-				schedulingUpdate.custom_preferences = {
-					...contact.scheduling?.custom_preferences,
-					...updates,
-				};
-			}
-
-			await updateContactScheduling(contact.id, schedulingUpdate);
-
-			if (shouldSchedule) {
-				await handleScheduleContact(null, schedulingUpdate);
-			}
-
-			setSelectedContact({
-				...contact,
+			await updateContactScheduling(contact.id, updates);
+			setSelectedContact((prev) => ({
+				...prev,
 				scheduling: {
-					...contact.scheduling,
-					...schedulingUpdate,
+					...prev.scheduling,
+					...updates,
 				},
-			});
+			}));
 		} catch (error) {
 			setError('Failed to update scheduling preferences');
 			console.error('Error updating scheduling preferences:', error);
 		} finally {
 			setLoading(false);
-		}
-	};
-
-	// Handle scheduling
-	const handleScheduleContact = async (customDate = null, schedulingData = null) => {
-		try {
-			const scheduler = new SchedulingService(
-				contact.scheduling.custom_preferences,
-				[],
-				Intl.DateTimeFormat().resolvedOptions().timeZone
-			);
-
-			let reminderDetails;
-			if (customDate) {
-				reminderDetails = await scheduler.scheduleCustomDate({ ...contact }, customDate);
-			} else if (contact.scheduling?.frequency) {
-				reminderDetails = await scheduler.scheduleReminder(
-					{ ...contact },
-					contact.last_contacted || new Date(),
-					contact.scheduling.frequency
-				);
-			} else {
-				throw new Error('No scheduling parameters provided');
-			}
-
-			const nextContactDate = new Date(reminderDetails.date.toDate());
-			await updateNextContact(contact.id, nextContactDate);
-
-			// Update UI immediately
-			setSelectedContact((prev) => ({
-				...prev,
-				next_contact: nextContactDate.toISOString(),
-			}));
-		} catch (error) {
-			setError('Failed to schedule contact');
-			console.error('Error scheduling contact:', error);
 		}
 	};
 
@@ -472,56 +412,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				}}
 			/>
 
-			{/* End Time */}
-			<TimePickerModal
-				visible={showEndTimePicker}
-				onClose={() => setShowEndTimePicker(false)}
-				initialHour={getHourFromTimeString(activeHours.end)}
-				title="Latest Call Time"
-				onSelect={async (hour) => {
-					const newTime = formatHourToTimeString(hour);
-					const startHour = getHourFromTimeString(activeHours.start);
-
-					if (hour <= startHour) {
-						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
-						return;
-					}
-
-					try {
-						setActiveHours((prev) => ({ ...prev, end: newTime }));
-						const schedulingUpdate = {
-							custom_preferences: {
-								...contact.scheduling?.custom_preferences,
-								active_hours: {
-									...contact.scheduling?.custom_preferences?.active_hours,
-									start: activeHours.start,
-									end: newTime,
-								},
-							},
-						};
-						await updateContactScheduling(contact.id, schedulingUpdate);
-						setSelectedContact((prev) => ({
-							...prev,
-							scheduling: {
-								...prev.scheduling,
-								custom_preferences: {
-									...prev.scheduling?.custom_preferences,
-									active_hours: {
-										...prev.scheduling?.custom_preferences?.active_hours,
-										start: activeHours.start,
-										end: newTime,
-									},
-								},
-							},
-						}));
-					} catch (error) {
-						console.error('Error updating end time:', error);
-						setError('Failed to update end time');
-					} finally {
-						setShowEndTimePicker(false);
-					}
-				}}
-			/>
 			<DatePickerModal
 				visible={showDatePicker}
 				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
