@@ -207,31 +207,38 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const handleSlotsFilledOption = async (option) => {
 		try {
 			setLoading(true);
-			let updatedContact;
+			let nextContactDate;
 
 			switch (option) {
 				case 'next_day':
-					if (slotsFilledDetails?.nextAvailableDay) {
-						const nextAvailableDate = DateTime.fromFormat(
-							slotsFilledDetails.nextAvailableDay,
-							'cccc, LLLL d'
-						).toJSDate();
-						updatedContact = await updateContactScheduling(contact.id, {
-							next_contact: nextAvailableDate,
-						});
-					}
+					nextContactDate = DateTime.now()
+						.plus({ days: 1 })
+						.set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+						.toJSDate();
 					break;
 
 				case 'next_week':
-					const nextWeek = DateTime.fromJSDate(new Date()).plus({ weeks: 1 }).toJSDate();
-					updatedContact = await updateContactScheduling(contact.id, {
-						next_contact: nextWeek,
-					});
+					nextContactDate = DateTime.fromJSDate(new Date())
+						.plus({ weeks: 1 })
+						.set({ hour: 9, minute: 0, second: 0, millisecond: 0 })
+						.toJSDate();
 					break;
 			}
 
-			if (updatedContact) {
-				setSelectedContact(updatedContact);
+			if (nextContactDate) {
+				// Update only the root level next_contact
+				await updateContactScheduling(contact.id, {
+					next_contact: nextContactDate,
+				});
+
+				setSelectedContact({
+					...contact,
+					next_contact: nextContactDate.toISOString(),
+				});
+
+				if (loadContacts) {
+					await loadContacts();
+				}
 			}
 		} catch (error) {
 			console.error('Error handling slots filled option:', error);
@@ -272,7 +279,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 										frequency: option.value,
 									});
 
-									// Check if we got a SLOTS_FILLED response
+									// Check if we have a SLOTS_FILLED response
 									if (updatedContact.status === 'SLOTS_FILLED') {
 										setSlotsFilledDetails(updatedContact.details);
 										setShowSlotsFilledModal(true);
