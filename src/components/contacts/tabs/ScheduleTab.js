@@ -13,7 +13,7 @@ import { db } from '../../../config/firebase';
 const FREQUENCY_OPTIONS = [
     { label: 'Daily', value: 'daily' },
     { label: 'Weekly', value: 'weekly' },
-    { label: 'Bi-weekly', value: 'biweekly' },
+    { label: 'Bi-Weekly', value: 'biweekly' },
     { label: 'Monthly', value: 'monthly' },
     { label: 'Quarterly', value: 'quarterly' },
     { label: 'Yearly', value: 'yearly' },

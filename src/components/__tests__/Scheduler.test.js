@@ -666,4 +666,99 @@ describe('SchedulingService', () => {
 			);
 		});
 	});
+
+	describe('User Experience', () => {
+		let schedulingService;
+
+		beforeEach(() => {
+			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+		});
+
+		it('should provide user-friendly options when all slots are filled', async () => {
+			const mockContact = {
+				id: 'test-id',
+				scheduling: {
+					relationship_type: 'work',
+					custom_schedule: false,
+					minimum_gap: 15,
+				},
+			};
+
+			// Start on a Monday
+			const monday = DateTime.fromObject(
+				{ year: 2024, month: 1, day: 1 }, // Monday
+				{ zone: 'America/New_York' }
+			);
+
+			schedulingService.reminders = [];
+
+			// Fill EVERY slot for the entire week
+			for (let day = 0; day < 5; day++) {
+				// Monday through Friday
+				const currentDay = monday.plus({ days: day });
+
+				// Fill every slot from 9 AM to 5 PM
+				for (let hour = 9; hour < 17; hour++) {
+					for (let minute = 0; minute < 60; minute += 15) {
+						const slotTime = currentDay.set({ hour, minute });
+						schedulingService.reminders.push({
+							date: {
+								toDate: () => slotTime.toJSDate(),
+								_seconds: Math.floor(slotTime.toSeconds()),
+								_nanoseconds: 0,
+							},
+						});
+					}
+				}
+			}
+
+			// Fill the next week too to prevent finding slots there
+			const nextMonday = monday.plus({ days: 7 });
+			for (let day = 0; day < 5; day++) {
+				const currentDay = nextMonday.plus({ days: day });
+				for (let hour = 9; hour < 17; hour++) {
+					for (let minute = 0; minute < 60; minute += 15) {
+						const slotTime = currentDay.set({ hour, minute });
+						schedulingService.reminders.push({
+							date: {
+								toDate: () => slotTime.toJSDate(),
+								_seconds: Math.floor(slotTime.toSeconds()),
+								_nanoseconds: 0,
+							},
+						});
+					}
+				}
+			}
+
+			console.log('User Experience Test:', {
+				totalSlots: schedulingService.reminders.length,
+				firstDaySlots: schedulingService.reminders
+					.filter((r) => {
+						const d = DateTime.fromJSDate(r.date.toDate());
+						return d.toFormat('yyyy-MM-dd') === monday.toFormat('yyyy-MM-dd');
+					})
+					.map((r) => DateTime.fromJSDate(r.date.toDate()).toFormat('HH:mm')),
+				firstDay: monday.toFormat('cccc, LLLL d'),
+				nextWeekSlots: schedulingService.reminders.filter((r) => {
+					const d = DateTime.fromJSDate(r.date.toDate());
+					return d.toFormat('yyyy-MM-dd') === nextMonday.toFormat('yyyy-MM-dd');
+				}).length,
+			});
+
+			const result = await schedulingService.scheduleReminder(
+				mockContact,
+				monday.set({ hour: 10, minute: 0 }).toJSDate(),
+				'daily'
+			);
+
+			// Verify the user-friendly response
+			expect(result.status).toBe('SLOTS_FILLED');
+			expect(result.message).toBe('This day is fully booked. Would you like to:');
+			expect(result.options).toEqual([
+				'Try the next available day',
+				'Schedule for next week',
+				'Get suggestions for alternative times',
+			]);
+		});
+	});
 });

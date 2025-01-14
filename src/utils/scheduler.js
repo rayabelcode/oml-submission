@@ -265,7 +265,6 @@ export class SchedulingService {
 						}
 					}
 
-					// If possible dates are found - use earliest (OR fall back to first preferred day)
 					if (possibleDates.length > 0) {
 						targetDate = possibleDates[0];
 					} else {
@@ -278,11 +277,49 @@ export class SchedulingService {
 					}
 				}
 			}
-
 			// Get active hours with fallback
 			const activeHours = preferences.active_hours || { start: '09:00', end: '17:00' };
 			const [startHour] = activeHours.start.split(':').map(Number);
 			const [endHour] = activeHours.end.split(':').map(Number);
+
+			// Check if the current day and next week are completely full
+			const workingMinutes = (endHour - startHour) * 60;
+			const slotsPerDay = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
+
+			// Count slots for current day and next week
+			const currentDayStart = targetDate.startOf('day');
+			const nextWeekEnd = currentDayStart.plus({ days: 7 }).endOf('day');
+
+			const existingSlots = this.reminders.filter((r) => {
+				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				return reminderDate >= currentDayStart && reminderDate <= nextWeekEnd;
+			});
+
+			const daySlots = new Set(
+				existingSlots.map((r) => {
+					const d = DateTime.fromJSDate(r.date.toDate());
+					return `${d.toFormat('yyyy-MM-dd')}-${d.hour}:${d.minute}`;
+				})
+			);
+
+			// If we have filled all slots for the next week
+			if (daySlots.size >= slotsPerDay * 5) {
+				// 5 working days
+				return {
+					status: 'SLOTS_FILLED',
+					message: 'This day is fully booked. Would you like to:',
+					options: [
+						'Try the next available day',
+						'Schedule for next week',
+						'Get suggestions for alternative times',
+					],
+					details: {
+						date: targetDate.toFormat('cccc, LLLL d'),
+						workingHours: `${activeHours.start} - ${activeHours.end}`,
+						nextAvailableDay: await this.findNextAvailableDay(targetDate.toJSDate(), contact),
+					},
+				};
+			}
 
 			// Generate potential time slots
 			const slots = [];
@@ -303,6 +340,34 @@ export class SchedulingService {
 			}
 
 			if (slots.length === 0) {
+				// Check if the day is completely full
+				const workingMinutes = (endHour - startHour) * 60;
+				const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
+				const existingSlots = new Set(
+					this.reminders.map((r) => {
+						const d = DateTime.fromJSDate(r.date.toDate());
+						return `${d.hour}:${d.minute}`;
+					})
+				);
+
+				if (existingSlots.size >= availableSlots) {
+					const nextDay = await this.findNextAvailableDay(targetDate.toJSDate(), contact);
+					return {
+						status: 'SLOTS_FILLED',
+						message: 'This day is fully booked. Would you like to:',
+						options: [
+							'Try the next available day',
+							'Schedule for next week',
+							'Get suggestions for alternative times',
+						],
+						details: {
+							date: targetDate.toFormat('cccc, LLLL d'),
+							workingHours: `${activeHours.start} - ${activeHours.end}`,
+							nextAvailableDay: nextDay,
+						},
+					};
+				}
+
 				return this.resolveConflict(targetDate.toJSDate(), contact);
 			}
 
@@ -334,6 +399,35 @@ export class SchedulingService {
 			console.error('Error in scheduleReminder:', error);
 			throw error;
 		}
+	}
+
+	findNextAvailableDay(date, contact) {
+		const dt = DateTime.fromJSDate(date);
+		const preferences = this.getPreferencesForContact(contact);
+
+		for (let i = 1; i <= 7; i++) {
+			const nextDay = dt.plus({ days: i });
+			const dayStart = nextDay.set({ hour: 9, minute: 0 });
+			const dayEnd = nextDay.set({ hour: 17, minute: 0 });
+
+			// Check if this day has any slots available
+			const dayReminders = this.reminders.filter((r) => {
+				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				return reminderDate >= dayStart && reminderDate <= dayEnd;
+			});
+
+			// Check if it's a preferred day (if any are specified)
+			const dayName = nextDay.weekdayLong.toLowerCase();
+			if (preferences?.preferred_days?.length && !preferences.preferred_days.includes(dayName)) {
+				continue;
+			}
+
+			if (dayReminders.length < 32) {
+				// 32 is max number of 15-min slots
+				return nextDay.toFormat('cccc, LLLL d');
+			}
+		}
+		return null;
 	}
 
 	async scheduleCustomDate(contact, customDate) {
