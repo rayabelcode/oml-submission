@@ -43,13 +43,23 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
+		buttonContent: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
 		// Action Buttons
 		actionButtonsContainer: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
+			marginTop: spacing.xs,
 			marginBottom: spacing.lg,
 			gap: spacing.sm,
+		},
+		customDateText: {
+			color: colors.primary,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		customDateButton: {
 			flex: 1,
@@ -61,26 +71,21 @@ export const useScheduleStyles = () => {
 			borderWidth: 1,
 			borderColor: colors.primary,
 		},
+		recurringOffText: {
+			color: colors.text.lightWarning,
+			fontSize: 18,
+			fontWeight: '700',
+		},
 		recurringOffButton: {
 			flex: 1,
-			backgroundColor: colors.background.tertiary,
+			backgroundColor: colors.lightWarning,
 			borderRadius: layout.borderRadius.md,
 			paddingVertical: spacing.md,
 			alignItems: 'center',
 			justifyContent: 'center',
 			borderWidth: 1,
-			borderColor: colors.border,
+			borderColor: colors.lightWarning,
 		},
-		customDateText: {
-			color: colors.primary,
-			fontSize: 14,
-			fontWeight: '500',
-		},
-		recurringOffText: {
-			color: colors.text.secondary,
-			fontSize: 14,
-		},
-
 		// Advanced Settings
 		advancedSettingsButton: {
 			flexDirection: 'row',
@@ -94,7 +99,6 @@ export const useScheduleStyles = () => {
 			marginLeft: spacing.xs,
 			fontSize: 14,
 		},
-
 		// Priority Section
 		priorityContainer: {
 			marginBottom: spacing.lg,
@@ -103,7 +107,7 @@ export const useScheduleStyles = () => {
 			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.primary,
-			marginBottom: spacing.sm,
+			marginBottom: spacing.md,
 			textAlign: 'center',
 		},
 		priorityButtons: {
@@ -134,7 +138,6 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
 		// Preferred Days
 		daysContainer: {
 			marginBottom: spacing.lg,
@@ -166,7 +169,6 @@ export const useScheduleStyles = () => {
 			color: colors.background.primary,
 			fontWeight: '500',
 		},
-
 		// Active Hours
 		hoursContainer: {
 			marginBottom: spacing.lg,
@@ -190,23 +192,78 @@ export const useScheduleStyles = () => {
 			fontSize: 14,
 			color: colors.text.primary,
 		},
-
 		// Next Contact Display
-		nextContactContainer: {
-			marginBottom: spacing.lg,
+		dateSection: {
+			flexDirection: 'row',
+			justifyContent: 'center',
 			alignItems: 'center',
+			marginBottom: spacing.md,
+			minHeight: 105,
+		},
+		nextContactContainer: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			padding: 15,
+			backgroundColor: 'transparent',
+		},
+		scheduledDatesContainer: {
+			flex: 0.9,
+			backgroundColor: colors.background.secondary,
+			borderRadius: 8,
+			paddingHorizontal: 8,
+			paddingVertical: 7,
+			borderWidth: 1,
+			borderColor: colors.border.light,
+			marginLeft: spacing.md,
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		scheduledDateLabel: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			marginBottom: 4,
+			textAlign: 'center',
+		},
+		scheduledDateRow: {
+			fontSize: 14,
+			color: colors.text.primary,
+			marginBottom: 4,
+			textAlign: 'center',
 		},
 		nextContactLabel: {
 			fontSize: 15,
 			color: colors.text.secondary,
 			marginBottom: spacing.xs,
+			textAlign: 'center',
 		},
 		nextContactDate: {
 			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
+			height: 30,
+			lineHeight: 30,
+			textAlign: 'center',
 		},
-
+		unscheduledText: {
+			color: colors.text.primary,
+			fontWeight: '500',
+			textAlign: 'center',
+		},
+		// Animated Loading Screen
+		dotsContainer: {
+			height: 30, // Match height of nextContactDate
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		dot: {
+			width: 8,
+			height: 8,
+			borderRadius: 3,
+			backgroundColor: colors.text.primary,
+			marginHorizontal: 8, // Spacing between dots
+		},
 		// Loading and Error States
 		loadingOverlay: {
 			...StyleSheet.absoluteFillObject,
@@ -222,7 +279,62 @@ export const useScheduleStyles = () => {
 			marginTop: spacing.xs,
 		},
 		disabledButton: {
-			opacity: 0.5,
+			opacity: 0.3,
+			pointerEvents: 'none',
+		},
+		disabledText: {
+			opacity: 0.3,
+		},
+		// SlotsFilledModal
+		modalOverlay: {
+			flex: 1,
+			backgroundColor: 'rgba(0, 0, 0, 0.5)',
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		modalContent: {
+			backgroundColor: colors.background.primary,
+			borderRadius: 12,
+			padding: spacing.lg,
+			width: '90%',
+			maxWidth: 400,
+		},
+		modalTitle: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
+		},
+		modalMessage: {
+			fontSize: 16,
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+			textAlign: 'center',
+		},
+		modalOptions: {
+			marginVertical: spacing.md,
+		},
+		modalOption: {
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			borderRadius: 8,
+			bbackgroundColor: colors.background.secondary,
+			marginBottom: spacing.sm,
+		},
+		modalOptionText: {
+			fontSize: 16,
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		modalCloseButton: {
+			marginTop: spacing.sm,
+			padding: spacing.sm,
+			alignItems: 'center',
+		},
+		modalCloseText: {
+			color: colors.text.secondary,
+			fontSize: 16,
 		},
 	});
 };

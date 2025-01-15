@@ -1,15 +1,16 @@
 import { Platform, Linking, Alert } from 'react-native';
 import { addContactHistory, updateNextContact } from './firestore';
 import Constants from 'expo-constants';
-import { notificationService } from './notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { REMINDER_TYPES } from '../../constants/notificationConstants';
 
 const ACTIVE_CALL_KEY = '@CallHandler:activeCall';
 
 export class CallHandler {
-	constructor() {
+	constructor(notificationService) {
 		this.initialized = false;
 		this.activeCall = null;
+		this.notificationService = notificationService;
 	}
 
 	async initiateCall(contact, callType = 'phone') {
@@ -43,12 +44,12 @@ export class CallHandler {
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
 
 			// Initialize notification service
-			await notificationService.initialize();
+			await this.notificationService.initialize();
 
 			// Schedule follow-up notification
 			const notificationTime = new Date(Date.now() + 5000);
 
-			const notificationId = await notificationService.scheduleCallFollowUp(
+			const notificationId = await this.notificationService.scheduleCallFollowUp(
 				{
 					...contact,
 					callData: {
@@ -70,37 +71,14 @@ export class CallHandler {
 		}
 	}
 
-	async processCallEnd() {
+	async handleCallAction(contact, type, onClose) {
 		try {
-			const savedCallData = await AsyncStorage.getItem(ACTIVE_CALL_KEY);
-			if (!savedCallData) {
-				return;
-			}
-
-			const callData = JSON.parse(savedCallData);
-			const contact = callData.contact;
-			const callEndTime = new Date();
-			const startTime = new Date(callData.startTime);
-			const callDuration = (callEndTime.getTime() - startTime.getTime()) / 1000;
-			const nextContactDate = new Date();
-			nextContactDate.setHours(nextContactDate.getHours() + 1);
-
-			const historyEntry = await addContactHistory(contact.id, {
-				date: callEndTime.toISOString(),
-				notes: `(${callData.type} call completed - Add your notes)`,
-				completed: false,
-			});
-
-			await updateNextContact(contact.id, nextContactDate, {
-				lastContacted: true,
-			});
+			await this.initiateCall(contact, type);
+			if (onClose) onClose();
 		} catch (error) {
-			console.error('[CallHandler] Error processing call end:', error);
-			throw error;
-		} finally {
-			await AsyncStorage.removeItem(ACTIVE_CALL_KEY);
+			console.error('[CallHandler] Error handling call action:', error);
+			if (onClose) onClose();
 		}
 	}
-}
 
-export const callHandler = new CallHandler();
+}

@@ -1,19 +1,20 @@
 import {
-	collection,
-	query,
-	where,
-	orderBy,
-	getDocs,
 	addDoc,
-	updateDoc,
+	arrayUnion,
+	collection,
 	deleteDoc,
 	doc,
+	getDoc,
+	getDocs,
+	onSnapshot,
+	orderBy,
+	query,
 	setDoc,
 	serverTimestamp,
-	getDoc,
-	arrayUnion,
+	Timestamp,
+	updateDoc,
+	where,
 	writeBatch,
-	onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { storage } from '../config/firebase';
@@ -23,6 +24,8 @@ import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './co
 import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
 import { RELATIONSHIP_DEFAULTS } from '../../constants/relationships';
+import { REMINDER_TYPES, REMINDER_STATUS } from '../../constants/notificationConstants';
+import { SchedulingService } from './scheduler';
 
 // Store active subscriptions
 const activeSubscriptions = new Map();
@@ -350,23 +353,21 @@ export const subscribeToContactDetails = (contactId, callback, onError) => {
 			contactRef,
 			(doc) => {
 				if (!doc.exists()) {
-					// Contact has been deleted, cleanup subscription
 					if (activeSubscriptions.has(`contact_${contactId}`)) {
 						activeSubscriptions.get(`contact_${contactId}`)();
 						activeSubscriptions.delete(`contact_${contactId}`);
 					}
-					return; // Exit quietly without error
+					return;
 				}
 				const contactData = { id: doc.id, ...doc.data() };
 				callback(contactData);
 			},
 			(error) => {
-				console.error('Error in contact details subscription:', error);
+				console.error('Contact subscription error:', error);
 				onError && onError(error);
 			}
 		);
 
-		// Store the unsubscribe function
 		if (activeSubscriptions.has(`contact_${contactId}`)) {
 			activeSubscriptions.get(`contact_${contactId}`)();
 		}
@@ -456,21 +457,128 @@ export const fetchPastContacts = async (userId) => {
 };
 
 // Scheduling Operations
+export const getUserPreferences = async (userId) => {
+	try {
+		const userDoc = await getDoc(doc(db, 'users', userId));
+		if (!userDoc.exists()) return null;
+		return userDoc.data();
+	} catch (error) {
+		console.error('Error getting user preferences:', error);
+		return null;
+	}
+};
+
+export const getActiveReminders = async (userId) => {
+	try {
+		const remindersRef = collection(db, 'reminders');
+		const q = query(
+			remindersRef,
+			where('user_id', '==', userId),
+			where('status', '==', REMINDER_STATUS.PENDING)
+		);
+		const snapshot = await getDocs(q);
+		return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+	} catch (error) {
+		console.error('Error getting active reminders:', error);
+		return [];
+	}
+};
+
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {
+		const batch = writeBatch(db);
 		const contactRef = doc(db, 'contacts', contactId);
 		const contactDoc = await getDoc(contactRef);
-		const existingScheduling = contactDoc.data().scheduling;
+		const contact = contactDoc.data();
 
-		await updateDoc(contactRef, {
+		let updateData = {
 			scheduling: {
-				...existingScheduling, // Keep existing values
-				...schedulingData, // Apply new values
+				...contact.scheduling,
+				...schedulingData,
 				updated_at: serverTimestamp(),
 			},
-		});
+		};
+
+		if (schedulingData.frequency) {
+			const userPrefs = await getUserPreferences(contact.user_id);
+			const activeReminders = await getActiveReminders(contact.user_id);
+
+			const schedulingService = new SchedulingService(
+				userPrefs?.scheduling_preferences,
+				activeReminders,
+				Intl.DateTimeFormat().resolvedOptions().timeZone
+			);
+
+			const lastContactDate = contact.last_contacted?.toDate() || new Date();
+			const nextDate = await schedulingService.scheduleReminder(
+				{ ...contact, id: contactId },
+				lastContactDate,
+				schedulingData.frequency
+			);
+
+			updateData.scheduling.recurring_next_date = nextDate.date.toDate().toISOString();
+		}
+
+		if ('custom_next_date' in schedulingData) {
+			updateData.scheduling.custom_next_date = schedulingData.custom_next_date || null;
+		}
+
+		if (updateData.scheduling.custom_next_date && updateData.scheduling.recurring_next_date) {
+			const recurring = new Date(updateData.scheduling.recurring_next_date);
+			const custom = new Date(updateData.scheduling.custom_next_date);
+			updateData.next_contact =
+				recurring < custom
+					? updateData.scheduling.recurring_next_date
+					: updateData.scheduling.custom_next_date;
+		} else {
+			updateData.next_contact =
+				updateData.scheduling.custom_next_date || updateData.scheduling.recurring_next_date || null;
+		}
+
+		batch.update(contactRef, updateData);
+
+		if (schedulingData.frequency) {
+			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+
+			existingReminders.forEach((reminder) => {
+				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+					const reminderRef = doc(db, 'reminders', reminder.id);
+					batch.delete(reminderRef);
+				}
+			});
+
+			const newReminderRef = doc(collection(db, 'reminders'));
+			const now = Timestamp.now();
+			const scheduledTimestamp = Timestamp.fromDate(new Date(updateData.next_contact));
+
+			const reminderDoc = {
+				created_at: now,
+				updated_at: now,
+				contact_id: contactId,
+				user_id: auth.currentUser.uid,
+				date: scheduledTimestamp,
+				scheduledTime: scheduledTimestamp,
+				status: REMINDER_STATUS.PENDING,
+				type: REMINDER_TYPES.SCHEDULED,
+				snoozed: false,
+				needs_attention: false,
+				completed: false,
+				completion_time: null,
+				notes_added: false,
+				contactName: contact.first_name + ' ' + contact.last_name,
+			};
+
+			batch.set(newReminderRef, reminderDoc);
+		}
+
+		await batch.commit();
+
+		const updatedContactDoc = await getDoc(contactRef);
+		const updatedContact = updatedContactDoc.data();
+
+		return { ...updatedContact, id: contactId };
 	} catch (error) {
-		console.error('Error updating contact scheduling:', error);
+		console.error('Error in updateContactScheduling:', error);
 		throw error;
 	}
 }
@@ -479,6 +587,7 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 	try {
 		const contactRef = doc(db, 'contacts', contactId);
 
+		// 1. Update the contact's next_contact date
 		const updateData = {
 			next_contact: nextContactDate ? nextContactDate.toISOString() : null,
 			last_updated: serverTimestamp(),
@@ -490,13 +599,24 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 
 		await updateDoc(contactRef, updateData);
 
+		// 2. If there's an existing scheduled reminder, cancel it
+		const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+		for (const reminder of existingReminders) {
+			if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+				await deleteReminder(reminder.id);
+			}
+		}
+
+		// 3. Only create a new reminder if nextContactDate exists
 		if (nextContactDate) {
 			await addReminder({
 				contactId: contactId,
 				scheduledTime: nextContactDate,
-				type: 'regular',
+				type: REMINDER_TYPES.SCHEDULED,
+				status: REMINDER_STATUS.PENDING,
 				userId: auth.currentUser.uid,
-				notes: '',
+				needs_attention: false,
+				snoozed: false,
 			});
 		}
 	} catch (error) {
@@ -509,18 +629,23 @@ export async function updateNextContact(contactId, nextContactDate, options = {}
 export const addReminder = async (reminderData) => {
 	try {
 		const remindersRef = collection(db, 'reminders');
+		const now = Timestamp.now();
+		const scheduledTimestamp =
+			reminderData.scheduledTime instanceof Date
+				? Timestamp.fromDate(reminderData.scheduledTime)
+				: Timestamp.fromDate(new Date(reminderData.scheduledTime));
+
 		const reminderDoc = {
-			created_at: serverTimestamp(),
-			updated_at: serverTimestamp(),
+			created_at: now,
+			updated_at: now,
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
-			userId: auth.currentUser.uid,
-			date: reminderData.scheduledTime,
-			scheduledTime: reminderData.scheduledTime,
-			status: reminderData.status || 'pending',
-			type: reminderData.type || 'follow_up',
+			date: scheduledTimestamp,
+			scheduledTime: scheduledTimestamp,
+			status: reminderData.status || REMINDER_STATUS.PENDING,
+			type: reminderData.type || REMINDER_TYPES.SCHEDULED,
 			snoozed: false,
-			follow_up: reminderData.type === 'follow_up',
+			needs_attention: reminderData.type === REMINDER_TYPES.FOLLOW_UP,
 			completed: false,
 			completion_time: null,
 			notes_added: false,

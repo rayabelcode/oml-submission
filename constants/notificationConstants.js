@@ -1,0 +1,70 @@
+import { Timestamp } from 'firebase/firestore';
+
+export const REMINDER_TYPES = {
+	SCHEDULED: 'scheduled',
+	FOLLOW_UP: 'call_follow_up',
+};
+
+export const REMINDER_STATUS = {
+	PENDING: 'pending',
+	COMPLETED: 'completed',
+	SNOOZED: 'snoozed',
+	SKIPPED: 'skipped',
+};
+
+// Default notification format
+export const REMINDER_SCHEMA = {
+	contact_id: String,
+	user_id: String,
+	type: String, // REMINDER_TYPES.SCHEDULED or REMINDER_TYPES.FOLLOW_UP
+	status: String, // 'pending', 'completed', 'snoozed', 'skipped'
+	scheduledTime: Timestamp,
+	created_at: Timestamp,
+	updated_at: Timestamp,
+	contactName: String,
+	notes_added: Boolean,
+	needs_attention: Boolean,
+	snoozed: Boolean,
+	snooze_history: Array, // Optional
+	call_data: Object, // Optional
+};
+
+export const SNOOZE_OPTIONS = [
+	{
+		id: 'later_today',
+		icon: 'time-outline',
+		text: 'Later Today (+3 hours)',
+		hours: 3,
+	},
+	{
+		id: 'tomorrow',
+		icon: 'calendar-outline',
+		text: 'Tomorrow',
+		days: 1,
+	},
+	{
+		id: 'next_week',
+		icon: 'calendar-outline',
+		text: 'Next Week',
+		days: 7,
+	},
+	{
+		id: 'skip',
+		icon: 'close-circle-outline',
+		text: 'Skip This Call',
+		type: 'skip',
+	},
+];
+
+export const MAX_SNOOZE_ATTEMPTS = 4;
+export const NOTIFICATION_MAP_KEY = 'notification_map';
+
+export const NOTIFICATION_MESSAGES = {
+	MAX_SNOOZE_REACHED: {
+		title: 'Maximum Snooze Reached',
+		message: 'You have snoozed this reminder 4 times. Would you like to skip this call?',
+	},
+	CONTACT_ACTION: {
+		title: 'Choose an action:',
+	},
+};

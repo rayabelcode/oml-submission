@@ -2,7 +2,7 @@ import { StyleSheet, Platform } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
 export const useContactDetailsStyles = () => {
-	const { colors } = useTheme();
+	const { colors, theme } = useTheme();
 
 	return StyleSheet.create({
 		container: {
@@ -15,8 +15,8 @@ export const useContactDetailsStyles = () => {
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
 			paddingVertical: spacing.md,
-			backgroundColor: colors.background.primary,
-			borderBottomWidth: 1,
+            backgroundColor: theme === 'dark' ? '#1C1C1E' : '#F2F2F7',
+			borderBottomWidth: 0,
 			borderBottomColor: colors.border,
 		},
 		headerButton: {
