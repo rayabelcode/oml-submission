@@ -599,22 +599,30 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						Alert.alert('Invalid Date', 'Please select a date in the future');
 						return;
 					}
-
+				
 					try {
 						setShowDatePicker(false);
-						await updateNextContact(contact.id, date);
-						setSelectedContact({
-							...contact,
-							next_contact: date.toISOString(),
+						setLoading(true);
+				
+						// Get the updated contact data from the function
+						const updatedContact = await updateContactScheduling(contact.id, {
+							custom_next_date: date.toISOString()
 						});
+				
+						// Use the returned data to update the state
+						setSelectedContact(updatedContact);
+				
 						if (loadContacts) {
 							await loadContacts();
 						}
 					} catch (error) {
-						console.error('Error updating next contact:', error);
-						Alert.alert('Error', 'Failed to update next contact date');
+						console.error('Error setting custom date:', error);
+						Alert.alert('Error', 'Failed to set custom date');
+					} finally {
+						setLoading(false);
 					}
 				}}
+				
 			/>
 		</ScrollView>
 	);
