@@ -106,7 +106,7 @@ export const useScheduleStyles = () => {
 			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.primary,
-			marginBottom: spacing.sm,
+			marginBottom: spacing.md,
 			textAlign: 'center',
 		},
 		priorityButtons: {
@@ -194,44 +194,59 @@ export const useScheduleStyles = () => {
 		// Next Contact Display
 		dateSection: {
 			flexDirection: 'row',
-			justifyContent: 'space-between',
-			alignItems: 'flex-start',
-			marginBottom: 20,
+			justifyContent: 'center',
+			alignItems: 'center',
+			marginBottom: spacing.md,
+			minHeight: 105,
 		},
 		nextContactContainer: {
 			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
 			padding: 15,
 			backgroundColor: 'transparent',
 		},
 		scheduledDatesContainer: {
-			flex: 0.7,
+			flex: 0.9,
 			backgroundColor: colors.background.secondary,
 			borderRadius: 8,
-			padding: 15,
+			padding: 8,
 			borderWidth: 1,
 			borderColor: colors.border.light,
 			marginLeft: spacing.md,
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		scheduledDateLabel: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			marginBottom: 4,
+			textAlign: 'center',
 		},
 		scheduledDateRow: {
 			fontSize: 14,
 			color: colors.text.primary,
 			marginBottom: 4,
+			textAlign: 'center',
 		},
 		nextContactLabel: {
 			fontSize: 15,
 			color: colors.text.secondary,
 			marginBottom: spacing.xs,
+			textAlign: 'center',
 		},
 		nextContactDate: {
 			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
-			height: 30, // Match height of dotsContainer
+			height: 30,
 			lineHeight: 30,
+			textAlign: 'center',
 		},
 		unscheduledText: {
 			color: colors.text.primary,
 			fontWeight: '500',
+			textAlign: 'center',
 		},
 		// Animated Loading Screen
 		dotsContainer: {
