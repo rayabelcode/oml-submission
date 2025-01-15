@@ -185,10 +185,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
-			// Use only updateContactScheduling with both updates
 			await updateContactScheduling(contact.id, {
 				frequency: null,
-				next_contact: null, // Pass it here instead of separate updateNextContact call
+				next_contact: null,
+				recurring_next_date: null,
+				custom_next_date: null,
 			});
 
 			setSelectedContact({
@@ -196,6 +197,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				scheduling: {
 					...contact.scheduling,
 					frequency: null,
+					recurring_next_date: null,
+					custom_next_date: null,
 				},
 				next_contact: null,
 			});
@@ -258,21 +261,33 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			contentContainerStyle={{ paddingBottom: spacing.xl }}
 			showsVerticalScrollIndicator={false}
 		>
-			<View style={styles.nextContactContainer}>
-				<Text style={styles.nextContactLabel}>Next Contact</Text>
-				{loading ? (
-					<View style={styles.dotsContainer}>
-						<Animated.View style={[styles.dot, { opacity: dot1 }]} />
-						<Animated.View style={[styles.dot, { opacity: dot2 }]} />
-						<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+			<View style={styles.dateSection}>
+				<View style={styles.nextContactContainer}>
+					<Text style={styles.nextContactLabel}>Next Contact</Text>
+					{loading ? (
+						<View style={styles.dotsContainer}>
+							<Animated.View style={[styles.dot, { opacity: dot1 }]} />
+							<Animated.View style={[styles.dot, { opacity: dot2 }]} />
+							<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+						</View>
+					) : (
+						<Text style={[styles.nextContactDate, !contact.next_contact && styles.unscheduledText]}>
+							{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Unscheduled'}
+						</Text>
+					)}
+				</View>
+
+				{Boolean(contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) && (
+					<View style={styles.scheduledDatesContainer}>
+						<Text style={styles.scheduledDateRow}>
+							Next Custom: {new Date(contact.scheduling.custom_next_date).toLocaleDateString()}
+						</Text>
+						<Text style={styles.scheduledDateRow}>
+							Next Recurring: {new Date(contact.scheduling.recurring_next_date).toLocaleDateString()}
+						</Text>
 					</View>
-				) : (
-					<Text style={[styles.nextContactDate, !contact.next_contact && styles.unscheduledText]}>
-						{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Unscheduled'}
-					</Text>
 				)}
 			</View>
-
 			<View style={styles.gridContainer}>
 				<Text style={styles.sectionTitle}>Contact Frequency</Text>
 				<View style={styles.frequencyGrid}>
@@ -321,7 +336,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					))}
 				</View>
 			</View>
-
 			<View style={styles.actionButtonsContainer}>
 				<TouchableOpacity
 					style={[styles.customDateButton, loading && styles.disabledButton]}
@@ -338,9 +352,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					<Text style={styles.recurringOffText}>No Contact</Text>
 				</TouchableOpacity>
 			</View>
-
 			{error && <Text style={styles.errorText}>{error}</Text>}
-
 			<TouchableOpacity
 				style={[styles.advancedSettingsButton, loading && styles.disabledButton]}
 				onPress={() => setShowAdvancedSettings(!showAdvancedSettings)}
@@ -352,7 +364,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				/>
 				<Text style={styles.advancedSettingsText}>Advanced Settings</Text>
 			</TouchableOpacity>
-
 			{showAdvancedSettings && (
 				<View>
 					<View style={styles.priorityContainer}>
@@ -488,7 +499,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					</View>
 				</View>
 			)}
-
 			<TimePickerModal
 				visible={showStartTimePicker}
 				onClose={() => setShowStartTimePicker(false)}
@@ -534,7 +544,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					}
 				}}
 			/>
-
 			<TimePickerModal
 				visible={showEndTimePicker}
 				onClose={() => setShowEndTimePicker(false)}
@@ -580,14 +589,12 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					}
 				}}
 			/>
-
 			<SlotsFilledModal
 				isVisible={showSlotsFilledModal}
 				onClose={() => setShowSlotsFilledModal(false)}
 				details={slotsFilledDetails}
 				onOptionSelect={handleSlotsFilledOption}
 			/>
-
 			<DatePickerModal
 				visible={showDatePicker}
 				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
@@ -599,19 +606,18 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						Alert.alert('Invalid Date', 'Please select a date in the future');
 						return;
 					}
-				
+
 					try {
 						setShowDatePicker(false);
 						setLoading(true);
-				
-						// Get the updated contact data from the function
+
 						const updatedContact = await updateContactScheduling(contact.id, {
-							custom_next_date: date.toISOString()
+							custom_next_date: date.toISOString(),
 						});
-				
-						// Use the returned data to update the state
+
+						// Use the complete updated contact data
 						setSelectedContact(updatedContact);
-				
+
 						if (loadContacts) {
 							await loadContacts();
 						}
@@ -622,7 +628,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						setLoading(false);
 					}
 				}}
-				
 			/>
 		</ScrollView>
 	);

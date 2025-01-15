@@ -516,36 +516,23 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				schedulingData.frequency
 			);
 
-			// Set recurring_next_date
 			updateData.scheduling.recurring_next_date = nextDate.date.toDate().toISOString();
-			// Only update next_contact if there's no custom date
-			if (!updateData.scheduling.custom_next_date) {
-				updateData.next_contact = updateData.scheduling.recurring_next_date;
-			}
 		}
 
-		// Handle custom next date setting
 		if ('custom_next_date' in schedulingData) {
-			if (schedulingData.custom_next_date) {
-				// Setting a new custom date
-				updateData.scheduling.custom_next_date = schedulingData.custom_next_date;
-				updateData.next_contact = schedulingData.custom_next_date;
-			} else {
-				// Removing custom date
-				updateData.scheduling.custom_next_date = null;
-				// Revert to recurring date if it exists
-				updateData.next_contact = updateData.scheduling.recurring_next_date || null;
-			}
+			updateData.scheduling.custom_next_date = schedulingData.custom_next_date || null;
 		}
 
-		// Pick closest date between recurring and custom
-		if (updateData.scheduling.recurring_next_date && updateData.scheduling.custom_next_date) {
+		if (updateData.scheduling.custom_next_date && updateData.scheduling.recurring_next_date) {
 			const recurring = new Date(updateData.scheduling.recurring_next_date);
 			const custom = new Date(updateData.scheduling.custom_next_date);
 			updateData.next_contact =
 				recurring < custom
 					? updateData.scheduling.recurring_next_date
 					: updateData.scheduling.custom_next_date;
+		} else {
+			updateData.next_contact =
+				updateData.scheduling.custom_next_date || updateData.scheduling.recurring_next_date || null;
 		}
 
 		batch.update(contactRef, updateData);

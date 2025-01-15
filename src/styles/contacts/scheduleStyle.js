@@ -192,9 +192,30 @@ export const useScheduleStyles = () => {
 			color: colors.text.primary,
 		},
 		// Next Contact Display
+		dateSection: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			alignItems: 'flex-start',
+			marginBottom: 20,
+		},
 		nextContactContainer: {
-			marginBottom: spacing.lg,
-			alignItems: 'center',
+			flex: 1,
+			padding: 15,
+			backgroundColor: 'transparent',
+		},
+		scheduledDatesContainer: {
+			flex: 0.7,
+			backgroundColor: colors.background.secondary,
+			borderRadius: 8,
+			padding: 15,
+			borderWidth: 1,
+			borderColor: colors.border.light,
+			marginLeft: spacing.md,
+		},
+		scheduledDateRow: {
+			fontSize: 14,
+			color: colors.text.primary,
+			marginBottom: 4,
 		},
 		nextContactLabel: {
 			fontSize: 15,
@@ -211,7 +232,7 @@ export const useScheduleStyles = () => {
 		unscheduledText: {
 			color: colors.text.primary,
 			fontWeight: '500',
-		},		
+		},
 		// Animated Loading Screen
 		dotsContainer: {
 			height: 30, // Match height of nextContactDate
