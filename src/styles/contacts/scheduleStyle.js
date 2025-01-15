@@ -52,6 +52,7 @@ export const useScheduleStyles = () => {
 		actionButtonsContainer: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
+			marginTop: spacing.xs,
 			marginBottom: spacing.lg,
 			gap: spacing.sm,
 		},
@@ -210,7 +211,8 @@ export const useScheduleStyles = () => {
 			flex: 0.9,
 			backgroundColor: colors.background.secondary,
 			borderRadius: 8,
-			padding: 8,
+			paddingHorizontal: 8,
+			paddingVertical: 7,
 			borderWidth: 1,
 			borderColor: colors.border.light,
 			marginLeft: spacing.md,

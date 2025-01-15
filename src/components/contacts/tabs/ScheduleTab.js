@@ -305,13 +305,25 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								if (loading) return;
 								try {
 									setLoading(true);
-									setFrequency(option.value);
+									// If the button is already active, turn it off
+									if (frequency === option.value) {
+										setFrequency(null);
+										const updatedContact = await updateContactScheduling(contact.id, {
+											frequency: null,
+											recurring_next_date: null,
+										});
+										setSelectedContact(updatedContact);
+										if (loadContacts) {
+											await loadContacts();
+										}
+										return;
+									}
 
+									setFrequency(option.value);
 									const updatedContact = await updateContactScheduling(contact.id, {
 										frequency: option.value,
 									});
 
-									// Check for slots filled status
 									if (updatedContact.status === 'SLOTS_FILLED') {
 										setSlotsFilledDetails(updatedContact.details);
 										setShowSlotsFilledModal(true);
@@ -319,6 +331,9 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									}
 
 									setSelectedContact(updatedContact);
+									if (loadContacts) {
+										await loadContacts();
+									}
 								} catch (error) {
 									console.error('Error updating frequency:', error);
 									setFrequency(contact?.scheduling?.frequency || null);
@@ -345,11 +360,37 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			<View style={styles.actionButtonsContainer}>
 				<TouchableOpacity
 					style={[styles.customDateButton, loading && styles.disabledButton]}
-					onPress={() => setShowDatePicker(true)}
+					onPress={async () => {
+						if (loading) return;
+
+						// If there's already a custom date, clear it
+						if (contact.scheduling?.custom_next_date) {
+							try {
+								setLoading(true);
+								const updatedContact = await updateContactScheduling(contact.id, {
+									custom_next_date: null,
+								});
+								setSelectedContact(updatedContact);
+								if (loadContacts) {
+									await loadContacts();
+								}
+							} catch (error) {
+								console.error('Error clearing custom date:', error);
+								Alert.alert('Error', 'Failed to clear custom date');
+							} finally {
+								setLoading(false);
+							}
+						} else {
+							setShowDatePicker(true);
+						}
+					}}
 					disabled={loading}
 				>
-					<Text style={styles.customDateText}>Set Custom Date</Text>
+					<Text style={styles.customDateText}>
+						{contact.scheduling?.custom_next_date ? 'Remove Custom' : 'Set Custom Date'}
+					</Text>
 				</TouchableOpacity>
+
 				<TouchableOpacity
 					style={[styles.recurringOffButton, loading && styles.disabledButton]}
 					onPress={handleRecurringOff}
