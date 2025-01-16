@@ -1,47 +1,116 @@
 import { DateTime } from 'luxon';
-import { REMINDER_STATUS, SNOOZE_OPTIONS, MAX_SNOOZE_ATTEMPTS } from '../../constants/notificationConstants';
+import {
+	REMINDER_STATUS,
+	SNOOZE_OPTIONS,
+	MAX_SNOOZE_ATTEMPTS,
+	PATTERN_TRACKING,
+} from '../../constants/notificationConstants';
 import { SchedulingService } from './scheduler';
-import { updateContactScheduling, getUserPreferences, getActiveReminders } from './firestore';
+import { updateContactScheduling, getUserPreferences, getActiveReminders, getContactById } from './firestore';
+import { schedulingHistory } from './schedulingHistory';
 
 export class SnoozeHandler {
 	constructor(userId, timezone) {
 		this.userId = userId;
 		this.timezone = timezone;
 		this.schedulingService = null;
+		this.patternCache = new Map(); // Cache pattern analysis results
 	}
 
 	async initialize() {
-		const userPrefs = await getUserPreferences(this.userId);
-		const activeReminders = await getActiveReminders(this.userId);
-		this.schedulingService = new SchedulingService(
-			userPrefs?.scheduling_preferences,
-			activeReminders,
-			this.timezone
-		);
+		try {
+			const userPrefs = await getUserPreferences(this.userId);
+			const activeReminders = await getActiveReminders(this.userId);
+			this.schedulingService = new SchedulingService(
+				userPrefs?.scheduling_preferences,
+				activeReminders,
+				this.timezone
+			);
+			await schedulingHistory.initialize();
+		} catch (error) {
+			console.error('Error initializing SnoozeHandler:', error);
+			throw error;
+		}
+	}
+
+	// Get time window based on contact frequency
+	async getAnalysisWindow(contactId) {
+		try {
+			const contact = await getContactById(contactId);
+			const frequency = contact?.scheduling?.frequency || 'monthly';
+
+			// Adjust window based on contact frequency
+			switch (frequency) {
+				case 'weekly':
+					return PATTERN_TRACKING.TIME_WINDOW.MIN;
+				case 'biweekly':
+					return PATTERN_TRACKING.TIME_WINDOW.MIN * 2;
+				case 'monthly':
+					return PATTERN_TRACKING.TIME_WINDOW.DEFAULT;
+				case 'quarterly':
+					return PATTERN_TRACKING.TIME_WINDOW.MAX;
+				default:
+					return PATTERN_TRACKING.TIME_WINDOW.DEFAULT;
+			}
+		} catch (error) {
+			return PATTERN_TRACKING.TIME_WINDOW.DEFAULT;
+		}
+	}
+
+	// Weight patterns by recency and success rate
+	async findOptimalTime(contactId, baseTime, snoozeType) {
+		try {
+			const cacheKey = `${contactId}_${baseTime.toISO()}_${snoozeType}`;
+			if (this.patternCache.has(cacheKey)) {
+				return this.patternCache.get(cacheKey);
+			}
+
+			const analysis = await schedulingHistory.getPatternAnalysis();
+			const { preferredTimeSlots } = analysis;
+
+			// Only use patterns for tomorrow and next week
+			if (preferredTimeSlots?.length > 0 && (snoozeType === 'tomorrow' || snoozeType === 'next_week')) {
+				// Convert all times to same day for comparison
+				const normalizedTime = baseTime.set({ hour: baseTime.hour });
+
+				// Find best time slot
+				const bestSlot = preferredTimeSlots.reduce((best, current) => {
+					const [hour, score] = current;
+					const hourNum = parseInt(hour);
+					return !best || score > best.score ? { hour: hourNum, score } : best;
+				}, null);
+
+				if (bestSlot) {
+					const result = normalizedTime.set({ hour: bestSlot.hour, minute: 0 });
+					this.patternCache.set(cacheKey, result);
+					return result;
+				}
+			}
+			return null;
+		} catch (error) {
+			console.error('Error finding optimal time:', error);
+			return null;
+		}
 	}
 
 	async handleLaterToday(contactId, currentTime = DateTime.now()) {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
+			// Always use standard timing for "later today"
 			const hour = currentTime.hour;
 			let minMinutes, maxMinutes;
 
-			// Adjust delay range based on time of day (including after midnight)
 			if (hour >= 0 && hour < 4) {
-				// Midnight to 4 AM
 				minMinutes = 20;
 				maxMinutes = 40;
 			} else if (hour >= 21 || hour < 0) {
-				// After 9 PM
 				minMinutes = 20;
 				maxMinutes = 40;
 			} else if (hour >= 19) {
-				// After 7 PM
 				minMinutes = 50;
 				maxMinutes = 80;
 			} else if (hour >= 17) {
-				// After 5 PM
 				minMinutes = 120;
 				maxMinutes = 150;
 			} else {
@@ -49,11 +118,9 @@ export class SnoozeHandler {
 				maxMinutes = 210;
 			}
 
-			// Generate random minutes within range
 			const minutesToAdd = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
 			const proposedTime = currentTime.plus({ minutes: minutesToAdd }).toJSDate();
 
-			// Find available slot that respects gaps
 			const availableTime = await this.schedulingService.findAvailableTimeSlot(proposedTime, {
 				id: contactId,
 			});
@@ -64,6 +131,13 @@ export class SnoozeHandler {
 				snooze_count: { increment: 1 },
 				status: REMINDER_STATUS.SNOOZED,
 			});
+
+			await schedulingHistory.trackSnooze(
+				contactId,
+				currentTime,
+				DateTime.fromJSDate(availableTime),
+				'later_today'
+			);
 
 			return availableTime;
 		} catch (error) {
@@ -76,10 +150,17 @@ export class SnoozeHandler {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
-			// Same time tomorrow
-			let proposedTime = currentTime.plus({ days: 1 }).toJSDate();
+			// Get optimal time based on patterns
+			const optimalTime = await this.findOptimalTime(contactId, currentTime, 'tomorrow');
 
-			// Find available slot that respects gaps
+			// If we have an optimal time, use it with tomorrow's date
+			let proposedTime;
+			if (optimalTime) {
+				proposedTime = optimalTime.plus({ days: 1 }).toJSDate();
+			} else {
+				proposedTime = currentTime.plus({ days: 1 }).toJSDate();
+			}
+
 			const availableTime = await this.schedulingService.findAvailableTimeSlot(proposedTime, {
 				id: contactId,
 			});
@@ -90,6 +171,13 @@ export class SnoozeHandler {
 				snooze_count: { increment: 1 },
 				status: REMINDER_STATUS.SNOOZED,
 			});
+
+			await schedulingHistory.trackSnooze(
+				contactId,
+				currentTime,
+				DateTime.fromJSDate(availableTime),
+				'tomorrow'
+			);
 
 			return availableTime;
 		} catch (error) {
@@ -102,10 +190,9 @@ export class SnoozeHandler {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
-			// Same time next week
-			let proposedTime = currentTime.plus({ weeks: 1 }).toJSDate();
+			const optimalTime = await this.findOptimalTime(contactId, currentTime.plus({ weeks: 1 }), 'next_week');
+			let proposedTime = optimalTime ? optimalTime.toJSDate() : currentTime.plus({ weeks: 1 }).toJSDate();
 
-			// Find available slot that respects gaps
 			const availableTime = await this.schedulingService.findAvailableTimeSlot(proposedTime, {
 				id: contactId,
 			});
@@ -117,6 +204,13 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SNOOZED,
 			});
 
+			await schedulingHistory.trackSnooze(
+				contactId,
+				currentTime,
+				DateTime.fromJSDate(availableTime),
+				'next_week'
+			);
+
 			return availableTime;
 		} catch (error) {
 			console.error('Error in handleNextWeek:', error);
@@ -124,7 +218,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleSkip(contactId) {
+	async handleSkip(contactId, currentTime = DateTime.now()) {
 		try {
 			await updateContactScheduling(contactId, {
 				custom_next_date: null,
@@ -132,6 +226,7 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SKIPPED,
 			});
 
+			await schedulingHistory.trackSkip(contactId, currentTime);
 			return true;
 		} catch (error) {
 			console.error('Error in handleSkip:', error);
@@ -151,12 +246,15 @@ export class SnoozeHandler {
 			case 'next_week':
 				return this.handleNextWeek(contactId, currentTime);
 			case 'skip':
-				return this.handleSkip(contactId);
+				return this.handleSkip(contactId, currentTime);
 			default:
 				throw new Error('Unsupported snooze option');
 		}
 	}
+
+	clearPatternCache() {
+		this.patternCache.clear();
+	}
 }
 
-// Export a singleton instance
 export const snoozeHandler = new SnoozeHandler();

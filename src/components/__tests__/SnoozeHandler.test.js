@@ -2,6 +2,16 @@ import { jest } from '@jest/globals';
 import { DateTime } from 'luxon';
 import { SnoozeHandler } from '../../utils/snoozeHandler';
 
+// Supress console.error
+beforeAll(() => {
+	jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterAll(() => {
+	jest.restoreAllMocks();
+});
+
+// Constants
 const REMINDER_STATUS = {
 	PENDING: 'pending',
 	COMPLETED: 'completed',
@@ -38,6 +48,28 @@ const SNOOZE_OPTIONS = [
 
 const MAX_SNOOZE_ATTEMPTS = 4;
 
+// Mocks
+jest.mock('../../utils/schedulingHistory', () => ({
+	schedulingHistory: {
+		initialize: jest.fn(),
+		getPatternAnalysis: jest.fn().mockResolvedValue({
+			preferredTimeSlots: [
+				['14', 0.9], // 2 PM
+				['15', 0.8], // 3 PM
+				['10', 0.7], // 10 AM
+			],
+			preferredDays: [
+				['3', 0.9], // Wednesday
+				['2', 0.8], // Tuesday
+				['4', 0.7], // Thursday
+			],
+		}),
+		trackSnooze: jest.fn(),
+		trackSkip: jest.fn(),
+		trackSuccessfulAttempt: jest.fn(),
+	},
+}));
+
 jest.mock('../../utils/scheduler', () => ({
 	SchedulingService: jest.fn().mockImplementation(() => ({
 		findAvailableTimeSlot: jest.fn((date) => date),
@@ -49,9 +81,14 @@ jest.mock('../../utils/firestore', () => ({
 	updateContactScheduling: jest.fn(),
 	getUserPreferences: jest.fn(),
 	getActiveReminders: jest.fn(),
+	getContactById: jest.fn().mockResolvedValue({
+		scheduling: { frequency: 'monthly' },
+	}),
 }));
 
+// Imports
 import { updateContactScheduling, getUserPreferences, getActiveReminders } from '../../utils/firestore';
+import { schedulingHistory } from '../../utils/schedulingHistory';
 
 describe('SnoozeHandler', () => {
 	let snoozeHandler;
@@ -62,6 +99,7 @@ describe('SnoozeHandler', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 		snoozeHandler = new SnoozeHandler(mockUserId, mockTimezone);
+		snoozeHandler.clearPatternCache();
 	});
 
 	describe('Later Today Handling', () => {
@@ -228,6 +266,81 @@ describe('SnoozeHandler', () => {
 			updateContactScheduling.mockRejectedValueOnce(new Error('Update failed'));
 
 			await expect(snoozeHandler.handleSkip(mockContactId)).rejects.toThrow('Update failed');
+		});
+	});
+
+	// Pattern Based Scheduling
+	describe('Pattern-based Scheduling', () => {
+		beforeEach(() => {
+			jest.clearAllMocks();
+			// Set specific pattern data for these tests
+			schedulingHistory.getPatternAnalysis.mockResolvedValue({
+				preferredTimeSlots: [
+					['14', 0.9], // 2 PM
+					['15', 0.8], // 3 PM
+					['10', 0.7], // 10 AM
+				],
+				preferredDays: [
+					['3', 0.9], // Wednesday
+					['2', 0.8], // Tuesday
+					['4', 0.7], // Thursday
+				],
+			});
+			snoozeHandler = new SnoozeHandler(mockUserId, mockTimezone);
+		});
+
+		it('uses pattern analysis for optimal time selection', async () => {
+			await snoozeHandler.initialize();
+			// Mock current time as 9 AM to ensure 2 PM is available
+			const currentTime = DateTime.fromObject({ hour: 9 });
+
+			// First, test findOptimalTime directly
+			const optimalTime = await snoozeHandler.findOptimalTime(
+				mockContactId,
+				currentTime,
+				'tomorrow' // Use tomorrow to enable pattern analysis
+			);
+
+			expect(optimalTime.hour).toBe(14); // Should select 2 PM
+
+			// Then test through handleTomorrow
+			const result = await snoozeHandler.handleTomorrow(mockContactId, currentTime);
+			const scheduledHour = DateTime.fromJSDate(result).hour;
+			expect(scheduledHour).toBe(14); // Should prefer 2 PM from pattern analysis
+		});
+
+		it('falls back to default timing when no patterns available', async () => {
+			schedulingHistory.getPatternAnalysis.mockResolvedValueOnce({
+				preferredTimeSlots: [],
+				preferredDays: [],
+			});
+
+			await snoozeHandler.initialize();
+			const currentTime = DateTime.fromObject({ hour: 14 });
+			const result = await snoozeHandler.handleLaterToday(mockContactId, currentTime);
+
+			const minutesAdded = DateTime.fromJSDate(result).diff(currentTime, 'minutes').minutes;
+			expect(minutesAdded).toBeGreaterThanOrEqual(150);
+			expect(minutesAdded).toBeLessThanOrEqual(210);
+		});
+
+		it('tracks snooze patterns', async () => {
+			await snoozeHandler.initialize();
+			await snoozeHandler.handleLaterToday(mockContactId);
+
+			expect(schedulingHistory.trackSnooze).toHaveBeenCalledWith(
+				mockContactId,
+				expect.any(DateTime),
+				expect.any(DateTime),
+				'later_today'
+			);
+		});
+
+		it('tracks skip patterns', async () => {
+			await snoozeHandler.initialize();
+			await snoozeHandler.handleSkip(mockContactId);
+
+			expect(schedulingHistory.trackSkip).toHaveBeenCalledWith(mockContactId, expect.any(DateTime));
 		});
 	});
 });
