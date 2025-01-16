@@ -189,6 +189,172 @@ class SchedulingHistoryService {
 			throw error;
 		}
 	}
+
+	// Pattern learning for rescheduling
+	async storeReschedulingPattern(contactId, type, timestamp, success) {
+		try {
+			if (!this.patternData) await this.loadPatternData();
+
+			// Initialize contact-specific patterns if needed
+			if (!this.patternData.contactPatterns) {
+				this.patternData.contactPatterns = {};
+			}
+			if (!this.patternData.contactPatterns[contactId]) {
+				this.patternData.contactPatterns[contactId] = {
+					attempts: [],
+					aggregatedStats: {
+						byHour: {},
+						byDay: {},
+						byType: {},
+					},
+				};
+			}
+
+			const patterns = this.patternData.contactPatterns[contactId];
+
+			// Add new attempt
+			const attemptData = {
+				timestamp: timestamp.toISO(),
+				type,
+				timeOfDay: timestamp.hour,
+				dayOfWeek: timestamp.weekday,
+				success,
+			};
+
+			// Remove any existing attempt from the same timestamp to avoid duplicates
+			patterns.attempts = patterns.attempts.filter((attempt) => attempt.timestamp !== timestamp.toISO());
+			patterns.attempts.push(attemptData);
+
+			// Reset and recalculate aggregated stats
+			const stats = patterns.aggregatedStats;
+			stats.byHour[timestamp.hour] = stats.byHour[timestamp.hour] || { attempts: 0, successes: 0 };
+			stats.byHour[timestamp.hour].attempts++;
+			if (success) stats.byHour[timestamp.hour].successes++;
+
+			stats.byDay[timestamp.weekday] = stats.byDay[timestamp.weekday] || { attempts: 0, successes: 0 };
+			stats.byDay[timestamp.weekday].attempts++;
+			if (success) stats.byDay[timestamp.weekday].successes++;
+
+			stats.byType[type] = stats.byType[type] || { attempts: 0, successes: 0 };
+			stats.byType[type].attempts++;
+			if (success) stats.byType[type].successes++;
+
+			await this.savePatternData();
+			return patterns;
+		} catch (error) {
+			console.error('Error storing rescheduling pattern:', error);
+			throw error;
+		}
+	}
+
+	async analyzeContactPatterns(contactId, timeWindow = 90) {
+		try {
+			const patterns = this.patternData?.contactPatterns?.[contactId];
+			if (!patterns?.attempts) {
+				return null;
+			}
+
+			const cutoffDate = DateTime.now().minus({ days: timeWindow });
+			const recentAttempts = patterns.attempts.filter(
+				(attempt) => DateTime.fromISO(attempt.timestamp) > cutoffDate
+			);
+
+			if (recentAttempts.length === 0) {
+				return null;
+			}
+
+			// Calculate success rates
+			const successRates = {
+				byHour: this.calculateSuccessRates(patterns.aggregatedStats.byHour),
+				byDay: this.calculateSuccessRates(patterns.aggregatedStats.byDay),
+				byType: this.calculateSuccessRates(patterns.aggregatedStats.byType),
+			};
+
+			return {
+				optimalTimes: Object.entries(successRates.byHour)
+					.sort(([, a], [, b]) => b.score - a.score)
+					.slice(0, 3),
+				optimalDays: Object.entries(successRates.byDay)
+					.sort(([, a], [, b]) => b.score - a.score)
+					.slice(0, 3),
+				successRates,
+				recentAttempts: recentAttempts.length,
+				confidence: this.calculateConfidenceScore(recentAttempts.length, timeWindow),
+			};
+		} catch (error) {
+			console.error('Error analyzing contact patterns:', error);
+			return null;
+		}
+	}
+
+	calculateSuccessRates(stats) {
+		return Object.entries(stats).reduce((acc, [key, data]) => {
+			const successRate = data.successes / data.attempts;
+			const score = successRate * Math.log10(data.attempts + 1); // Weight by attempt count
+			acc[key] = {
+				successRate,
+				attempts: data.attempts,
+				score,
+			};
+			return acc;
+		}, {});
+	}
+
+	calculateConfidenceScore(attempts, timeWindow) {
+		if (attempts === 0) return 0;
+
+		// Calculate attempts per month (30 days)
+		const monthlyRate = (attempts * 30) / timeWindow;
+
+		// Weight components
+		const frequencyWeight = Math.min(monthlyRate / 10, 1) * 0.4; // Max at 10 attempts per month
+		const volumeWeight = Math.min(attempts / 20, 1) * 0.4; // Max at 20 total attempts
+		const timeWeight = Math.min(timeWindow / 90, 1) * 0.2; // Max at 90 days
+
+		// Calculate final score with proper normalization for high values
+		const score = Math.min(frequencyWeight + volumeWeight + timeWeight, 1);
+
+		return Math.round(score * 100) / 100; // Round to 2 decimal places
+	}
+
+	async suggestOptimalTime(contactId, baseTime, type) {
+		try {
+			const patterns = this.patternData?.contactPatterns?.[contactId];
+			if (!patterns?.aggregatedStats?.byHour) {
+				return null;
+			}
+
+			// Find the best hour with highest success rate
+			const hourlyStats = patterns.aggregatedStats.byHour;
+			const bestHourEntry = Object.entries(hourlyStats)
+				.filter(([hour]) => parseInt(hour) > baseTime.hour)
+				.sort(([, a], [, b]) => {
+					const rateA = a.successes / a.attempts;
+					const rateB = b.successes / b.attempts;
+					return rateB - rateA;
+				})[0];
+
+			if (bestHourEntry) {
+				return baseTime.set({ hour: parseInt(bestHourEntry[0]), minute: 0 });
+			}
+
+			// If no suitable hour found after current time, try earlier hours for next day
+			const nextDayBestHour = Object.entries(hourlyStats).sort(([, a], [, b]) => {
+				const rateA = a.successes / a.attempts;
+				const rateB = b.successes / b.attempts;
+				return rateB - rateA;
+			})[0];
+
+			if (nextDayBestHour) {
+				return baseTime.plus({ days: 1 }).set({ hour: parseInt(nextDayBestHour[0]), minute: 0 });
+			}
+
+			return baseTime.plus({ hours: 3 }); // fallback
+		} catch (error) {
+			console.error('Error suggesting optimal time:', error);
+			return null;
+		}
+	}
 }
 
 export const schedulingHistory = new SchedulingHistoryService();
