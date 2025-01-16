@@ -62,18 +62,23 @@ describe('SchedulingHistory', () => {
 		});
 
 		it('calculates success rates correctly', async () => {
-			// Add multiple patterns
+			const baseTime = mockTimestamp.set({ hour: 14 }); // Set fixed hour for testing
+
+			// Multiple patterns at the same hour
 			for (let i = 0; i < 5; i++) {
 				await schedulingHistory.storeReschedulingPattern(
 					mockContactId,
 					'tomorrow',
-					mockTimestamp.plus({ hours: i }),
-					i % 2 === 0 // Alternate success/failure
+					baseTime, // Use same time for all attempts
+					i % 2 === 0 // Alternate success/failure (3 successes, 2 failures)
 				);
 			}
 
 			const patterns = await schedulingHistory.analyzeContactPatterns(mockContactId);
-			expect(patterns.successRates.byType.tomorrow.successRate).toBeCloseTo(0.6);
+			expect(patterns.successRates.byHour['14']).toEqual({
+				successRate: 0.6, // 3 successes out of 5 attempts
+				attempts: 5,
+			});
 			expect(patterns.confidence).toBeGreaterThan(0);
 		});
 
@@ -143,7 +148,6 @@ describe('SchedulingHistory', () => {
 				byType: {},
 			};
 
-			// Add three patterns within the time window
 			for (let i = 0; i < 3; i++) {
 				await schedulingHistory.storeReschedulingPattern(
 					mockContactId,
@@ -153,7 +157,6 @@ describe('SchedulingHistory', () => {
 				);
 			}
 
-			// Add one old pattern outside the window
 			await schedulingHistory.storeReschedulingPattern(
 				mockContactId,
 				'later_today',
@@ -163,6 +166,86 @@ describe('SchedulingHistory', () => {
 
 			const patterns = await schedulingHistory.analyzeContactPatterns(mockContactId, 90);
 			expect(patterns.recentAttempts).toBe(3);
+		});
+	});
+
+	describe('Time Period Analysis', () => {
+		it('correctly identifies time period preferences', async () => {
+			// Test morning period
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 9 }), // 9 AM
+				true
+			);
+
+			// Test afternoon period
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 14 }), // 2 PM
+				true
+			);
+
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 15 }), // 3 PM
+				true
+			);
+
+			// Test evening period
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 19 }), // 7 PM
+				true
+			);
+
+			const patterns = schedulingHistory.patternData.contactPatterns[mockContactId].attempts;
+			const timePreferences = schedulingHistory.getTimePreference(patterns);
+
+			expect(timePreferences).toEqual({
+				morning: 1, // One attempt at 9 AM
+				afternoon: 2, // Two attempts at 2 PM and 3 PM
+				evening: 1, // One attempt at 7 PM
+			});
+		});
+
+		it('handles empty patterns', () => {
+			const timePreferences = schedulingHistory.getTimePreference([]);
+			expect(timePreferences).toEqual({
+				morning: 0,
+				afternoon: 0,
+				evening: 0,
+			});
+		});
+
+		it('ignores attempts outside defined periods', async () => {
+			// Attempt at 5 AM (outside defined periods)
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 5 }),
+				true
+			);
+
+			// Attempt at 23:00 (outside defined periods)
+			await schedulingHistory.storeReschedulingPattern(
+				mockContactId,
+				'tomorrow',
+				mockTimestamp.set({ hour: 23 }),
+				true
+			);
+
+			const patterns = schedulingHistory.patternData.contactPatterns[mockContactId].attempts;
+			const timePreferences = schedulingHistory.getTimePreference(patterns);
+
+			expect(timePreferences).toEqual({
+				morning: 0,
+				afternoon: 0,
+				evening: 0,
+			});
 		});
 	});
 

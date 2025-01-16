@@ -212,7 +212,6 @@ class SchedulingHistoryService {
 
 			const patterns = this.patternData.contactPatterns[contactId];
 
-			// Add new attempt
 			const attemptData = {
 				timestamp: timestamp.toISO(),
 				type,
@@ -287,14 +286,29 @@ class SchedulingHistoryService {
 		}
 	}
 
+	// Time period tracking
+	getTimePreference(patterns) {
+		const periods = {
+			morning: 0, // 6-12
+			afternoon: 0, // 12-17
+			evening: 0, // 17-22
+		};
+
+		patterns.forEach((pattern) => {
+			const hour = pattern.timeOfDay;
+			if (hour >= 6 && hour < 12) periods.morning++;
+			else if (hour >= 12 && hour < 17) periods.afternoon++;
+			else if (hour >= 17 && hour < 22) periods.evening++;
+		});
+
+		return periods;
+	}
+
 	calculateSuccessRates(stats) {
 		return Object.entries(stats).reduce((acc, [key, data]) => {
-			const successRate = data.successes / data.attempts;
-			const score = successRate * Math.log10(data.attempts + 1); // Weight by attempt count
 			acc[key] = {
-				successRate,
+				successRate: data.successes / data.attempts,
 				attempts: data.attempts,
-				score,
 			};
 			return acc;
 		}, {});

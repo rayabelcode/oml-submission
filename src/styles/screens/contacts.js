@@ -321,12 +321,12 @@ const useStyles = () => {
 		},
 		formScrollView: {
 			paddingHorizontal: spacing.sm,
-			paddingTop: spacing.sm, // Add top padding
+			paddingTop: spacing.sm,
 		},
 		photoUploadContainer: {
 			alignItems: 'center',
 			marginBottom: spacing.md,
-			paddingTop: spacing.xs || 5, // Add top padding
+			paddingTop: spacing.xs || 5,
 		},
 		photoPreview: {
 			width: 100,
@@ -958,7 +958,7 @@ const useStyles = () => {
 			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.md,
-			alignItems: 'center', 
+			alignItems: 'center',
 		},
 		nextContactLabel: {
 			fontSize: 14,

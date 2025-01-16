@@ -57,36 +57,27 @@ export class SnoozeHandler {
 		}
 	}
 
-	// Weight patterns by recency and success rate
+	// Patterns by time period
 	async findOptimalTime(contactId, baseTime, snoozeType) {
 		try {
-			const cacheKey = `${contactId}_${baseTime.toISO()}_${snoozeType}`;
-			if (this.patternCache.has(cacheKey)) {
-				return this.patternCache.get(cacheKey);
+			const patterns = await schedulingHistory.analyzeContactPatterns(contactId);
+			if (!patterns?.successRates?.byHour) return null;
+
+			// Get success rates for current time period
+			const hour = baseTime.hour;
+			const periodRates = Object.entries(patterns.successRates.byHour)
+				.filter(([h]) => {
+					const hourNum = parseInt(h);
+					// Look within same time period (morning/afternoon/evening)
+					return Math.abs(hourNum - hour) <= 3;
+				})
+				.sort(([, a], [, b]) => b.successRate - a.successRate);
+
+			if (periodRates.length > 0) {
+				return baseTime.set({ hour: parseInt(periodRates[0][0]), minute: 0 });
 			}
 
-			const analysis = await schedulingHistory.getPatternAnalysis();
-			const { preferredTimeSlots } = analysis;
-
-			// Only use patterns for tomorrow and next week
-			if (preferredTimeSlots?.length > 0 && (snoozeType === 'tomorrow' || snoozeType === 'next_week')) {
-				// Convert all times to same day for comparison
-				const normalizedTime = baseTime.set({ hour: baseTime.hour });
-
-				// Find best time slot
-				const bestSlot = preferredTimeSlots.reduce((best, current) => {
-					const [hour, score] = current;
-					const hourNum = parseInt(hour);
-					return !best || score > best.score ? { hour: hourNum, score } : best;
-				}, null);
-
-				if (bestSlot) {
-					const result = normalizedTime.set({ hour: bestSlot.hour, minute: 0 });
-					this.patternCache.set(cacheKey, result);
-					return result;
-				}
-			}
-			return null;
+			return baseTime.plus({ hours: 3 }); // fallback
 		} catch (error) {
 			console.error('Error finding optimal time:', error);
 			return null;

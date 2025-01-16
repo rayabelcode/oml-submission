@@ -47,7 +47,7 @@ export const useCommonStyles = () => {
 			marginBottom: spacing.sm,
 			position: 'relative',
 			height: 30,
-			marginTop: 0, // Add space for the buttons that overflow
+			marginTop: 0, // Space for the buttons that overflow
 		},
 		modalTitle: {
 			fontSize: 24,
