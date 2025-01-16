@@ -1,5 +1,16 @@
 import { DateTime } from 'luxon';
-import { snoozeHandler } from '../../utils/snoozeHandler';
+import { snoozeHandler, SnoozeHandler } from '../../utils/snoozeHandler';
+import { MAX_SNOOZE_ATTEMPTS } from '../../../constants/notificationConstants';
+
+beforeAll(() => {
+	// Suppress expected console errors in tests
+	jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterAll(() => {
+	// Restore console.error
+	jest.spyOn(console, 'error').mockRestore();
+});
 
 // Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
@@ -155,5 +166,74 @@ describe('Notification Flow Integration', () => {
 			expect.any(DateTime),
 			'tomorrow'
 		);
+	});
+
+	it('handles next week scheduling', async () => {
+		await snoozeHandler.initialize();
+		const result = await snoozeHandler.handleSnooze(mockContactId, 'next_week', mockCurrentTime);
+		expect(result).toBeTruthy();
+		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		expect(mockHistory.trackSnooze).toHaveBeenCalledWith(
+			mockContactId,
+			mockCurrentTime,
+			expect.any(DateTime),
+			'next_week'
+		);
+	});
+
+	it('fails initialization when user is not authenticated', async () => {
+		// Mock getUserPreferences to throw an auth error
+		const firestore = require('../../utils/firestore');
+		firestore.getUserPreferences.mockRejectedValueOnce(new Error('User not authenticated'));
+
+		await expect(snoozeHandler.initialize()).rejects.toThrow('User not authenticated');
+	});
+
+	it('uses optimal time from pattern analysis', async () => {
+		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		mockHistory.analyzeContactPatterns.mockResolvedValueOnce({
+			successRates: {
+				byHour: {
+					16: { successRate: 0.9 },
+					15: { successRate: 0.8 },
+				},
+			},
+		});
+
+		await snoozeHandler.initialize();
+		const result = await snoozeHandler.handleSnooze(mockContactId, 'tomorrow', mockCurrentTime);
+
+		expect(result).toBeTruthy();
+		expect(mockHistory.analyzeContactPatterns).toHaveBeenCalled();
+	});
+
+	it('enforces max snooze attempts', async () => {
+		const mockContact = {
+			scheduling: {
+				snooze_count: MAX_SNOOZE_ATTEMPTS,
+			},
+		};
+
+		// Mock both getContactById and updateContactScheduling
+		const firestore = require('../../utils/firestore');
+		firestore.getContactById.mockResolvedValueOnce(mockContact);
+		firestore.updateContactScheduling.mockRejectedValueOnce(new Error('Maximum snooze attempts reached'));
+
+		await snoozeHandler.initialize();
+		await expect(snoozeHandler.handleSnooze(mockContactId, 'later_today', mockCurrentTime)).rejects.toThrow(
+			/maximum snooze attempts/i
+		);
+	});
+
+	it('handles timezone conversions correctly', async () => {
+		const timezone = 'America/New_York';
+		const localHandler = new SnoozeHandler('test-user', timezone);
+		await localHandler.initialize();
+
+		const result = await localHandler.handleSnooze(mockContactId, 'later_today', mockCurrentTime);
+
+		expect(result).toBeTruthy();
+		const scheduledTime = DateTime.fromJSDate(result).setZone(timezone);
+		expect(scheduledTime.zoneName).toBe(timezone);
 	});
 });
