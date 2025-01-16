@@ -149,8 +149,8 @@ export class SchedulingService {
 		});
 	}
 
-	hasTimeConflict(dateTime, contact) {
-		const minGap = contact?.scheduling?.minimum_gap || 30;
+	hasTimeConflict(dateTime) {
+		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
 		return this.reminders.some((reminder) => {
 			const reminderTime = reminder.date.toDate().getTime();
 			const timeToCheck = dateTime.getTime();
@@ -191,7 +191,7 @@ export class SchedulingService {
 			})
 			.toJSDate();
 
-		if (!this.isTimeBlocked(exactTime, contact) && !this.hasTimeConflict(exactTime, contact)) {
+		if (!this.isTimeBlocked(exactTime, contact) && !this.hasTimeConflict(exactTime)) {
 			return exactTime;
 		}
 
@@ -229,7 +229,11 @@ export class SchedulingService {
 			let targetDate = dt;
 
 			// Only adjust for preferred days if they exist
-			if (Array.isArray(preferences.preferred_days) && preferences.preferred_days.length > 0 && frequency !== 'daily') {
+			if (
+				Array.isArray(preferences.preferred_days) &&
+				preferences.preferred_days.length > 0 &&
+				frequency !== 'daily'
+			) {
 				const daysMap = {
 					sunday: 7,
 					monday: 1,
@@ -522,11 +526,11 @@ export class SchedulingService {
 		);
 	}
 
-	calculateDistanceScore(dateTime, contact) {
+	calculateDistanceScore(dateTime) {
 		if (this.reminders.length === 0) return 1.0;
-
-		const minGap = contact?.scheduling?.minimum_gap || 30;
-		const optimalGap = minGap * 2;
+	
+		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
+		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
 
 		const timeToCheck = dateTime.getTime();
 		const gaps = this.reminders.map((reminder) => {
@@ -613,7 +617,7 @@ export class SchedulingService {
 				const resolvedDate = await strategy(date, contact);
 				if (
 					resolvedDate &&
-					!this.hasTimeConflict(resolvedDate, contact) &&
+					!this.hasTimeConflict(resolvedDate) &&
 					!this.isTimeBlocked(resolvedDate, contact)
 				) {
 					const shiftedDate = await this.shiftWithinDay(resolvedDate, contact);
@@ -692,8 +696,8 @@ export class SchedulingService {
 		let current = expandedStart;
 		while (current <= expandedEnd) {
 			if (
-				!this.hasTimeConflict(current.toJSDate(), contact) &&
-				!this.isTimeBlocked(current.toJSDate(), contact)
+				!this.hasTimeConflict(currentSlot.toJSDate()) &&
+				!this.isTimeBlocked(currentSlot.toJSDate(), contact)
 			) {
 				return current.toJSDate();
 			}
@@ -717,5 +721,72 @@ export class SchedulingService {
 		}
 
 		return null;
+	}
+
+	// Gap Scheduling
+	validateGapRequirements(proposedTime, userPreferences) {
+		const minGap = userPreferences?.scheduling_preferences?.minimumGapMinutes || 20; // fallback to 20
+		const optimalGap = userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+
+		const dt = DateTime.fromJSDate(proposedTime).setZone(this.timeZone);
+
+		// Check existing reminders
+		const conflicts = this.reminders.filter((reminder) => {
+			const reminderTime = reminder.date.toDate().getTime();
+			const proposedTimeMs = proposedTime.getTime();
+			const gapMinutes = Math.abs(proposedTimeMs - reminderTime) / (1000 * 60);
+			return gapMinutes < minGap;
+		});
+
+		if (conflicts.length > 0) {
+			return {
+				isValid: false,
+				conflicts,
+				reason: `Too close to existing reminder(s). Minimum gap is ${minGap} minutes.`,
+			};
+		}
+
+		return { isValid: true };
+	}
+
+	findNextAvailableTimeWithGap(baseTime, userPreferences) {
+		const minGap = userPreferences?.scheduling_preferences?.minimumGapMinutes || 5;
+		const optimalGap = userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+
+		let currentTime = DateTime.fromJSDate(baseTime).setZone(this.timeZone);
+		const maxAttempts = 48; // Try up to 48 slots (12 hours with 15-min intervals)
+
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			const proposedTime = currentTime.toJSDate();
+			const validation = this.validateGapRequirements(proposedTime, userPreferences);
+
+			if (validation.isValid) {
+				return proposedTime;
+			}
+
+			// Move to next time slot (15-minute intervals)
+			currentTime = currentTime.plus({ minutes: TIME_SLOT_INTERVAL });
+		}
+
+		throw new Error('No available time slot found within reasonable range');
+	}
+
+	adjustTimeForGaps(proposedTime, contact, userPreferences) {
+		// First try the exact proposed time
+		const validation = this.validateGapRequirements(proposedTime, userPreferences);
+		if (validation.isValid) {
+			return proposedTime;
+		}
+
+		// If that doesn't work, find the next available time that respects gaps
+		const adjustedTime = this.findNextAvailableTimeWithGap(proposedTime, userPreferences);
+
+		// Validate the adjusted time against contact preferences
+		if (this.isTimeBlocked(adjustedTime, contact)) {
+			// If blocked, try to find a slot that works for both gaps and contact preferences
+			return this.findAvailableTimeSlot(adjustedTime, contact);
+		}
+
+		return adjustedTime;
 	}
 }

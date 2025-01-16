@@ -88,7 +88,82 @@ describe('Contact Spreading', () => {
 		expect(scheduledDays.size).toBe(3);
 	});
 
+	it('should respect user gap preferences over contact gaps', () => {
+		const userPrefsWithGaps = {
+			...mockUserPreferences,
+			scheduling_preferences: {
+				minimumGapMinutes: 20,
+				optimalGapMinutes: 1440,
+			},
+		};
+
+		const schedulingService = new SchedulingService(userPrefsWithGaps, [], 'America/New_York');
+
+		// Create a reminder at 10:00
+		schedulingService.reminders = [
+			{
+				date: {
+					toDate: () =>
+						DateTime.fromObject(
+							{ year: 2024, month: 1, day: 1, hour: 10, minute: 0 },
+							{ zone: 'America/New_York' }
+						).toJSDate(),
+				},
+			},
+		];
+
+		// Try scheduling something 15 minutes later (should fail)
+		const tooClose = DateTime.fromObject(
+			{ year: 2024, month: 1, day: 1, hour: 10, minute: 15 },
+			{ zone: 'America/New_York' }
+		).toJSDate();
+
+		// Try scheduling something 25 minutes later (should succeed)
+		const farEnough = DateTime.fromObject(
+			{ year: 2024, month: 1, day: 1, hour: 10, minute: 25 },
+			{ zone: 'America/New_York' }
+		).toJSDate();
+
+		expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
+		expect(schedulingService.hasTimeConflict(farEnough)).toBeFalsy();
+	});
+
+	it('should use default gap when user preferences are missing', () => {
+		const schedulingService = new SchedulingService({}, [], 'America/New_York');
+
+		// Create a reminder at 10:00
+		schedulingService.reminders = [
+			{
+				date: {
+					toDate: () =>
+						DateTime.fromObject(
+							{ year: 2024, month: 1, day: 1, hour: 10, minute: 0 },
+							{ zone: 'America/New_York' }
+						).toJSDate(),
+				},
+			},
+		];
+
+		// Try scheduling something 15 minutes later (should fail as default is 20)
+		const tooClose = DateTime.fromObject(
+			{ year: 2024, month: 1, day: 1, hour: 10, minute: 15 },
+			{ zone: 'America/New_York' }
+		).toJSDate();
+
+		expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
+	});
+
 	it('should respect minimum gaps between contacts', async () => {
+		const userPrefsWithGaps = {
+			...mockUserPreferences,
+			scheduling_preferences: {
+				minimumGapMinutes: 120,
+				optimalGapMinutes: 1440,
+			},
+		};
+
+		const schedulingService = new SchedulingService(userPrefsWithGaps, [], 'America/New_York');
+
 		const contact = {
 			id: 'test-id',
 			scheduling: {
@@ -97,7 +172,6 @@ describe('Contact Spreading', () => {
 					active_hours: { start: '09:00', end: '17:00' },
 					preferred_days: ['monday'],
 				},
-				minimum_gap: 120, // 2 hours
 				priority: 'normal',
 			},
 		};
@@ -406,17 +480,28 @@ describe('SchedulingService', () => {
 				await schedulingService.findAvailableTimeSlot(targetDate.toJSDate(), mockContact);
 			}).rejects.toThrow('No available time slots found within working hours');
 		});
-
 		it('should handle minimum gap requirements strictly', () => {
+			const userPrefsWithGaps = {
+				...mockUserPreferences,
+				scheduling_preferences: {
+					minimumGapMinutes: 30,
+					optimalGapMinutes: 1440,
+				},
+			};
+
+			const schedulingService = new SchedulingService(userPrefsWithGaps, [], 'America/New_York');
+
 			const baseTime = DateTime.now().set({ hour: 12, minute: 0 }).toJSDate();
 			schedulingService.reminders = [
 				{
-					date: { toDate: () => baseTime },
+					date: {
+						toDate: () => baseTime,
+					},
 				},
 			];
 
-			const tooClose = new Date(baseTime.getTime() + 29 * 60 * 1000);
-			const justRight = new Date(baseTime.getTime() + 30 * 60 * 1000);
+			const tooClose = new Date(baseTime.getTime() + 29 * 60 * 1000); // 29 minutes
+			const justRight = new Date(baseTime.getTime() + 30 * 60 * 1000); // 30 minutes
 
 			expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
 			expect(schedulingService.hasTimeConflict(justRight)).toBeFalsy();
@@ -754,10 +839,7 @@ describe('SchedulingService', () => {
 			// Verify the user-friendly response
 			expect(result.status).toBe('SLOTS_FILLED');
 			expect(result.message).toBe('This day is fully booked. Would you like to:');
-			expect(result.options).toEqual([
-				'Try the next available day',
-				'Schedule for next week',
-			]);
+			expect(result.options).toEqual(['Try the next available day', 'Schedule for next week']);
 		});
 	});
 });
