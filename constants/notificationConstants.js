@@ -12,6 +12,18 @@ export const REMINDER_STATUS = {
 	SKIPPED: 'skipped',
 };
 
+// Default notifcation configurations
+export const NOTIFICATION_CONFIGS = {
+	FOLLOW_UP: {
+		DELAY: 0, // immediate for now
+		TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours until auto-cleanup
+	},
+	SCHEDULED: {
+		MIN_ADVANCE: 0, // minimum 0 minutes advance
+		MAX_ADVANCE: 7 * 24 * 60 * 60 * 1000, // maximum 7 days advance
+	},
+};
+
 // Default notification format
 export const REMINDER_SCHEMA = {
 	contact_id: String,
