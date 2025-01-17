@@ -1,5 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 
+export const NOTIFICATION_MAP_KEY = 'notification_map';
+
 export const REMINDER_TYPES = {
 	SCHEDULED: 'scheduled',
 	FOLLOW_UP: 'call_follow_up',
@@ -12,16 +14,116 @@ export const REMINDER_STATUS = {
 	SKIPPED: 'skipped',
 };
 
-// Default notifcation configurations
+// iOS specific configurations
+export const IOS_CONFIGS = {
+	NOTIFICATION_SETTINGS: {
+		// iOS foreground presentation options
+		FOREGROUND: {
+			alert: true,
+			badge: true,
+			sound: true,
+		},
+		// iOS background fetch settings
+		BACKGROUND: {
+			fetchInterval: 15 * 60, // 15 minutes in seconds
+		},
+		// iOS specific notification categories
+		CATEGORIES: {
+			FOLLOW_UP: {
+				identifier: 'follow_up',
+				actions: [
+					{
+						identifier: 'add_notes',
+						title: 'Add Notes',
+						options: {
+							foreground: true,
+							destructive: false,
+						},
+					},
+					{
+						identifier: 'dismiss',
+						title: 'Dismiss',
+						options: {
+							foreground: false,
+							destructive: true,
+						},
+					},
+				],
+			},
+			SCHEDULED: {
+				identifier: 'scheduled',
+				actions: [
+					{
+						identifier: 'call_now',
+						title: 'Call Now',
+						options: {
+							foreground: true,
+						},
+					},
+					{
+						identifier: 'snooze',
+						title: 'Snooze',
+						options: {
+							foreground: true,
+						},
+					},
+				],
+			},
+		},
+	},
+};
+
+// Enhanced notification configurations
 export const NOTIFICATION_CONFIGS = {
 	FOLLOW_UP: {
 		DELAY: 0, // immediate for now
 		TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours until auto-cleanup
+		CLEANUP: {
+			TRIGGERS: ['notes_added', 'dismissed', 'timeout'],
+			ACTIONS: {
+				notes_added: 'archive',
+				dismissed: 'delete',
+				timeout: 'archive',
+			},
+		},
 	},
 	SCHEDULED: {
 		MIN_ADVANCE: 0, // minimum 0 minutes advance
 		MAX_ADVANCE: 7 * 24 * 60 * 60 * 1000, // maximum 7 days advance
+		CLEANUP: {
+			TRIGGERS: ['completed', 'skipped', 'expired'],
+			ACTIONS: {
+				completed: 'archive',
+				skipped: 'delete',
+				expired: 'archive',
+			},
+		},
 	},
+};
+
+// Error handling configurations
+export const ERROR_HANDLING = {
+	RETRY: {
+		MAX_ATTEMPTS: 3,
+		INTERVALS: [1000, 5000, 15000], // Retry delays in ms
+	},
+	OFFLINE: {
+		QUEUE_KEY: '@NotificationQueue',
+		MAX_QUEUE_SIZE: 100,
+	},
+};
+
+// Notification coordinator settings
+export const COORDINATOR_CONFIG = {
+    BATCH_SIZE: 50,
+    CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
+    SYNC_INTERVAL: 15 * 60 * 1000, // 15 minutes
+    STORAGE_KEYS: {
+        NOTIFICATION_MAP: NOTIFICATION_MAP_KEY,
+        PENDING_QUEUE: '@PendingNotifications',
+        LAST_CLEANUP: '@LastCleanupTime',
+        LAST_SYNC: '@LastSyncTime',
+    },
 };
 
 // Default notification format
@@ -99,7 +201,6 @@ export const PATTERN_TRACKING = {
 };
 
 export const MAX_SNOOZE_ATTEMPTS = 4;
-export const NOTIFICATION_MAP_KEY = 'notification_map';
 
 export const NOTIFICATION_MESSAGES = {
 	MAX_SNOOZE_REACHED: {
