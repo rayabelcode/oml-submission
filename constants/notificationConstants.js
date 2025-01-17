@@ -12,6 +12,18 @@ export const REMINDER_STATUS = {
 	SKIPPED: 'skipped',
 };
 
+// Default notifcation configurations
+export const NOTIFICATION_CONFIGS = {
+	FOLLOW_UP: {
+		DELAY: 0, // immediate for now
+		TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours until auto-cleanup
+	},
+	SCHEDULED: {
+		MIN_ADVANCE: 0, // minimum 0 minutes advance
+		MAX_ADVANCE: 7 * 24 * 60 * 60 * 1000, // maximum 7 days advance
+	},
+};
+
 // Default notification format
 export const REMINDER_SCHEMA = {
 	contact_id: String,
@@ -55,6 +67,36 @@ export const SNOOZE_OPTIONS = [
 		type: 'skip',
 	},
 ];
+
+export const PATTERN_TRACKING = {
+	TIME_WINDOW: {
+		DEFAULT: 90, // 3 months default days to analyze
+		MIN: 30, // Minimum days to analyze
+		MAX: 365, // Maximum days to analyze
+	},
+	MIN_ATTEMPTS: {
+		DEFAULT: 3, // Default minimum attempts before using patterns
+		BY_FREQUENCY: {
+			weekly: 3,
+			biweekly: 2,
+			monthly: 2,
+			bimonthly: 1,
+			quarterly: 1,
+		},
+	},
+	WEIGHTS: {
+		COMPLETION: 1.0,
+		SNOOZE: 0.7,
+		SKIP: -0.5,
+		TIME_OF_DAY: 0.8,
+		RECENCY: {
+			LAST_WEEK: 1.0,
+			LAST_MONTH: 0.8,
+			LAST_QUARTER: 0.5,
+			OLDER: 0.3,
+		},
+	},
+};
 
 export const MAX_SNOOZE_ATTEMPTS = 4;
 export const NOTIFICATION_MAP_KEY = 'notification_map';

@@ -15,6 +15,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
+import { snoozeHandler } from '../utils/snoozeHandler';
+import { DateTime } from 'luxon';
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -26,6 +28,8 @@ export default function DashboardScreen({ navigation, route }) {
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
 	const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
+	const [snoozeLoading, setSnoozeLoading] = useState(false);
+	const [snoozeError, setSnoozeError] = useState(null);
 	const [selectedReminder, setSelectedReminder] = useState(null);
 	const [remindersState, setRemindersState] = useState({
 		data: [],
@@ -131,19 +135,24 @@ export default function DashboardScreen({ navigation, route }) {
 		setShowSnoozeOptions(true);
 	};
 
-	const handleSnoozeSelection = async (duration) => {
+	const handleSnoozeSelection = async (option) => {
 		if (!selectedReminder) return;
 
+		setSnoozeLoading(true);
+		setSnoozeError(null);
+
 		try {
-			const newTime = new Date(Date.now() + duration);
-			await notificationService.rescheduleFollowUp(selectedReminder.firestoreId, newTime);
+			const contactId = selectedReminder.data.contactId;
+			const currentTime = DateTime.now();
+
+			await snoozeHandler.handleSnooze(contactId, option, currentTime);
 			await loadReminders();
+			setShowSnoozeOptions(false);
 		} catch (error) {
 			console.error('Error snoozing reminder:', error);
-			Alert.alert('Error', 'Failed to snooze reminder');
+			setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
 		} finally {
-			setShowSnoozeOptions(false);
-			setSelectedReminder(null);
+			setSnoozeLoading(false);
 		}
 	};
 
@@ -258,25 +267,34 @@ export default function DashboardScreen({ navigation, route }) {
 				onClose={() => {
 					setShowSnoozeOptions(false);
 					setSelectedReminder(null);
+					setSnoozeError(null);
 				}}
+				loading={snoozeLoading}
+				error={snoozeError}
 				options={[
 					{
-						id: '1h',
+						id: 'later_today',
 						icon: 'time-outline',
-						text: 'In 1 hour',
-						onPress: () => handleSnoozeSelection(60 * 60 * 1000),
+						text: 'Later Today',
+						onPress: () => handleSnoozeSelection('later_today'),
 					},
 					{
-						id: '3h',
-						icon: 'time-outline',
-						text: 'In 3 hours',
-						onPress: () => handleSnoozeSelection(3 * 60 * 60 * 1000),
-					},
-					{
-						id: '1d',
+						id: 'tomorrow',
 						icon: 'calendar-outline',
 						text: 'Tomorrow',
-						onPress: () => handleSnoozeSelection(24 * 60 * 60 * 1000),
+						onPress: () => handleSnoozeSelection('tomorrow'),
+					},
+					{
+						id: 'next_week',
+						icon: 'calendar-outline',
+						text: 'Next Week',
+						onPress: () => handleSnoozeSelection('next_week'),
+					},
+					{
+						id: 'skip',
+						icon: 'close-circle-outline',
+						text: 'Skip This Call',
+						onPress: () => handleSnoozeSelection('skip'),
 					},
 				]}
 			/>
