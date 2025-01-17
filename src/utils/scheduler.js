@@ -169,16 +169,30 @@ export class SchedulingService {
 
 		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
 
+		// Get all reminders for the current day
+		const dayStart = dt.startOf('day');
+		const dayEnd = dt.endOf('day');
+		const dayReminders = this.reminders.filter((r) => {
+			const reminderDate = DateTime.fromJSDate(r.date.toDate());
+			return reminderDate >= dayStart && reminderDate <= dayEnd;
+		});
+
 		const workingSlots = new Set(
-			this.reminders.map((r) => {
+			dayReminders.map((r) => {
 				const d = DateTime.fromJSDate(r.date.toDate());
 				return `${d.hour}:${d.minute}`;
 			})
 		);
 
 		const totalPossibleSlots = ((endHour - startHour) * 60) / TIME_SLOT_INTERVAL;
+
+		// Only check current day's slots
 		if (workingSlots.size >= totalPossibleSlots) {
-			throw new Error('No available time slots found within working hours');
+			// Try next day instead of throwing error
+			return this.findAvailableTimeSlot(
+				dt.plus({ days: 1 }).set({ hour: startHour, minute: 0 }).toJSDate(),
+				contact
+			);
 		}
 
 		const requestedHour = dt.hour;
@@ -528,7 +542,7 @@ export class SchedulingService {
 
 	calculateDistanceScore(dateTime) {
 		if (this.reminders.length === 0) return 1.0;
-	
+
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
 		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
 
