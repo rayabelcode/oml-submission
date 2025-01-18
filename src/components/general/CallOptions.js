@@ -1,7 +1,7 @@
 import React from 'react';
 import Constants from 'expo-constants';
 import ActionModal from './ActionModal';
-import { callHandler } from '../../utils/callHandlerInstance';
+import { callHandler } from '../../utils/callHandler';
 
 const CallOptions = ({ show, contact, onClose }) => {
 	const handleCall = async (callType) => {

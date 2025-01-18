@@ -4,7 +4,7 @@ export const NOTIFICATION_MAP_KEY = 'notification_map';
 
 export const REMINDER_TYPES = {
 	SCHEDULED: 'scheduled',
-	FOLLOW_UP: 'call_follow_up',
+	FOLLOW_UP: 'follow_up',
 };
 
 export const REMINDER_STATUS = {

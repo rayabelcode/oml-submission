@@ -310,7 +310,11 @@ class NotificationCoordinator {
 				const timestamp = new Date(data.timestamp);
 				const age = now - timestamp;
 
-				if (age > NOTIFICATION_CONFIGS[data.options.type]?.CLEANUP?.TIMEOUT) {
+				// Null check and default type
+				const notificationType = data.options?.type || 'FOLLOW_UP';
+				const timeoutConfig = NOTIFICATION_CONFIGS[notificationType]?.CLEANUP?.TIMEOUT;
+
+				if (timeoutConfig && age > timeoutConfig) {
 					promises.push(this.cancelNotification(id));
 				}
 			}

@@ -1,13 +1,11 @@
 import { Platform, Linking, Alert } from 'react-native';
-import { addContactHistory, updateNextContact } from './firestore';
-import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { REMINDER_TYPES } from '../../constants/notificationConstants';
+import { notificationService } from './notifications';
 
 const ACTIVE_CALL_KEY = '@CallHandler:activeCall';
 
-export class CallHandler {
-	constructor(notificationService) {
+class CallHandler {
+	constructor() {
 		this.initialized = false;
 		this.activeCall = null;
 		this.notificationService = notificationService;
@@ -34,7 +32,6 @@ export class CallHandler {
 				return false;
 			}
 
-			// Save call data
 			const callData = {
 				contact,
 				startTime: new Date().toISOString(),
@@ -42,13 +39,9 @@ export class CallHandler {
 			};
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
-
-			// Initialize notification service
 			await this.notificationService.initialize();
 
-			// Schedule follow-up notification
 			const notificationTime = new Date(Date.now() + 5000);
-
 			const notificationId = await this.notificationService.scheduleCallFollowUp(
 				{
 					...contact,
@@ -60,7 +53,6 @@ export class CallHandler {
 				notificationTime
 			);
 
-			// Open call URL
 			await Linking.openURL(urlScheme);
 			return true;
 		} catch (error) {
@@ -80,5 +72,6 @@ export class CallHandler {
 			if (onClose) onClose();
 		}
 	}
-
 }
+
+export const callHandler = new CallHandler();
