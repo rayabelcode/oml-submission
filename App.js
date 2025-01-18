@@ -137,14 +137,6 @@ function App() {
 					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);
 
-				Notifications.setNotificationHandler({
-					handleNotification: async () => ({
-						shouldShowAlert: true,
-						shouldPlaySound: true,
-						shouldSetBadge: true,
-					}),
-				});
-
 				Notifications.addNotificationReceivedListener((notification) => {});
 			} catch (e) {
 				console.warn(e);

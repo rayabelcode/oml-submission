@@ -42,6 +42,51 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
 	alert: jest.fn(),
 }));
 
+jest.mock('../../utils/callHandler', () => {
+	const MockCallHandler = jest.fn().mockImplementation(() => ({
+		initiateCall: jest.fn().mockImplementation(async (contact, callType) => {
+			let urlScheme;
+			switch (callType) {
+				case 'facetime-video':
+					urlScheme = `facetime://${contact.phone}`;
+					break;
+				case 'facetime-audio':
+					urlScheme = `facetime-audio://${contact.phone}`;
+					break;
+				default:
+					urlScheme = `tel:${contact.phone}`;
+			}
+
+			const canOpen = await require('react-native/Libraries/Linking/Linking').canOpenURL(urlScheme);
+			if (!canOpen) {
+				require('react-native/Libraries/Alert/Alert').alert(
+					'Call Error',
+					`Cannot make ${callType} call. Please check if the app is installed.`
+				);
+				return false;
+			}
+
+			await require('react-native/Libraries/Linking/Linking').openURL(urlScheme);
+			return true;
+		}),
+		handleCallAction: jest.fn().mockImplementation(async (contact, type, onClose) => {
+			try {
+				await require('react-native/Libraries/Linking/Linking').openURL(`tel:${contact.phone}`);
+				if (onClose) onClose();
+				return true;
+			} catch (error) {
+				if (onClose) onClose();
+				return false;
+			}
+		}),
+	}));
+
+	return {
+		CallHandler: MockCallHandler,
+		callHandler: new MockCallHandler(),
+	};
+});
+
 import { CallHandler } from '../../utils/callHandler';
 import { Linking, Alert } from 'react-native';
 
