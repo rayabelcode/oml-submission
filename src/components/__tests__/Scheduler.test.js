@@ -18,6 +18,9 @@ jest.mock('firebase/firestore', () => ({
 			};
 		},
 	},
+	initializeFirestore: jest.fn(),
+	persistentLocalCache: jest.fn(() => ({})),
+	persistentMultipleTabManager: jest.fn(() => ({})),
 }));
 
 const mockUserPreferences = {
