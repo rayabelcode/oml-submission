@@ -34,6 +34,11 @@ export const sendPushNotification = async (userIds, notification) => {
 
 		const tokens = (await Promise.all(tokenPromises)).filter(Boolean);
 
+		// Don't make the API call if there are no valid tokens
+		if (tokens.length === 0) {
+			return true; // Return true since this isn't an error case
+		}
+
 		// Send to each token
 		const messages = tokens.map((token) => ({
 			to: token,
