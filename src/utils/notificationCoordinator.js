@@ -9,6 +9,9 @@ import {
 	IOS_CONFIGS,
 	NOTIFICATION_CONFIGS,
 } from '../../constants/notificationConstants';
+import { sendPushNotification, scheduleLocalNotificationWithPush } from './notifications/pushNotification';
+import { doc, getUserProfile, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
 
 class NotificationCoordinator {
 	constructor() {
@@ -49,22 +52,38 @@ class NotificationCoordinator {
 			// Request permissions
 			await this.requestPermissions();
 
-			// Load stored data
+			// Get Expo push token and store in Firestore only if user is authenticated
+			if (Platform.OS === 'ios' && auth.currentUser) {
+				try {
+					const token = (
+						await Notifications.getExpoPushTokenAsync({
+							projectId: 'a2b79805-c750-4012-92e8-fee850d83b9c',
+						})
+					).data;
+
+					// Store token in user's Firestore document
+					const userDoc = doc(db, 'users', auth.currentUser.uid);
+					await updateDoc(userDoc, {
+						expoPushToken: token,
+						devicePlatform: Platform.OS,
+						lastTokenUpdate: serverTimestamp(),
+					});
+				} catch (tokenError) {
+					console.error('Error storing push token:', tokenError);
+					// Continue initialization even if token storage fails
+				}
+			}
+
+			// Initialization services
 			await this.loadStoredData();
-
-			// Initialize services
 			await this.initializeServices();
-
-			// Set up app state and network listeners
 			this.setupEventListeners();
-
-			// Start maintenance intervals
 			this.startMaintenanceIntervals();
 
 			this.initialized = true;
 			return true;
 		} catch (error) {
-			console.error('Failed to initialize notification coordinator:', error);
+			console.error('Error in initialize:', error);
 			return false;
 		}
 	}
@@ -179,6 +198,9 @@ class NotificationCoordinator {
 		}
 
 		try {
+			const userId = auth.currentUser?.uid;
+			if (!userId) throw new Error('User not authenticated');
+
 			// Prepare notification content
 			const finalContent = {
 				...content,
@@ -188,14 +210,14 @@ class NotificationCoordinator {
 					}),
 			};
 
-			// Schedule the notification
-			const notificationId = await Notifications.scheduleNotificationAsync({
+			// Schedule the local notification
+			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
 				trigger,
 			});
 
 			// Store in notification map
-			this.notificationMap.set(notificationId, {
+			this.notificationMap.set(localNotificationId, {
 				content: finalContent,
 				trigger,
 				options,
@@ -204,12 +226,27 @@ class NotificationCoordinator {
 
 			await this.saveNotificationMap();
 
-			// Handle offline queue if needed
-			if (!options.skipQueue && !(await this.checkConnectivity())) {
-				await this.addToPendingQueue(notificationId, finalContent, trigger, options);
+			// If this is a future notification, schedule push notification
+			if (trigger.seconds > 0) {
+				const userDoc = await getUserProfile(userId);
+				if (userDoc?.expoPushToken) {
+					await sendPushNotification([userId], {
+						title: finalContent.title,
+						body: finalContent.body,
+						data: {
+							...finalContent.data,
+							localNotificationId,
+						},
+					});
+				}
 			}
 
-			return notificationId;
+			// Handle offline queue if needed
+			if (!options.skipQueue && !(await this.checkConnectivity())) {
+				await this.addToPendingQueue(localNotificationId, finalContent, trigger, options);
+			}
+
+			return localNotificationId;
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
 			if (options.retry !== false) {
