@@ -75,6 +75,7 @@ jest.mock('../../utils/scheduler', () => ({
 	SchedulingService: jest.fn().mockImplementation(() => ({
 		findAvailableTimeSlot: jest.fn((date) => date),
 		initialize: jest.fn(),
+		scheduleNotificationForReminder: jest.fn().mockResolvedValue(true)
 	})),
 }));
 
