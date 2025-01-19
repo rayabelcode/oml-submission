@@ -12,6 +12,7 @@ import {
 import { sendPushNotification, scheduleLocalNotificationWithPush } from './notifications/pushNotification';
 import { doc, getUserProfile, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
+import { reminderSync } from './notifications/reminderSync';
 
 class NotificationCoordinator {
 	constructor() {
@@ -68,6 +69,9 @@ class NotificationCoordinator {
 						devicePlatform: Platform.OS,
 						lastTokenUpdate: serverTimestamp(),
 					});
+
+					// Start reminder sync after we confirm user is authenticated
+					await reminderSync.start();
 				} catch (tokenError) {
 					console.error('Error storing push token:', tokenError);
 					// Continue initialization even if token storage fails
@@ -125,6 +129,9 @@ class NotificationCoordinator {
 				});
 			}
 
+			// Start reminder sync
+			await reminderSync.start();
+
 			return true;
 		} catch (error) {
 			console.error('Error requesting notification permissions:', error);
@@ -181,6 +188,10 @@ class NotificationCoordinator {
 
 	async handleAppStateChange(nextAppState) {
 		if (nextAppState === 'active') {
+			// Start reminder sync if user is authenticated
+			if (auth.currentUser && !reminderSync.initialized) {
+				await reminderSync.start();
+			}
 			await this.syncPendingNotifications();
 			await this.performCleanup();
 		}
@@ -431,6 +442,9 @@ class NotificationCoordinator {
 		if (this.networkSubscription) {
 			this.networkSubscription();
 		}
+
+		// Stop reminder sync
+		reminderSync.stop();
 	}
 }
 
