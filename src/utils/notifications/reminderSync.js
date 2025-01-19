@@ -8,10 +8,10 @@ class ReminderSync {
 		this.unsubscribe = null;
 		this.localNotifications = new Map();
 		this.initialized = false;
+		this.authTimeout = 5000;
 	}
 
-	async start() {
-		// If already initialized, don't start again
+	async start(options = {}) {
 		if (this.initialized) return;
 
 		try {
@@ -24,16 +24,19 @@ class ReminderSync {
 							resolve();
 						}
 					});
-					// Set a timeout to prevent hanging
+					// Use immediate timeout in test environment
+					const timeout = options.testing ? 0 : this.authTimeout;
 					setTimeout(() => {
 						unsubscribe();
 						resolve();
-					}, 5000);
+					}, timeout);
 				});
 			}
 
-			// Check again after waiting
-			if (!auth.currentUser) return;
+			if (!auth.currentUser) {
+				console.error('No authenticated user');
+				return;
+			}
 
 			// Get all current local notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
