@@ -130,6 +130,17 @@ export class SnoozeHandler {
 				'later_today'
 			);
 
+			if (availableTime) {
+				const contact = await getContactById(contactId);
+				await this.schedulingService.scheduleNotificationForReminder({
+					id: contactId,
+					contactName: contact.first_name + ' ' + contact.last_name,
+					scheduledTime: availableTime,
+					contact_id: contactId,
+					user_id: this.userId,
+					type: 'scheduled',
+				});
+			}
 			return availableTime;
 		} catch (error) {
 			console.error('Error in handleLaterToday:', error);
@@ -170,6 +181,17 @@ export class SnoozeHandler {
 				'tomorrow'
 			);
 
+			if (availableTime) {
+				const contact = await getContactById(contactId);
+				await this.schedulingService.scheduleNotificationForReminder({
+					id: contactId,
+					contactName: contact.first_name + ' ' + contact.last_name,
+					scheduledTime: availableTime,
+					contact_id: contactId,
+					user_id: this.userId,
+					type: 'scheduled',
+				});
+			}
 			return availableTime;
 		} catch (error) {
 			console.error('Error in handleTomorrow:', error);
@@ -202,6 +224,17 @@ export class SnoozeHandler {
 				'next_week'
 			);
 
+			if (availableTime) {
+				const contact = await getContactById(contactId);
+				await this.schedulingService.scheduleNotificationForReminder({
+					id: contactId,
+					contactName: contact.first_name + ' ' + contact.last_name,
+					scheduledTime: availableTime,
+					contact_id: contactId,
+					user_id: this.userId,
+					type: 'scheduled',
+				});
+			}
 			return availableTime;
 		} catch (error) {
 			console.error('Error in handleNextWeek:', error);

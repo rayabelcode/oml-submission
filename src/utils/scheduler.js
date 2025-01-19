@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
+import { scheduleLocalNotificationWithPush } from './notifications/pushNotification';
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -802,5 +803,32 @@ export class SchedulingService {
 		}
 
 		return adjustedTime;
+	}
+
+	async scheduleNotificationForReminder(reminder) {
+		const scheduledTime = reminder.scheduledTime?.toDate() || reminder.date?.toDate();
+		if (!scheduledTime) return;
+
+		const now = new Date();
+		const secondsUntilNotification = Math.max(0, Math.floor((scheduledTime - now) / 1000));
+
+		const notificationContent = {
+			title: `Scheduled Call: ${reminder.contactName}`,
+			body: `Time to connect with ${reminder.contactName}`,
+			data: {
+				type: 'scheduled',
+				reminderId: reminder.id,
+				contactId: reminder.contact_id,
+				userId: reminder.user_id,
+			},
+		};
+
+		try {
+			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, {
+				seconds: secondsUntilNotification,
+			});
+		} catch (error) {
+			console.error('Error scheduling notification:', error);
+		}
 	}
 }
