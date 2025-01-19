@@ -613,6 +613,73 @@ describe('SchedulingService', () => {
 			expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
 			expect(schedulingService.hasTimeConflict(justRight)).toBeFalsy();
 		});
+
+		describe('Timezone Handling', () => {
+			it('should handle notifications across timezone changes', async () => {
+				const originalTimezone = 'America/New_York';
+				const newTimezone = 'Asia/Tokyo';
+				const schedulingService = new SchedulingService(mockUserPreferences, [], originalTimezone);
+
+				const mockContact = {
+					id: 'test-id',
+					scheduling: {
+						relationship_type: 'friend',
+						custom_preferences: {
+							active_hours: { start: '09:00', end: '17:00' },
+						},
+					},
+				};
+
+				// Schedule in original timezone
+				const firstResult = await schedulingService.scheduleReminder(mockContact, new Date(), 'weekly');
+
+				// Change timezone
+				schedulingService.timeZone = newTimezone;
+				const secondResult = await schedulingService.scheduleReminder(
+					mockContact,
+					firstResult.date.toDate(),
+					'weekly'
+				);
+
+				// Verify times are correctly adjusted
+				const firstDateTime = DateTime.fromJSDate(firstResult.date.toDate()).setZone(originalTimezone);
+				const secondDateTime = DateTime.fromJSDate(secondResult.date.toDate()).setZone(newTimezone);
+
+				expect(firstDateTime.hour).toBeGreaterThanOrEqual(9);
+				expect(firstDateTime.hour).toBeLessThan(17);
+				expect(secondDateTime.hour).toBeGreaterThanOrEqual(9);
+				expect(secondDateTime.hour).toBeLessThan(17);
+			});
+
+			it('should maintain consistent scheduling times across timezones', async () => {
+				const schedulingService = new SchedulingService(mockUserPreferences, [], 'UTC');
+
+				const mockContact = {
+					id: 'test-id',
+					scheduling: {
+						relationship_type: 'friend',
+						custom_preferences: {
+							active_hours: { start: '09:00', end: '17:00' },
+						},
+					},
+				};
+
+				const timezones = ['America/New_York', 'Asia/Tokyo', 'Europe/London'];
+				const results = await Promise.all(
+					timezones.map(async (timezone) => {
+						schedulingService.timeZone = timezone;
+						return schedulingService.scheduleReminder(mockContact, new Date(), 'weekly');
+					})
+				);
+
+				// Verify all scheduled times fall within working hours in their respective timezones
+				results.forEach((result, index) => {
+					const localTime = DateTime.fromJSDate(result.date.toDate()).setZone(timezones[index]);
+					expect(localTime.hour).toBeGreaterThanOrEqual(9);
+					expect(localTime.hour).toBeLessThan(17);
+				});
+			});
+		});
 	});
 
 	describe('Conflict Resolution', () => {
