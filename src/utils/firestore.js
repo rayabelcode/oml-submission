@@ -510,13 +510,36 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			);
 
 			const lastContactDate = contact.last_contacted?.toDate() || new Date();
-			const nextDate = await schedulingService.scheduleReminder(
+
+			// Use new recurring scheduler instead of regular scheduler
+			const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 				{ ...contact, id: contactId },
 				lastContactDate,
 				schedulingData.frequency
 			);
 
-			updateData.scheduling.recurring_next_date = nextDate.date.toDate().toISOString();
+			// Update the scheduling data with recurrence information
+			updateData.scheduling = {
+				...updateData.scheduling,
+				recurring: {
+					frequency: schedulingData.frequency,
+					pattern_adjusted: reminderSchedule.recurrence?.pattern_adjusted || false,
+					// Only include confidence if it exists
+					...(reminderSchedule.recurrence?.confidence !== undefined && {
+						confidence: reminderSchedule.recurrence.confidence,
+					}),
+					next_date: reminderSchedule.recurrence?.next_date || reminderSchedule.date?.toDate().toISOString(),
+				},
+			};
+
+			// Set next_contact based on scheduled date
+			if (reminderSchedule.status !== 'SLOTS_FILLED') {
+				updateData.next_contact = reminderSchedule.date;
+
+				// Update the recurring_next_date
+				updateData.scheduling.recurring_next_date =
+					reminderSchedule.recurrence?.next_date || reminderSchedule.date.toDate().toISOString();
+			}
 		}
 
 		if ('custom_next_date' in schedulingData) {
@@ -537,9 +560,11 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		batch.update(contactRef, updateData);
 
-		if (schedulingData.frequency) {
+		// Handle reminder updates if there's a new next_contact date
+		if (updateData.next_contact) {
 			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
+			// Delete existing scheduled reminders
 			existingReminders.forEach((reminder) => {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
 					const reminderRef = doc(db, 'reminders', reminder.id);
@@ -547,9 +572,13 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				}
 			});
 
+			// Create new reminder
 			const newReminderRef = doc(collection(db, 'reminders'));
 			const now = Timestamp.now();
-			const scheduledTimestamp = Timestamp.fromDate(new Date(updateData.next_contact));
+			const scheduledTimestamp =
+				updateData.next_contact instanceof Timestamp
+					? updateData.next_contact
+					: Timestamp.fromDate(new Date(updateData.next_contact));
 
 			const reminderDoc = {
 				created_at: now,

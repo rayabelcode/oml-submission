@@ -23,6 +23,14 @@ jest.mock('firebase/firestore', () => ({
 	persistentMultipleTabManager: jest.fn(() => ({})),
 }));
 
+//Mock schedulingHistory
+jest.mock('../../utils/schedulingHistory', () => ({
+	schedulingHistory: {
+		analyzeContactPatterns: jest.fn(),
+		suggestOptimalTime: jest.fn(),
+	},
+}));
+
 const mockUserPreferences = {
 	relationship_types: {
 		friend: {
@@ -1097,6 +1105,110 @@ describe('SchedulingService', () => {
 
 			console.log('Long-term Scheduling Performance:', results);
 			expect(parseFloat(results[results.length - 1].operationsPerSecond)).toBeGreaterThan(3);
+		});
+	});
+
+	// Recurring reminder testing
+	describe('Recurring Reminders', () => {
+		let schedulingService;
+		let mockSchedulingHistory;
+		
+		const mockContact = {
+			id: 'test-id',
+			scheduling: {
+				relationship_type: 'friend',
+				custom_preferences: {
+					active_hours: { start: '09:00', end: '17:00' },
+				}
+			}
+		};
+	
+		beforeEach(() => {
+			jest.clearAllMocks();
+			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+			
+			// Get fresh reference to mocked module
+			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		});
+
+		it('should use base scheduling when no patterns exist', async () => {
+			// Mock no patterns found
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+				null
+			);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			// Should still have basic scheduling data
+			expect(result.date).toBeDefined();
+			expect(result.recurrence).toEqual({
+				frequency: 'weekly',
+				pattern_adjusted: false,
+				next_date: expect.any(String),
+			});
+		});
+
+		it('should enhance scheduling with pattern analysis when available', async () => {
+			// Mock successful pattern analysis
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
+				confidence: 0.8,
+				successRates: {
+					byHour: { 14: { successRate: 0.9 } },
+				},
+			});
+
+			// Mock optimal time suggestion
+			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValue(
+				DateTime.now().set({ hour: 14, minute: 0 })
+			);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			expect(result.recurrence).toEqual({
+				frequency: 'weekly',
+				pattern_adjusted: true,
+				confidence: 0.8,
+				next_date: expect.any(String),
+			});
+		});
+
+		it('should respect scheduling constraints even with pattern adjustment', async () => {
+			// Mock pattern analysis suggesting a blocked time
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
+				confidence: 0.8,
+				successRates: {
+					byHour: { 23: { successRate: 0.9 } }, // Outside active hours
+				},
+			});
+
+			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValue(
+				DateTime.now().set({ hour: 23, minute: 0 })
+			);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			// Should fall back to base scheduling
+			expect(result.recurrence.pattern_adjusted).toBe(false);
+
+			// Verify time is within allowed hours
+			const scheduledHour = DateTime.fromJSDate(result.date.toDate()).hour;
+			expect(scheduledHour).toBeGreaterThanOrEqual(9);
+			expect(scheduledHour).toBeLessThan(17);
+		});
+
+		it('should handle slots filled status correctly', async () => {
+			// Mock base scheduling returning slots filled
+			jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce({
+				status: 'SLOTS_FILLED',
+				message: 'This day is fully booked. Would you like to:',
+				options: ['Try the next available day', 'Schedule for next week'],
+			});
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			expect(result.status).toBe('SLOTS_FILLED');
+			expect(result.message).toBeDefined();
+			expect(result.options).toBeDefined();
 		});
 	});
 });

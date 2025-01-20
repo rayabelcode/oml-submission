@@ -14,6 +14,19 @@ export const REMINDER_STATUS = {
 	SKIPPED: 'skipped',
 };
 
+// Recurring reminder configurations
+export const RECURRENCE_METADATA = {
+	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns
+	TYPES: {
+		DAILY: 'daily',
+		WEEKLY: 'weekly',
+		BIWEEKLY: 'biweekly',
+		MONTHLY: 'monthly',
+		QUARTERLY: 'quarterly',
+		YEARLY: 'yearly',
+	},
+};
+
 // iOS specific configurations
 export const IOS_CONFIGS = {
 	NOTIFICATION_SETTINGS: {
@@ -115,15 +128,15 @@ export const ERROR_HANDLING = {
 
 // Notification coordinator settings
 export const COORDINATOR_CONFIG = {
-    BATCH_SIZE: 50,
-    CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
-    SYNC_INTERVAL: 15 * 60 * 1000, // 15 minutes
-    STORAGE_KEYS: {
-        NOTIFICATION_MAP: NOTIFICATION_MAP_KEY,
-        PENDING_QUEUE: '@PendingNotifications',
-        LAST_CLEANUP: '@LastCleanupTime',
-        LAST_SYNC: '@LastSyncTime',
-    },
+	BATCH_SIZE: 50,
+	CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
+	SYNC_INTERVAL: 15 * 60 * 1000, // 15 minutes
+	STORAGE_KEYS: {
+		NOTIFICATION_MAP: NOTIFICATION_MAP_KEY,
+		PENDING_QUEUE: '@PendingNotifications',
+		LAST_CLEANUP: '@LastCleanupTime',
+		LAST_SYNC: '@LastSyncTime',
+	},
 };
 
 // Default notification format

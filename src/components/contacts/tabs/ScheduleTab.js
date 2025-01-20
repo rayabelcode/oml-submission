@@ -280,13 +280,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				{Boolean(contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) && (
 					<View style={styles.scheduledDatesContainer}>
 						<Text style={{ marginBottom: 8 }}>
-							<Text style={styles.scheduledDateLabel}>Next Recurring </Text>
+							<Text style={styles.scheduledDateLabel}>Next Recurring: </Text>
 							<Text style={styles.scheduledDateRow}>
 								{new Date(contact.scheduling.recurring_next_date).toLocaleDateString()}
 							</Text>
 						</Text>
 						<Text>
-							<Text style={styles.scheduledDateLabel}>Next Custom </Text>
+							<Text style={styles.scheduledDateLabel}>Custom Date: </Text>
 							<Text style={styles.scheduledDateRow}>
 								{new Date(contact.scheduling.custom_next_date).toLocaleDateString()}
 							</Text>

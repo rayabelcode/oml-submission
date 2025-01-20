@@ -1,6 +1,9 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
 import { scheduleLocalNotificationWithPush } from './notifications/pushNotification';
+// Recurring reminder configurations
+import { schedulingHistory } from './schedulingHistory';
+import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -439,6 +442,64 @@ export class SchedulingService {
 			}
 		}
 		return null;
+	}
+
+	// Recurring Reminder Scheduling
+	async scheduleRecurringReminder(contact, lastContactDate, frequency) {
+		try {
+			// First get base scheduling using existing logic
+			const baseSchedule = await this.scheduleReminder(contact, lastContactDate, frequency);
+
+			if (baseSchedule.status === 'SLOTS_FILLED') {
+				return baseSchedule;
+			}
+
+			// Check for pattern-based improvements
+			const patterns = await schedulingHistory.analyzeContactPatterns(
+				contact.id,
+				90 // Using default time window
+			);
+
+			if (patterns?.confidence > RECURRENCE_METADATA.MIN_CONFIDENCE) {
+				// Try to optimize the time based on patterns
+				const suggestedTime = await schedulingHistory.suggestOptimalTime(
+					contact.id,
+					DateTime.fromJSDate(baseSchedule.date.toDate()),
+					'recurring'
+				);
+
+				if (suggestedTime) {
+					const adjustedDate = suggestedTime.toJSDate();
+
+					// Only use suggested time if it doesn't violate existing constraints
+					if (!this.isTimeBlocked(adjustedDate, contact) && !this.hasTimeConflict(adjustedDate)) {
+						return {
+							...baseSchedule,
+							date: Timestamp.fromDate(adjustedDate),
+							recurrence: {
+								frequency,
+								pattern_adjusted: true,
+								confidence: patterns.confidence,
+								next_date: adjustedDate.toISOString(),
+							},
+						};
+					}
+				}
+			}
+
+			// If no pattern adjustment, return base schedule with recurrence metadata
+			return {
+				...baseSchedule,
+				recurrence: {
+					frequency,
+					pattern_adjusted: false,
+					next_date: baseSchedule.date.toDate().toISOString(),
+				},
+			};
+		} catch (error) {
+			console.error('Error in scheduleRecurringReminder:', error);
+			throw error;
+		}
 	}
 
 	async scheduleCustomDate(contact, customDate) {
