@@ -119,10 +119,18 @@ export const ERROR_HANDLING = {
 	RETRY: {
 		MAX_ATTEMPTS: 3,
 		INTERVALS: [1000, 5000, 15000], // Retry delays in ms
-	},
-	OFFLINE: {
-		QUEUE_KEY: '@NotificationQueue',
-		MAX_QUEUE_SIZE: 100,
+		PUSH: {
+			MAX_ATTEMPTS: 3,
+			INTERVALS: [2000, 10000, 30000], // Push-specific retry delays
+			BACKOFF_RATE: 2, // Exponential backoff multiplier
+			JITTER: 1000, // Random delay (ms) to prevent thundering herd
+			ERROR_CODES: {
+				INVALID_TOKEN: 'InvalidToken',
+				RATE_LIMIT: 'RateLimit',
+				NETWORK_ERROR: 'NetworkError',
+				SERVER_ERROR: 'ServerError',
+			},
+		},
 	},
 };
 
