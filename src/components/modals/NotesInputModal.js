@@ -8,8 +8,8 @@ import {
 	TouchableWithoutFeedback,
 	Keyboard,
 } from 'react-native';
-import { useTheme, spacing, layout } from '../../../context/ThemeContext';
-import { useCommonStyles } from '../../../styles/common';
+import { useTheme, spacing, layout } from '../../context/ThemeContext';
+import { useCommonStyles } from '../../styles/common';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const NotesInputModal = ({ visible, onClose, onSubmit, initialValue = '', contactName = '' }) => {
