@@ -48,6 +48,10 @@ export const IOS_CONFIGS = {
 					{
 						identifier: 'add_notes',
 						title: 'Add Notes',
+						textInput: {
+							buttonTitle: 'Save',
+							placeholder: 'Enter your call notes...',
+						},
 						options: {
 							foreground: true,
 							destructive: false,
@@ -63,6 +67,7 @@ export const IOS_CONFIGS = {
 					},
 				],
 			},
+
 			SCHEDULED: {
 				identifier: 'scheduled',
 				actions: [

@@ -67,6 +67,7 @@ class CallNotesService {
 					firestoreId: firestoreId,
 					callData: contact.callData,
 				},
+				categoryIdentifier: 'follow_up',
 				sound: true,
 			};
 
