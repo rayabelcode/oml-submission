@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { reminderSync } from '../../utils/notifications/reminderSync';
 import { getUserPreferences } from '../../utils/preferences';
 import { collection, onSnapshot, query, where, REMINDER_STATUS, REMINDER_TYPES } from 'firebase/firestore';
+import NetInfo from '@react-native-community/netinfo';
 
 // Mock expo-notifications
 jest.mock('expo-notifications', () => ({
@@ -21,6 +22,11 @@ jest.mock('../../utils/preferences', () => ({
 			timezone: 'America/New_York',
 		},
 	}),
+}));
+
+// Mock NetInfo
+jest.mock('@react-native-community/netinfo', () => ({
+	fetch: jest.fn().mockResolvedValue({ isConnected: true, isInternetReachable: true }),
 }));
 
 // Mock firebase/firestore
@@ -329,16 +335,16 @@ describe('Reminder Sync System', () => {
 				id: 'test-reminder',
 				user_id: 'test-user',
 				scheduledTime: new Date('2024-01-20T15:00:00.000Z'),
-				title: 'Test Reminder'
+				title: 'Test Reminder',
 			};
-		
+
 			getUserPreferences.mockResolvedValue({ timezone: 'America/New_York' });
-		
+
 			await reminderSync.scheduleLocalNotification(reminder);
-		
+
 			const mockCalls = Notifications.scheduleNotificationAsync.mock.calls;
 			console.log('Mock calls:', JSON.stringify(mockCalls[0][0], null, 2));
-		
+
 			// Using exact match since we know the expected values
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
 				content: {
@@ -349,13 +355,65 @@ describe('Reminder Sync System', () => {
 						scheduledTimezone: 'America/New_York',
 						originalTime: '2024-01-20T15:00:00.000Z',
 						type: undefined,
-						contactId: undefined
-					}
+						contactId: undefined,
+					},
 				},
 				trigger: {
-					date: reminder.scheduledTime
-				}
-			});		
+					date: reminder.scheduledTime,
+				},
+			});
+		});
+
+		describe('Offline Support', () => {
+			it('should queue reminders when offline', async () => {
+				// Mock offline state
+				NetInfo.fetch.mockResolvedValueOnce({
+					isConnected: false,
+					isInternetReachable: false,
+				});
+
+				const reminder = {
+					id: 'offline-reminder',
+					title: 'Offline Test',
+					scheduledTime: new Date(Date.now() + 3600000),
+				};
+
+				await reminderSync.handleReminderUpdate({
+					docChanges: () => [
+						{
+							type: 'added',
+							doc: {
+								id: reminder.id,
+								data: () => reminder,
+							},
+						},
+					],
+				});
+
+				expect(reminderSync.offlineQueue.has('offline-reminder')).toBe(true);
+				expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+			});
+
+			it('should sync offline queue when coming online', async () => {
+				// Setup offline queue
+				const reminder = {
+					id: 'queued-reminder',
+					title: 'Queued Test',
+					scheduledTime: new Date(Date.now() + 3600000),
+				};
+
+				await reminderSync.handleOfflineReminder(reminder);
+
+				// Mock coming online
+				NetInfo.fetch.mockResolvedValueOnce({
+					isConnected: true,
+					isInternetReachable: true,
+				});
+
+				await reminderSync.syncOfflineQueue();
+
+				expect(reminderSync.offlineQueue.size).toBe(0);
+			});
 		});
 	});
 });

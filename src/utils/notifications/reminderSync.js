@@ -1,6 +1,8 @@
 import * as Notifications from 'expo-notifications';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { DateTime } from 'luxon';
+import * as NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db, auth } from '../../config/firebase';
 import { REMINDER_STATUS } from '../../../constants/notificationConstants';
 import { getUserPreferences } from '../../utils/preferences';
@@ -11,6 +13,7 @@ class ReminderSync {
 		this.localNotifications = new Map();
 		this.initialized = false;
 		this.authTimeout = 5000;
+		this.offlineQueue = new Map();
 	}
 
 	async start(options = {}) {
@@ -48,6 +51,9 @@ class ReminderSync {
 				}
 			});
 
+			// Load offline queue
+			await this.loadOfflineQueue();
+
 			// Subscribe to Firestore reminders
 			const remindersRef = collection(db, 'reminders');
 			const q = query(
@@ -58,8 +64,37 @@ class ReminderSync {
 
 			this.unsubscribe = onSnapshot(q, this.handleReminderUpdate.bind(this));
 			this.initialized = true;
+
+			// Check for offline items to sync
+			const networkState = await NetInfo.fetch();
+			if (networkState.isConnected) {
+				await this.syncOfflineQueue();
+			}
 		} catch (error) {
 			console.error('Error starting reminder sync:', error);
+		}
+	}
+
+	async loadOfflineQueue() {
+		try {
+			const storedQueue = await AsyncStorage.getItem('reminderSync_offlineQueue');
+			if (storedQueue) {
+				this.offlineQueue = new Map(JSON.parse(storedQueue));
+			}
+		} catch (error) {
+			console.error('Error loading offline queue:', error);
+			this.offlineQueue = new Map();
+		}
+	}
+
+	async persistOfflineQueue() {
+		try {
+			await AsyncStorage.setItem(
+				'reminderSync_offlineQueue',
+				JSON.stringify(Array.from(this.offlineQueue.entries()))
+			);
+		} catch (error) {
+			console.error('Error persisting offline queue:', error);
 		}
 	}
 
@@ -69,15 +104,24 @@ class ReminderSync {
 			this.unsubscribe = null;
 		}
 		this.localNotifications.clear();
+		this.offlineQueue.clear();
 		this.initialized = false;
 	}
 
 	async handleReminderUpdate(snapshot) {
 		try {
+			const networkState = await NetInfo.fetch();
 			const changes = snapshot.docChanges();
 
 			for (const change of changes) {
 				const reminder = { id: change.doc.id, ...change.doc.data() };
+
+				if (!networkState.isConnected) {
+					if (change.type === 'added' || change.type === 'modified') {
+						await this.handleOfflineReminder(reminder);
+					}
+					continue;
+				}
 
 				if (change.type === 'added' || change.type === 'modified') {
 					await this.scheduleLocalNotification(reminder);
@@ -87,6 +131,34 @@ class ReminderSync {
 			}
 		} catch (error) {
 			console.error('Error handling reminder update:', error);
+		}
+	}
+
+	async handleOfflineReminder(reminder) {
+		try {
+			const notificationId = await this.scheduleLocalNotification(reminder);
+			this.offlineQueue.set(reminder.id, {
+				reminder,
+				notificationId,
+				timestamp: new Date().toISOString(),
+			});
+			await this.persistOfflineQueue();
+		} catch (error) {
+			console.error('Error handling offline reminder:', error);
+		}
+	}
+
+	async syncOfflineQueue() {
+		if (this.offlineQueue.size === 0) return;
+
+		try {
+			for (const [reminderId, { reminder }] of this.offlineQueue) {
+				await this.scheduleLocalNotification(reminder);
+				this.offlineQueue.delete(reminderId);
+			}
+			await this.persistOfflineQueue();
+		} catch (error) {
+			console.error('Error syncing offline queue:', error);
 		}
 	}
 
@@ -131,12 +203,12 @@ class ReminderSync {
 				});
 
 				this.localNotifications.set(reminder.id, notificationId);
-				return notificationId; // Return value for testing
+				return notificationId;
 			}
 			return null;
 		} catch (error) {
 			console.error('Error scheduling local notification:', error);
-			throw error; // Rethrow to help with testing
+			throw error;
 		}
 	}
 
