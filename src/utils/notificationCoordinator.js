@@ -248,6 +248,14 @@ class NotificationCoordinator {
 			const userId = auth.currentUser?.uid;
 			if (!userId) throw new Error('User not authenticated');
 
+			// Handle replacing existing notification
+			if (options.replaceId) {
+				const existingNotification = this.notificationMap.get(options.replaceId);
+				if (existingNotification) {
+					await this.cancelNotification(options.replaceId);
+				}
+			}
+
 			// Prepare notification content
 			const finalContent = {
 				...content,
@@ -257,7 +265,7 @@ class NotificationCoordinator {
 					}),
 			};
 
-			// Schedule the local notification FIRST
+			// Schedule the local notification
 			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
 				trigger,
@@ -269,6 +277,7 @@ class NotificationCoordinator {
 				trigger,
 				options,
 				timestamp: new Date().toISOString(),
+				replacedId: options.replaceId, // Track which notification this replaced
 			});
 
 			await this.saveNotificationMap();
@@ -284,6 +293,7 @@ class NotificationCoordinator {
 							data: {
 								...finalContent.data,
 								localNotificationId: localNotificationId,
+								replacedId: options.replaceId, // Include in push data
 							},
 						});
 					}

@@ -3,6 +3,7 @@ jest.mock('firebase/firestore', () => ({
 	initializeFirestore: jest.fn(() => ({})),
 	persistentLocalCache: jest.fn(() => ({})),
 	persistentMultipleTabManager: jest.fn(() => ({})),
+	where: jest.fn().mockReturnThis(),
 	doc: jest.fn(),
 	getDoc: jest.fn(),
 	updateDoc: jest.fn(),
@@ -11,6 +12,11 @@ jest.mock('firebase/firestore', () => ({
 		expoPushToken: 'mock-token',
 		uid: 'test-user-id',
 	}),
+	collection: jest.fn(() => ({
+		where: jest.fn().mockReturnThis(),
+		orderBy: jest.fn().mockReturnThis(),
+		get: jest.fn().mockResolvedValue({ docs: [] }),
+	})),
 }));
 
 // Mock notification constants
@@ -33,6 +39,37 @@ const NOTIFICATION_CONSTANTS = {
 		},
 		OFFLINE: {
 			MAX_QUEUE_SIZE: 100,
+		},
+	},
+	REMINDER_TYPES: {
+		SCHEDULED: 'SCHEDULED',
+		FOLLOW_UP: 'FOLLOW_UP',
+	},
+	NOTIFICATION_TYPES: {
+		SCHEDULED: 'SCHEDULED',
+		FOLLOW_UP: 'FOLLOW_UP',
+	},
+	ERROR_CODES: {
+		NETWORK_ERROR: 'NETWORK_ERROR',
+		INVALID_TOKEN: 'INVALID_TOKEN',
+		RATE_LIMIT: 'RATE_LIMIT',
+	},
+	REMINDER_STATUS: {
+		PENDING: 'PENDING',
+		COMPLETED: 'COMPLETED',
+		SNOOZED: 'SNOOZED',
+		SKIPPED: 'SKIPPED',
+	},
+	NOTIFICATION_CONFIGS: {
+		SCHEDULED: {
+			CLEANUP: {
+				TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours
+			},
+		},
+		FOLLOW_UP: {
+			CLEANUP: {
+				TIMEOUT: 24 * 60 * 60 * 1000,
+			},
 		},
 	},
 };
@@ -75,6 +112,10 @@ jest.mock('expo-notifications', () => ({
 	setNotificationCategoryAsync: jest.fn(),
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
 	AndroidImportance: { MAX: 5 },
+	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
+	scheduleNotificationAsync: jest
+		.fn()
+		.mockImplementation(() => Promise.resolve(`notification-${Math.random()}`)),
 }));
 
 // Mock AsyncStorage
@@ -208,6 +249,142 @@ describe('Notification Performance and Concurrency Tests', () => {
 			);
 
 			expect(results).toHaveLength(5);
+		});
+	});
+
+	describe('Recurring Notification Performance', () => {
+		beforeEach(async () => {
+			jest.clearAllMocks();
+			await notificationCoordinator.initialize();
+		});
+
+		it('should handle multiple recurring notifications efficiently', async () => {
+			const recurringNotifications = Array(10)
+				.fill()
+				.map((_, index) => ({
+					content: {
+						title: `Recurring Test ${index}`,
+						body: `Recurring notification ${index}`,
+						data: {
+							type: 'SCHEDULED',
+							recurring: true,
+							frequency: 'weekly',
+						},
+					},
+					trigger: {
+						seconds: 60 + index,
+						repeats: true,
+					},
+				}));
+
+			const startTime = Date.now();
+			const results = await Promise.all(
+				recurringNotifications.map(({ content, trigger }) =>
+					notificationCoordinator.scheduleNotification(content, trigger)
+				)
+			);
+
+			const endTime = Date.now();
+			const processingTime = endTime - startTime;
+
+			expect(results).toHaveLength(10);
+			expect(processingTime).toBeLessThan(1000); // Should process 10 recurring notifications in under 1 second
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(10);
+		});
+
+		it('should handle concurrent recurring and one-time notifications', async () => {
+			const mixedNotifications = [
+				// Recurring notifications
+				...Array(5)
+					.fill()
+					.map((_, index) => ({
+						content: {
+							title: `Recurring ${index}`,
+							data: { type: 'SCHEDULED', recurring: true },
+						},
+						trigger: { seconds: 60, repeats: true },
+					})),
+				// One-time notifications
+				...Array(5)
+					.fill()
+					.map((_, index) => ({
+						content: {
+							title: `One-time ${index}`,
+							data: { type: 'SCHEDULED' },
+						},
+						trigger: { seconds: 60 },
+					})),
+			];
+
+			const results = await Promise.all(
+				mixedNotifications.map(({ content, trigger }) =>
+					notificationCoordinator.scheduleNotification(content, trigger)
+				)
+			);
+
+			expect(results).toHaveLength(10);
+			expect(notificationCoordinator.notificationMap.size).toBe(10);
+		});
+
+		it('should handle updates to recurring notifications', async () => {
+			// Mock a consistent ID generator
+			let idCounter = 0;
+			Notifications.scheduleNotificationAsync.mockImplementation(() =>
+				Promise.resolve(`test-id-${idCounter++}`)
+			);
+
+			// Schedule initial notification
+			const originalId = await notificationCoordinator.scheduleNotification(
+				{
+					title: 'Recurring Test',
+					data: { type: 'SCHEDULED', recurring: true },
+				},
+				{ seconds: 60, repeats: true }
+			);
+
+			// Update notification
+			const updateResult = await notificationCoordinator.scheduleNotification(
+				{
+					title: 'Updated Recurring Test',
+					data: { type: 'SCHEDULED', recurring: true },
+				},
+				{ seconds: 120, repeats: true },
+				{ replaceId: originalId }
+			);
+
+			expect(updateResult).toBe('test-id-1');
+			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith(originalId);
+		});
+
+		it('should cleanup expired recurring notifications correctly', async () => {
+			const expiredDate = new Date(Date.now() - 25 * 60 * 60 * 1000);
+
+			// Clear existing notifications
+			notificationCoordinator.notificationMap.clear();
+
+			// Mock the cleanup behavior
+			Notifications.cancelScheduledNotificationAsync.mockImplementation(() => Promise.resolve());
+
+			for (let i = 0; i < 5; i++) {
+				const notificationId = `expired-recurring-${i}`;
+				notificationCoordinator.notificationMap.set(notificationId, {
+					content: {
+						title: `Expired Recurring ${i}`,
+						data: { type: NOTIFICATION_CONSTANTS.REMINDER_TYPES.SCHEDULED },
+					},
+					trigger: { repeats: true },
+					timestamp: expiredDate.toISOString(),
+					options: {
+						type: NOTIFICATION_CONSTANTS.REMINDER_TYPES.SCHEDULED,
+						recurring: true,
+					},
+				});
+			}
+
+			await notificationCoordinator.performCleanup();
+
+			expect(notificationCoordinator.notificationMap.size).toBe(0);
+			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(5);
 		});
 	});
 });
