@@ -3,7 +3,7 @@ import { addReminder, updateReminder, completeFollowUp, getReminder, getContactB
 import { auth } from '../config/firebase';
 import { navigate } from '../navigation/RootNavigation';
 import { notificationCoordinator } from './notificationCoordinator';
-import { REMINDER_STATUS, REMINDER_TYPES } from '../../constants/notificationConstants';
+import { REMINDER_STATUS, REMINDER_TYPES, IOS_CONFIGS } from '../../constants/notificationConstants';
 
 class CallNotesService {
 	constructor() {
@@ -29,14 +29,24 @@ class CallNotesService {
 	handleNotificationResponse = async (response) => {
 		try {
 			const data = response.notification.request.content.data;
-			if (data.type === REMINDER_TYPES.FOLLOW_UP && data.firestoreId && data.contactId) {
-				const contact = await getContactById(data.contactId);
-				if (contact) {
-					navigate('ContactDetails', {
-						contact: contact,
-						initialTab: 'Notes',
-						reminderId: data.firestoreId,
-					});
+			if (data.type === REMINDER_TYPES.FOLLOW_UP && data.firestoreId) {
+				if (response.actionIdentifier === 'add_notes') {
+					const notes = response.userText?.trim();
+					if (notes) {
+						await this.handleFollowUpComplete(data.firestoreId, notes);
+					}
+				} else if (response.actionIdentifier === 'dismiss') {
+					await this.handleFollowUpComplete(data.firestoreId);
+				} else {
+					// Default behavior - navigate to contact details
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: data.firestoreId,
+						});
+					}
 				}
 			}
 		} catch (error) {
@@ -67,12 +77,13 @@ class CallNotesService {
 					firestoreId: firestoreId,
 					callData: contact.callData,
 				},
-				categoryIdentifier: 'follow_up',
 				sound: true,
 			};
 
 			const trigger = notificationTime instanceof Date ? { date: notificationTime } : null;
-			const localNotificationId = await notificationCoordinator.scheduleNotification(content, trigger);
+			const localNotificationId = await notificationCoordinator.scheduleNotification(content, trigger, {
+				type: REMINDER_TYPES.FOLLOW_UP,
+			});
 
 			notificationCoordinator.notificationMap.set(firestoreId, {
 				localId: localNotificationId,
@@ -139,9 +150,15 @@ class CallNotesService {
 				sound: true,
 			};
 
-			const localNotificationId = await notificationCoordinator.scheduleNotification(content, {
-				date: newTime,
-			});
+			const localNotificationId = await notificationCoordinator.scheduleNotification(
+				content,
+				{
+					date: newTime,
+				},
+				{
+					type: REMINDER_TYPES.FOLLOW_UP,
+				}
+			);
 
 			notificationCoordinator.notificationMap.set(reminderId, {
 				localId: localNotificationId,

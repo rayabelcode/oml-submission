@@ -62,11 +62,11 @@ const IOS_CONFIGS = {
 		},
 		CATEGORIES: {
 			SCHEDULED: {
-				identifier: 'scheduled',
+				identifier: 'SCHEDULED',
 				actions: [],
 			},
 			FOLLOW_UP: {
-				identifier: 'follow_up',
+				identifier: 'FOLLOW_UP',
 				actions: [],
 			},
 		},

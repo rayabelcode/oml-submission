@@ -872,7 +872,7 @@ export const getFollowUpReminders = async (userId) => {
 		const q = query(
 			remindersRef,
 			where('user_id', '==', userId),
-			where('type', '==', 'follow_up'),
+			where('type', '==', 'FOLLOW_UP'),
 			where('completed', '==', false),
 			orderBy('date', 'desc')
 		);
@@ -925,7 +925,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 				const newHistoryEntry = {
 					date: new Date().toISOString(),
 					notes: notes,
-					type: 'follow_up',
+					type: 'FOLLOW_UP',
 					completed: true,
 				};
 

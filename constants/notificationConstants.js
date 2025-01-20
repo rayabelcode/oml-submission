@@ -3,8 +3,8 @@ import { Timestamp } from 'firebase/firestore';
 export const NOTIFICATION_MAP_KEY = 'notification_map';
 
 export const REMINDER_TYPES = {
-	SCHEDULED: 'scheduled',
-	FOLLOW_UP: 'follow_up',
+	SCHEDULED: 'SCHEDULED',
+	FOLLOW_UP: 'FOLLOW_UP',
 };
 
 export const REMINDER_STATUS = {
@@ -43,7 +43,7 @@ export const IOS_CONFIGS = {
 		// iOS specific notification categories
 		CATEGORIES: {
 			FOLLOW_UP: {
-				identifier: 'follow_up',
+				identifier: 'FOLLOW_UP',
 				actions: [
 					{
 						identifier: 'add_notes',
@@ -69,7 +69,7 @@ export const IOS_CONFIGS = {
 			},
 
 			SCHEDULED: {
-				identifier: 'scheduled',
+				identifier: 'SCHEDULED',
 				actions: [
 					{
 						identifier: 'call_now',

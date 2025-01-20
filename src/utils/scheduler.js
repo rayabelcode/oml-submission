@@ -557,7 +557,7 @@ export class SchedulingService {
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
 				snoozed: false,
-				follow_up: false,
+				FOLLOW_UP: false,
 				ai_suggestions: [],
 				score: this.calculateTimeSlotScore(scheduledDate, contact),
 				flexibility_used: scheduledDate.getTime() !== customDate.getTime(),
@@ -891,7 +891,7 @@ export class SchedulingService {
 			title: `Scheduled Call: ${reminder.contactName}`,
 			body: `Time to connect with ${reminder.contactName}`,
 			data: {
-				type: 'scheduled',
+				type: 'SCHEDULED',
 				reminderId: reminder.id,
 				contactId: reminder.contact_id,
 				userId: reminder.user_id,

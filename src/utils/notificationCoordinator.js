@@ -93,9 +93,45 @@ class NotificationCoordinator {
 	}
 
 	async setupIOSCategories() {
-		const categories = IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES;
-		for (const [key, category] of Object.entries(categories)) {
-			await Notifications.setNotificationCategoryAsync(category.identifier, category.actions);
+		if (Platform.OS === 'ios') {
+			await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
+				{
+					identifier: 'add_notes',
+					buttonTitle: 'Add Notes',
+					options: {
+						opensAppToForeground: false,
+						textInput: {
+							submitButtonTitle: 'Save',
+							placeholder: 'Enter your call notes...',
+						},
+					},
+				},
+				{
+					identifier: 'dismiss',
+					buttonTitle: 'Dismiss',
+					options: {
+						opensAppToForeground: false,
+						isDestructive: true,
+					},
+				},
+			]);
+
+			await Notifications.setNotificationCategoryAsync('SCHEDULED', [
+				{
+					identifier: 'call_now',
+					buttonTitle: 'Call Now',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+				{
+					identifier: 'snooze',
+					buttonTitle: 'Snooze',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+			]);
 		}
 	}
 
@@ -217,11 +253,11 @@ class NotificationCoordinator {
 				...content,
 				...(Platform.OS === 'ios' &&
 					options.type && {
-						categoryIdentifier: IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES[options.type].identifier,
+						categoryIdentifier: IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES[options.type]?.identifier,
 					}),
 			};
 
-			// Schedule the local notification
+			// Schedule the local notification FIRST
 			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
 				trigger,
@@ -237,18 +273,23 @@ class NotificationCoordinator {
 
 			await this.saveNotificationMap();
 
-			// If this is a future notification, schedule push notification
-			if (trigger.seconds > 0) {
-				const userDoc = await getUserProfile(userId);
-				if (userDoc?.expoPushToken) {
-					await sendPushNotification([userId], {
-						title: finalContent.title,
-						body: finalContent.body,
-						data: {
-							...finalContent.data,
-							localNotificationId,
-						},
-					});
+			// Handle push notification with the localNotificationId
+			if (trigger?.seconds > 0) {
+				try {
+					const userDoc = await getUserProfile(userId);
+					if (userDoc?.expoPushToken) {
+						await sendPushNotification([userId], {
+							title: finalContent.title,
+							body: finalContent.body,
+							data: {
+								...finalContent.data,
+								localNotificationId: localNotificationId,
+							},
+						});
+					}
+				} catch (pushError) {
+					console.error('Error sending push notification:', pushError);
+					// Continue execution even if push notification fails
 				}
 			}
 

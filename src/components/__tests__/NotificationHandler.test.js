@@ -48,7 +48,7 @@ describe('Notification Handler', () => {
 					request: {
 						content: {
 							data: {
-								type: 'scheduled',
+								type: 'SCHEDULED',
 								contactId: 'test-contact',
 							},
 						},
@@ -84,7 +84,7 @@ describe('Notification Handler', () => {
 					request: {
 						content: {
 							data: {
-								type: 'follow_up',
+								type: 'FOLLOW_UP',
 							},
 						},
 					},

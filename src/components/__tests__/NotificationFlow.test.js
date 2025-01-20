@@ -49,7 +49,7 @@ jest.mock('../../utils/callHandler', () => ({
 
 		// Add to history
 		await require('../../utils/firestore').addContactHistory(mockReminder.contact_id, {
-			type: 'scheduled',
+			type: 'SCHEDULED',
 			status: 'completed',
 			notes: notes,
 		});
@@ -195,7 +195,7 @@ jest.mock('../../utils/firestore', () => ({
 		if (reminderId === 'non-existent-id') return null;
 		return {
 			id: reminderId,
-			type: 'scheduled',
+			type: 'SCHEDULED',
 			status: 'pending',
 			contact_id: 'test-contact',
 			scheduledTime: { toDate: () => new Date() },

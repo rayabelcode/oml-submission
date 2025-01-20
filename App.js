@@ -134,29 +134,6 @@ function App() {
 						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 					}),
 					notificationCoordinator.initialize(),
-					// Setup notification categories for iOS
-					Platform.OS === 'ios'
-						? Notifications.setNotificationCategoryAsync('follow_up', [
-								{
-									identifier: 'add_notes',
-									buttonTitle: 'Add Notes',
-									options: {
-										opensAppToForeground: true,
-										textInput: {
-											buttonTitle: 'Save',
-											placeholder: 'Enter your call notes...',
-										},
-									},
-								},
-								{
-									identifier: 'dismiss',
-									buttonTitle: 'Dismiss',
-									options: {
-										isDestructive: true,
-									},
-								},
-						  ])
-						: null,
 					// Clear badges when app opens
 					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);

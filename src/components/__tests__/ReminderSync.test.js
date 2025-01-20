@@ -57,7 +57,7 @@ jest.mock('firebase/firestore', () => {
 			PENDING: 'pending',
 		},
 		REMINDER_TYPES: {
-			SCHEDULED: 'scheduled',
+			SCHEDULED: 'SCHEDULED',
 		},
 	};
 });
