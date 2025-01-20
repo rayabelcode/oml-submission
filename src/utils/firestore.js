@@ -894,26 +894,23 @@ export const completeFollowUp = async (reminderId, notes) => {
 		const reminderDoc = await getDoc(reminderRef);
 
 		if (!reminderDoc.exists()) {
+			console.error('[Firestore] Reminder not found:', reminderId);
 			throw new Error('Reminder not found');
 		}
 
 		const reminderData = reminderDoc.data();
 
 		if (reminderData.user_id !== auth.currentUser?.uid) {
+			console.error('[Firestore] Permission denied for user:', auth.currentUser?.uid);
 			throw new Error('User does not have permission to modify this reminder');
 		}
 
 		const batch = writeBatch(db);
 
-		batch.update(reminderRef, {
-			completed: true,
-			completion_time: serverTimestamp(),
-			notes_added: !!notes,
-			updated_at: serverTimestamp(),
-			notes: notes || '',
-			status: 'completed',
-		});
+		// Delete the reminder when dismiss is selected
+		batch.delete(reminderRef);
 
+		// If there are notes, add them to contact history
 		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -939,7 +936,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 		await batch.commit();
 		return true;
 	} catch (error) {
-		console.error('Error completing follow-up:', error);
+		console.error('[Firestore] Error completing follow-up:', error);
 		throw error;
 	}
 };
