@@ -335,6 +335,53 @@ describe('Push Notification System', () => {
 			expect(fetch).toHaveBeenCalledTimes(3);
 			expect(mockDelay).toHaveBeenCalledTimes(2);
 		});
+
+		it('should handle extremely large notification payloads', async () => {
+			getDoc.mockResolvedValue({
+				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+			});
+
+			const largeData = {
+				title: 'Test',
+				body: 'Test',
+				data: {
+					array: Array(1000).fill('test'),
+					nested: { deep: { deeper: { deepest: 'value' } } },
+				},
+			};
+
+			const result = await sendPushNotification(['user1'], largeData);
+			expect(result).toBeTruthy();
+
+			// Verify payload was sent and not truncated
+			const body = JSON.parse(fetch.mock.calls[0][1].body);
+			expect(body[0].data.array.length).toBe(1000);
+		});
+
+		it('should handle mixed token validity in batch sends', async () => {
+			getDoc
+				.mockResolvedValueOnce({ data: () => ({ expoPushToken: 'ExponentPushToken[valid]' }) })
+				.mockResolvedValueOnce({ data: () => ({ expoPushToken: null }) })
+				.mockResolvedValueOnce({ data: () => ({ expoPushToken: 'ExponentPushToken[invalid]' }) });
+
+			global.fetch.mockResolvedValueOnce({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						data: [
+							{ status: 'ok', id: '1' },
+							{ status: 'error', message: 'InvalidToken', token: 'ExponentPushToken[invalid]' },
+						],
+					}),
+			});
+
+			const result = await sendPushNotification(['user1', 'user2', 'user3'], { title: 'Test', body: 'Test' });
+			expect(result).toBeTruthy();
+
+			// Should only send to valid tokens
+			const body = JSON.parse(fetch.mock.calls[0][1].body);
+			expect(body.length).toBe(2);
+		});
 	});
 
 	describe('scheduleLocalNotificationWithPush', () => {
