@@ -251,4 +251,94 @@ describe('CleanupService', () => {
 			expect(deleteReminder).toHaveBeenCalled();
 		});
 	});
+
+	describe('CleanupService Edge Cases', () => {
+		beforeEach(() => {
+			jest.clearAllMocks();
+			cleanupService.cleanupStats = {
+				lastRunTime: null,
+				successCount: 0,
+				failureCount: 0,
+				lastError: null,
+			};
+		});
+
+		it('should handle network timeout gracefully', async () => {
+			getReminder.mockImplementationOnce(() => new Promise((resolve) => setTimeout(resolve, 100)));
+
+			const result = await cleanupService.performCleanup();
+			expect(result).toBe(true);
+		});
+
+		it('should handle corrupt notification data', async () => {
+			notificationCoordinator.notificationMap.clear();
+			notificationCoordinator.notificationMap.set('corrupt-id', null);
+
+			const result = await cleanupService.performCleanup();
+			expect(result).toBe(true);
+			expect(cleanupService.cleanupStats.successCount).toBe(1);
+			expect(cleanupService.cleanupStats.failureCount).toBe(0);
+		}, 10000); // Timeout
+
+		it('should handle concurrent cleanup requests', async () => {
+			notificationCoordinator.notificationMap.clear();
+			const promise1 = cleanupService.performCleanup();
+			const promise2 = cleanupService.performCleanup();
+
+			const [result1, result2] = await Promise.all([promise1, promise2]);
+			expect(result1).toBe(true);
+			expect(result2).toBe(true);
+		});
+
+		it('should handle reminders with missing scheduledTime', async () => {
+			const mockReminder = {
+				type: REMINDER_TYPES.FOLLOW_UP,
+				notes_added: false,
+				scheduledTime: null,
+			};
+
+			getReminder.mockResolvedValue(mockReminder);
+			const result = await cleanupService.shouldCleanupReminder(mockReminder, new Date());
+			expect(result).toBe(true);
+		});
+
+		it('should handle app state changes during cleanup', async () => {
+			notificationCoordinator.notificationMap.clear();
+			await cleanupService.initialize();
+			const mockAppStateCallback = AppState.addEventListener.mock.calls[0][1];
+
+			const cleanupPromise = cleanupService.performCleanup();
+			await mockAppStateCallback('background');
+			await mockAppStateCallback('active');
+
+			const result = await cleanupPromise;
+			expect(result).toBe(true);
+		});
+
+		it('should track cleanup statistics', async () => {
+			notificationCoordinator.notificationMap.clear();
+			cleanupService.cleanupStats = {
+				lastRunTime: null,
+				successCount: 0,
+				failureCount: 0,
+				lastError: null,
+			};
+
+			const initialStats = cleanupService.getCleanupStats();
+			expect(initialStats.successCount).toBe(0);
+
+			notificationCoordinator.notificationMap.set('test-id', { localId: 'test-local-id' });
+			getReminder.mockResolvedValue({
+				type: REMINDER_TYPES.FOLLOW_UP,
+				notes_added: true,
+			});
+
+			await cleanupService.performCleanup();
+
+			const updatedStats = cleanupService.getCleanupStats();
+			expect(updatedStats.lastRunTime).toBeInstanceOf(Date);
+			expect(updatedStats.successCount).toBe(1);
+			expect(updatedStats.failureCount).toBe(0);
+		});
+	});
 });
