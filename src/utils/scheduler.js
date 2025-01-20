@@ -4,6 +4,8 @@ import { scheduleLocalNotificationWithPush } from './notifications/pushNotificat
 // Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
 import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
+// Fallback
+const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -447,47 +449,59 @@ export class SchedulingService {
 	// Recurring Reminder Scheduling
 	async scheduleRecurringReminder(contact, lastContactDate, frequency) {
 		try {
-			// First get base scheduling using existing logic
 			const baseSchedule = await this.scheduleReminder(contact, lastContactDate, frequency);
-
 			if (baseSchedule.status === 'SLOTS_FILLED') {
 				return baseSchedule;
 			}
 
-			// Check for pattern-based improvements
-			const patterns = await schedulingHistory.analyzeContactPatterns(
-				contact.id,
-				90 // Using default time window
-			);
+			try {
+				const patterns = await schedulingHistory.analyzeContactPatterns(contact.id, 90);
 
-			if (patterns?.confidence > RECURRENCE_METADATA.MIN_CONFIDENCE) {
-				// Try to optimize the time based on patterns
-				const suggestedTime = await schedulingHistory.suggestOptimalTime(
-					contact.id,
-					DateTime.fromJSDate(baseSchedule.date.toDate()),
-					'recurring'
-				);
+				// Check for stale data first
+				if (patterns?.lastUpdated) {
+					const lastUpdate = DateTime.fromISO(patterns.lastUpdated);
+					const daysSinceUpdate = DateTime.now().diff(lastUpdate, 'days').days;
 
-				if (suggestedTime) {
-					const adjustedDate = suggestedTime.toJSDate();
-
-					// Only use suggested time if it doesn't violate existing constraints
-					if (!this.isTimeBlocked(adjustedDate, contact) && !this.hasTimeConflict(adjustedDate)) {
+					if (daysSinceUpdate > MAX_AGE_DAYS) {
 						return {
 							...baseSchedule,
-							date: Timestamp.fromDate(adjustedDate),
 							recurrence: {
 								frequency,
-								pattern_adjusted: true,
-								confidence: patterns.confidence,
-								next_date: adjustedDate.toISOString(),
+								pattern_adjusted: false,
+								next_date: baseSchedule.date.toDate().toISOString(),
 							},
 						};
 					}
 				}
+
+				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
+					const suggestedTime = await schedulingHistory.suggestOptimalTime(
+						contact.id,
+						DateTime.fromJSDate(baseSchedule.date.toDate()),
+						'recurring'
+					);
+
+					if (suggestedTime) {
+						const suggestedJSDate = suggestedTime.toJSDate();
+						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
+							return {
+								...baseSchedule,
+								date: Timestamp.fromDate(suggestedJSDate),
+								recurrence: {
+									frequency,
+									pattern_adjusted: true,
+									confidence: patterns.confidence,
+									next_date: suggestedTime.toISO(),
+								},
+							};
+						}
+					}
+				}
+			} catch (error) {
+				// Silently fall back to base schedule
 			}
 
-			// If no pattern adjustment, return base schedule with recurrence metadata
+			// Return base schedule if pattern analysis fails or suggested time is blocked
 			return {
 				...baseSchedule,
 				recurrence: {
