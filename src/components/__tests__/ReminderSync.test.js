@@ -1,30 +1,60 @@
-import { reminderSync } from '../../utils/notifications/reminderSync';
 import * as Notifications from 'expo-notifications';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { REMINDER_STATUS, REMINDER_TYPES } from '../../../constants/notificationConstants';
+import { DateTime } from 'luxon';
+import { reminderSync } from '../../utils/notifications/reminderSync';
+import { getUserPreferences } from '../../utils/preferences';
+import { collection, onSnapshot, query, where, REMINDER_STATUS, REMINDER_TYPES } from 'firebase/firestore';
 
 // Mock expo-notifications
 jest.mock('expo-notifications', () => ({
-	scheduleNotificationAsync: jest.fn().mockResolvedValue('local-notification-id'),
-	cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(),
-	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
+	scheduleNotificationAsync: jest.fn((notification) => Promise.resolve('test-notification-id')),
+	cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+	getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+}));
+
+// Mock getUserPreferences
+jest.mock('../../utils/preferences', () => ({
+	getUserPreferences: jest.fn().mockResolvedValue({
+		timezone: 'America/New_York',
+		scheduling_preferences: {
+			minimumGapMinutes: 30,
+			optimalGapMinutes: 120,
+			timezone: 'America/New_York',
+		},
+	}),
 }));
 
 // Mock firebase/firestore
-jest.mock('firebase/firestore', () => ({
-	collection: jest.fn().mockReturnValue('reminders-collection'),
-	query: jest.fn().mockReturnValue('reminders-query'),
-	where: jest.fn().mockReturnValue('where-clause'),
-	onSnapshot: jest.fn(),
-	Timestamp: {
-		now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
-		fromDate: jest.fn((date) => ({
-			seconds: Math.floor(date.getTime() / 1000),
-			nanoseconds: 0,
-			toDate: () => date,
-		})),
-	},
-}));
+jest.mock('firebase/firestore', () => {
+	const mockOnSnapshot = jest.fn();
+	const mockCollection = jest.fn();
+	const mockQuery = jest.fn();
+	const mockWhere = jest.fn();
+	const mockDoc = jest.fn();
+	const mockGetDoc = jest.fn();
+
+	return {
+		collection: mockCollection,
+		query: mockQuery,
+		where: mockWhere,
+		onSnapshot: mockOnSnapshot,
+		doc: mockDoc,
+		getDoc: mockGetDoc,
+		Timestamp: {
+			now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
+			fromDate: jest.fn((date) => ({
+				seconds: Math.floor(date.getTime() / 1000),
+				nanoseconds: 0,
+				toDate: () => date,
+			})),
+		},
+		REMINDER_STATUS: {
+			PENDING: 'pending',
+		},
+		REMINDER_TYPES: {
+			SCHEDULED: 'scheduled',
+		},
+	};
+});
 
 // Mock firebase config
 jest.mock('../../config/firebase', () => ({
@@ -264,6 +294,68 @@ describe('Reminder Sync System', () => {
 			// Restore original auth
 			Object.assign(auth, originalAuth);
 			consoleSpy.mockRestore();
+		});
+	});
+
+	describe('Timezone Handling', () => {
+		let mockNow;
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			// Set a fixed timestamp for January 1, 2024
+			mockNow = new Date('2024-01-01T00:00:00.000Z').getTime();
+
+			// Mock both Date.now and new Date()
+			global.Date.now = jest.fn(() => mockNow);
+			const RealDate = global.Date;
+			global.Date = class extends RealDate {
+				constructor(...args) {
+					if (args.length === 0) {
+						return new RealDate(mockNow);
+					}
+					return new RealDate(...args);
+				}
+			};
+			global.Date.now = jest.fn(() => mockNow);
+		});
+
+		afterEach(() => {
+			global.Date = Date;
+			jest.restoreAllMocks();
+		});
+
+		it('should store timezone information with notification', async () => {
+			const reminder = {
+				id: 'test-reminder',
+				user_id: 'test-user',
+				scheduledTime: new Date('2024-01-20T15:00:00.000Z'),
+				title: 'Test Reminder'
+			};
+		
+			getUserPreferences.mockResolvedValue({ timezone: 'America/New_York' });
+		
+			await reminderSync.scheduleLocalNotification(reminder);
+		
+			const mockCalls = Notifications.scheduleNotificationAsync.mock.calls;
+			console.log('Mock calls:', JSON.stringify(mockCalls[0][0], null, 2));
+		
+			// Using exact match since we know the expected values
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content: {
+					title: 'Test Reminder',
+					body: 'Time to reach out!',
+					data: {
+						reminderId: 'test-reminder',
+						scheduledTimezone: 'America/New_York',
+						originalTime: '2024-01-20T15:00:00.000Z',
+						type: undefined,
+						contactId: undefined
+					}
+				},
+				trigger: {
+					date: reminder.scheduledTime
+				}
+			});		
 		});
 	});
 });
