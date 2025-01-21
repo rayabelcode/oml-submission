@@ -1245,13 +1245,15 @@ describe('SchedulingService', () => {
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			// Should still have basic scheduling data
+			// Expectation for flattened structure
 			expect(result.date).toBeDefined();
-			expect(result.recurrence).toEqual({
-				frequency: 'weekly',
-				pattern_adjusted: false,
-				next_date: expect.any(String),
-			});
+			expect(result).toEqual(
+				expect.objectContaining({
+					frequency: 'weekly',
+					pattern_adjusted: false,
+					recurring_next_date: expect.any(String),
+				})
+			);
 		});
 
 		it('should enhance scheduling with pattern analysis when available', async () => {
@@ -1270,12 +1272,15 @@ describe('SchedulingService', () => {
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			expect(result.recurrence).toEqual({
-				frequency: 'weekly',
-				pattern_adjusted: true,
-				confidence: 0.8,
-				next_date: expect.any(String),
-			});
+			// Expectation for flattened structure
+			expect(result).toEqual(
+				expect.objectContaining({
+					frequency: 'weekly',
+					pattern_adjusted: true,
+					confidence: 0.8,
+					recurring_next_date: expect.any(String),
+				})
+			);
 		});
 
 		it('should respect scheduling constraints even with pattern adjustment', async () => {
@@ -1310,8 +1315,8 @@ describe('SchedulingService', () => {
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			// Should fall back to base scheduling since suggested time is blocked
-			expect(result.recurrence.pattern_adjusted).toBe(false);
+			// Use flattened structure
+			expect(result.pattern_adjusted).toBe(false);
 
 			// Verify time is within allowed hours
 			const scheduledHour = DateTime.fromJSDate(result.date.toDate()).hour;
@@ -1398,8 +1403,7 @@ describe('SchedulingService', () => {
 				});
 
 				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
-
-				expect(result.recurrence.pattern_adjusted).toBe(false);
+				expect(result.pattern_adjusted).toBe(false);
 			});
 
 			it('should handle borderline confidence cases', async () => {
@@ -1426,8 +1430,7 @@ describe('SchedulingService', () => {
 				mockSchedulingHistory.suggestOptimalTime.mockResolvedValueOnce(baseDate);
 
 				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
-
-				expect(result.recurrence.pattern_adjusted).toBe(true);
+				expect(result.pattern_adjusted).toBe(true);
 			});
 		});
 
@@ -1445,7 +1448,6 @@ describe('SchedulingService', () => {
 
 				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
 
-				// Use RECURRENCE_METADATA.MAX_AGE_DAYS instead of MAX_AGE_DAYS
 				const staleDate = DateTime.now().minus({ days: RECURRENCE_METADATA.MAX_AGE_DAYS + 1 });
 
 				mockSchedulingHistory.analyzeContactPatterns.mockResolvedValueOnce({
@@ -1458,8 +1460,8 @@ describe('SchedulingService', () => {
 
 				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-				expect(result.recurrence.pattern_adjusted).toBe(false);
-				expect(result.recurrence.frequency).toBe('weekly');
+				expect(result.pattern_adjusted).toBe(false);
+				expect(result.frequency).toBe('weekly');
 				expect(result.date).toEqual(mockBaseResult.date);
 			});
 
