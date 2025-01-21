@@ -27,6 +27,17 @@ export const RECURRENCE_METADATA = {
 	},
 };
 
+// Notification trigger validation
+export const NOTIFICATION_VALIDATION = {
+	validateTrigger: (trigger) => {
+		if (trigger instanceof Date) return trigger;
+		if (typeof trigger === 'string') return new Date(trigger);
+		if (trigger?.date) return new Date(trigger.date);
+		if (trigger?.seconds) return new Date(Date.now() + trigger.seconds * 1000);
+		throw new Error('Invalid notification trigger format');
+	},
+};
+
 // iOS specific configurations
 export const IOS_CONFIGS = {
 	NOTIFICATION_SETTINGS: {

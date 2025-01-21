@@ -239,7 +239,7 @@ class NotificationCoordinator {
 		}
 	}
 
-	async scheduleNotification(content, trigger, options = {}) {
+	async scheduleNotification(content, scheduledTime, options = {}) {
 		if (!this.initialized) {
 			await this.initialize();
 		}
@@ -256,6 +256,9 @@ class NotificationCoordinator {
 				}
 			}
 
+			// Ensure we have a Date object
+			const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
+
 			// Prepare notification content
 			const finalContent = {
 				...content,
@@ -265,25 +268,28 @@ class NotificationCoordinator {
 					}),
 			};
 
-			// Schedule the local notification
+			// Schedule the local notification using Date object directly
 			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
-				trigger,
+				trigger: triggerTime,
 			});
+
+			// Calculate seconds until notification
+			const secondsUntilNotification = Math.max(0, Math.floor((triggerTime - new Date()) / 1000));
 
 			// Store in notification map
 			this.notificationMap.set(localNotificationId, {
 				content: finalContent,
-				trigger,
+				scheduledTime: triggerTime,
 				options,
 				timestamp: new Date().toISOString(),
-				replacedId: options.replaceId, // Track which notification this replaced
+				replacedId: options.replaceId,
 			});
 
 			await this.saveNotificationMap();
 
-			// Handle push notification with the localNotificationId
-			if (trigger?.seconds > 0) {
+			// Handle push notification
+			if (secondsUntilNotification > 0) {
 				try {
 					const userDoc = await getUserProfile(userId);
 					if (userDoc?.expoPushToken) {
@@ -292,8 +298,8 @@ class NotificationCoordinator {
 							body: finalContent.body,
 							data: {
 								...finalContent.data,
-								localNotificationId: localNotificationId,
-								replacedId: options.replaceId, // Include in push data
+								localNotificationId,
+								replacedId: options.replaceId,
 							},
 						});
 					}
@@ -305,14 +311,14 @@ class NotificationCoordinator {
 
 			// Handle offline queue if needed
 			if (!options.skipQueue && !(await this.checkConnectivity())) {
-				await this.addToPendingQueue(localNotificationId, finalContent, trigger, options);
+				await this.addToPendingQueue(localNotificationId, finalContent, triggerTime, options);
 			}
 
 			return localNotificationId;
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
 			if (options.retry !== false) {
-				return this.handleSchedulingError(content, trigger, options);
+				return this.handleSchedulingError(content, scheduledTime, options);
 			}
 			throw error;
 		}
@@ -369,14 +375,14 @@ class NotificationCoordinator {
 		}
 	}
 
-	async addToPendingQueue(notificationId, content, trigger, options) {
+	async addToPendingQueue(notificationId, content, scheduledTime, options) {
 		if (this.pendingQueue.size >= ERROR_HANDLING.OFFLINE.MAX_QUEUE_SIZE) {
 			throw new Error('Pending queue size limit reached');
 		}
 
 		this.pendingQueue.set(notificationId, {
 			content,
-			trigger,
+			scheduledTime, // Store the Date object
 			options,
 			timestamp: new Date().toISOString(),
 		});
@@ -434,7 +440,7 @@ class NotificationCoordinator {
 		const promises = [];
 		for (const [id, data] of this.pendingQueue) {
 			promises.push(
-				this.scheduleNotification(data.content, data.trigger, {
+				this.scheduleNotification(data.content, data.scheduledTime, {
 					...data.options,
 					skipQueue: true,
 				}).then(() => id)

@@ -9,7 +9,10 @@
 		"orientation": "portrait",
 		"icon": "./assets/icon.png",
 		"notification": {
-			"icon": "./assets/icon.png"
+			"icon": "./assets/icon.png",
+			"iosDisplayInForeground": true,
+			"androidMode": "default",
+			"androidCollapsedTitle": "#{unread_notifications} new notifications"
 		},
 		"scheme": "onmylist",
 		"userInterfaceStyle": "automatic",
@@ -66,7 +69,12 @@
 					"contactsPermission": "Allow OnMyList to access your contacts."
 				}
 			],
-			"expo-notifications"
+			"expo-notifications",
+			{
+				"icon": "./assets/icon.png",
+				"color": "#ffffff",
+				"mode": "production"
+			}
 		],
 		"extra": {
 			"eas": {

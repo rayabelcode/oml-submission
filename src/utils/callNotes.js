@@ -81,9 +81,13 @@ class CallNotesService {
 			};
 
 			const trigger = notificationTime instanceof Date ? { date: notificationTime } : null;
-			const localNotificationId = await notificationCoordinator.scheduleNotification(content, trigger, {
-				type: REMINDER_TYPES.FOLLOW_UP,
-			});
+			const localNotificationId = await notificationCoordinator.scheduleNotification(
+				content,
+				notificationTime, // Pass Date object directly
+				{
+					type: REMINDER_TYPES.FOLLOW_UP,
+				}
+			);
 
 			notificationCoordinator.notificationMap.set(firestoreId, {
 				localId: localNotificationId,
@@ -152,9 +156,7 @@ class CallNotesService {
 
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				content,
-				{
-					date: newTime,
-				},
+				newTime, // Pass Date object directly
 				{
 					type: REMINDER_TYPES.FOLLOW_UP,
 				}

@@ -50,7 +50,7 @@ class CallHandler {
 						startTime: callData.startTime,
 					},
 				},
-				notificationTime
+				notificationTime // Pass Date object directly
 			);
 
 			await Linking.openURL(urlScheme);
