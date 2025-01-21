@@ -511,34 +511,26 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 			const lastContactDate = contact.last_contacted?.toDate() || new Date();
 
-			// Use new recurring scheduler instead of regular scheduler
 			const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 				{ ...contact, id: contactId },
 				lastContactDate,
 				schedulingData.frequency
 			);
 
-			// Update the scheduling data with recurrence information
+			// Update with flattened structure
 			updateData.scheduling = {
 				...updateData.scheduling,
-				recurring: {
-					frequency: schedulingData.frequency,
-					pattern_adjusted: reminderSchedule.recurrence?.pattern_adjusted || false,
-					// Only include confidence if it exists
-					...(reminderSchedule.recurrence?.confidence !== undefined && {
-						confidence: reminderSchedule.recurrence.confidence,
-					}),
-					next_date: reminderSchedule.recurrence?.next_date || reminderSchedule.date?.toDate().toISOString(),
-				},
+				frequency: schedulingData.frequency,
+				pattern_adjusted: reminderSchedule.pattern_adjusted || false,
+				...(reminderSchedule.confidence !== undefined && {
+					confidence: reminderSchedule.confidence,
+				}),
+				recurring_next_date: reminderSchedule.recurring_next_date,
 			};
 
 			// Set next_contact based on scheduled date
 			if (reminderSchedule.status !== 'SLOTS_FILLED') {
 				updateData.next_contact = reminderSchedule.date;
-
-				// Update the recurring_next_date
-				updateData.scheduling.recurring_next_date =
-					reminderSchedule.recurrence?.next_date || reminderSchedule.date.toDate().toISOString();
 			}
 		}
 
@@ -546,6 +538,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			updateData.scheduling.custom_next_date = schedulingData.custom_next_date || null;
 		}
 
+		// Update next_contact based on available dates
 		if (updateData.scheduling.custom_next_date && updateData.scheduling.recurring_next_date) {
 			const recurring = new Date(updateData.scheduling.recurring_next_date);
 			const custom = new Date(updateData.scheduling.custom_next_date);

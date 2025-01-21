@@ -457,7 +457,6 @@ export class SchedulingService {
 			try {
 				const patterns = await schedulingHistory.analyzeContactPatterns(contact.id, 90);
 
-				// Check for stale data first
 				if (patterns?.lastUpdated) {
 					const lastUpdate = DateTime.fromISO(patterns.lastUpdated);
 					const daysSinceUpdate = DateTime.now().diff(lastUpdate, 'days').days;
@@ -465,11 +464,9 @@ export class SchedulingService {
 					if (daysSinceUpdate > MAX_AGE_DAYS) {
 						return {
 							...baseSchedule,
-							recurrence: {
-								frequency,
-								pattern_adjusted: false,
-								next_date: baseSchedule.date.toDate().toISOString(),
-							},
+							frequency: frequency,
+							pattern_adjusted: false,
+							recurring_next_date: baseSchedule.date.toDate().toISOString(),
 						};
 					}
 				}
@@ -487,12 +484,10 @@ export class SchedulingService {
 							return {
 								...baseSchedule,
 								date: Timestamp.fromDate(suggestedJSDate),
-								recurrence: {
-									frequency,
-									pattern_adjusted: true,
-									confidence: patterns.confidence,
-									next_date: suggestedTime.toISO(),
-								},
+								frequency: frequency,
+								pattern_adjusted: true,
+								confidence: patterns.confidence,
+								recurring_next_date: suggestedTime.toISO(),
 							};
 						}
 					}
@@ -504,11 +499,9 @@ export class SchedulingService {
 			// Return base schedule if pattern analysis fails or suggested time is blocked
 			return {
 				...baseSchedule,
-				recurrence: {
-					frequency,
-					pattern_adjusted: false,
-					next_date: baseSchedule.date.toDate().toISOString(),
-				},
+				frequency: frequency,
+				pattern_adjusted: false,
+				recurring_next_date: baseSchedule.date.toDate().toISOString(),
 			};
 		} catch (error) {
 			console.error('Error in scheduleRecurringReminder:', error);
