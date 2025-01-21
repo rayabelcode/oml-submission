@@ -201,23 +201,23 @@ describe('NotificationCoordinator', () => {
 				body: 'Test notification',
 				data: {},
 			};
-			const mockTrigger = {
-				seconds: 60,
-				repeats: false,
-			};
+			const scheduledTime = new Date(Date.now() + 60000); // 60 seconds from now
 
 			Notifications.scheduleNotificationAsync.mockResolvedValueOnce('test-id');
 
-			const result = await notificationCoordinator.scheduleNotification(mockContent, mockTrigger, {
+			const result = await notificationCoordinator.scheduleNotification(mockContent, scheduledTime, {
 				type: 'SCHEDULED',
 			});
 
 			expect(result).toBe('test-id');
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
-				content: expect.objectContaining(mockContent),
-				trigger: mockTrigger,
+				content: expect.objectContaining({
+					...mockContent,
+					categoryIdentifier: 'SCHEDULED',
+				}),
+				trigger: scheduledTime,
 			});
-		}, 10000);
+		});
 	});
 
 	describe('Badge Management', () => {

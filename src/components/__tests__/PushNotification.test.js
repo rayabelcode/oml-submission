@@ -386,31 +386,23 @@ describe('Push Notification System', () => {
 
 	describe('scheduleLocalNotificationWithPush', () => {
 		it('should schedule both local and push notifications for future events', async () => {
-			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
-			});
-
 			const content = {
 				title: 'Test Notification',
 				body: 'Test Body',
 				data: { type: 'test' },
 			};
 
-			const trigger = {
-				seconds: 3600,
-			};
+			const scheduledTime = new Date(Date.now() + 3600000); // 1 hour from now
 
-			const resultPromise = scheduleLocalNotificationWithPush('user1', content, trigger);
-			jest.runAllTimers();
-			const result = await resultPromise;
+			const result = await scheduleLocalNotificationWithPush('user1', content, scheduledTime);
 
 			expect(result).toBe('local-notification-id');
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
 				content,
-				trigger,
+				trigger: scheduledTime,
 			});
 			expect(fetch).toHaveBeenCalled();
-		}, 10000);
+		});
 
 		it('should only schedule local notification for immediate events', async () => {
 			const content = {
@@ -456,23 +448,17 @@ describe('Push Notification System', () => {
 				title: 'Test Notification',
 				body: 'Test Body',
 			};
-
-			const trigger = {
-				seconds: 3600,
-			};
-
-			const resultPromise = scheduleLocalNotificationWithPush('user1', content, trigger);
-			jest.runAllTimers();
-			const result = await resultPromise;
-
+		
+			const scheduledTime = new Date(Date.now() + 3600000); // 1 hour from now
+		
+			const result = await scheduleLocalNotificationWithPush('user1', content, scheduledTime);
+		
 			expect(result).toBeDefined();
-			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
-				expect.objectContaining({
-					trigger: expect.objectContaining({
-						seconds: 3600,
-					}),
-				})
-			);
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content,
+				trigger: expect.any(Date)
+			});
 		}, 10000);
+		
 	});
 });

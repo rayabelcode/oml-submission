@@ -132,21 +132,19 @@ describe('Notification UI Integration Tests', () => {
 		const notificationId = 'recurring-test';
 		Notifications.scheduleNotificationAsync.mockResolvedValueOnce(notificationId);
 
+		const scheduledTime = new Date(Date.now() + 86400000); // 24 hours from now
 		const recurringNotification = await notificationCoordinator.scheduleNotification(
 			{
 				title: 'Recurring Test',
 				body: 'Daily reminder',
 				data: { recurring: true },
 			},
-			{
-				seconds: 86400, // 24 hours
-				repeats: true,
-			}
+			scheduledTime
 		);
 
 		expect(recurringNotification).toBe(notificationId);
-		expect(notificationCoordinator.notificationMap.get(notificationId).trigger.repeats).toBe(true);
-	}, 10000);
+		expect(notificationCoordinator.notificationMap.get(notificationId).scheduledTime).toEqual(scheduledTime);
+	});
 
 	it('should update existing recurring notification', async () => {
 		const originalId = 'original-recurring';

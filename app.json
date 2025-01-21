@@ -69,12 +69,7 @@
 					"contactsPermission": "Allow OnMyList to access your contacts."
 				}
 			],
-			"expo-notifications",
-			{
-				"icon": "./assets/icon.png",
-				"color": "#ffffff",
-				"mode": "production"
-			}
+			"expo-notifications"
 		],
 		"extra": {
 			"eas": {

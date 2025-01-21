@@ -133,20 +133,20 @@ describe('Reminder Sync System', () => {
 				setTimeout(resolve, 0);
 			});
 
-			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
-				expect.objectContaining({
-					content: expect.objectContaining({
-						title: newReminder.title,
-						body: newReminder.body,
-						data: expect.objectContaining({
-							reminderId: newReminder.id,
-						}),
-					}),
-					trigger: expect.objectContaining({
-						date: scheduledTime,
-					}),
-				})
-			);
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content: {
+					title: newReminder.title,
+					body: newReminder.body,
+					data: {
+						reminderId: newReminder.id,
+						contactId: testContactId,
+						type: REMINDER_TYPES.SCHEDULED,
+						scheduledTimezone: 'America/New_York',
+						originalTime: scheduledTime.toISOString(),
+					},
+				},
+				trigger: scheduledTime,
+			});
 		});
 
 		it('should cancel local notification when reminder is deleted from Firestore', async () => {
@@ -204,17 +204,20 @@ describe('Reminder Sync System', () => {
 			});
 
 			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('local-notification-id');
-			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
-				expect.objectContaining({
-					content: expect.objectContaining({
-						title: updatedReminder.title,
-						body: updatedReminder.body,
-					}),
-					trigger: expect.objectContaining({
-						date: scheduledTime,
-					}),
-				})
-			);
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content: {
+					title: updatedReminder.title,
+					body: updatedReminder.body,
+					data: {
+						reminderId: reminderId,
+						scheduledTimezone: 'America/New_York',
+						originalTime: scheduledTime.toISOString(),
+						type: undefined,
+						contactId: undefined,
+					},
+				},
+				trigger: scheduledTime,
+			});
 		});
 
 		it('should handle multiple reminders efficiently', async () => {
@@ -331,10 +334,11 @@ describe('Reminder Sync System', () => {
 		});
 
 		it('should store timezone information with notification', async () => {
+			const scheduledTime = new Date('2024-01-20T15:00:00.000Z');
 			const reminder = {
 				id: 'test-reminder',
 				user_id: 'test-user',
-				scheduledTime: new Date('2024-01-20T15:00:00.000Z'),
+				scheduledTime,
 				title: 'Test Reminder',
 			};
 
@@ -342,10 +346,6 @@ describe('Reminder Sync System', () => {
 
 			await reminderSync.scheduleLocalNotification(reminder);
 
-			const mockCalls = Notifications.scheduleNotificationAsync.mock.calls;
-			console.log('Mock calls:', JSON.stringify(mockCalls[0][0], null, 2));
-
-			// Using exact match since we know the expected values
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
 				content: {
 					title: 'Test Reminder',
@@ -353,14 +353,12 @@ describe('Reminder Sync System', () => {
 					data: {
 						reminderId: 'test-reminder',
 						scheduledTimezone: 'America/New_York',
-						originalTime: '2024-01-20T15:00:00.000Z',
+						originalTime: scheduledTime.toISOString(),
 						type: undefined,
 						contactId: undefined,
 					},
 				},
-				trigger: {
-					date: reminder.scheduledTime,
-				},
+				trigger: scheduledTime,
 			});
 		});
 
