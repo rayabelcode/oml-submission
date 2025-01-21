@@ -130,16 +130,19 @@ export const sendPushNotification = async (userIds, notification, attempt = 0) =
 	}
 };
 
-export const scheduleLocalNotificationWithPush = async (userId, content, trigger) => {
+export const scheduleLocalNotificationWithPush = async (userId, content, scheduledTime) => {
 	try {
-		// Schedule local notification
+		// Make sure we have a Date object
+		const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
+
+		// Schedule local notification using Date object directly
 		const localNotificationId = await Notifications.scheduleNotificationAsync({
 			content,
-			trigger,
+			trigger: triggerTime,
 		});
 
-		// Send push notification if scheduled for future
-		if (trigger.seconds > 0) {
+		// Only send push for future notifications
+		if (triggerTime > new Date()) {
 			await sendPushNotification([userId], {
 				title: content.title,
 				body: content.body,

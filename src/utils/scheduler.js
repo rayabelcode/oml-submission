@@ -884,9 +884,6 @@ export class SchedulingService {
 		const scheduledTime = reminder.scheduledTime?.toDate() || reminder.date?.toDate();
 		if (!scheduledTime) return;
 
-		const now = new Date();
-		const secondsUntilNotification = Math.max(0, Math.floor((scheduledTime - now) / 1000));
-
 		const notificationContent = {
 			title: `Scheduled Call: ${reminder.contactName}`,
 			body: `Time to connect with ${reminder.contactName}`,
@@ -899,11 +896,14 @@ export class SchedulingService {
 		};
 
 		try {
-			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, {
-				seconds: secondsUntilNotification,
-			});
+			await scheduleLocalNotificationWithPush(
+				reminder.user_id,
+				notificationContent,
+				scheduledTime // Pass Date object directly
+			);
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
+			throw error;
 		}
 	}
 }

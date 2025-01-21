@@ -166,7 +166,6 @@ class ReminderSync {
 		try {
 			await this.cancelLocalNotification(reminder.id);
 
-			// Get user's timezone preference with error handling
 			let userTimezone;
 			try {
 				const userPrefs = await getUserPreferences(reminder.user_id);
@@ -176,14 +175,11 @@ class ReminderSync {
 				userTimezone = DateTime.local().zoneName;
 			}
 
-			// Convert scheduledTime to Date if it isn't already
 			const scheduledTime =
 				reminder.scheduledTime instanceof Date ? reminder.scheduledTime : new Date(reminder.scheduledTime);
 
-			// Convert to user's timezone while preserving the local time
 			const localDateTime = DateTime.fromJSDate(scheduledTime).setZone(userTimezone, { keepLocalTime: true });
 
-			// Only schedule if the time is in the future
 			if (localDateTime.toJSDate() > new Date()) {
 				const notificationId = await Notifications.scheduleNotificationAsync({
 					content: {
@@ -197,9 +193,7 @@ class ReminderSync {
 							originalTime: scheduledTime.toISOString(),
 						},
 					},
-					trigger: {
-						date: localDateTime.toJSDate(),
-					},
+					trigger: localDateTime.toJSDate(), // Use Date object directly
 				});
 
 				this.localNotifications.set(reminder.id, notificationId);
