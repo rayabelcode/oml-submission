@@ -18,6 +18,7 @@ import {
 	getContactById,
 	getContactReminders,
 	deleteReminder,
+	getActiveReminders,
 } from '../../../utils/firestore';
 import { SchedulingService } from '../../../utils/scheduler';
 import TimePickerModal from '../../modals/TimePickerModal';
@@ -115,6 +116,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+
+	// Helper function for checking if a date is today
+	const isToday = (date) => {
+		const today = new Date();
+		return (
+			date.getDate() === today.getDate() &&
+			date.getMonth() === today.getMonth() &&
+			date.getFullYear() === today.getFullYear()
+		);
+	};
 
 	useEffect(() => {
 		if (loading) {
@@ -723,18 +734,34 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				minimumDate={new Date()}
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={async (event, date) => {
-					if (!date) return;
-					if (date < new Date()) {
-						Alert.alert('Invalid Date', 'Please select a date in the future');
-						return;
-					}
+					if (!date || event.type !== 'set') return;
 
 					try {
 						setShowDatePicker(false);
 						setLoading(true);
 
+						let finalDate;
+
+						// If today is selected pick a time using random minutes (between 120-180)
+						if (isToday(date)) {
+							finalDate = new Date();
+							const minutesToAdd = 120 + Math.floor(Math.random() * 60);
+							finalDate.setTime(Date.now() + minutesToAdd * 60000);
+						} else {
+							// For future dates pick random time within active hours
+							finalDate = new Date(date);
+							const [startHour] = activeHours.start.split(':').map(Number);
+							const [endHour] = activeHours.end.split(':').map(Number);
+
+							const totalHours = endHour - startHour;
+							const randomHour = startHour + Math.random() * totalHours;
+							const randomMinutes = Math.floor(Math.random() * 60);
+
+							finalDate.setHours(Math.floor(randomHour), randomMinutes, 0, 0);
+						}
+
 						const updatedContact = await updateContactScheduling(contact.id, {
-							custom_next_date: date.toISOString(),
+							custom_next_date: finalDate.toISOString(),
 						});
 
 						setSelectedContact(updatedContact);
