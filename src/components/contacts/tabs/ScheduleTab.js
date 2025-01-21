@@ -192,6 +192,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
+			setLoading(true);
 			// Get existing reminders for this contact
 			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 
@@ -228,6 +229,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');
 			setFrequency(contact?.scheduling?.frequency || null);
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -332,7 +335,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 										setFrequency(null);
 										const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 
-										// Only delete reminders if there's no custom date
 										if (!contact.scheduling?.custom_next_date) {
 											const deletePromises = existingReminders
 												.map((reminder) => {
@@ -358,11 +360,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											});
 										}
 
+										const updatedContact = await getContactById(contact.id);
+										setSelectedContact(updatedContact);
+
 										if (loadContacts) {
 											await loadContacts();
 										}
+										setLoading(false);
 										return;
 									}
+
 									setFrequency(option.value);
 									const updatedContact = await updateContactScheduling(contact.id, {
 										frequency: option.value,
@@ -415,11 +422,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									custom_next_date: null,
 								};
 
-								// Only remove next_contact and delete reminders if there's no recurring date
 								if (!contact.scheduling?.recurring_next_date) {
 									updates.next_contact = null;
-
-									// Get and delete existing reminders only if there's no recurring date
 									const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 									const deletePromises = existingReminders
 										.map((reminder) => {
@@ -431,21 +435,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 									await Promise.all([updateContactScheduling(contact.id, updates), ...deletePromises]);
 								} else {
-									// If there's still a recurring date, just update the scheduling
 									await updateContactScheduling(contact.id, updates);
 								}
 
-								setSelectedContact((prev) => ({
-									...prev,
-									scheduling: {
-										...prev.scheduling,
-										custom_next_date: null,
-										// Preserve recurring_next_date if it exists
-										recurring_next_date: prev.scheduling?.recurring_next_date || null,
-									},
-									// Keep next_contact if there's still a recurring date
-									next_contact: prev.scheduling?.recurring_next_date || null,
-								}));
+								const updatedContact = await getContactById(contact.id);
+								setSelectedContact(updatedContact);
 
 								if (loadContacts) {
 									await loadContacts();
