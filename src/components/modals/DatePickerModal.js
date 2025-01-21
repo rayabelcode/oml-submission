@@ -4,8 +4,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../context/ThemeContext';
 
-const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, containerStyle }) => {
+const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, minimumDate, containerStyle }) => {
 	const { colors, theme } = useTheme();
+
+	// Use provided selectedDate or current date as fallback
+	const initialDate = selectedDate || new Date();
 
 	const styles = StyleSheet.create({
 		datePickerModalOverlay: {
@@ -28,10 +31,11 @@ const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, contain
 			<TouchableOpacity style={styles.datePickerModalOverlay} onPress={onClose} activeOpacity={1}>
 				<View style={[styles.datePickerContainer, containerStyle]}>
 					<DateTimePicker
-						value={selectedDate}
+						value={initialDate}
 						mode="date"
 						display="inline"
 						onChange={onDateSelect}
+						minimumDate={minimumDate}
 						textColor={colors.text.primary}
 						accentColor={colors.primary}
 						themeVariant={theme}

@@ -91,6 +91,10 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const [showSlotsFilledModal, setShowSlotsFilledModal] = useState(false);
 	const [slotsFilledDetails, setSlotsFilledDetails] = useState(null);
 
+	// Date Picker default
+	const [selectedDate, setSelectedDate] = useState(new Date());
+
+	// Loading Animation
 	const dot1 = new Animated.Value(0);
 	const dot2 = new Animated.Value(0);
 	const dot3 = new Animated.Value(0);
@@ -414,7 +418,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					onPress={async () => {
 						if (loading) return;
 
-						// If there's already a custom date, clear it
 						if (contact.scheduling?.custom_next_date) {
 							try {
 								setLoading(true);
@@ -451,6 +454,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								setLoading(false);
 							}
 						} else {
+							// Reset selectedDate to current date when opening picker
+							setSelectedDate(new Date());
 							setShowDatePicker(true);
 						}
 					}}
@@ -714,7 +719,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			/>
 			<DatePickerModal
 				visible={showDatePicker}
-				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
+				selectedDate={selectedDate}
 				minimumDate={new Date()}
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={async (event, date) => {
@@ -732,7 +737,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							custom_next_date: date.toISOString(),
 						});
 
-						// Use the complete updated contact data
 						setSelectedContact(updatedContact);
 
 						if (loadContacts) {
