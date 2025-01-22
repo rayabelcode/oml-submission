@@ -557,15 +557,18 @@ export async function updateContactScheduling(contactId, schedulingData) {
 		if (updateData.next_contact) {
 			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
-			// Delete existing scheduled reminders
-			existingReminders.forEach((reminder) => {
+			// Delete existing scheduled reminders - with existence check
+			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
 					const reminderRef = doc(db, 'reminders', reminder.id);
-					batch.delete(reminderRef);
+					const reminderDoc = await getDoc(reminderRef);
+					if (reminderDoc.exists()) {
+						batch.delete(reminderRef);
+					}
 				}
-			});
+			}
 
-			// Create new reminder
+			// Create new reminder only if deletions successfully processed
 			const newReminderRef = doc(collection(db, 'reminders'));
 			const now = Timestamp.now();
 			const scheduledTimestamp =
