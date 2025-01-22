@@ -9,6 +9,10 @@ import {
 	IOS_CONFIGS,
 	NOTIFICATION_CONFIGS,
 } from '../../constants/notificationConstants';
+import { sendPushNotification, scheduleLocalNotificationWithPush } from './notifications/pushNotification';
+import { doc, getUserProfile, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../config/firebase';
+import { reminderSync } from './notifications/reminderSync';
 
 class NotificationCoordinator {
 	constructor() {
@@ -49,30 +53,85 @@ class NotificationCoordinator {
 			// Request permissions
 			await this.requestPermissions();
 
-			// Load stored data
+			// Get Expo push token and store in Firestore only if user is authenticated
+			if (Platform.OS === 'ios' && auth.currentUser) {
+				try {
+					const token = (
+						await Notifications.getExpoPushTokenAsync({
+							projectId: 'a2b79805-c750-4012-92e8-fee850d83b9c',
+						})
+					).data;
+
+					// Store token in user's Firestore document
+					const userDoc = doc(db, 'users', auth.currentUser.uid);
+					await updateDoc(userDoc, {
+						expoPushToken: token,
+						devicePlatform: Platform.OS,
+						lastTokenUpdate: serverTimestamp(),
+					});
+
+					// Start reminder sync after we confirm user is authenticated
+					await reminderSync.start();
+				} catch (tokenError) {
+					console.error('Error storing push token:', tokenError);
+					// Continue initialization even if token storage fails
+				}
+			}
+
+			// Initialization services
 			await this.loadStoredData();
-
-			// Initialize services
 			await this.initializeServices();
-
-			// Set up app state and network listeners
 			this.setupEventListeners();
-
-			// Start maintenance intervals
 			this.startMaintenanceIntervals();
 
 			this.initialized = true;
 			return true;
 		} catch (error) {
-			console.error('Failed to initialize notification coordinator:', error);
+			console.error('Error in initialize:', error);
 			return false;
 		}
 	}
 
 	async setupIOSCategories() {
-		const categories = IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES;
-		for (const [key, category] of Object.entries(categories)) {
-			await Notifications.setNotificationCategoryAsync(category.identifier, category.actions);
+		if (Platform.OS === 'ios') {
+			await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
+				{
+					identifier: 'add_notes',
+					buttonTitle: 'Add Notes',
+					options: {
+						opensAppToForeground: false,
+						textInput: {
+							submitButtonTitle: 'Save',
+							placeholder: 'Enter your call notes...',
+						},
+					},
+				},
+				{
+					identifier: 'dismiss',
+					buttonTitle: 'Dismiss',
+					options: {
+						opensAppToForeground: false,
+						isDestructive: true,
+					},
+				},
+			]);
+
+			await Notifications.setNotificationCategoryAsync('SCHEDULED', [
+				{
+					identifier: 'call_now',
+					buttonTitle: 'Call Now',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+				{
+					identifier: 'snooze',
+					buttonTitle: 'Snooze',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+			]);
 		}
 	}
 
@@ -105,6 +164,9 @@ class NotificationCoordinator {
 					lightColor: '#FF231F7C',
 				});
 			}
+
+			// Start reminder sync
+			await reminderSync.start();
 
 			return true;
 		} catch (error) {
@@ -162,6 +224,10 @@ class NotificationCoordinator {
 
 	async handleAppStateChange(nextAppState) {
 		if (nextAppState === 'active') {
+			// Start reminder sync if user is authenticated
+			if (auth.currentUser && !reminderSync.initialized) {
+				await reminderSync.start();
+			}
 			await this.syncPendingNotifications();
 			await this.performCleanup();
 		}
@@ -173,47 +239,86 @@ class NotificationCoordinator {
 		}
 	}
 
-	async scheduleNotification(content, trigger, options = {}) {
+	async scheduleNotification(content, scheduledTime, options = {}) {
 		if (!this.initialized) {
 			await this.initialize();
 		}
 
 		try {
+			const userId = auth.currentUser?.uid;
+			if (!userId) throw new Error('User not authenticated');
+
+			// Handle replacing existing notification
+			if (options.replaceId) {
+				const existingNotification = this.notificationMap.get(options.replaceId);
+				if (existingNotification) {
+					await this.cancelNotification(options.replaceId);
+				}
+			}
+
+			// Ensure we have a Date object
+			const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
+
 			// Prepare notification content
 			const finalContent = {
 				...content,
 				...(Platform.OS === 'ios' &&
 					options.type && {
-						categoryIdentifier: IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES[options.type].identifier,
+						categoryIdentifier: IOS_CONFIGS.NOTIFICATION_SETTINGS.CATEGORIES[options.type]?.identifier,
 					}),
 			};
 
-			// Schedule the notification
-			const notificationId = await Notifications.scheduleNotificationAsync({
+			// Schedule the local notification using Date object directly
+			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
-				trigger,
+				trigger: triggerTime,
 			});
 
+			// Calculate seconds until notification
+			const secondsUntilNotification = Math.max(0, Math.floor((triggerTime - new Date()) / 1000));
+
 			// Store in notification map
-			this.notificationMap.set(notificationId, {
+			this.notificationMap.set(localNotificationId, {
 				content: finalContent,
-				trigger,
+				scheduledTime: triggerTime,
 				options,
 				timestamp: new Date().toISOString(),
+				replacedId: options.replaceId,
 			});
 
 			await this.saveNotificationMap();
 
-			// Handle offline queue if needed
-			if (!options.skipQueue && !(await this.checkConnectivity())) {
-				await this.addToPendingQueue(notificationId, finalContent, trigger, options);
+			// Handle push notification
+			if (secondsUntilNotification > 0) {
+				try {
+					const userDoc = await getUserProfile(userId);
+					if (userDoc?.expoPushToken) {
+						await sendPushNotification([userId], {
+							title: finalContent.title,
+							body: finalContent.body,
+							data: {
+								...finalContent.data,
+								localNotificationId,
+								replacedId: options.replaceId,
+							},
+						});
+					}
+				} catch (pushError) {
+					console.error('Error sending push notification:', pushError);
+					// Continue execution even if push notification fails
+				}
 			}
 
-			return notificationId;
+			// Handle offline queue if needed
+			if (!options.skipQueue && !(await this.checkConnectivity())) {
+				await this.addToPendingQueue(localNotificationId, finalContent, triggerTime, options);
+			}
+
+			return localNotificationId;
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
 			if (options.retry !== false) {
-				return this.handleSchedulingError(content, trigger, options);
+				return this.handleSchedulingError(content, scheduledTime, options);
 			}
 			throw error;
 		}
@@ -270,14 +375,14 @@ class NotificationCoordinator {
 		}
 	}
 
-	async addToPendingQueue(notificationId, content, trigger, options) {
+	async addToPendingQueue(notificationId, content, scheduledTime, options) {
 		if (this.pendingQueue.size >= ERROR_HANDLING.OFFLINE.MAX_QUEUE_SIZE) {
 			throw new Error('Pending queue size limit reached');
 		}
 
 		this.pendingQueue.set(notificationId, {
 			content,
-			trigger,
+			scheduledTime, // Store the Date object
 			options,
 			timestamp: new Date().toISOString(),
 		});
@@ -335,7 +440,7 @@ class NotificationCoordinator {
 		const promises = [];
 		for (const [id, data] of this.pendingQueue) {
 			promises.push(
-				this.scheduleNotification(data.content, data.trigger, {
+				this.scheduleNotification(data.content, data.scheduledTime, {
 					...data.options,
 					skipQueue: true,
 				}).then(() => id)
@@ -394,6 +499,9 @@ class NotificationCoordinator {
 		if (this.networkSubscription) {
 			this.networkSubscription();
 		}
+
+		// Stop reminder sync
+		reminderSync.stop();
 	}
 }
 

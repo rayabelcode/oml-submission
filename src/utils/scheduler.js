@@ -1,5 +1,11 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
+import { scheduleLocalNotificationWithPush } from './notifications/pushNotification';
+// Recurring reminder configurations
+import { schedulingHistory } from './schedulingHistory';
+import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
+// Fallback
+const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -440,6 +446,69 @@ export class SchedulingService {
 		return null;
 	}
 
+	// Recurring Reminder Scheduling
+	async scheduleRecurringReminder(contact, lastContactDate, frequency) {
+		try {
+			const baseSchedule = await this.scheduleReminder(contact, lastContactDate, frequency);
+			if (baseSchedule.status === 'SLOTS_FILLED') {
+				return baseSchedule;
+			}
+
+			try {
+				const patterns = await schedulingHistory.analyzeContactPatterns(contact.id, 90);
+
+				if (patterns?.lastUpdated) {
+					const lastUpdate = DateTime.fromISO(patterns.lastUpdated);
+					const daysSinceUpdate = DateTime.now().diff(lastUpdate, 'days').days;
+
+					if (daysSinceUpdate > MAX_AGE_DAYS) {
+						return {
+							...baseSchedule,
+							frequency: frequency,
+							pattern_adjusted: false,
+							recurring_next_date: baseSchedule.date.toDate().toISOString(),
+						};
+					}
+				}
+
+				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
+					const suggestedTime = await schedulingHistory.suggestOptimalTime(
+						contact.id,
+						DateTime.fromJSDate(baseSchedule.date.toDate()),
+						'recurring'
+					);
+
+					if (suggestedTime) {
+						const suggestedJSDate = suggestedTime.toJSDate();
+						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
+							return {
+								...baseSchedule,
+								date: Timestamp.fromDate(suggestedJSDate),
+								frequency: frequency,
+								pattern_adjusted: true,
+								confidence: patterns.confidence,
+								recurring_next_date: suggestedTime.toISO(),
+							};
+						}
+					}
+				}
+			} catch (error) {
+				// Silently fall back to base schedule
+			}
+
+			// Return base schedule if pattern analysis fails or suggested time is blocked
+			return {
+				...baseSchedule,
+				frequency: frequency,
+				pattern_adjusted: false,
+				recurring_next_date: baseSchedule.date.toDate().toISOString(),
+			};
+		} catch (error) {
+			console.error('Error in scheduleRecurringReminder:', error);
+			throw error;
+		}
+	}
+
 	async scheduleCustomDate(contact, customDate) {
 		try {
 			// Validate input
@@ -481,7 +550,7 @@ export class SchedulingService {
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
 				snoozed: false,
-				follow_up: false,
+				FOLLOW_UP: false,
 				ai_suggestions: [],
 				score: this.calculateTimeSlotScore(scheduledDate, contact),
 				flexibility_used: scheduledDate.getTime() !== customDate.getTime(),
@@ -802,5 +871,32 @@ export class SchedulingService {
 		}
 
 		return adjustedTime;
+	}
+
+	async scheduleNotificationForReminder(reminder) {
+		const scheduledTime = reminder.scheduledTime?.toDate() || reminder.date?.toDate();
+		if (!scheduledTime) return;
+
+		const notificationContent = {
+			title: `Scheduled Call: ${reminder.contactName}`,
+			body: `Time to connect with ${reminder.contactName}`,
+			data: {
+				type: 'SCHEDULED',
+				reminderId: reminder.id,
+				contactId: reminder.contact_id,
+				userId: reminder.user_id,
+			},
+		};
+
+		try {
+			await scheduleLocalNotificationWithPush(
+				reminder.user_id,
+				notificationContent,
+				scheduledTime // Pass Date object directly
+			);
+		} catch (error) {
+			console.error('Error scheduling notification:', error);
+			throw error;
+		}
 	}
 }

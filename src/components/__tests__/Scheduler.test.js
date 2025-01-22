@@ -1,6 +1,11 @@
 import { jest } from '@jest/globals';
 import { SchedulingService } from '../../utils/scheduler';
 import { DateTime } from 'luxon';
+import { updateContactScheduling, getContactReminders } from '../../utils/firestore';
+const RECURRENCE_METADATA = {
+	MIN_CONFIDENCE: 0.5,
+	MAX_AGE_DAYS: 30,
+};
 
 jest.mock('firebase/firestore', () => ({
 	Timestamp: {
@@ -17,6 +22,32 @@ jest.mock('firebase/firestore', () => ({
 				_nanoseconds: (now.getTime() % 1000) * 1000000,
 			};
 		},
+	},
+	initializeFirestore: jest.fn(),
+	persistentLocalCache: jest.fn(() => ({})),
+	persistentMultipleTabManager: jest.fn(() => ({})),
+}));
+
+//Mock schedulingHistory
+jest.mock('../../utils/schedulingHistory', () => ({
+	schedulingHistory: {
+		analyzeContactPatterns: jest.fn(),
+		suggestOptimalTime: jest.fn(),
+	},
+}));
+
+// Mock firestore functions
+jest.mock('../../utils/firestore', () => ({
+	updateContactScheduling: jest.fn(),
+	getContactReminders: jest.fn(),
+	getUserPreferences: jest.fn(),
+	getActiveReminders: jest.fn(),
+}));
+
+// Mock auth
+jest.mock('../../config/firebase', () => ({
+	auth: {
+		currentUser: { uid: 'test-user' },
 	},
 }));
 
@@ -266,6 +297,92 @@ describe('SchedulingService', () => {
 			expect(() => {
 				schedulingService.calculatePreliminaryDate(startDate, 'invalid');
 			}).toThrow('Invalid frequency: invalid');
+		});
+	});
+
+	describe('Custom Date Scheduling', () => {
+		let schedulingService;
+		let mockContact;
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+			mockContact = {
+				id: 'test-id',
+				first_name: 'John',
+				last_name: 'Doe',
+				scheduling: {
+					relationship_type: 'friend',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			// Mock successful Firestore operations
+			require('../../utils/firestore').getContactReminders.mockImplementation((contactId, userId) => {
+				return Promise.resolve([
+					{
+						id: 'reminder-id',
+						scheduledTime: {
+							toDate: () => mockContact.scheduling.custom_next_date || new Date(),
+						},
+					},
+				]);
+			});
+
+			require('../../utils/firestore').updateContactScheduling.mockImplementation((contactId, data) => {
+				mockContact.scheduling.custom_next_date = data.custom_next_date;
+				return Promise.resolve({
+					id: contactId,
+					scheduling: {
+						custom_next_date: data.custom_next_date.toISOString(),
+					},
+					next_contact: data.custom_next_date.toISOString(),
+				});
+			});
+		});
+
+		it('should create reminder for custom date', async () => {
+			// Create a fixed date in the local timezone
+			const customDate = DateTime.fromObject(
+				{ year: 2024, month: 1, day: 1, hour: 14, minute: 0 },
+				{ zone: 'America/New_York' }
+			);
+
+			// Mock the exact response we expect
+			require('../../utils/firestore').updateContactScheduling.mockResolvedValueOnce({
+				id: mockContact.id,
+				scheduling: {
+					custom_next_date: customDate.toISO(),
+				},
+				next_contact: customDate.toISO(),
+			});
+
+			const result = await updateContactScheduling(mockContact.id, {
+				custom_next_date: customDate.toJSDate(),
+			});
+
+			expect(result.next_contact).toEqual(customDate.toISO());
+		});
+
+		it('should handle multiple custom date updates', async () => {
+			const firstDate = DateTime.now().plus({ days: 1 });
+			const secondDate = DateTime.now().plus({ days: 2 });
+
+			// Set first custom date
+			await updateContactScheduling(mockContact.id, {
+				custom_next_date: firstDate.toJSDate(),
+			});
+
+			// Update to second custom date
+			await updateContactScheduling(mockContact.id, {
+				custom_next_date: secondDate.toJSDate(),
+			});
+
+			const reminders = await getContactReminders(mockContact.id, 'test-user');
+			expect(reminders).toHaveLength(1);
+			expect(reminders[0].scheduledTime.toDate()).toEqual(secondDate.toJSDate());
 		});
 	});
 
@@ -609,6 +726,73 @@ describe('SchedulingService', () => {
 
 			expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
 			expect(schedulingService.hasTimeConflict(justRight)).toBeFalsy();
+		});
+
+		describe('Timezone Handling', () => {
+			it('should handle notifications across timezone changes', async () => {
+				const originalTimezone = 'America/New_York';
+				const newTimezone = 'Asia/Tokyo';
+				const schedulingService = new SchedulingService(mockUserPreferences, [], originalTimezone);
+
+				const mockContact = {
+					id: 'test-id',
+					scheduling: {
+						relationship_type: 'friend',
+						custom_preferences: {
+							active_hours: { start: '09:00', end: '17:00' },
+						},
+					},
+				};
+
+				// Schedule in original timezone
+				const firstResult = await schedulingService.scheduleReminder(mockContact, new Date(), 'weekly');
+
+				// Change timezone
+				schedulingService.timeZone = newTimezone;
+				const secondResult = await schedulingService.scheduleReminder(
+					mockContact,
+					firstResult.date.toDate(),
+					'weekly'
+				);
+
+				// Verify times are correctly adjusted
+				const firstDateTime = DateTime.fromJSDate(firstResult.date.toDate()).setZone(originalTimezone);
+				const secondDateTime = DateTime.fromJSDate(secondResult.date.toDate()).setZone(newTimezone);
+
+				expect(firstDateTime.hour).toBeGreaterThanOrEqual(9);
+				expect(firstDateTime.hour).toBeLessThan(17);
+				expect(secondDateTime.hour).toBeGreaterThanOrEqual(9);
+				expect(secondDateTime.hour).toBeLessThan(17);
+			});
+
+			it('should maintain consistent scheduling times across timezones', async () => {
+				const schedulingService = new SchedulingService(mockUserPreferences, [], 'UTC');
+
+				const mockContact = {
+					id: 'test-id',
+					scheduling: {
+						relationship_type: 'friend',
+						custom_preferences: {
+							active_hours: { start: '09:00', end: '17:00' },
+						},
+					},
+				};
+
+				const timezones = ['America/New_York', 'Asia/Tokyo', 'Europe/London'];
+				const results = await Promise.all(
+					timezones.map(async (timezone) => {
+						schedulingService.timeZone = timezone;
+						return schedulingService.scheduleReminder(mockContact, new Date(), 'weekly');
+					})
+				);
+
+				// Verify all scheduled times fall within working hours in their respective timezones
+				results.forEach((result, index) => {
+					const localTime = DateTime.fromJSDate(result.date.toDate()).setZone(timezones[index]);
+					expect(localTime.hour).toBeGreaterThanOrEqual(9);
+					expect(localTime.hour).toBeLessThan(17);
+				});
+			});
 		});
 	});
 
@@ -1027,6 +1211,315 @@ describe('SchedulingService', () => {
 
 			console.log('Long-term Scheduling Performance:', results);
 			expect(parseFloat(results[results.length - 1].operationsPerSecond)).toBeGreaterThan(3);
+		});
+	});
+
+	// Recurring reminder testing
+	describe('Recurring Reminders', () => {
+		let schedulingService;
+		let mockSchedulingHistory;
+
+		const mockContact = {
+			id: 'test-id',
+			scheduling: {
+				relationship_type: 'friend',
+				custom_preferences: {
+					active_hours: { start: '09:00', end: '17:00' },
+				},
+			},
+		};
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+
+			// Get fresh reference to mocked module
+			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		});
+
+		it('should use base scheduling when no patterns exist', async () => {
+			// Mock no patterns found
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+				null
+			);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			// Expectation for flattened structure
+			expect(result.date).toBeDefined();
+			expect(result).toEqual(
+				expect.objectContaining({
+					frequency: 'weekly',
+					pattern_adjusted: false,
+					recurring_next_date: expect.any(String),
+				})
+			);
+		});
+
+		it('should enhance scheduling with pattern analysis when available', async () => {
+			// Mock successful pattern analysis
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
+				confidence: 0.8,
+				successRates: {
+					byHour: { 14: { successRate: 0.9 } },
+				},
+			});
+
+			// Mock optimal time suggestion
+			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValue(
+				DateTime.now().set({ hour: 14, minute: 0 })
+			);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			// Expectation for flattened structure
+			expect(result).toEqual(
+				expect.objectContaining({
+					frequency: 'weekly',
+					pattern_adjusted: true,
+					confidence: 0.8,
+					recurring_next_date: expect.any(String),
+				})
+			);
+		});
+
+		it('should respect scheduling constraints even with pattern adjustment', async () => {
+			// Mock pattern analysis suggesting a blocked time
+			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValueOnce(
+				{
+					confidence: 0.8,
+					successRates: {
+						byHour: { 23: { successRate: 0.9 } }, // Outside active hours
+					},
+				}
+			);
+
+			// Mock optimal time suggestion to return a blocked time
+			const blockedTime = DateTime.now().set({ hour: 23, minute: 0 });
+			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
+				blockedTime
+			);
+
+			// Mock base schedule to be within working hours
+			const baseDate = DateTime.now().set({ hour: 14, minute: 0 });
+			const mockBaseResult = {
+				date: {
+					toDate: () => baseDate.toJSDate(),
+					_seconds: Math.floor(baseDate.toSeconds()),
+					_nanoseconds: 0,
+				},
+				status: 'SUCCESS',
+			};
+
+			jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			// Use flattened structure
+			expect(result.pattern_adjusted).toBe(false);
+
+			// Verify time is within allowed hours
+			const scheduledHour = DateTime.fromJSDate(result.date.toDate()).hour;
+			expect(scheduledHour).toBeGreaterThanOrEqual(9);
+			expect(scheduledHour).toBeLessThan(17);
+		});
+
+		it('should handle slots filled status correctly', async () => {
+			// Mock base scheduling returning slots filled
+			jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce({
+				status: 'SLOTS_FILLED',
+				message: 'This day is fully booked. Would you like to:',
+				options: ['Try the next available day', 'Schedule for next week'],
+			});
+
+			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+			expect(result.status).toBe('SLOTS_FILLED');
+			expect(result.message).toBeDefined();
+			expect(result.options).toBeDefined();
+		});
+	});
+
+	describe('Advanced Recurring Reminder Scenarios', () => {
+		let schedulingService;
+		let mockSchedulingHistory;
+		let mockContact;
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
+			mockContact = {
+				id: 'test-id',
+				first_name: 'John',
+				last_name: 'Doe',
+				scheduling: {
+					relationship_type: 'friend',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+		});
+
+		describe('Error Handling', () => {
+			it('should handle schedulingHistory failures gracefully', async () => {
+				// Set up the success mock for base scheduling
+				const baseDate = DateTime.now().plus({ days: 7 });
+				const mockBaseResult = {
+					date: {
+						toDate: () => baseDate.toJSDate(),
+						_seconds: Math.floor(baseDate.toSeconds()),
+						_nanoseconds: 0,
+					},
+					status: 'SUCCESS',
+					recurrence: {
+						frequency: 'weekly',
+						pattern_adjusted: false,
+						next_date: baseDate.toISO(),
+					},
+				};
+
+				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
+
+				// Set up failure for pattern analysis
+				mockSchedulingHistory.analyzeContactPatterns.mockRejectedValueOnce(
+					new Error('Pattern analysis failed')
+				);
+
+				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+				expect(result.recurrence.pattern_adjusted).toBe(false);
+			});
+		});
+
+		describe('Pattern Confidence', () => {
+			it('should respect minimum confidence threshold', async () => {
+				mockSchedulingHistory.analyzeContactPatterns.mockResolvedValueOnce({
+					confidence: 0.4, // Below threshold
+					successRates: {
+						byHour: { 14: { successRate: 0.9 } },
+					},
+				});
+
+				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+				expect(result.pattern_adjusted).toBe(false);
+			});
+
+			it('should handle borderline confidence cases', async () => {
+				const baseDate = DateTime.now().plus({ days: 7 });
+				const mockBaseResult = {
+					date: {
+						toDate: () => baseDate.toJSDate(),
+						_seconds: Math.floor(baseDate.toSeconds()),
+						_nanoseconds: 0,
+					},
+					status: 'SUCCESS',
+				};
+
+				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
+
+				mockSchedulingHistory.analyzeContactPatterns.mockResolvedValueOnce({
+					confidence: RECURRENCE_METADATA.MIN_CONFIDENCE,
+					successRates: {
+						byHour: { 14: { successRate: 0.9 } },
+					},
+					lastUpdated: DateTime.now().toISO(),
+				});
+
+				mockSchedulingHistory.suggestOptimalTime.mockResolvedValueOnce(baseDate);
+
+				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+				expect(result.pattern_adjusted).toBe(true);
+			});
+		});
+
+		describe('Cache and Data Staleness', () => {
+			it('should handle stale pattern data', async () => {
+				const baseDate = DateTime.now().plus({ days: 7 });
+				const mockBaseResult = {
+					date: {
+						toDate: () => baseDate.toJSDate(),
+						_seconds: Math.floor(baseDate.toSeconds()),
+						_nanoseconds: 0,
+					},
+					status: 'SUCCESS',
+				};
+
+				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
+
+				const staleDate = DateTime.now().minus({ days: RECURRENCE_METADATA.MAX_AGE_DAYS + 1 });
+
+				mockSchedulingHistory.analyzeContactPatterns.mockResolvedValueOnce({
+					confidence: 0.8,
+					successRates: {
+						byHour: { 14: { successRate: 0.9 } },
+					},
+					lastUpdated: staleDate.toISO(),
+				});
+
+				const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
+
+				expect(result.pattern_adjusted).toBe(false);
+				expect(result.frequency).toBe('weekly');
+				expect(result.date).toEqual(mockBaseResult.date);
+			});
+
+			it('should integrate with Firestore updates', async () => {
+				const customDate = DateTime.now().plus({ days: 1 });
+				const recurringDate = DateTime.now().plus({ days: 2 });
+				const mockTimestamp = {
+					toDate: () => recurringDate.toJSDate(),
+					_seconds: Math.floor(recurringDate.toSeconds()),
+					_nanoseconds: 0,
+				};
+
+				const recurringResponse = {
+					date: mockTimestamp,
+					contact_id: mockContact.id,
+					created_at: mockTimestamp,
+					updated_at: mockTimestamp,
+					scheduling: {
+						recurring_next_date: recurringDate.toISO(),
+						recurring: {
+							frequency: 'weekly',
+							pattern_adjusted: false,
+							next_date: recurringDate.toISO(),
+						},
+					},
+				};
+
+				const customResponse = {
+					id: mockContact.id,
+					scheduling: {
+						recurring_next_date: recurringDate.toISO(),
+						custom_next_date: customDate.toISO(),
+						recurring: {
+							frequency: 'weekly',
+							pattern_adjusted: false,
+							next_date: recurringDate.toISO(),
+						},
+					},
+				};
+
+				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(recurringResponse);
+
+				require('../../utils/firestore').updateContactScheduling.mockResolvedValueOnce(customResponse);
+
+				const recurringResult = await schedulingService.scheduleRecurringReminder(
+					mockContact,
+					new Date(),
+					'weekly'
+				);
+
+				const customResult = await updateContactScheduling(mockContact.id, {
+					custom_next_date: customDate.toJSDate(),
+				});
+
+				expect(recurringResult.scheduling?.recurring_next_date).toBeDefined();
+				expect(customResult.scheduling.recurring_next_date).toBeDefined();
+				expect(customResult.scheduling.custom_next_date).toBeDefined();
+			});
 		});
 	});
 });

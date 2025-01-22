@@ -95,15 +95,18 @@ class NotificationService {
 		}
 	}
 
-	async scheduleNotification(content, trigger) {
+	async scheduleNotification(content, scheduledTime) {
 		if (!this.initialized) {
 			await this.initialize();
 		}
 
 		try {
+			// Make sure we have a Date object
+			const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
+
 			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content,
-				trigger,
+				trigger: triggerTime, // Use Date object directly
 			});
 
 			return localNotificationId;

@@ -3,8 +3,8 @@ import { Timestamp } from 'firebase/firestore';
 export const NOTIFICATION_MAP_KEY = 'notification_map';
 
 export const REMINDER_TYPES = {
-	SCHEDULED: 'scheduled',
-	FOLLOW_UP: 'follow_up',
+	SCHEDULED: 'SCHEDULED',
+	FOLLOW_UP: 'FOLLOW_UP',
 };
 
 export const REMINDER_STATUS = {
@@ -12,6 +12,30 @@ export const REMINDER_STATUS = {
 	COMPLETED: 'completed',
 	SNOOZED: 'snoozed',
 	SKIPPED: 'skipped',
+};
+
+// Recurring reminder configurations
+export const RECURRENCE_METADATA = {
+	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns
+	TYPES: {
+		DAILY: 'daily',
+		WEEKLY: 'weekly',
+		BIWEEKLY: 'biweekly',
+		MONTHLY: 'monthly',
+		QUARTERLY: 'quarterly',
+		YEARLY: 'yearly',
+	},
+};
+
+// Notification trigger validation
+export const NOTIFICATION_VALIDATION = {
+	validateTrigger: (trigger) => {
+		if (trigger instanceof Date) return trigger;
+		if (typeof trigger === 'string') return new Date(trigger);
+		if (trigger?.date) return new Date(trigger.date);
+		if (trigger?.seconds) return new Date(Date.now() + trigger.seconds * 1000);
+		throw new Error('Invalid notification trigger format');
+	},
 };
 
 // iOS specific configurations
@@ -30,11 +54,15 @@ export const IOS_CONFIGS = {
 		// iOS specific notification categories
 		CATEGORIES: {
 			FOLLOW_UP: {
-				identifier: 'follow_up',
+				identifier: 'FOLLOW_UP',
 				actions: [
 					{
 						identifier: 'add_notes',
 						title: 'Add Notes',
+						textInput: {
+							buttonTitle: 'Save',
+							placeholder: 'Enter your call notes...',
+						},
 						options: {
 							foreground: true,
 							destructive: false,
@@ -50,8 +78,9 @@ export const IOS_CONFIGS = {
 					},
 				],
 			},
+
 			SCHEDULED: {
-				identifier: 'scheduled',
+				identifier: 'SCHEDULED',
 				actions: [
 					{
 						identifier: 'call_now',
@@ -106,24 +135,32 @@ export const ERROR_HANDLING = {
 	RETRY: {
 		MAX_ATTEMPTS: 3,
 		INTERVALS: [1000, 5000, 15000], // Retry delays in ms
-	},
-	OFFLINE: {
-		QUEUE_KEY: '@NotificationQueue',
-		MAX_QUEUE_SIZE: 100,
+		PUSH: {
+			MAX_ATTEMPTS: 3,
+			INTERVALS: [2000, 10000, 30000], // Push-specific retry delays
+			BACKOFF_RATE: 2, // Exponential backoff multiplier
+			JITTER: 1000, // Random delay (ms) to prevent thundering herd
+			ERROR_CODES: {
+				INVALID_TOKEN: 'InvalidToken',
+				RATE_LIMIT: 'RateLimit',
+				NETWORK_ERROR: 'NetworkError',
+				SERVER_ERROR: 'ServerError',
+			},
+		},
 	},
 };
 
 // Notification coordinator settings
 export const COORDINATOR_CONFIG = {
-    BATCH_SIZE: 50,
-    CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
-    SYNC_INTERVAL: 15 * 60 * 1000, // 15 minutes
-    STORAGE_KEYS: {
-        NOTIFICATION_MAP: NOTIFICATION_MAP_KEY,
-        PENDING_QUEUE: '@PendingNotifications',
-        LAST_CLEANUP: '@LastCleanupTime',
-        LAST_SYNC: '@LastSyncTime',
-    },
+	BATCH_SIZE: 50,
+	CLEANUP_INTERVAL: 60 * 60 * 1000, // 1 hour
+	SYNC_INTERVAL: 15 * 60 * 1000, // 15 minutes
+	STORAGE_KEYS: {
+		NOTIFICATION_MAP: NOTIFICATION_MAP_KEY,
+		PENDING_QUEUE: '@PendingNotifications',
+		LAST_CLEANUP: '@LastCleanupTime',
+		LAST_SYNC: '@LastSyncTime',
+	},
 };
 
 // Default notification format

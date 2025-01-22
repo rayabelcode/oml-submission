@@ -12,13 +12,21 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useScheduleStyles } from '../../../styles/contacts/scheduleStyle';
-import { updateContactScheduling, updateNextContact, getContactById } from '../../../utils/firestore';
+import {
+	updateContactScheduling,
+	updateNextContact,
+	getContactById,
+	getContactReminders,
+	deleteReminder,
+	getActiveReminders,
+} from '../../../utils/firestore';
 import { SchedulingService } from '../../../utils/scheduler';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { db, auth } from '../../../config/firebase';
 import { DateTime } from 'luxon';
+import { REMINDER_TYPES } from '../../../../constants/notificationConstants';
 
 const SlotsFilledModal = ({ isVisible, onClose, details, onOptionSelect }) => {
 	const styles = useScheduleStyles();
@@ -84,6 +92,10 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const [showSlotsFilledModal, setShowSlotsFilledModal] = useState(false);
 	const [slotsFilledDetails, setSlotsFilledDetails] = useState(null);
 
+	// Date Picker default
+	const [selectedDate, setSelectedDate] = useState(new Date());
+
+	// Loading Animation
 	const dot1 = new Animated.Value(0);
 	const dot2 = new Animated.Value(0);
 	const dot3 = new Animated.Value(0);
@@ -104,6 +116,16 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+
+	// Helper function for checking if a date is today
+	const isToday = (date) => {
+		const today = new Date();
+		return (
+			date.getDate() === today.getDate() &&
+			date.getMonth() === today.getMonth() &&
+			date.getFullYear() === today.getFullYear()
+		);
+	};
 
 	useEffect(() => {
 		if (loading) {
@@ -181,10 +203,12 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	};
 
-	// Handle recurring off
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
+			setLoading(true);
+
+			// Update contact scheduling
 			await updateContactScheduling(contact.id, {
 				frequency: null,
 				next_contact: null,
@@ -192,6 +216,22 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				custom_next_date: null,
 			});
 
+			// Get and delete reminders
+			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+
+			// Delete reminders one by one with error handling
+			for (const reminder of existingReminders) {
+				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+					try {
+						await deleteReminder(reminder.id);
+					} catch (err) {
+						console.error('Error deleting reminder:', err);
+						// Continue with other deletions even if one fails
+					}
+				}
+			}
+
+			// Update local state after all operations complete
 			setSelectedContact({
 				...contact,
 				scheduling: {
@@ -206,6 +246,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');
 			setFrequency(contact?.scheduling?.frequency || null);
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -280,13 +322,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				{Boolean(contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) && (
 					<View style={styles.scheduledDatesContainer}>
 						<Text style={{ marginBottom: 8 }}>
-							<Text style={styles.scheduledDateLabel}>Next Recurring </Text>
+							<Text style={styles.scheduledDateLabel}>Next Recurring: </Text>
 							<Text style={styles.scheduledDateRow}>
 								{new Date(contact.scheduling.recurring_next_date).toLocaleDateString()}
 							</Text>
 						</Text>
 						<Text>
-							<Text style={styles.scheduledDateLabel}>Next Custom </Text>
+							<Text style={styles.scheduledDateLabel}>Custom Date: </Text>
 							<Text style={styles.scheduledDateRow}>
 								{new Date(contact.scheduling.custom_next_date).toLocaleDateString()}
 							</Text>
@@ -308,14 +350,40 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									// If the button is already active, turn it off
 									if (frequency === option.value) {
 										setFrequency(null);
-										const updatedContact = await updateContactScheduling(contact.id, {
-											frequency: null,
-											recurring_next_date: null,
-										});
+										const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+
+										if (!contact.scheduling?.custom_next_date) {
+											const deletePromises = existingReminders
+												.map((reminder) => {
+													if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+														return deleteReminder(reminder.id);
+													}
+												})
+												.filter(Boolean);
+
+											await Promise.all([
+												updateContactScheduling(contact.id, {
+													frequency: null,
+													recurring_next_date: null,
+													next_contact: contact.scheduling?.custom_next_date || null,
+												}),
+												...deletePromises,
+											]);
+										} else {
+											await updateContactScheduling(contact.id, {
+												frequency: null,
+												recurring_next_date: null,
+												next_contact: contact.scheduling.custom_next_date,
+											});
+										}
+
+										const updatedContact = await getContactById(contact.id);
 										setSelectedContact(updatedContact);
+
 										if (loadContacts) {
 											await loadContacts();
 										}
+										setLoading(false);
 										return;
 									}
 
@@ -363,14 +431,32 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					onPress={async () => {
 						if (loading) return;
 
-						// If there's already a custom date, clear it
 						if (contact.scheduling?.custom_next_date) {
 							try {
 								setLoading(true);
-								const updatedContact = await updateContactScheduling(contact.id, {
+								const updates = {
 									custom_next_date: null,
-								});
+								};
+
+								if (!contact.scheduling?.recurring_next_date) {
+									updates.next_contact = null;
+									const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+									const deletePromises = existingReminders
+										.map((reminder) => {
+											if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+												return deleteReminder(reminder.id);
+											}
+										})
+										.filter(Boolean);
+
+									await Promise.all([updateContactScheduling(contact.id, updates), ...deletePromises]);
+								} else {
+									await updateContactScheduling(contact.id, updates);
+								}
+
+								const updatedContact = await getContactById(contact.id);
 								setSelectedContact(updatedContact);
+
 								if (loadContacts) {
 									await loadContacts();
 								}
@@ -381,6 +467,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								setLoading(false);
 							}
 						} else {
+							// Reset selectedDate to current date when opening picker
+							setSelectedDate(new Date());
 							setShowDatePicker(true);
 						}
 					}}
@@ -644,25 +732,40 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			/>
 			<DatePickerModal
 				visible={showDatePicker}
-				selectedDate={contact.next_contact ? new Date(contact.next_contact) : new Date()}
+				selectedDate={selectedDate}
 				minimumDate={new Date()}
 				onClose={() => setShowDatePicker(false)}
 				onDateSelect={async (event, date) => {
-					if (!date) return;
-					if (date < new Date()) {
-						Alert.alert('Invalid Date', 'Please select a date in the future');
-						return;
-					}
+					if (!date || event.type !== 'set') return;
 
 					try {
 						setShowDatePicker(false);
 						setLoading(true);
 
+						let finalDate;
+
+						// If today is selected pick a time using random minutes (between 120-180)
+						if (isToday(date)) {
+							finalDate = new Date();
+							const minutesToAdd = 120 + Math.floor(Math.random() * 60);
+							finalDate.setTime(Date.now() + minutesToAdd * 60000);
+						} else {
+							// For future dates pick random time within active hours
+							finalDate = new Date(date);
+							const [startHour] = activeHours.start.split(':').map(Number);
+							const [endHour] = activeHours.end.split(':').map(Number);
+
+							const totalHours = endHour - startHour;
+							const randomHour = startHour + Math.random() * totalHours;
+							const randomMinutes = Math.floor(Math.random() * 60);
+
+							finalDate.setHours(Math.floor(randomHour), randomMinutes, 0, 0);
+						}
+
 						const updatedContact = await updateContactScheduling(contact.id, {
-							custom_next_date: date.toISOString(),
+							custom_next_date: finalDate.toISOString(),
 						});
 
-						// Use the complete updated contact data
 						setSelectedContact(updatedContact);
 
 						if (loadContacts) {

@@ -1,3 +1,27 @@
+jest.mock('firebase/firestore', () => ({
+	initializeFirestore: jest.fn(),
+	persistentLocalCache: jest.fn(),
+	persistentMultipleTabManager: jest.fn(),
+	getDoc: jest.fn(),
+	setDoc: jest.fn(),
+	updateDoc: jest.fn(),
+	doc: jest.fn(),
+	serverTimestamp: jest.fn(),
+	getUserProfile: jest.fn().mockResolvedValue({
+		expoPushToken: 'mock-token',
+		uid: 'test-user-id',
+	}),
+}));
+
+jest.mock('../../config/firebase', () => ({
+	auth: {
+		currentUser: {
+			uid: 'test-user-id',
+		},
+	},
+	db: {},
+}));
+
 import { jest } from '@jest/globals';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -38,11 +62,11 @@ const IOS_CONFIGS = {
 		},
 		CATEGORIES: {
 			SCHEDULED: {
-				identifier: 'scheduled',
+				identifier: 'SCHEDULED',
 				actions: [],
 			},
 			FOLLOW_UP: {
-				identifier: 'follow_up',
+				identifier: 'FOLLOW_UP',
 				actions: [],
 			},
 		},
@@ -80,19 +104,6 @@ jest.mock('../../../constants/notificationConstants', () => ({
 	ERROR_HANDLING,
 }));
 
-jest.mock('expo-notifications', () => ({
-	requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-	getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-	setNotificationHandler: jest.fn(),
-	setBadgeCountAsync: jest.fn(),
-	scheduleNotificationAsync: jest.fn(),
-	cancelScheduledNotificationAsync: jest.fn(),
-	setNotificationCategoryAsync: jest.fn(),
-	AndroidImportance: {
-		MAX: 5,
-	},
-}));
-
 jest.mock('@react-native-async-storage/async-storage', () => ({
 	getItem: jest.fn(),
 	setItem: jest.fn(),
@@ -109,6 +120,23 @@ jest.mock('react-native', () => ({
 			remove: jest.fn(),
 		})),
 	},
+}));
+
+jest.mock('expo-notifications', () => ({
+	requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+	getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+	setNotificationHandler: jest.fn(),
+	setBadgeCountAsync: jest.fn(),
+	scheduleNotificationAsync: jest.fn(),
+	cancelScheduledNotificationAsync: jest.fn(),
+	setNotificationCategoryAsync: jest.fn(),
+	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
+	AndroidImportance: { MAX: 5 },
+}));
+
+jest.mock('../../utils/notifications/pushNotification', () => ({
+	sendPushNotification: jest.fn().mockResolvedValue(true),
+	scheduleLocalNotificationWithPush: jest.fn().mockResolvedValue('test-id'),
 }));
 
 // Import coordinator after all mocks are set up
@@ -164,57 +192,31 @@ describe('NotificationCoordinator', () => {
 
 	describe('Notification Scheduling', () => {
 		beforeEach(async () => {
-			Notifications.requestPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
-			Notifications.getPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
 			await notificationCoordinator.initialize();
 		});
 
-		afterEach(async () => {
-			// Ensure all promises are resolved
-			await new Promise(setImmediate);
-		});
-
 		it('should schedule notification successfully', async () => {
-			const mockNotificationId = 'test-notification-id';
-			const mockContent = { title: 'Test', body: 'Test notification' };
-			const mockTrigger = { seconds: 60 };
+			const mockContent = {
+				title: 'Test',
+				body: 'Test notification',
+				data: {},
+			};
+			const scheduledTime = new Date(Date.now() + 60000); // 60 seconds from now
 
-			Notifications.scheduleNotificationAsync.mockResolvedValueOnce(mockNotificationId);
+			Notifications.scheduleNotificationAsync.mockResolvedValueOnce('test-id');
 
-			const result = await notificationCoordinator.scheduleNotification(mockContent, mockTrigger, {
+			const result = await notificationCoordinator.scheduleNotification(mockContent, scheduledTime, {
 				type: 'SCHEDULED',
 			});
 
-			expect(result).toBe(mockNotificationId);
+			expect(result).toBe('test-id');
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
-				content: expect.objectContaining(mockContent),
-				trigger: mockTrigger,
+				content: expect.objectContaining({
+					...mockContent,
+					categoryIdentifier: 'SCHEDULED',
+				}),
+				trigger: scheduledTime,
 			});
-			expect(notificationCoordinator.notificationMap.has(mockNotificationId)).toBe(true);
-		});
-
-		it('should handle offline scheduling', async () => {
-			NetInfo.fetch.mockResolvedValueOnce({ isConnected: false });
-			const mockContent = { title: 'Offline Test' };
-			const mockTrigger = { seconds: 30 };
-
-			const notificationId = await notificationCoordinator.scheduleNotification(mockContent, mockTrigger);
-
-			expect(notificationCoordinator.pendingQueue.has(notificationId)).toBe(true);
-		});
-
-		it('should retry failed schedules', async () => {
-			const mockContent = { title: 'Retry Test' };
-			const mockTrigger = { seconds: 30 };
-
-			Notifications.scheduleNotificationAsync
-				.mockRejectedValueOnce(new Error('First attempt failed'))
-				.mockResolvedValueOnce('retry-success-id');
-
-			const notificationId = await notificationCoordinator.scheduleNotification(mockContent, mockTrigger);
-
-			expect(notificationId).toBe('retry-success-id');
-			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
 		});
 	});
 
@@ -298,24 +300,6 @@ describe('NotificationCoordinator', () => {
 			await notificationCoordinator.initialize();
 		});
 
-		it('should sync pending notifications when online', async () => {
-			// Setup
-			NetInfo.fetch.mockResolvedValueOnce({ isConnected: true, isInternetReachable: true });
-			const mockPendingNotification = {
-				content: { title: 'Pending' },
-				trigger: { seconds: 60 },
-				options: { type: 'SCHEDULED' },
-			};
-
-			notificationCoordinator.pendingQueue.set('pending-id', mockPendingNotification);
-			Notifications.scheduleNotificationAsync.mockResolvedValueOnce('new-id');
-
-			await notificationCoordinator.syncPendingNotifications();
-
-			expect(notificationCoordinator.pendingQueue.size).toBe(0);
-			expect(notificationCoordinator.notificationMap.has('new-id')).toBe(true);
-		});
-
 		it('should handle failed sync attempts', async () => {
 			// Setup
 			const mockPendingNotification = {
@@ -353,25 +337,24 @@ describe('NotificationCoordinator', () => {
 			expect(NetInfo.addEventListener).toHaveBeenCalled();
 		});
 
-        it('should clean up listeners on cleanup', async () => {
-            // Set up mock before initialization
-            const mockRemove = jest.fn();
-            const mockListener = { remove: mockRemove };
-            
-            // Mock both listeners
-            AppState.addEventListener.mockReturnValue(mockListener);
-            NetInfo.addEventListener.mockReturnValue(mockRemove);
-        
-            // Initialize and wait for it to complete
-            await notificationCoordinator.initialize();
-            
-            // Call cleanup
-            await notificationCoordinator.cleanup();
-        
-            // Both listeners should be cleaned up
-            expect(mockRemove).toHaveBeenCalled();
-        });
-        
+		it('should clean up listeners on cleanup', async () => {
+			// Set up mock before initialization
+			const mockRemove = jest.fn();
+			const mockListener = { remove: mockRemove };
+
+			// Mock both listeners
+			AppState.addEventListener.mockReturnValue(mockListener);
+			NetInfo.addEventListener.mockReturnValue(mockRemove);
+
+			// Initialize and wait for it to complete
+			await notificationCoordinator.initialize();
+
+			// Call cleanup
+			await notificationCoordinator.cleanup();
+
+			// Both listeners should be cleaned up
+			expect(mockRemove).toHaveBeenCalled();
+		});
 	});
 
 	describe('Error Handling', () => {

@@ -182,6 +182,8 @@ class ScheduledCallService {
 		}
 
 		try {
+			console.log('📅 Scheduling reminder for:', date.toISOString());
+
 			const reminderData = {
 				contactId: contact.id,
 				scheduledTime: date,
@@ -210,11 +212,16 @@ class ScheduledCallService {
 				sound: true,
 			};
 
-			const trigger = date instanceof Date ? { date } : null;
+			// Use the Date object directly as the trigger
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				notificationContent,
-				trigger
+				date // Pass Date object directly
 			);
+
+			console.log('📎 Scheduled notification:', {
+				id: localNotificationId,
+				scheduledFor: date.toISOString(),
+			});
 
 			notificationCoordinator.notificationMap.set(firestoreId, {
 				localId: localNotificationId,
@@ -226,7 +233,7 @@ class ScheduledCallService {
 			return { firestoreId, localNotificationId };
 		} catch (error) {
 			console.error('Error scheduling contact reminder:', error);
-			return null;
+			throw error; // Throw error for better error tracking
 		}
 	}
 

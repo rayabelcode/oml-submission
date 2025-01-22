@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
+import './src/utils/notifications/notificationHandler';
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
@@ -137,7 +138,12 @@ function App() {
 					Platform.OS === 'ios' ? Notifications.setBadgeCountAsync(0) : null,
 				]);
 
-				Notifications.addNotificationReceivedListener((notification) => {});
+				Notifications.addNotificationReceivedListener((notification) => {
+					// Handle notifications received while app is in the foreground
+					if (Platform.OS === 'ios') {
+						notificationCoordinator.incrementBadge();
+					}
+				});
 			} catch (e) {
 				console.warn(e);
 			} finally {

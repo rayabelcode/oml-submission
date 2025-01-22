@@ -510,19 +510,35 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			);
 
 			const lastContactDate = contact.last_contacted?.toDate() || new Date();
-			const nextDate = await schedulingService.scheduleReminder(
+
+			const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 				{ ...contact, id: contactId },
 				lastContactDate,
 				schedulingData.frequency
 			);
 
-			updateData.scheduling.recurring_next_date = nextDate.date.toDate().toISOString();
+			// Update with flattened structure
+			updateData.scheduling = {
+				...updateData.scheduling,
+				frequency: schedulingData.frequency,
+				pattern_adjusted: reminderSchedule.pattern_adjusted || false,
+				...(reminderSchedule.confidence !== undefined && {
+					confidence: reminderSchedule.confidence,
+				}),
+				recurring_next_date: reminderSchedule.recurring_next_date,
+			};
+
+			// Set next_contact based on scheduled date
+			if (reminderSchedule.status !== 'SLOTS_FILLED') {
+				updateData.next_contact = reminderSchedule.date;
+			}
 		}
 
 		if ('custom_next_date' in schedulingData) {
 			updateData.scheduling.custom_next_date = schedulingData.custom_next_date || null;
 		}
 
+		// Update next_contact based on available dates
 		if (updateData.scheduling.custom_next_date && updateData.scheduling.recurring_next_date) {
 			const recurring = new Date(updateData.scheduling.recurring_next_date);
 			const custom = new Date(updateData.scheduling.custom_next_date);
@@ -537,19 +553,28 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		batch.update(contactRef, updateData);
 
-		if (schedulingData.frequency) {
+		// Handle reminder updates if there's a new next_contact date
+		if (updateData.next_contact) {
 			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
-			existingReminders.forEach((reminder) => {
+			// Delete existing scheduled reminders - with existence check
+			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
 					const reminderRef = doc(db, 'reminders', reminder.id);
-					batch.delete(reminderRef);
+					const reminderDoc = await getDoc(reminderRef);
+					if (reminderDoc.exists()) {
+						batch.delete(reminderRef);
+					}
 				}
-			});
+			}
 
+			// Create new reminder only if deletions successfully processed
 			const newReminderRef = doc(collection(db, 'reminders'));
 			const now = Timestamp.now();
-			const scheduledTimestamp = Timestamp.fromDate(new Date(updateData.next_contact));
+			const scheduledTimestamp =
+				updateData.next_contact instanceof Timestamp
+					? updateData.next_contact
+					: Timestamp.fromDate(new Date(updateData.next_contact));
 
 			const reminderDoc = {
 				created_at: now,
@@ -843,7 +868,7 @@ export const getFollowUpReminders = async (userId) => {
 		const q = query(
 			remindersRef,
 			where('user_id', '==', userId),
-			where('type', '==', 'follow_up'),
+			where('type', '==', 'FOLLOW_UP'),
 			where('completed', '==', false),
 			orderBy('date', 'desc')
 		);
@@ -865,26 +890,23 @@ export const completeFollowUp = async (reminderId, notes) => {
 		const reminderDoc = await getDoc(reminderRef);
 
 		if (!reminderDoc.exists()) {
+			console.error('[Firestore] Reminder not found:', reminderId);
 			throw new Error('Reminder not found');
 		}
 
 		const reminderData = reminderDoc.data();
 
 		if (reminderData.user_id !== auth.currentUser?.uid) {
+			console.error('[Firestore] Permission denied for user:', auth.currentUser?.uid);
 			throw new Error('User does not have permission to modify this reminder');
 		}
 
 		const batch = writeBatch(db);
 
-		batch.update(reminderRef, {
-			completed: true,
-			completion_time: serverTimestamp(),
-			notes_added: !!notes,
-			updated_at: serverTimestamp(),
-			notes: notes || '',
-			status: 'completed',
-		});
+		// Delete the reminder when dismiss is selected
+		batch.delete(reminderRef);
 
+		// If there are notes, add them to contact history
 		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -896,7 +918,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 				const newHistoryEntry = {
 					date: new Date().toISOString(),
 					notes: notes,
-					type: 'follow_up',
+					type: 'FOLLOW_UP',
 					completed: true,
 				};
 
@@ -910,7 +932,7 @@ export const completeFollowUp = async (reminderId, notes) => {
 		await batch.commit();
 		return true;
 	} catch (error) {
-		console.error('Error completing follow-up:', error);
+		console.error('[Firestore] Error completing follow-up:', error);
 		throw error;
 	}
 };

@@ -1835,7 +1835,7 @@ PODS:
     - React-Core
     - React-RCTImage
     - TOCropViewController (~> 2.7.4)
-  - RNReanimated (3.16.7):
+  - RNReanimated (3.16.6):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1855,10 +1855,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated (= 3.16.7)
-    - RNReanimated/worklets (= 3.16.7)
+    - RNReanimated/reanimated (= 3.16.6)
+    - RNReanimated/worklets (= 3.16.6)
     - Yoga
-  - RNReanimated/reanimated (3.16.7):
+  - RNReanimated/reanimated (3.16.6):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1878,9 +1878,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNReanimated/reanimated/apple (= 3.16.7)
+    - RNReanimated/reanimated/apple (= 3.16.6)
     - Yoga
-  - RNReanimated/reanimated/apple (3.16.7):
+  - RNReanimated/reanimated/apple (3.16.6):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1901,7 +1901,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNReanimated/worklets (3.16.7):
+  - RNReanimated/worklets (3.16.6):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2506,7 +2506,7 @@ SPEC CHECKSUMS:
   RNDateTimePicker: dd58d8235c3d12d349c043c2d9bcedcbb513f106
   RNGestureHandler: c3cd88852db9aa6910d270da3246875fca3a4256
   RNImageCropPicker: d5387003612dd08d52fb062760136e0e473df186
-  RNReanimated: 23d4dd74e67d9eb5648839dcaabc00be8aba6af4
+  RNReanimated: fb3896d9010787799eb5748e50fd59746a503001
   RNScreens: 09f7a66d59a40dd4c0f012d69d2abb13c81cd3bc
   RNSentry: bd9d15d37733a485519d08eebba55a223823e059
   RNSVG: ce20215fa0260a11ea36962326ca3099db552ffb
