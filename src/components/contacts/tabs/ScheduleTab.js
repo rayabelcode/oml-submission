@@ -203,33 +203,35 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	};
 
-	// Handle recurring off
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
 			setLoading(true);
-			// Get existing reminders for this contact
+
+			// Update contact scheduling
+			await updateContactScheduling(contact.id, {
+				frequency: null,
+				next_contact: null,
+				recurring_next_date: null,
+				custom_next_date: null,
+			});
+
+			// Get and delete reminders
 			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 
-			// Delete any SCHEDULED type reminders
-			const deletePromises = existingReminders
-				.map((reminder) => {
-					if (reminder.type === REMINDER_TYPES.SCHEDULED) {
-						return deleteReminder(reminder.id);
+			// Delete reminders one by one with error handling
+			for (const reminder of existingReminders) {
+				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+					try {
+						await deleteReminder(reminder.id);
+					} catch (err) {
+						console.error('Error deleting reminder:', err);
+						// Continue with other deletions even if one fails
 					}
-				})
-				.filter(Boolean);
+				}
+			}
 
-			await Promise.all([
-				updateContactScheduling(contact.id, {
-					frequency: null,
-					next_contact: null,
-					recurring_next_date: null,
-					custom_next_date: null,
-				}),
-				...deletePromises,
-			]);
-
+			// Update local state after all operations complete
 			setSelectedContact({
 				...contact,
 				scheduling: {
