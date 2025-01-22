@@ -5,15 +5,7 @@ import { spacing, useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { DateTime } from 'luxon';
 
-const DatePickerModal = ({
-	visible,
-	onClose,
-	selectedDate,
-	onDateSelect,
-	minimumDate,
-	containerStyle,
-	showTodayButton = true,
-}) => {
+const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, minimumDate, containerStyle }) => {
 	const { colors, layout } = useTheme();
 
 	const formatDate = (date) => {
@@ -35,6 +27,13 @@ const DatePickerModal = ({
 	today.setHours(0, 0, 0, 0);
 
 	const styles = StyleSheet.create({
+		modalHeader: {
+			fontSize: 20,
+			fontWeight: 'bold',
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginBottom: spacing.xs,
+		},
 		datePickerModalOverlay: {
 			flex: 1,
 			backgroundColor: colors.background.overlay,
@@ -51,21 +50,6 @@ const DatePickerModal = ({
 			borderWidth: 3,
 			borderColor: colors.border,
 		},
-		confirmButton: {
-			paddingVertical: spacing.md,
-			paddingHorizontal: spacing.xl,
-			alignItems: 'center',
-			marginTop: spacing.sm,
-			marginBottom: spacing.xs,
-			backgroundColor: colors.primary,
-			borderRadius: layout.borderRadius.md,
-			alignSelf: 'center',
-		},
-		confirmButtonText: {
-			color: 'white',
-			fontSize: 17,
-			fontWeight: '600',
-		},
 		arrow: {
 			padding: spacing.xs,
 		},
@@ -79,10 +63,13 @@ const DatePickerModal = ({
 					activeOpacity={1}
 					onPress={(e) => e.stopPropagation()}
 				>
+					<Text style={styles.modalHeader}>Custom Contact Date</Text>
+
 					<Calendar
 						current={formatDate(selectedDate || today)}
 						minDate={minimumDate ? formatDate(minimumDate) : undefined}
 						onDayPress={handleDayPress}
+						hideExtraDays={true}
 						enableSwipeMonths={true}
 						markedDates={{
 							[formatDate(selectedDate)]: { selected: true, selectedColor: colors.primary },
@@ -90,7 +77,7 @@ const DatePickerModal = ({
 						theme={{
 							calendarBackground: colors.background.primary,
 							dayTextColor: colors.text.primary,
-							textDisabledColor: colors.text.secondary,
+							textDisabledColor: colors.text.subtleText,
 							selectedDayBackgroundColor: colors.primary,
 							selectedDayTextColor: '#ffffff',
 							todayTextColor: colors.primary,
@@ -118,18 +105,11 @@ const DatePickerModal = ({
 						renderArrow={renderArrow}
 						arrowsHitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
 						disableMonthChange={true}
+						style={{
+							height: 380, // To fit 6 rows and padding
+							paddingBottom: 1, // Make sure the bottom border is visible
+						}}
 					/>
-					{showTodayButton && (
-						<TouchableOpacity
-							style={styles.confirmButton}
-							onPress={() => {
-								const today = DateTime.now().startOf('day');
-								handleDayPress({ dateString: today.toISODate() });
-							}}
-						>
-							<Text style={styles.confirmButtonText}>Select Today</Text>
-						</TouchableOpacity>
-					)}
 				</TouchableOpacity>
 			</TouchableOpacity>
 		</Modal>
