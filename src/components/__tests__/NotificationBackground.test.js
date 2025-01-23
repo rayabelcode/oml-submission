@@ -1,17 +1,29 @@
 // Mock external dependencies
-jest.mock('firebase/firestore', () => ({
-	initializeFirestore: jest.fn(),
-	persistentLocalCache: jest.fn(),
-	persistentMultipleTabManager: jest.fn(),
-	getDoc: jest.fn(),
-	setDoc: jest.fn(),
-	updateDoc: jest.fn(),
-	doc: jest.fn(),
-	serverTimestamp: jest.fn(),
-	getUserProfile: jest.fn().mockResolvedValue({
-		expoPushToken: 'mock-token',
-		uid: 'test-user-id',
-	}),
+jest.mock('firebase/firestore', () => {
+	const userDocRef = { id: 'test-user-id' };
+	return {
+		initializeFirestore: jest.fn(),
+		persistentLocalCache: jest.fn(),
+		persistentMultipleTabManager: jest.fn(),
+		getDoc: jest.fn(),
+		setDoc: jest.fn(),
+		updateDoc: jest.fn(),
+		doc: jest.fn().mockReturnValue(userDocRef),
+		serverTimestamp: jest.fn(() => ({ _seconds: Date.now() / 1000 })),
+		arrayUnion: jest.fn((token) => ['mock-token-1', 'mock-token-2', token]),
+		getUserProfile: jest.fn().mockResolvedValue({
+			expoPushTokens: ['mock-token-1', 'mock-token-2'],
+			uid: 'test-user-id',
+		}),
+	};
+});
+
+jest.mock('../../utils/notifications/reminderSync', () => ({
+	reminderSync: {
+		initialized: false,
+		start: jest.fn().mockResolvedValue(true),
+		stop: jest.fn(),
+	},
 }));
 
 jest.mock('../../config/firebase', () => ({
@@ -127,6 +139,7 @@ jest.mock('expo-notifications', () => ({
 	setNotificationCategoryAsync: jest.fn(),
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
 	AndroidImportance: { MAX: 5 },
+	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('../../utils/notifications/pushNotification', () => ({
@@ -182,6 +195,28 @@ describe('Background Mode Tests', () => {
 			await notificationCoordinator.handleAppStateChange('active');
 			expect(notificationCoordinator.pendingQueue.size).toBe(0);
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+		});
+
+		it('should maintain push token registration in background', async () => {
+			const { doc, updateDoc } = require('firebase/firestore');
+			const { db } = require('../../config/firebase'); // Add this import
+
+			// Clear previous calls
+			updateDoc.mockClear();
+
+			// Force re-initialization
+			notificationCoordinator.initialized = false;
+			await notificationCoordinator.initialize();
+
+			// Verify token registration was maintained
+			expect(updateDoc).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({
+					expoPushTokens: ['mock-token-1', 'mock-token-2', 'mock-expo-token'],
+					devicePlatform: 'ios',
+					lastTokenUpdate: expect.any(Object),
+				})
+			);
 		});
 	});
 

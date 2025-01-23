@@ -8,8 +8,9 @@ jest.mock('firebase/firestore', () => ({
 	getDoc: jest.fn(),
 	updateDoc: jest.fn(),
 	serverTimestamp: jest.fn(() => ({ _seconds: Date.now() / 1000 })),
+	arrayUnion: jest.fn((token) => ['mock-token-1', 'mock-token-2', token]),
 	getUserProfile: jest.fn().mockResolvedValue({
-		expoPushToken: 'mock-token',
+		expoPushTokens: ['mock-token-1', 'mock-token-2'],
 		uid: 'test-user-id',
 	}),
 	collection: jest.fn(() => ({
@@ -209,4 +210,116 @@ describe('Notification Grouping Tests', () => {
 		const highPriorityNotification = notifications.find((n) => n.content.data?.priority === 'high');
 		expect(highPriorityNotification).toBeTruthy();
 	}, 10000);
+
+	it('should send grouped notifications to multiple devices', async () => {
+		const { getUserProfile } = require('firebase/firestore');
+
+		// Mock user with multiple devices
+		getUserProfile.mockResolvedValueOnce({
+			expoPushTokens: ['device1', 'device2', 'device3'],
+			uid: 'test-user-id',
+		});
+
+		const groupId = 'multi-device-group';
+		const notifications = await Promise.all([
+			notificationCoordinator.scheduleNotification(
+				{
+					title: 'Multi-device Test 1',
+					body: 'Test content',
+					data: { groupId },
+				},
+				{ seconds: 60 }
+			),
+			notificationCoordinator.scheduleNotification(
+				{
+					title: 'Multi-device Test 2',
+					body: 'Test content',
+					data: { groupId },
+				},
+				{ seconds: 120 }
+			),
+		]);
+
+		const storedNotifications = Array.from(notificationCoordinator.notificationMap.values());
+		expect(storedNotifications.length).toBe(2);
+		expect(storedNotifications.every((n) => n.content.data?.groupId === groupId)).toBe(true);
+	});
+
+	it('should handle token updates within groups', async () => {
+		const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
+		const { db } = require('../../config/firebase');
+
+		// Reset coordinator state
+		notificationCoordinator.initialized = false;
+
+		// Create a mock document reference and setup mocks
+		const userDocRef = { id: 'test-user-id' };
+		doc.mockReturnValue(userDocRef);
+
+		// Clear previous calls
+		updateDoc.mockClear();
+
+		// Trigger initial token registration
+		await notificationCoordinator.initialize();
+
+		// Schedule grouped notifications
+		await Promise.all([
+			notificationCoordinator.scheduleNotification(
+				{
+					title: 'Token Update Test 1',
+					body: 'Test content',
+					data: { groupId: 'token-test' },
+				},
+				{ seconds: 60 }
+			),
+			notificationCoordinator.scheduleNotification(
+				{
+					title: 'Token Update Test 2',
+					body: 'Test content',
+					data: { groupId: 'token-test' },
+				},
+				{ seconds: 120 }
+			),
+		]);
+
+		// Simulate app state change to trigger token update
+		await notificationCoordinator.handleAppStateChange('background');
+		await notificationCoordinator.handleAppStateChange('active');
+
+		// Verify token update was called
+		expect(updateDoc).toHaveBeenCalledWith(
+			userDocRef,
+			expect.objectContaining({
+				expoPushTokens: arrayUnion('mock-expo-token'),
+				devicePlatform: 'ios',
+				lastTokenUpdate: expect.any(Object),
+			})
+		);
+	});
+
+	it('should respect device limit in groups', async () => {
+		const { getUserProfile } = require('firebase/firestore');
+
+		// Mock user with maximum devices
+		const maxTokens = Array(20)
+			.fill()
+			.map((_, i) => `device-${i}`);
+		getUserProfile.mockResolvedValueOnce({
+			expoPushTokens: maxTokens,
+			uid: 'test-user-id',
+		});
+
+		const notification = await notificationCoordinator.scheduleNotification(
+			{
+				title: 'Device Limit Test',
+				body: 'Test content',
+				data: { groupId: 'limit-test' },
+			},
+			{ seconds: 60 }
+		);
+
+		expect(notification).toBeTruthy();
+		const stored = notificationCoordinator.notificationMap.get(notification);
+		expect(stored).toBeTruthy();
+	});
 });

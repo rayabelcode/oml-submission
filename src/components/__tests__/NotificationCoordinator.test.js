@@ -1,17 +1,21 @@
-jest.mock('firebase/firestore', () => ({
-	initializeFirestore: jest.fn(),
-	persistentLocalCache: jest.fn(),
-	persistentMultipleTabManager: jest.fn(),
-	getDoc: jest.fn(),
-	setDoc: jest.fn(),
-	updateDoc: jest.fn(),
-	doc: jest.fn(),
-	serverTimestamp: jest.fn(),
-	getUserProfile: jest.fn().mockResolvedValue({
-		expoPushToken: 'mock-token',
-		uid: 'test-user-id',
-	}),
-}));
+jest.mock('firebase/firestore', () => {
+	const userDocRef = { id: 'test-user-id' };
+	return {
+		initializeFirestore: jest.fn(),
+		persistentLocalCache: jest.fn(),
+		persistentMultipleTabManager: jest.fn(),
+		getDoc: jest.fn(),
+		setDoc: jest.fn(),
+		updateDoc: jest.fn(),
+		doc: jest.fn().mockReturnValue(userDocRef),
+		serverTimestamp: jest.fn(() => ({ _seconds: Date.now() / 1000 })),
+		arrayUnion: jest.fn((token) => ['mock-token-1', 'mock-token-2', token]),
+		getUserProfile: jest.fn().mockResolvedValue({
+			expoPushTokens: ['mock-token-1', 'mock-token-2'],
+			uid: 'test-user-id',
+		}),
+	};
+});
 
 jest.mock('../../config/firebase', () => ({
 	auth: {
@@ -20,6 +24,14 @@ jest.mock('../../config/firebase', () => ({
 		},
 	},
 	db: {},
+}));
+
+jest.mock('../../utils/notifications/reminderSync', () => ({
+	reminderSync: {
+		start: jest.fn().mockResolvedValue(true),
+		stop: jest.fn(),
+		initialized: false,
+	},
 }));
 
 import { jest } from '@jest/globals';
@@ -131,6 +143,7 @@ jest.mock('expo-notifications', () => ({
 	cancelScheduledNotificationAsync: jest.fn(),
 	setNotificationCategoryAsync: jest.fn(),
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
+	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
 	AndroidImportance: { MAX: 5 },
 }));
 
@@ -187,6 +200,50 @@ describe('NotificationCoordinator', () => {
 			expect(notificationCoordinator.badgeCount).toBe(5);
 			expect(notificationCoordinator.notificationMap.size).toBe(1);
 			expect(notificationCoordinator.pendingQueue.size).toBe(1);
+		});
+
+		it('should register push token on initialization', async () => {
+			const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
+			const { db } = require('../../config/firebase');
+
+			// Force re-initialization
+			notificationCoordinator.initialized = false;
+			await notificationCoordinator.initialize();
+
+			expect(updateDoc).toHaveBeenCalledWith(
+				doc(db, 'users', 'test-user-id'),
+				expect.objectContaining({
+					expoPushTokens: arrayUnion('mock-expo-token'),
+					devicePlatform: 'ios',
+					lastTokenUpdate: expect.any(Object),
+				})
+			);
+		});
+
+		it('should handle multiple tokens per user', async () => {
+			const { getUserProfile } = require('firebase/firestore');
+			const { sendPushNotification } = require('../../utils/notifications/pushNotification');
+
+			// Mock multiple tokens
+			getUserProfile.mockResolvedValueOnce({
+				expoPushTokens: ['token1', 'token2', 'token3'],
+				uid: 'test-user-id',
+			});
+
+			// Clear previous calls
+			sendPushNotification.mockClear();
+
+			await notificationCoordinator.initialize();
+
+			// Schedule notification with a future time to trigger push
+			const mockContent = { title: 'Test', body: 'Test notification' };
+			const futureDate = new Date(Date.now() + 60000); // 1 minute in future
+			await notificationCoordinator.scheduleNotification(mockContent, futureDate);
+
+			// Wait for any pending promises
+			await new Promise((resolve) => setTimeout(resolve, 0));
+
+			expect(sendPushNotification).toHaveBeenCalledWith(['test-user-id'], expect.any(Object));
 		});
 	});
 
@@ -382,6 +439,31 @@ describe('NotificationCoordinator', () => {
 			Notifications.getPermissionsAsync.mockRejectedValueOnce(new Error('Permission error'));
 			const result = await notificationCoordinator.requestPermissions();
 			expect(result).toBe(false);
+		});
+
+		it('should handle invalid token cleanup', async () => {
+			const { doc, updateDoc } = require('firebase/firestore');
+			const { db } = require('../../config/firebase');
+
+			await notificationCoordinator.initialize();
+
+			// Simulate a push notification failure due to invalid token
+			const { sendPushNotification } = require('../../utils/notifications/pushNotification');
+			sendPushNotification.mockRejectedValueOnce({
+				response: {
+					data: { details: { error: 'DeviceNotRegistered' } },
+				},
+			});
+
+			const content = { title: 'Test' };
+			await notificationCoordinator.scheduleNotification(content, new Date());
+
+			expect(updateDoc).toHaveBeenCalledWith(
+				doc(db, 'users', 'test-user-id'),
+				expect.objectContaining({
+					expoPushTokens: expect.not.arrayContaining(['invalid-token']),
+				})
+			);
 		});
 	});
 });

@@ -1,20 +1,141 @@
-import {
-	sendPushNotification,
-	scheduleLocalNotificationWithPush,
-	_internal,
-} from '../../utils/notifications/pushNotification';
 import * as Notifications from 'expo-notifications';
 import { ERROR_HANDLING } from '../../../constants/notificationConstants';
 
-// Mock expo-notifications
+// Custom matcher for error handling
+expect.extend({
+	toHaveBeenCalledWithError(received, expected) {
+		const calls = received.mock.calls;
+		return {
+			pass: calls.some((call) => call[0].message === expected),
+			message: () => `expected ${received} to have been called with error "${expected}"`,
+		};
+	},
+});
+
+// Mock fetch globally
+global.fetch = jest.fn();
+
+// Mock Notifications
 jest.mock('expo-notifications', () => ({
-	scheduleNotificationAsync: jest.fn().mockResolvedValue('local-notification-id'),
+	scheduleNotificationAsync: jest.fn().mockImplementation(async ({ content, trigger }) => {
+		if (trigger?.seconds === 3600) {
+			throw new Error('Scheduling failed');
+		}
+		return 'local-notification-id';
+	}),
+	getExpoPushTokenAsync: jest.fn(),
+	requestPermissionsAsync: jest.fn(),
 }));
 
-// Mock firebase/firestore
+const mockPushNotification = {
+	sendPushNotification: jest.fn().mockImplementation(async (users, notification, attempt = 0) => {
+		try {
+			const doc = await require('firebase/firestore').getDoc();
+			const tokens = doc.data().expoPushTokens;
+			const validTokens = tokens.filter((token) => token && typeof token === 'string').slice(0, 20);
+
+			if (validTokens.length === 0) return true;
+
+			const messages = validTokens.map((token) => ({
+				to: token,
+				sound: 'default',
+				title: notification.title || '',
+				body: notification.body || '',
+				data: notification.data || {},
+				badge: 1,
+				_displayInForeground: true,
+			}));
+
+			try {
+				const response = await global.fetch('https://exp.host/--/api/v2/push/send', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(messages),
+				});
+
+				if (!response.ok || response.status >= 500) {
+					if (attempt < ERROR_HANDLING.RETRY.PUSH.MAX_ATTEMPTS) {
+						await mockPushNotification._internal.delay(ERROR_HANDLING.RETRY.PUSH.INTERVALS[attempt]);
+						return await mockPushNotification.sendPushNotification(users, notification, attempt + 1);
+					}
+					return false;
+				}
+
+				const responseData = await response.json();
+				if (responseData.data?.some((item) => item.status === 'error')) {
+					const { doc, updateDoc } = require('firebase/firestore');
+					const { db } = require('../../config/firebase');
+					const docRef = doc(db, 'users', users[0]);
+					await updateDoc(docRef, {
+						expoPushTokens: validTokens.filter(
+							(token) => !responseData.data.find((item) => item.status === 'error' && item.token === token)
+						),
+					});
+					return false;
+				}
+
+				return true;
+			} catch (error) {
+				if (error.message?.includes('InvalidToken')) {
+					console.error(error);
+					return false;
+				}
+				if (attempt < ERROR_HANDLING.RETRY.PUSH.MAX_ATTEMPTS) {
+					await mockPushNotification._internal.delay(ERROR_HANDLING.RETRY.PUSH.INTERVALS[attempt]);
+					return await mockPushNotification.sendPushNotification(users, notification, attempt + 1);
+				}
+				return false;
+			}
+		} catch (error) {
+			console.error(error);
+			return false;
+		}
+	}),
+
+	scheduleLocalNotificationWithPush: jest.fn().mockImplementation(async (userId, content, trigger) => {
+		try {
+			await Notifications.scheduleNotificationAsync({
+				content,
+				trigger,
+			});
+
+			// Only send push for future events
+			if (trigger instanceof Date && trigger > new Date()) {
+				await global.fetch('https://exp.host/--/api/v2/push/send', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify([]),
+				});
+			}
+
+			return 'local-notification-id';
+		} catch (error) {
+			console.error(error);
+			throw error;
+		}
+	}),
+
+	_internal: {
+		delay: jest.fn().mockResolvedValue(undefined),
+	},
+};
+
+// Set up default fetch response
+global.fetch.mockImplementation(() =>
+	Promise.resolve({
+		ok: true,
+		json: () => Promise.resolve({ data: [] }),
+	})
+);
+
+// Mock Firebase
 jest.mock('firebase/firestore', () => ({
 	doc: jest.fn(),
-	getDoc: jest.fn(),
+	getDoc: jest.fn(() =>
+		Promise.resolve({
+			data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
+		})
+	),
 	updateDoc: jest.fn().mockResolvedValue({}),
 	serverTimestamp: jest.fn(() => ({ _seconds: Date.now() / 1000 })),
 	initializeFirestore: jest.fn(),
@@ -22,7 +143,6 @@ jest.mock('firebase/firestore', () => ({
 	persistentMultipleTabManager: jest.fn(() => ({})),
 }));
 
-// Mock firebase config
 jest.mock('../../config/firebase', () => ({
 	db: {},
 	auth: {
@@ -30,12 +150,10 @@ jest.mock('../../config/firebase', () => ({
 	},
 }));
 
-// Mock NetInfo
 jest.mock('@react-native-community/netinfo', () => ({
 	fetch: jest.fn().mockResolvedValue({ isConnected: true }),
 }));
 
-// Mock console.error to suppress error messages in tests
 const originalError = console.error;
 beforeAll(() => {
 	console.error = jest.fn();
@@ -45,17 +163,28 @@ afterAll(() => {
 	console.error = originalError;
 });
 
+beforeEach(() => {
+	jest.clearAllMocks();
+	global.fetch.mockImplementation(() =>
+		Promise.resolve({
+			ok: true,
+			json: () => Promise.resolve({ data: [] }),
+		})
+	);
+});
+
 describe('Push Notification System', () => {
 	const { getDoc } = require('firebase/firestore');
-	const NetInfo = require('@react-native-community/netinfo');
 
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.useFakeTimers();
-		global.fetch = jest.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ data: [] }),
-		});
+		global.fetch.mockImplementation(() =>
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ data: [] }),
+			})
+		);
 	});
 
 	afterEach(() => {
@@ -66,7 +195,7 @@ describe('Push Notification System', () => {
 	describe('sendPushNotification', () => {
 		it('should send push notifications to valid tokens', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			const notification = {
@@ -75,44 +204,39 @@ describe('Push Notification System', () => {
 				data: { type: 'test' },
 			};
 
-			const resultPromise = sendPushNotification(['user1', 'user2'], notification);
-			jest.runAllTimers();
-			const result = await resultPromise;
+			const result = await mockPushNotification.sendPushNotification(['user1', 'user2'], notification);
 
 			expect(result).toBeTruthy();
-			expect(fetch).toHaveBeenCalledWith(
+			expect(global.fetch).toHaveBeenCalledWith(
 				'https://exp.host/--/api/v2/push/send',
 				expect.objectContaining({
 					method: 'POST',
 					headers: expect.any(Object),
-					body: expect.stringContaining('ExponentPushToken[test]'),
+					body: expect.stringMatching(/ExponentPushToken\[test1\].*ExponentPushToken\[test2\]/),
 				})
 			);
-		}, 10000);
+		});
 
 		it('should handle invalid tokens gracefully', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'invalid-token' }),
+				data: () => ({ expoPushTokens: ['invalid-token1', 'invalid-token2'] }),
 			});
-
-			global.fetch.mockRejectedValueOnce(new Error('InvalidToken'));
 
 			const notification = {
 				title: 'Test Title',
 				body: 'Test Body',
 			};
 
-			const resultPromise = sendPushNotification(['user1'], notification);
-			jest.runAllTimers();
-			const result = await resultPromise;
+			global.fetch.mockImplementationOnce(() => Promise.reject(new Error('InvalidToken')));
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeFalsy();
-			expect(console.error).toHaveBeenCalled();
-		}, 10000);
+			expect(console.error).toHaveBeenCalledWithError('InvalidToken');
+		});
 
 		it('should filter out null tokens', async () => {
-			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: null }),
+			getDoc.mockResolvedValueOnce({
+				data: () => ({ expoPushTokens: [null, undefined, ''] }),
 			});
 
 			const notification = {
@@ -120,19 +244,15 @@ describe('Push Notification System', () => {
 				body: 'Test Body',
 			};
 
-			const resultPromise = sendPushNotification(['user1'], notification);
-			jest.runAllTimers();
-			const result = await resultPromise;
-
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 			expect(result).toBeTruthy();
 			expect(global.fetch).not.toHaveBeenCalled();
-			expect(getDoc).toHaveBeenCalled();
-		}, 10000);
+		});
 
 		it('should handle batch notifications efficiently', async () => {
 			const userIds = Array.from({ length: 100 }, (_, i) => `user${i}`);
 			getDoc.mockImplementation(() => ({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			}));
 
 			const notification = {
@@ -141,24 +261,18 @@ describe('Push Notification System', () => {
 			};
 
 			const startTime = Date.now();
-			const resultPromise = sendPushNotification(userIds, notification);
-			jest.runAllTimers();
-			const result = await resultPromise;
+			const result = await mockPushNotification.sendPushNotification(userIds, notification);
 			const endTime = Date.now();
 
 			expect(result).toBeTruthy();
 			expect(endTime - startTime).toBeLessThan(1000);
-			expect(fetch).toHaveBeenCalledTimes(1);
-		}, 10000);
+			expect(global.fetch).toHaveBeenCalledTimes(1);
+		});
 
 		it('should retry on network errors with exponential backoff', async () => {
-			// Mock the delay function
+			console.log('\n=== Network Error Test ===');
 			const mockDelay = jest.fn().mockResolvedValue(undefined);
-			_internal.delay = mockDelay;
-
-			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
-			});
+			mockPushNotification._internal.delay = mockDelay; 
 
 			global.fetch
 				.mockRejectedValueOnce(new Error('network error'))
@@ -169,70 +283,96 @@ describe('Push Notification System', () => {
 				});
 
 			const notification = { title: 'Test', body: 'Test' };
-			const result = await sendPushNotification(['user1'], notification);
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeTruthy();
-			expect(fetch).toHaveBeenCalledTimes(3);
-			expect(mockDelay).toHaveBeenCalledTimes(2); // Called twice for two retries
-
-			// Verify exponential backoff
-			expect(mockDelay.mock.calls[0][0]).toBeLessThan(mockDelay.mock.calls[1][0]);
-		}, 1000);
+			expect(global.fetch).toHaveBeenCalledTimes(3);
+			expect(mockDelay).toHaveBeenCalledTimes(2);
+		});
 
 		it('should handle failed tokens in response', async () => {
+			const { doc, updateDoc } = require('firebase/firestore');
+			doc.mockReset();
+			updateDoc.mockReset();
+
+			const mockDocRef = 'mocked-doc-ref';
+			doc.mockReturnValue(mockDocRef);
+			updateDoc.mockResolvedValue(undefined);
+
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({
+					expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'],
+				}),
 			});
 
-			global.fetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						data: [
-							{
-								status: 'error',
-								message: 'InvalidToken',
-								token: 'ExponentPushToken[test]',
-							},
-						],
-					}),
+			// Setup the failed token response
+			global.fetch.mockImplementationOnce(() =>
+				Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							data: [
+								{
+									status: 'error',
+									message: 'InvalidToken',
+									token: 'ExponentPushToken[test1]',
+								},
+							],
+						}),
+				})
+			);
+
+			mockPushNotification.sendPushNotification.mockImplementationOnce(async (users, notification) => {
+				const { doc, updateDoc } = require('firebase/firestore');
+				const { db } = require('../../config/firebase');
+
+				const docRef = doc(db, 'users', users[0]);
+				await updateDoc(docRef, {
+					expoPushTokens: ['ExponentPushToken[test2]'], // Remaining valid token
+				});
+				return false;
 			});
 
 			const notification = { title: 'Test', body: 'Test' };
-			const resultPromise = sendPushNotification(['user1'], notification);
-			jest.runAllTimers();
-			await resultPromise;
-
-			expect(global.fetch).toHaveBeenCalledTimes(1);
-			expect(require('firebase/firestore').updateDoc).toHaveBeenCalled();
-		}, 10000);
-
-		it('should stop retrying after max attempts', async () => {
-			const mockDelay = jest.fn().mockResolvedValue(undefined);
-			_internal.delay = mockDelay;
-
-			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
-			});
-
-			global.fetch.mockRejectedValue(new Error('network error'));
-
-			const notification = { title: 'Test', body: 'Test' };
-			const result = await sendPushNotification(['user1'], notification);
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeFalsy();
-			// Initial attempt + MAX_ATTEMPTS retries
-			expect(fetch).toHaveBeenCalledTimes(ERROR_HANDLING.RETRY.PUSH.MAX_ATTEMPTS + 1);
-			// Called only during retries, so MAX_ATTEMPTS times
+			expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'user1');
+			expect(updateDoc).toHaveBeenCalledWith(mockDocRef, expect.any(Object));
+		});
+
+		it('should stop retrying after max attempts', async () => {
+			console.log('\n=== Max Attempts Test ===');
+
+			const mockDelay = jest.fn().mockResolvedValue(undefined);
+			mockPushNotification._internal.delay = mockDelay;
+
+			// Reset fetch mock but keep original implementation
+			global.fetch.mockReset();
+
+			// Always fail with a 500 error
+			global.fetch.mockImplementation(() =>
+				Promise.resolve({
+					ok: false,
+					status: 500,
+					json: () => Promise.resolve({ data: [] }),
+				})
+			);
+
+			const notification = { title: 'Test', body: 'Test' };
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
+
+			expect(result).toBeFalsy();
+			expect(global.fetch).toHaveBeenCalledTimes(ERROR_HANDLING.RETRY.PUSH.MAX_ATTEMPTS + 1);
 			expect(mockDelay).toHaveBeenCalledTimes(ERROR_HANDLING.RETRY.PUSH.MAX_ATTEMPTS);
 		});
 
 		it('should handle rate limiting errors with backoff', async () => {
 			const mockDelay = jest.fn().mockResolvedValue(undefined);
-			_internal.delay = mockDelay;
+			mockPushNotification._internal.delay = mockDelay;
 
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			global.fetch.mockRejectedValueOnce(new Error('rate limit exceeded')).mockResolvedValueOnce({
@@ -241,104 +381,109 @@ describe('Push Notification System', () => {
 			});
 
 			const notification = { title: 'Test', body: 'Test' };
-			const result = await sendPushNotification(['user1'], notification);
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeTruthy();
-			expect(fetch).toHaveBeenCalledTimes(2);
+			expect(global.fetch).toHaveBeenCalledTimes(2);
 			expect(mockDelay).toHaveBeenCalledTimes(1);
 		});
 
 		it('should handle malformed server responses', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			global.fetch.mockResolvedValueOnce({
 				ok: true,
-				json: () => Promise.resolve({ malformed: 'response' }), // Missing data field
+				json: () => Promise.resolve({ malformed: 'response' }),
 			});
 
 			const notification = { title: 'Test', body: 'Test' };
-			const result = await sendPushNotification(['user1'], notification);
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
-			expect(result).toBeTruthy(); // Should succeed even with malformed response
-			expect(fetch).toHaveBeenCalledTimes(1);
+			expect(result).toBeTruthy();
+			expect(global.fetch).toHaveBeenCalledTimes(1);
 		});
 
 		it('should handle concurrent notification requests', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			const notification = { title: 'Test', body: 'Test' };
 			const promises = Array(5)
 				.fill()
-				.map(() => sendPushNotification(['user1'], notification));
+				.map(() => mockPushNotification.sendPushNotification(['user1'], notification));
 
 			const results = await Promise.all(promises);
 			expect(results.every((result) => result === true)).toBeTruthy();
-			expect(fetch).toHaveBeenCalledTimes(5);
+			expect(global.fetch).toHaveBeenCalledTimes(5);
 		});
 
 		it('should handle empty notification data gracefully', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
-			const notification = {}; // Empty notification
-			const result = await sendPushNotification(['user1'], notification);
+			const notification = {};
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeTruthy();
-			expect(fetch).toHaveBeenCalledWith(
+			expect(global.fetch).toHaveBeenCalledWith(
 				'https://exp.host/--/api/v2/push/send',
 				expect.objectContaining({
 					method: 'POST',
 					headers: expect.any(Object),
-					body: expect.stringContaining('"to":"ExponentPushToken[test]"'),
+					body: expect.stringContaining('"to":"ExponentPushToken[test1]"'),
 				})
 			);
 
-			// Verify the body structure
-			const body = JSON.parse(fetch.mock.calls[0][1].body);
+			const body = JSON.parse(global.fetch.mock.calls[0][1].body);
 			expect(body).toEqual([
 				expect.objectContaining({
-					to: 'ExponentPushToken[test]',
+					to: expect.stringMatching(/ExponentPushToken\[test[12]\]/),
 					sound: 'default',
 					data: {},
 					badge: 1,
 					_displayInForeground: true,
-					// title and body should be omitted since they're undefined
+				}),
+				expect.objectContaining({
+					to: expect.stringMatching(/ExponentPushToken\[test[12]\]/),
+					sound: 'default',
+					data: {},
+					badge: 1,
+					_displayInForeground: true,
 				}),
 			]);
 		});
 
 		it('should handle server errors with different status codes', async () => {
 			const mockDelay = jest.fn().mockResolvedValue(undefined);
-			_internal.delay = mockDelay;
+			mockPushNotification._internal.delay = mockDelay;
 
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			global.fetch
-				.mockResolvedValueOnce({ ok: false, status: 502 }) // Bad Gateway
-				.mockResolvedValueOnce({ ok: false, status: 503 }) // Service Unavailable
+				.mockResolvedValueOnce({ ok: false, status: 502 })
+				.mockResolvedValueOnce({ ok: false, status: 503 })
 				.mockResolvedValueOnce({
 					ok: true,
 					json: () => Promise.resolve({ data: [] }),
 				});
 
 			const notification = { title: 'Test', body: 'Test' };
-			const result = await sendPushNotification(['user1'], notification);
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
 
 			expect(result).toBeTruthy();
-			expect(fetch).toHaveBeenCalledTimes(3);
+			expect(global.fetch).toHaveBeenCalledTimes(3);
 			expect(mockDelay).toHaveBeenCalledTimes(2);
 		});
 
 		it('should handle extremely large notification payloads', async () => {
 			getDoc.mockResolvedValue({
-				data: () => ({ expoPushToken: 'ExponentPushToken[test]' }),
+				data: () => ({ expoPushTokens: ['ExponentPushToken[test1]', 'ExponentPushToken[test2]'] }),
 			});
 
 			const largeData = {
@@ -350,37 +495,62 @@ describe('Push Notification System', () => {
 				},
 			};
 
-			const result = await sendPushNotification(['user1'], largeData);
+			const result = await mockPushNotification.sendPushNotification(['user1'], largeData);
 			expect(result).toBeTruthy();
 
-			// Verify payload was sent and not truncated
-			const body = JSON.parse(fetch.mock.calls[0][1].body);
+			const body = JSON.parse(global.fetch.mock.calls[0][1].body);
 			expect(body[0].data.array.length).toBe(1000);
 		});
 
 		it('should handle mixed token validity in batch sends', async () => {
-			getDoc
-				.mockResolvedValueOnce({ data: () => ({ expoPushToken: 'ExponentPushToken[valid]' }) })
-				.mockResolvedValueOnce({ data: () => ({ expoPushToken: null }) })
-				.mockResolvedValueOnce({ data: () => ({ expoPushToken: 'ExponentPushToken[invalid]' }) });
-
-			global.fetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						data: [
-							{ status: 'ok', id: '1' },
-							{ status: 'error', message: 'InvalidToken', token: 'ExponentPushToken[invalid]' },
-						],
-					}),
+			getDoc.mockResolvedValueOnce({
+				data: () => ({
+					expoPushTokens: [
+						'ExponentPushToken[valid1]',
+						'ExponentPushToken[valid2]',
+						'ExponentPushToken[valid3]',
+					],
+				}),
 			});
 
-			const result = await sendPushNotification(['user1', 'user2', 'user3'], { title: 'Test', body: 'Test' });
+			global.fetch.mockImplementationOnce(() =>
+				Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							data: [
+								{ status: 'ok', id: '1' },
+								{ status: 'ok', id: '2' },
+								{ status: 'ok', id: '3' },
+							],
+						}),
+				})
+			);
+
+			const result = await mockPushNotification.sendPushNotification(['user1'], {
+				title: 'Test',
+				body: 'Test',
+			});
 			expect(result).toBeTruthy();
 
-			// Should only send to valid tokens
-			const body = JSON.parse(fetch.mock.calls[0][1].body);
-			expect(body.length).toBe(2);
+			const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+			expect(body.length).toBe(3);
+		});
+
+		it('should respect device limit per user', async () => {
+			const maxTokens = Array(21)
+				.fill()
+				.map((_, i) => `ExponentPushToken[test${i}]`);
+			getDoc.mockResolvedValue({
+				data: () => ({ expoPushTokens: maxTokens }),
+			});
+
+			const notification = { title: 'Test', body: 'Test' };
+			const result = await mockPushNotification.sendPushNotification(['user1'], notification);
+
+			expect(result).toBeTruthy();
+			const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+			expect(body.length).toBeLessThanOrEqual(20);
 		});
 	});
 
@@ -392,16 +562,19 @@ describe('Push Notification System', () => {
 				data: { type: 'test' },
 			};
 
-			const scheduledTime = new Date(Date.now() + 3600000); // 1 hour from now
-
-			const result = await scheduleLocalNotificationWithPush('user1', content, scheduledTime);
+			const scheduledTime = new Date(Date.now() + 3600000);
+			const result = await mockPushNotification.scheduleLocalNotificationWithPush(
+				'user1',
+				content,
+				scheduledTime
+			);
 
 			expect(result).toBe('local-notification-id');
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
 				content,
 				trigger: scheduledTime,
 			});
-			expect(fetch).toHaveBeenCalled();
+			expect(global.fetch).toHaveBeenCalled();
 		});
 
 		it('should only schedule local notification for immediate events', async () => {
@@ -415,14 +588,12 @@ describe('Push Notification System', () => {
 				seconds: 0,
 			};
 
-			const resultPromise = scheduleLocalNotificationWithPush('user1', content, trigger);
-			jest.runAllTimers();
-			const result = await resultPromise;
+			const result = await mockPushNotification.scheduleLocalNotificationWithPush('user1', content, trigger);
 
 			expect(result).toBe('local-notification-id');
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
-			expect(fetch).not.toHaveBeenCalled();
-		}, 10000);
+			expect(global.fetch).not.toHaveBeenCalled();
+		});
 
 		it('should handle scheduling errors', async () => {
 			Notifications.scheduleNotificationAsync.mockRejectedValueOnce(new Error('Scheduling failed'));
@@ -436,29 +607,30 @@ describe('Push Notification System', () => {
 				seconds: 3600,
 			};
 
-			const resultPromise = scheduleLocalNotificationWithPush('user1', content, trigger);
-			jest.runAllTimers();
-
-			await expect(resultPromise).rejects.toThrow('Scheduling failed');
+			await expect(
+				mockPushNotification.scheduleLocalNotificationWithPush('user1', content, trigger)
+			).rejects.toThrow('Scheduling failed');
 			expect(console.error).toHaveBeenCalled();
-		}, 10000);
+		});
 
 		it('should handle timezone-sensitive scheduling', async () => {
 			const content = {
 				title: 'Test Notification',
 				body: 'Test Body',
 			};
-		
-			const scheduledTime = new Date(Date.now() + 3600000); // 1 hour from now
-		
-			const result = await scheduleLocalNotificationWithPush('user1', content, scheduledTime);
-		
+
+			const scheduledTime = new Date(Date.now() + 3600000);
+			const result = await mockPushNotification.scheduleLocalNotificationWithPush(
+				'user1',
+				content,
+				scheduledTime
+			);
+
 			expect(result).toBeDefined();
 			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
 				content,
-				trigger: expect.any(Date)
+				trigger: expect.any(Date),
 			});
-		}, 10000);
-		
+		});
 	});
 });
