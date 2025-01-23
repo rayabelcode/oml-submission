@@ -5,16 +5,16 @@ const { Expo } = require("expo-server-sdk");
 admin.initializeApp();
 const expo = new Expo();
 
-// Test Function: sends to Ray's device once per day at 10 AM
-exports.testScheduledReminder = onSchedule("0 10 * * *", async (event) => {
+// Test function that sends to my device once per day at 10:20 AM Eastern Time
+exports.scheduledNotification = onSchedule({
+  schedule: "20 10 * * *", // First number is the minutes, second is the hour
+  timeZone: "America/New_York", // Local time zone
+}, async (event) => {
   console.log("Running test notification function...");
   const TEST_USER_ID = "LTQ2OSK61lTjRdyqF9qXn94HW0t1"; // Ray's User ID
 
   try {
-    const userDoc = await admin.firestore()
-      .collection("users")
-      .doc(TEST_USER_ID)
-      .get();
+    const userDoc = await admin.firestore().collection("users").doc(TEST_USER_ID).get();
 
     if (!userDoc.exists) {
       console.log("Test user not found");
