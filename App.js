@@ -22,7 +22,7 @@ import { notificationCoordinator } from './src/utils/notificationCoordinator';
 import { callNotesService } from './src/utils/callNotes';
 import { scheduledCallService } from './src/utils/scheduledCalls';
 import { schedulingHistory } from './src/utils/schedulingHistory';
-import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './src/config/firebase';
 
 // Disable ScrollView scrollbar globally
@@ -67,9 +67,14 @@ async function registerForPushNotificationsAsync() {
 
 		if (auth.currentUser) {
 			const userRef = doc(db, 'users', auth.currentUser.uid);
+			const userDoc = await getDoc(userRef);
+
+			// Create or update expoPushTokens array
 			await updateDoc(userRef, {
-				expoPushToken: tokenData.data,
+				expoPushTokens: arrayUnion(tokenData.data),
 				lastTokenUpdate: serverTimestamp(),
+				devicePlatform: Platform.OS,
+				appVersion: Constants.expoConfig.version,
 			});
 		}
 
