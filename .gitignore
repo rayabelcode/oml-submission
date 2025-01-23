@@ -26,6 +26,7 @@ npm-debug.*
 eas.json
 google-services.json
 GoogleService-Info.plist
+functions/serviceAccountKey.json
 
 # macOS
 .DS_Store
