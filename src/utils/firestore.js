@@ -697,7 +697,7 @@ export const subscribeToReminders = (userId, status, callback) => {
 	}
 
 	const remindersRef = collection(db, 'reminders');
-	const q = query(remindersRef, where('userId', '==', userId), where('status', '==', status));
+	const q = query(remindersRef, where('user_id', '==', userId), where('status', '==', status));
 
 	const unsubscribe = onSnapshot(
 		q,
