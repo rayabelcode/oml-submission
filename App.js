@@ -124,15 +124,9 @@ function AppContent() {
 
 	useEffect(() => {
 		if (user) {
-			registerForPushNotificationsAsync()
-				.then((token) => {
-					if (token) {
-						console.log('Push token registered:', token);
-					}
-				})
-				.catch((error) => {
-					console.error('Error registering push token:', error);
-				});
+			registerForPushNotificationsAsync().catch((error) => {
+				console.error('Error registering push token:', error);
+			});
 		}
 	}, [user]);
 
