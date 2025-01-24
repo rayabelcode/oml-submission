@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
 import * as NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -176,7 +176,11 @@ class ReminderSync {
 			}
 
 			const scheduledTime =
-				reminder.scheduledTime instanceof Date ? reminder.scheduledTime : new Date(reminder.scheduledTime);
+				reminder.scheduledTime instanceof Timestamp
+					? reminder.scheduledTime.toDate()
+					: reminder.scheduledTime instanceof Date
+					? reminder.scheduledTime
+					: new Date(reminder.scheduledTime);
 
 			const localDateTime = DateTime.fromJSDate(scheduledTime).setZone(userTimezone, { keepLocalTime: true });
 

@@ -17,6 +17,7 @@ export const REMINDER_STATUS = {
 // Recurring reminder configurations
 export const RECURRENCE_METADATA = {
 	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns
+	MAX_AGE_DAYS: 30,  // Time window to analyze patterns
 	TYPES: {
 		DAILY: 'daily',
 		WEEKLY: 'weekly',

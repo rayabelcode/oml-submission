@@ -6,6 +6,10 @@ import { schedulingHistory } from './schedulingHistory';
 import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
 // Fallback
 const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
+// Warning if MAX_AGE_DAYS is missing
+if (!RECURRENCE_METADATA?.MAX_AGE_DAYS) {
+	console.warn('MAX_AGE_DAYS not found in RECURRENCE_METADATA, using fallback value of 30');
+}
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -155,7 +159,7 @@ export class SchedulingService {
 		});
 	}
 
-	hasTimeConflict(dateTime) {
+	hasTimeConflict(dateTime, contact = null) {
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
 		return this.reminders.some((reminder) => {
 			const reminderTime = reminder.scheduledTime.toDate().getTime();
@@ -399,7 +403,18 @@ export class SchedulingService {
 			this.reminders.push({
 				scheduledTime: Timestamp.fromDate(selectedSlot.scheduledTime),
 				notified: false,
-				type: 'SCHEDULED'
+				type: 'SCHEDULED',
+				contact_id: contact.id,
+				user_id: contact.user_id,
+				status: 'pending',
+				snoozed: false,
+				needs_attention: false,
+				completed: false,
+				completion_time: null,
+				notes_added: false,
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				created_at: Timestamp.now(),
+				updated_at: Timestamp.now(),
 			});
 
 			return {
@@ -876,12 +891,20 @@ export class SchedulingService {
 	}
 
 	async scheduleNotificationForReminder(reminder) {
+		if (!reminder?.scheduledTime) {
+			console.error('No scheduledTime found for reminder:', reminder);
+			return;
+		}
+
 		const scheduledTime = reminder.scheduledTime.toDate();
-		if (!scheduledTime) return;
+		if (!(scheduledTime instanceof Date)) {
+			console.error('Invalid scheduledTime format:', scheduledTime);
+			return;
+		}
 
 		const notificationContent = {
-			title: `Scheduled Call: ${reminder.contactName}`,
-			body: `Time to connect with ${reminder.contactName}`,
+			title: `Scheduled Call: ${reminder.contactName || 'Contact'}`,
+			body: `Time to connect with ${reminder.contactName || 'your contact'}`,
 			data: {
 				type: 'SCHEDULED',
 				reminderId: reminder.id,
@@ -891,11 +914,7 @@ export class SchedulingService {
 		};
 
 		try {
-			await scheduleLocalNotificationWithPush(
-				reminder.user_id,
-				notificationContent,
-				scheduledTime // Pass Date object directly
-			);
+			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, scheduledTime);
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
 			throw error;
