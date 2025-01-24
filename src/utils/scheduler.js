@@ -896,9 +896,24 @@ export class SchedulingService {
 			return;
 		}
 
-		const scheduledTime = reminder.scheduledTime.toDate();
-		if (!(scheduledTime instanceof Date)) {
-			console.error('Invalid scheduledTime format:', scheduledTime);
+		let scheduledTime;
+		try {
+			// Handle different scheduledTime formats
+			if (reminder.scheduledTime instanceof Date) {
+				scheduledTime = reminder.scheduledTime;
+			} else if (typeof reminder.scheduledTime === 'string') {
+				scheduledTime = new Date(reminder.scheduledTime);
+			} else if (reminder.scheduledTime.toDate) {
+				scheduledTime = reminder.scheduledTime.toDate();
+			} else {
+				throw new Error('Invalid scheduledTime format');
+			}
+
+			if (isNaN(scheduledTime.getTime())) {
+				throw new Error('Invalid date value');
+			}
+		} catch (error) {
+			console.error('Invalid scheduledTime format:', reminder.scheduledTime, error);
 			return;
 		}
 

@@ -19,14 +19,30 @@ export class SnoozeHandler {
 
 	async initialize() {
 		try {
-			const userPrefs = await getUserPreferences(this.userId);
-			const activeReminders = await getActiveReminders(this.userId);
+			let userPrefs;
+			try {
+				userPrefs = await getUserPreferences(this.userId);
+			} catch (error) {
+				console.warn('Failed to get user preferences, using defaults:', error);
+				userPrefs = {
+					scheduling_preferences: {
+						minimumGapMinutes: 20,
+						preferredTimeSlots: [],
+						timezone: this.timezone || DateTime.local().zoneName,
+					},
+				};
+			}
+
+			const activeReminders = (await getActiveReminders(this.userId)) || [];
+
 			this.schedulingService = new SchedulingService(
-				userPrefs?.scheduling_preferences,
+				userPrefs.scheduling_preferences,
 				activeReminders,
-				this.timezone
+				userPrefs.scheduling_preferences.timezone || this.timezone
 			);
+
 			await schedulingHistory.initialize();
+			return true;
 		} catch (error) {
 			console.error('Error initializing SnoozeHandler:', error);
 			throw error;
@@ -87,6 +103,9 @@ export class SnoozeHandler {
 	async handleLaterToday(contactId, currentTime = DateTime.now()) {
 		try {
 			if (!this.schedulingService) await this.initialize();
+			if (!this.schedulingService) {
+				throw new Error('Failed to initialize scheduling service');
+			}
 
 			// Always use standard timing for "later today"
 			const hour = currentTime.hour;
@@ -132,14 +151,16 @@ export class SnoozeHandler {
 
 			if (availableTime) {
 				const contact = await getContactById(contactId);
-				await this.schedulingService.scheduleNotificationForReminder({
+				const reminderData = {
 					id: contactId,
-					contactName: contact.first_name + ' ' + contact.last_name,
+					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'scheduled',
-				});
+					type: 'SCHEDULED',
+				};
+				// Use schedulingService directly
+				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
 			return availableTime;
 		} catch (error) {
@@ -183,14 +204,15 @@ export class SnoozeHandler {
 
 			if (availableTime) {
 				const contact = await getContactById(contactId);
-				await this.schedulingService.scheduleNotificationForReminder({
+				const reminderData = {
 					id: contactId,
-					contactName: contact.first_name + ' ' + contact.last_name,
+					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'scheduled',
-				});
+					type: 'SCHEDULED',
+				};
+				await this.scheduleNotificationForReminder(reminderData);
 			}
 			return availableTime;
 		} catch (error) {
@@ -201,7 +223,18 @@ export class SnoozeHandler {
 
 	async handleNextWeek(contactId, currentTime = DateTime.now()) {
 		try {
-			if (!this.schedulingService) await this.initialize();
+			if (!this.schedulingService) {
+				await this.initialize();
+			}
+
+			if (!this.schedulingService) {
+				throw new Error('Failed to initialize scheduling service');
+			}
+
+			// Validate contact ID
+			if (!contactId) {
+				throw new Error('Contact ID is required');
+			}
 
 			const optimalTime = await this.findOptimalTime(contactId, currentTime.plus({ weeks: 1 }), 'next_week');
 			let proposedTime = optimalTime ? optimalTime.toJSDate() : currentTime.plus({ weeks: 1 }).toJSDate();
@@ -210,6 +243,11 @@ export class SnoozeHandler {
 				id: contactId,
 			});
 
+			if (!availableTime) {
+				throw new Error('No available time slot found');
+			}
+
+			// Update contact scheduling
 			await updateContactScheduling(contactId, {
 				custom_next_date: availableTime,
 				last_snooze_type: 'next_week',
@@ -217,6 +255,7 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SNOOZED,
 			});
 
+			// Track the snooze
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -224,17 +263,25 @@ export class SnoozeHandler {
 				'next_week'
 			);
 
+			// Schedule the notification
 			if (availableTime) {
 				const contact = await getContactById(contactId);
-				await this.schedulingService.scheduleNotificationForReminder({
+				if (!contact) {
+					throw new Error('Contact not found');
+				}
+
+				const reminderData = {
 					id: contactId,
-					contactName: contact.first_name + ' ' + contact.last_name,
+					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'scheduled',
-				});
+					type: 'SCHEDULED',
+				};
+
+				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
+
 			return availableTime;
 		} catch (error) {
 			console.error('Error in handleNextWeek:', error);
@@ -259,6 +306,13 @@ export class SnoozeHandler {
 	}
 
 	async handleSnooze(contactId, option, currentTime = DateTime.now()) {
+		if (!contactId) {
+			throw new Error('Contact ID is required');
+		}
+
+		// Make sure currentTime is a DateTime object
+		currentTime = DateTime.isDateTime(currentTime) ? currentTime : DateTime.now();
+
 		const snoozeOption = SNOOZE_OPTIONS.find((opt) => opt.id === option);
 		if (!snoozeOption) throw new Error('Invalid snooze option');
 

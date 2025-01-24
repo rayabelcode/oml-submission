@@ -175,12 +175,18 @@ class ReminderSync {
 				userTimezone = DateTime.local().zoneName;
 			}
 
-			const scheduledTime =
-				reminder.scheduledTime instanceof Timestamp
+			const scheduledTime = reminder?.scheduledTime
+				? reminder.scheduledTime instanceof Timestamp
 					? reminder.scheduledTime.toDate()
 					: reminder.scheduledTime instanceof Date
 					? reminder.scheduledTime
-					: new Date(reminder.scheduledTime);
+					: new Date(reminder.scheduledTime)
+				: null;
+
+			if (!scheduledTime) {
+				console.error('Invalid scheduledTime for reminder:', reminder);
+				return null;
+			}
 
 			const localDateTime = DateTime.fromJSDate(scheduledTime).setZone(userTimezone, { keepLocalTime: true });
 
