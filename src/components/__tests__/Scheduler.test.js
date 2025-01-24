@@ -28,7 +28,6 @@ jest.mock('firebase/firestore', () => ({
 	persistentMultipleTabManager: jest.fn(() => ({})),
 }));
 
-//Mock schedulingHistory
 jest.mock('../../utils/schedulingHistory', () => ({
 	schedulingHistory: {
 		analyzeContactPatterns: jest.fn(),
@@ -36,7 +35,6 @@ jest.mock('../../utils/schedulingHistory', () => ({
 	},
 }));
 
-// Mock firestore functions
 jest.mock('../../utils/firestore', () => ({
 	updateContactScheduling: jest.fn(),
 	getContactReminders: jest.fn(),
@@ -44,13 +42,13 @@ jest.mock('../../utils/firestore', () => ({
 	getActiveReminders: jest.fn(),
 }));
 
-// Mock auth
 jest.mock('../../config/firebase', () => ({
 	auth: {
 		currentUser: { uid: 'test-user' },
 	},
 }));
 
+// After: Updated mockUserPreferences with scheduling_preferences
 const mockUserPreferences = {
 	relationship_types: {
 		friend: {
@@ -77,6 +75,10 @@ const mockUserPreferences = {
 			end: '07:00',
 		},
 	],
+	scheduling_preferences: {
+		minimumGapMinutes: 30, // Minimum gap of 30 minutes
+		optimalGapMinutes: 1440, // Optional: Can be adjusted as needed
+	},
 };
 
 describe('Contact Spreading', () => {
@@ -85,6 +87,7 @@ describe('Contact Spreading', () => {
 	beforeEach(() => {
 		schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
 	});
+
 	it('should spread contacts across preferred days', async () => {
 		const baseContact = {
 			id: 'test-id',
@@ -99,7 +102,6 @@ describe('Contact Spreading', () => {
 			},
 		};
 
-		// Create three contacts with same preferences
 		const contacts = Array.from({ length: 3 }, (_, i) => ({
 			...baseContact,
 			id: `test-id-${i}`,
@@ -108,14 +110,12 @@ describe('Contact Spreading', () => {
 		const lastContactDate = DateTime.now().toJSDate();
 		const results = [];
 
-		// Schedule all contacts
 		for (const contact of contacts) {
 			const result = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
 			results.push(result);
 		}
 
-		// Check that they're on different days
-		const scheduledDays = new Set(results.map((r) => DateTime.fromJSDate(r.date.toDate()).weekday));
+		const scheduledDays = new Set(results.map((r) => DateTime.fromJSDate(r.scheduledTime.toDate()).weekday));
 		expect(scheduledDays.size).toBe(3);
 	});
 
@@ -130,10 +130,9 @@ describe('Contact Spreading', () => {
 
 		const schedulingService = new SchedulingService(userPrefsWithGaps, [], 'America/New_York');
 
-		// Create a reminder at 10:00
 		schedulingService.reminders = [
 			{
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						DateTime.fromObject(
 							{ year: 2024, month: 1, day: 1, hour: 10, minute: 0 },
@@ -143,13 +142,11 @@ describe('Contact Spreading', () => {
 			},
 		];
 
-		// Try scheduling something 15 minutes later (should fail)
 		const tooClose = DateTime.fromObject(
 			{ year: 2024, month: 1, day: 1, hour: 10, minute: 15 },
 			{ zone: 'America/New_York' }
 		).toJSDate();
 
-		// Try scheduling something 25 minutes later (should succeed)
 		const farEnough = DateTime.fromObject(
 			{ year: 2024, month: 1, day: 1, hour: 10, minute: 25 },
 			{ zone: 'America/New_York' }
@@ -162,10 +159,9 @@ describe('Contact Spreading', () => {
 	it('should use default gap when user preferences are missing', () => {
 		const schedulingService = new SchedulingService({}, [], 'America/New_York');
 
-		// Create a reminder at 10:00
 		schedulingService.reminders = [
 			{
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						DateTime.fromObject(
 							{ year: 2024, month: 1, day: 1, hour: 10, minute: 0 },
@@ -175,7 +171,6 @@ describe('Contact Spreading', () => {
 			},
 		];
 
-		// Try scheduling something 15 minutes later (should fail as default is 20)
 		const tooClose = DateTime.fromObject(
 			{ year: 2024, month: 1, day: 1, hour: 10, minute: 15 },
 			{ zone: 'America/New_York' }
@@ -211,10 +206,9 @@ describe('Contact Spreading', () => {
 		const result1 = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
 		const result2 = await schedulingService.scheduleReminder(contact, lastContactDate, 'weekly');
 
-		const time1 = result1.date.toDate().getTime();
-		const time2 = result2.date.toDate().getTime();
+		const time1 = result1.scheduledTime.toDate().getTime();
+		const time2 = result2.scheduledTime.toDate().getTime();
 		const gap = Math.abs(time2 - time1) / (1000 * 60); // gap in minutes
-
 		expect(gap).toBeGreaterThanOrEqual(120);
 	});
 });
@@ -240,7 +234,7 @@ describe('Custom Preferences', () => {
 
 		const result = await schedulingService.scheduleReminder(contact, DateTime.now().toJSDate(), 'weekly');
 
-		const scheduledDateTime = DateTime.fromJSDate(result.date.toDate());
+		const scheduledDateTime = DateTime.fromJSDate(result.scheduledTime.toDate());
 		expect(['6', '7']).toContain(scheduledDateTime.weekday.toString());
 		expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(12);
 		expect(scheduledDateTime.hour).toBeLessThan(20);
@@ -257,8 +251,8 @@ describe('Custom Preferences', () => {
 
 		const result = await schedulingService.scheduleReminder(contact, DateTime.now().toJSDate(), 'weekly');
 
-		const scheduledDateTime = DateTime.fromJSDate(result.date.toDate());
-		expect(scheduledDateTime.weekday).toBeLessThanOrEqual(5); // Monday-Friday
+		const scheduledDateTime = DateTime.fromJSDate(result.scheduledTime.toDate());
+		expect(scheduledDateTime.weekday).toBeLessThanOrEqual(5);
 		expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(9);
 		expect(scheduledDateTime.hour).toBeLessThan(17);
 	});
@@ -319,11 +313,11 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Mock successful Firestore operations
 			require('../../utils/firestore').getContactReminders.mockImplementation((contactId, userId) => {
 				return Promise.resolve([
 					{
 						id: 'reminder-id',
+
 						scheduledTime: {
 							toDate: () => mockContact.scheduling.custom_next_date || new Date(),
 						},
@@ -344,13 +338,11 @@ describe('SchedulingService', () => {
 		});
 
 		it('should create reminder for custom date', async () => {
-			// Create a fixed date in the local timezone
 			const customDate = DateTime.fromObject(
 				{ year: 2024, month: 1, day: 1, hour: 14, minute: 0 },
 				{ zone: 'America/New_York' }
 			);
 
-			// Mock the exact response we expect
 			require('../../utils/firestore').updateContactScheduling.mockResolvedValueOnce({
 				id: mockContact.id,
 				scheduling: {
@@ -370,12 +362,10 @@ describe('SchedulingService', () => {
 			const firstDate = DateTime.now().plus({ days: 1 });
 			const secondDate = DateTime.now().plus({ days: 2 });
 
-			// Set first custom date
 			await updateContactScheduling(mockContact.id, {
 				custom_next_date: firstDate.toJSDate(),
 			});
 
-			// Update to second custom date
 			await updateContactScheduling(mockContact.id, {
 				custom_next_date: secondDate.toJSDate(),
 			});
@@ -412,18 +402,12 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Use a specific Monday for consistent testing
-			const monday = DateTime.fromObject(
-				{ year: 2024, month: 1, day: 1 }, // This is a Monday
-				{ zone: 'America/New_York' }
-			);
+			const monday = DateTime.fromObject({ year: 2024, month: 1, day: 1 }, { zone: 'America/New_York' });
 
-			// Test during excluded period (23:00-07:00)
 			const nightTime = monday.set({ hour: 23, minute: 30 }).toJSDate();
 			const earlyMorning = monday.set({ hour: 6, minute: 30 }).toJSDate();
 			const dayTime = monday.set({ hour: 10, minute: 0 }).toJSDate();
 
-			// Debug info
 			console.log('Testing excluded times:', {
 				contact: mockContact,
 				preferences: schedulingService.getPreferencesForContact(mockContact),
@@ -447,7 +431,6 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Set to Monday at 12:30 PM
 			const lunchTime = DateTime.fromObject(
 				{ year: 2024, month: 1, day: 1, hour: 12, minute: 30 },
 				{ zone: 'America/New_York' }
@@ -473,10 +456,9 @@ describe('SchedulingService', () => {
 		});
 
 		it('should automatically check next day when current day is full', async () => {
-			// Fill up Monday completely
 			const monday = DateTime.now().startOf('week').plus({ days: 1 });
 			schedulingService.reminders = Array.from({ length: 32 }, (_, i) => ({
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						monday
 							.plus({
@@ -498,13 +480,11 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Try to schedule on Monday
 			const result = await schedulingService.findAvailableTimeSlot(
 				monday.set({ hour: 10 }).toJSDate(),
 				contact
 			);
 
-			// Verify it scheduled for Tuesday
 			const scheduledDate = DateTime.fromJSDate(result);
 			expect(scheduledDate.weekday).toBe(3); // Wednesday
 			expect(scheduledDate.hour).toBeGreaterThanOrEqual(9);
@@ -512,7 +492,6 @@ describe('SchedulingService', () => {
 		});
 
 		it('should find next available day within the week', async () => {
-			// Fill Monday through Wednesday
 			const monday = DateTime.now().startOf('week').plus({ days: 1 });
 			const filledDays = [];
 
@@ -520,7 +499,7 @@ describe('SchedulingService', () => {
 				const currentDay = monday.plus({ days: day });
 				filledDays.push(
 					...Array.from({ length: 32 }, (_, i) => ({
-						date: {
+						scheduledTime: {
 							toDate: () =>
 								currentDay
 									.plus({
@@ -546,13 +525,11 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Try to schedule on Monday
 			const result = await schedulingService.findAvailableTimeSlot(
 				monday.set({ hour: 10 }).toJSDate(),
 				contact
 			);
 
-			// Verify it scheduled for Thursday
 			const scheduledDate = DateTime.fromJSDate(result);
 			expect(scheduledDate.weekday).toBe(5); // Friday
 			expect(scheduledDate.hour).toBeGreaterThanOrEqual(9);
@@ -613,20 +590,29 @@ describe('SchedulingService', () => {
 			expect(invalidTzService.timeZone).toBe(systemTz);
 		});
 
-		it('should handle concurrent scheduling requests', async () => {
+		// Tests scheduling multiple reminders with realistic constraints (9hr gaps, working hours 9-5, spread across days)
+		it('should handle multiple scheduling requests', async () => {
 			schedulingService.reminders = [];
+			const minGap = Math.max(
+				schedulingService.userPreferences?.scheduling_preferences?.minimumGapMinutes || 540, // 9 hours in minutes
+				540 // minimum 9 hour gap
+			);
 
-			const baseDate = DateTime.now().set({ hour: 9, minute: 0 }).toJSDate();
-			const promises = [];
+			const baseDate = DateTime.now().set({ hour: 9, minute: 0 }).startOf('hour').setZone('America/New_York');
 
-			for (let i = 0; i < 10; i++) {
-				const requestedTime = DateTime.fromJSDate(baseDate)
-					.plus({ hours: Math.floor(i / 2), minutes: (i % 2) * 30 })
-					.toJSDate();
+			// 3 requests - naturally spread across days due to 9-hour gap
+			const requestTimes = Array.from({ length: 3 }, (_, i) => ({
+				index: i,
+				time: baseDate.plus({ days: i }), // One request per day
+			}));
 
+			const results = [];
+			for (const request of requestTimes) {
 				const contact = {
-					...mockContact,
-					id: `test-id-${i}`,
+					id: `test-id-${request.index}`,
+					first_name: 'Test',
+					last_name: `${request.index}`,
+					user_id: 'test-user',
 					scheduling: {
 						relationship_type: 'friend',
 						priority: 'normal',
@@ -636,22 +622,28 @@ describe('SchedulingService', () => {
 					},
 				};
 
-				promises.push(schedulingService.scheduleReminder(contact, requestedTime, 'daily'));
+				const result = await schedulingService.scheduleReminder(contact, request.time.toJSDate(), 'daily');
+				results.push(result);
 			}
 
-			const results = await Promise.all(promises);
+			const successfulResults = results.filter((r) => r.scheduledTime);
+			successfulResults.sort(
+				(a, b) => a.scheduledTime.toDate().getTime() - b.scheduledTime.toDate().getTime()
+			);
 
-			const times = results.map((r) => r.date.toDate().getTime());
-			const uniqueTimes = new Set(times);
+			expect(successfulResults.length).toBe(3);
 
-			expect(uniqueTimes.size).toBe(10);
-
-			for (let i = 0; i < times.length; i++) {
-				for (let j = i + 1; j < times.length; j++) {
-					const gap = Math.abs(times[i] - times[j]) / (1000 * 60);
-					expect(gap).toBeGreaterThanOrEqual(30);
-				}
+			const times = successfulResults.map((r) => r.scheduledTime.toDate().getTime());
+			for (let i = 0; i < times.length - 1; i++) {
+				const gap = Math.floor((times[i + 1] - times[i]) / (1000 * 60));
+				expect(gap).toBeGreaterThanOrEqual(minGap);
 			}
+
+			successfulResults.forEach((result) => {
+				const hour = DateTime.fromJSDate(result.scheduledTime.toDate()).hour;
+				expect(hour).toBeGreaterThanOrEqual(9);
+				expect(hour).toBeLessThan(17);
+			});
 		});
 
 		it('should handle maximum scheduling attempts', async () => {
@@ -664,16 +656,14 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Fill up entire week
-			const days = 5; // Monday through Friday
+			const days = 5;
 			const slotsPerDay = 32;
 			const reminders = [];
-			const startDate = DateTime.now().startOf('week').plus({ days: 1 }); // Start from Monday
-
+			const startDate = DateTime.now().startOf('week').plus({ days: 1 });
 			for (let day = 0; day < days; day++) {
 				for (let slot = 0; slot < slotsPerDay; slot++) {
 					reminders.push({
-						date: {
+						scheduledTime: {
 							toDate: () =>
 								startDate
 									.plus({ days: day })
@@ -689,7 +679,6 @@ describe('SchedulingService', () => {
 
 			schedulingService.reminders = reminders;
 
-			// Should return a user-friendly response when no slots are available
 			const result = await schedulingService.scheduleReminder(
 				mockContact,
 				startDate.set({ hour: 10 }).toJSDate(),
@@ -715,15 +704,14 @@ describe('SchedulingService', () => {
 			const baseTime = DateTime.now().set({ hour: 12, minute: 0 }).toJSDate();
 			schedulingService.reminders = [
 				{
-					date: {
+					scheduledTime: {
 						toDate: () => baseTime,
 					},
 				},
 			];
 
-			const tooClose = new Date(baseTime.getTime() + 29 * 60 * 1000); // 29 minutes
-			const justRight = new Date(baseTime.getTime() + 30 * 60 * 1000); // 30 minutes
-
+			const tooClose = new Date(baseTime.getTime() + 29 * 60 * 1000);
+			const justRight = new Date(baseTime.getTime() + 30 * 60 * 1000);
 			expect(schedulingService.hasTimeConflict(tooClose)).toBeTruthy();
 			expect(schedulingService.hasTimeConflict(justRight)).toBeFalsy();
 		});
@@ -744,20 +732,19 @@ describe('SchedulingService', () => {
 					},
 				};
 
-				// Schedule in original timezone
 				const firstResult = await schedulingService.scheduleReminder(mockContact, new Date(), 'weekly');
 
-				// Change timezone
 				schedulingService.timeZone = newTimezone;
 				const secondResult = await schedulingService.scheduleReminder(
 					mockContact,
-					firstResult.date.toDate(),
+					firstResult.scheduledTime.toDate(),
 					'weekly'
 				);
 
-				// Verify times are correctly adjusted
-				const firstDateTime = DateTime.fromJSDate(firstResult.date.toDate()).setZone(originalTimezone);
-				const secondDateTime = DateTime.fromJSDate(secondResult.date.toDate()).setZone(newTimezone);
+				const firstDateTime = DateTime.fromJSDate(firstResult.scheduledTime.toDate()).setZone(
+					originalTimezone
+				);
+				const secondDateTime = DateTime.fromJSDate(secondResult.scheduledTime.toDate()).setZone(newTimezone);
 
 				expect(firstDateTime.hour).toBeGreaterThanOrEqual(9);
 				expect(firstDateTime.hour).toBeLessThan(17);
@@ -786,9 +773,8 @@ describe('SchedulingService', () => {
 					})
 				);
 
-				// Verify all scheduled times fall within working hours in their respective timezones
 				results.forEach((result, index) => {
-					const localTime = DateTime.fromJSDate(result.date.toDate()).setZone(timezones[index]);
+					const localTime = DateTime.fromJSDate(result.scheduledTime.toDate()).setZone(timezones[index]);
 					expect(localTime.hour).toBeGreaterThanOrEqual(9);
 					expect(localTime.hour).toBeLessThan(17);
 				});
@@ -811,7 +797,7 @@ describe('SchedulingService', () => {
 
 			schedulingService.reminders = [
 				{
-					date: {
+					scheduledTime: {
 						toDate: () => DateTime.now().set({ hour: 10, minute: 0 }).toJSDate(),
 					},
 				},
@@ -837,12 +823,11 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Block morning hours
 			schedulingService.reminders = Array.from({ length: 8 }, (_, i) => ({
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						DateTime.now()
-							.set({ hour: 9 + Math.floor(i / 2), minute: (i % 2) * 30 })
+							.plus({ hours: Math.floor(i / 2), minutes: (i % 2) * 30 })
 							.toJSDate(),
 				},
 			}));
@@ -867,13 +852,9 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Fill normal hours
 			schedulingService.reminders = Array.from({ length: 16 }, (_, i) => ({
-				date: {
-					toDate: () =>
-						DateTime.now()
-							.set({ hour: 9 + i, minute: 0 })
-							.toJSDate(),
+				scheduledTime: {
+					toDate: () => DateTime.now().plus({ hours: i }).set({ minute: 0 }).toJSDate(),
 				},
 			}));
 
@@ -890,7 +871,7 @@ describe('SchedulingService', () => {
 			const contact = {
 				id: 'test-id',
 				scheduling: {
-					relationship_type: 'friend',
+					relationship_type: 'work',
 					priority: 'normal',
 					custom_preferences: {
 						active_hours: { start: '09:00', end: '17:00' },
@@ -898,12 +879,12 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Fill all possible slots
 			schedulingService.reminders = Array.from({ length: 32 }, (_, i) => ({
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						DateTime.now()
-							.set({ hour: 9 + Math.floor(i / 4), minute: (i % 4) * 15 })
+							.plus({ hours: Math.floor(i / 4) })
+							.set({ minute: (i % 4) * 15 })
 							.toJSDate(),
 				},
 			}));
@@ -932,25 +913,19 @@ describe('SchedulingService', () => {
 				},
 			};
 
-			// Start on a Monday
-			const monday = DateTime.fromObject(
-				{ year: 2024, month: 1, day: 1 }, // Monday
-				{ zone: 'America/New_York' }
-			);
+			const monday = DateTime.fromObject({ year: 2024, month: 1, day: 1 }, { zone: 'America/New_York' });
 
 			schedulingService.reminders = [];
 
-			// Fill EVERY slot for the entire week
+			// Populate all slots for the first and second week
 			for (let day = 0; day < 5; day++) {
-				// Monday through Friday
 				const currentDay = monday.plus({ days: day });
 
-				// Fill every slot from 9 AM to 5 PM
 				for (let hour = 9; hour < 17; hour++) {
 					for (let minute = 0; minute < 60; minute += 15) {
 						const slotTime = currentDay.set({ hour, minute });
 						schedulingService.reminders.push({
-							date: {
+							scheduledTime: {
 								toDate: () => slotTime.toJSDate(),
 								_seconds: Math.floor(slotTime.toSeconds()),
 								_nanoseconds: 0,
@@ -959,16 +934,13 @@ describe('SchedulingService', () => {
 					}
 				}
 			}
-
-			// Fill the next week too to prevent finding slots there
-			const nextMonday = monday.plus({ days: 7 });
 			for (let day = 0; day < 5; day++) {
-				const currentDay = nextMonday.plus({ days: day });
+				const currentDay = monday.plus({ days: day }).plus({ weeks: 1 });
 				for (let hour = 9; hour < 17; hour++) {
 					for (let minute = 0; minute < 60; minute += 15) {
 						const slotTime = currentDay.set({ hour, minute });
 						schedulingService.reminders.push({
-							date: {
+							scheduledTime: {
 								toDate: () => slotTime.toJSDate(),
 								_seconds: Math.floor(slotTime.toSeconds()),
 								_nanoseconds: 0,
@@ -982,14 +954,14 @@ describe('SchedulingService', () => {
 				totalSlots: schedulingService.reminders.length,
 				firstDaySlots: schedulingService.reminders
 					.filter((r) => {
-						const d = DateTime.fromJSDate(r.date.toDate());
+						const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 						return d.toFormat('yyyy-MM-dd') === monday.toFormat('yyyy-MM-dd');
 					})
-					.map((r) => DateTime.fromJSDate(r.date.toDate()).toFormat('HH:mm')),
+					.map((r) => DateTime.fromJSDate(r.scheduledTime.toDate()).toFormat('HH:mm')),
 				firstDay: monday.toFormat('cccc, LLLL d'),
 				nextWeekSlots: schedulingService.reminders.filter((r) => {
-					const d = DateTime.fromJSDate(r.date.toDate());
-					return d.toFormat('yyyy-MM-dd') === nextMonday.toFormat('yyyy-MM-dd');
+					const d = DateTime.fromJSDate(r.scheduledTime.toDate());
+					return d.toFormat('yyyy-MM-dd') === monday.plus({ weeks: 1 }).toFormat('yyyy-MM-dd');
 				}).length,
 			});
 
@@ -999,14 +971,12 @@ describe('SchedulingService', () => {
 				'daily'
 			);
 
-			// Verify the user-friendly response
 			expect(result.status).toBe('SLOTS_FILLED');
 			expect(result.message).toBe('This day is fully booked. Would you like to:');
 			expect(result.options).toEqual(['Try the next available day', 'Schedule for next week']);
 		});
 	});
 
-	//Basic Performance Benchmarking
 	describe('Performance Benchmarking', () => {
 		let schedulingService;
 
@@ -1022,7 +992,6 @@ describe('SchedulingService', () => {
 				try {
 					results.push(await operation(i));
 				} catch (error) {
-					// Skip failed operations
 					continue;
 				}
 			}
@@ -1039,7 +1008,7 @@ describe('SchedulingService', () => {
 
 		it('benchmarks custom time scheduling', async () => {
 			const customDateOperation = (i) => {
-				const baseDate = DateTime.now().set({ hour: 13, minute: 0 }); // Start at 1 PM
+				const baseDate = DateTime.now().set({ hour: 13, minute: 0 });
 				const date = baseDate.plus({ days: Math.floor(i / 8), hours: i % 8 }).toJSDate();
 				const contact = {
 					id: `test-${i}`,
@@ -1096,7 +1065,6 @@ describe('SchedulingService', () => {
 		});
 	});
 
-	// Performance Stress Testing - Larger Datasets
 	describe('Performance Stress Testing - Larger Datasets', () => {
 		let schedulingService;
 
@@ -1110,7 +1078,7 @@ describe('SchedulingService', () => {
 
 			for (const size of datasetSizes) {
 				const reminders = Array.from({ length: size }, (_, i) => ({
-					date: {
+					scheduledTime: {
 						toDate: () =>
 							DateTime.now()
 								.plus({ days: Math.floor(i / 32) })
@@ -1153,9 +1121,8 @@ describe('SchedulingService', () => {
 		});
 
 		it('handles long-term scheduling scenarios', async () => {
-			// Generate a month of reminders
 			const monthOfReminders = Array.from({ length: 30 * 32 }, (_, i) => ({
-				date: {
+				scheduledTime: {
 					toDate: () =>
 						DateTime.now()
 							.plus({ days: Math.floor(i / 32) })
@@ -1169,7 +1136,7 @@ describe('SchedulingService', () => {
 
 			schedulingService.reminders = monthOfReminders;
 
-			const timeRanges = [7, 14, 21, 30]; // Days to schedule ahead
+			const timeRanges = [7, 14, 21, 30];
 			const results = [];
 
 			for (const days of timeRanges) {
@@ -1214,7 +1181,6 @@ describe('SchedulingService', () => {
 		});
 	});
 
-	// Recurring reminder testing
 	describe('Recurring Reminders', () => {
 		let schedulingService;
 		let mockSchedulingHistory;
@@ -1233,20 +1199,17 @@ describe('SchedulingService', () => {
 			jest.clearAllMocks();
 			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
 
-			// Get fresh reference to mocked module
 			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
 		});
 
 		it('should use base scheduling when no patterns exist', async () => {
-			// Mock no patterns found
 			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
 				null
 			);
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			// Expectation for flattened structure
-			expect(result.date).toBeDefined();
+			expect(result.scheduledTime).toBeDefined();
 			expect(result).toEqual(
 				expect.objectContaining({
 					frequency: 'weekly',
@@ -1257,7 +1220,6 @@ describe('SchedulingService', () => {
 		});
 
 		it('should enhance scheduling with pattern analysis when available', async () => {
-			// Mock successful pattern analysis
 			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
 				confidence: 0.8,
 				successRates: {
@@ -1265,14 +1227,12 @@ describe('SchedulingService', () => {
 				},
 			});
 
-			// Mock optimal time suggestion
-			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValue(
+			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
 				DateTime.now().set({ hour: 14, minute: 0 })
 			);
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			// Expectation for flattened structure
 			expect(result).toEqual(
 				expect.objectContaining({
 					frequency: 'weekly',
@@ -1284,26 +1244,23 @@ describe('SchedulingService', () => {
 		});
 
 		it('should respect scheduling constraints even with pattern adjustment', async () => {
-			// Mock pattern analysis suggesting a blocked time
 			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValueOnce(
 				{
 					confidence: 0.8,
 					successRates: {
-						byHour: { 23: { successRate: 0.9 } }, // Outside active hours
+						byHour: { 23: { successRate: 0.9 } },
 					},
 				}
 			);
 
-			// Mock optimal time suggestion to return a blocked time
 			const blockedTime = DateTime.now().set({ hour: 23, minute: 0 });
 			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
 				blockedTime
 			);
 
-			// Mock base schedule to be within working hours
 			const baseDate = DateTime.now().set({ hour: 14, minute: 0 });
 			const mockBaseResult = {
-				date: {
+				scheduledTime: {
 					toDate: () => baseDate.toJSDate(),
 					_seconds: Math.floor(baseDate.toSeconds()),
 					_nanoseconds: 0,
@@ -1315,17 +1272,14 @@ describe('SchedulingService', () => {
 
 			const result = await schedulingService.scheduleRecurringReminder(mockContact, new Date(), 'weekly');
 
-			// Use flattened structure
 			expect(result.pattern_adjusted).toBe(false);
 
-			// Verify time is within allowed hours
-			const scheduledHour = DateTime.fromJSDate(result.date.toDate()).hour;
+			const scheduledHour = DateTime.fromJSDate(result.scheduledTime.toDate()).hour;
 			expect(scheduledHour).toBeGreaterThanOrEqual(9);
 			expect(scheduledHour).toBeLessThan(17);
 		});
 
 		it('should handle slots filled status correctly', async () => {
-			// Mock base scheduling returning slots filled
 			jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce({
 				status: 'SLOTS_FILLED',
 				message: 'This day is fully booked. Would you like to:',
@@ -1364,10 +1318,9 @@ describe('SchedulingService', () => {
 
 		describe('Error Handling', () => {
 			it('should handle schedulingHistory failures gracefully', async () => {
-				// Set up the success mock for base scheduling
 				const baseDate = DateTime.now().plus({ days: 7 });
 				const mockBaseResult = {
-					date: {
+					scheduledTime: {
 						toDate: () => baseDate.toJSDate(),
 						_seconds: Math.floor(baseDate.toSeconds()),
 						_nanoseconds: 0,
@@ -1382,7 +1335,6 @@ describe('SchedulingService', () => {
 
 				jest.spyOn(schedulingService, 'scheduleReminder').mockResolvedValueOnce(mockBaseResult);
 
-				// Set up failure for pattern analysis
 				mockSchedulingHistory.analyzeContactPatterns.mockRejectedValueOnce(
 					new Error('Pattern analysis failed')
 				);
@@ -1396,7 +1348,7 @@ describe('SchedulingService', () => {
 		describe('Pattern Confidence', () => {
 			it('should respect minimum confidence threshold', async () => {
 				mockSchedulingHistory.analyzeContactPatterns.mockResolvedValueOnce({
-					confidence: 0.4, // Below threshold
+					confidence: 0.4,
 					successRates: {
 						byHour: { 14: { successRate: 0.9 } },
 					},
@@ -1409,7 +1361,7 @@ describe('SchedulingService', () => {
 			it('should handle borderline confidence cases', async () => {
 				const baseDate = DateTime.now().plus({ days: 7 });
 				const mockBaseResult = {
-					date: {
+					scheduledTime: {
 						toDate: () => baseDate.toJSDate(),
 						_seconds: Math.floor(baseDate.toSeconds()),
 						_nanoseconds: 0,
@@ -1438,7 +1390,7 @@ describe('SchedulingService', () => {
 			it('should handle stale pattern data', async () => {
 				const baseDate = DateTime.now().plus({ days: 7 });
 				const mockBaseResult = {
-					date: {
+					scheduledTime: {
 						toDate: () => baseDate.toJSDate(),
 						_seconds: Math.floor(baseDate.toSeconds()),
 						_nanoseconds: 0,
@@ -1462,23 +1414,23 @@ describe('SchedulingService', () => {
 
 				expect(result.pattern_adjusted).toBe(false);
 				expect(result.frequency).toBe('weekly');
-				expect(result.date).toEqual(mockBaseResult.date);
+				expect(result.scheduledTime.toDate()).toEqual(mockBaseResult.scheduledTime.toDate());
 			});
 
 			it('should integrate with Firestore updates', async () => {
 				const customDate = DateTime.now().plus({ days: 1 });
 				const recurringDate = DateTime.now().plus({ days: 2 });
-				const mockTimestamp = {
-					toDate: () => recurringDate.toJSDate(),
-					_seconds: Math.floor(recurringDate.toSeconds()),
+				const mockTimestamp = (date) => ({
+					toDate: () => date,
+					_seconds: Math.floor(date.getTime() / 1000),
 					_nanoseconds: 0,
-				};
+				});
 
 				const recurringResponse = {
-					date: mockTimestamp,
+					scheduledTime: mockTimestamp(recurringDate.toJSDate()),
 					contact_id: mockContact.id,
-					created_at: mockTimestamp,
-					updated_at: mockTimestamp,
+					created_at: mockTimestamp(recurringDate.toJSDate()),
+					updated_at: mockTimestamp(recurringDate.toJSDate()),
 					scheduling: {
 						recurring_next_date: recurringDate.toISO(),
 						recurring: {

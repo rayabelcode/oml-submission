@@ -159,12 +159,16 @@ export class SchedulingService {
 		});
 	}
 
-	hasTimeConflict(dateTime, contact = null) {
+	hasTimeConflict(dateTime) {
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
+		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+
 		return this.reminders.some((reminder) => {
 			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			const timeToCheck = dateTime.getTime();
-			const minutesDiff = Math.abs(timeToCheck - reminderTime) / (1000 * 60);
+			const minutesDiff = Math.floor(Math.abs(timeToCheck - reminderTime) / (1000 * 60));
+
+			// Always enforce the minimum gap
 			return minutesDiff < minGap;
 		});
 	}
@@ -352,7 +356,7 @@ export class SchedulingService {
 
 			while (currentSlot <= endTime) {
 				if (
-					!this.hasTimeConflict(currentSlot.toJSDate()) &&
+					!this.hasTimeConflict(currentSlot.toJSDate(), contact) &&
 					!this.isTimeBlocked(currentSlot.toJSDate(), contact)
 				) {
 					// Random minutes within the 15-minute slot
@@ -617,16 +621,21 @@ export class SchedulingService {
 		return dt.plus({ days: daysToAdd }).toJSDate();
 	}
 
-	calculateTimeSlotScore(dateTime, contact) {
-		const distanceScore = this.calculateDistanceScore(dateTime);
-		const positionScore = this.calculatePositionScore(dateTime, contact);
-		const priorityScore = this.calculatePriorityScore(contact);
+	calculateTimeSlotScore(proposedTime, existingReminders) {
+		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+		let score = 100;
 
-		return (
-			distanceScore * SCORE_WEIGHTS.DISTANCE_FROM_REMINDERS +
-			positionScore * SCORE_WEIGHTS.PREFERRED_TIME_POSITION +
-			priorityScore * SCORE_WEIGHTS.PRIORITY_SCORE
-		);
+		// Check gaps with existing reminders
+		for (const reminder of this.reminders) {
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
+			const gap = Math.abs(proposedTime.getTime() - reminderTime) / (1000 * 60);
+
+			// Reduce score based on how far from optimal gap
+			const gapDifference = Math.abs(gap - optimalGap);
+			score -= (gapDifference / optimalGap) * 50; // Adjust score weight
+		}
+
+		return Math.max(0, score);
 	}
 
 	calculateDistanceScore(dateTime) {
