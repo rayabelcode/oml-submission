@@ -18,16 +18,19 @@ export class SnoozeHandler {
 	}
 
 	async initialize() {
-		try {
-			if (!this.userId) {
-				throw new Error('User ID is required for initialization');
-			}
+		if (!this.userId) {
+			throw new Error('User ID is required for initialization');
+		}
 
+		try {
 			// Get user preferences with fallback
 			const userPrefs = await getUserPreferences(this.userId);
+			if (!userPrefs) {
+				throw new Error('Failed to load user preferences');
+			}
 
 			// Get active reminders with fallback
-			const activeReminders = (await getActiveReminders(this.userId)) || [];
+			const activeReminders = await getActiveReminders(this.userId);
 
 			// Create scheduling service with guaranteed preferences
 			this.schedulingService = new SchedulingService(
@@ -36,25 +39,20 @@ export class SnoozeHandler {
 					preferredTimeSlots: [],
 					timezone: this.timezone || DateTime.local().zoneName,
 				},
-				activeReminders,
+				activeReminders || [],
 				this.timezone || DateTime.local().zoneName
 			);
 
 			await schedulingHistory.initialize();
+
+			if (!this.schedulingService) {
+				throw new Error('Failed to initialize scheduling service');
+			}
+
 			return true;
 		} catch (error) {
 			console.error('Error initializing SnoozeHandler:', error);
-			// Initialize with defaults on error
-			this.schedulingService = new SchedulingService(
-				{
-					minimumGapMinutes: 20,
-					preferredTimeSlots: [],
-					timezone: this.timezone || DateTime.local().zoneName,
-				},
-				[],
-				this.timezone || DateTime.local().zoneName
-			);
-			return true;
+			throw error;
 		}
 	}
 
@@ -221,7 +219,7 @@ export class SnoozeHandler {
 					user_id: this.userId,
 					type: 'SCHEDULED',
 				};
-				await this.scheduleNotificationForReminder(reminderData);
+				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
 			return availableTime;
 		} catch (error) {
