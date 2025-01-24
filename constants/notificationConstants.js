@@ -163,21 +163,20 @@ export const COORDINATOR_CONFIG = {
 	},
 };
 
-// Default notification format
 export const REMINDER_SCHEMA = {
-	contact_id: String,
-	user_id: String,
-	type: String, // REMINDER_TYPES.SCHEDULED or REMINDER_TYPES.FOLLOW_UP
-	status: String, // 'pending', 'completed', 'snoozed', 'skipped'
-	scheduledTime: Timestamp,
-	created_at: Timestamp,
-	updated_at: Timestamp,
-	contactName: String,
-	notes_added: Boolean,
-	needs_attention: Boolean,
-	snoozed: Boolean,
-	snooze_history: Array, // Optional
-	call_data: Object, // Optional
+	contact_id: String, // Reference to the contact this reminder is for
+	user_id: String, // Reference to the user who owns this reminder
+	type: String, // SCHEDULED or FOLLOW_UP
+	status: String, // pending, completed, snoozed, or skipped
+	scheduledTime: Timestamp, // When the notification should trigger
+	created_at: Timestamp, // When this reminder was created
+	updated_at: Timestamp, // Last time this reminder was modified
+	contactName: String, // Display name for the contact
+	notes_added: Boolean, // Whether notes were added after the call
+	needs_attention: Boolean, // Flag for follow-ups requiring action
+	snoozed: Boolean, // Whether reminder has been snoozed
+	snooze_history: Array, // List of previous snooze actions
+	call_data: Object, // Optional metadata about the call (duration, etc)
 };
 
 export const SNOOZE_OPTIONS = [

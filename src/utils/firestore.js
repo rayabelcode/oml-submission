@@ -581,7 +581,6 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				updated_at: now,
 				contact_id: contactId,
 				user_id: auth.currentUser.uid,
-				date: scheduledTimestamp,
 				scheduledTime: scheduledTimestamp,
 				status: REMINDER_STATUS.PENDING,
 				type: REMINDER_TYPES.SCHEDULED,
@@ -665,7 +664,6 @@ export const addReminder = async (reminderData) => {
 			updated_at: now,
 			contact_id: reminderData.contactId,
 			user_id: auth.currentUser.uid,
-			date: scheduledTimestamp,
 			scheduledTime: scheduledTimestamp,
 			status: reminderData.status || REMINDER_STATUS.PENDING,
 			type: reminderData.type || REMINDER_TYPES.SCHEDULED,
@@ -706,12 +704,8 @@ export const subscribeToReminders = (userId, status, callback) => {
 				const data = doc.data();
 				let scheduledTime;
 				try {
-					if (data.date?.toDate) {
-						scheduledTime = data.date.toDate();
-					} else if (data.scheduledTime?.toDate) {
+					if (data.scheduledTime?.toDate) {
 						scheduledTime = data.scheduledTime.toDate();
-					} else if (data.date) {
-						scheduledTime = new Date(data.date);
 					} else if (data.scheduledTime) {
 						scheduledTime = new Date(data.scheduledTime);
 					} else {
@@ -797,9 +791,9 @@ export const getReminders = async (userId, status = 'pending') => {
 		const remindersRef = collection(db, 'reminders');
 		const q = query(
 			remindersRef,
-			where('userId', '==', userId),
+			where('user_id', '==', userId),
 			where('status', '==', status),
-			orderBy('date', 'desc')
+			orderBy('scheduledTime', 'desc')
 		);
 
 		const snapshot = await getDocs(q);
@@ -808,12 +802,8 @@ export const getReminders = async (userId, status = 'pending') => {
 			const data = doc.data();
 			let scheduledTime;
 			try {
-				if (data.date?.toDate) {
-					scheduledTime = data.date.toDate();
-				} else if (data.scheduledTime?.toDate) {
+				if (data.scheduledTime?.toDate) {
 					scheduledTime = data.scheduledTime.toDate();
-				} else if (data.date) {
-					scheduledTime = new Date(data.date);
 				} else if (data.scheduledTime) {
 					scheduledTime = new Date(data.scheduledTime);
 				} else {
@@ -870,7 +860,7 @@ export const getFollowUpReminders = async (userId) => {
 			where('user_id', '==', userId),
 			where('type', '==', 'FOLLOW_UP'),
 			where('completed', '==', false),
-			orderBy('date', 'desc')
+			orderBy('scheduledTime', 'desc')
 		);
 
 		const querySnapshot = await getDocs(q);

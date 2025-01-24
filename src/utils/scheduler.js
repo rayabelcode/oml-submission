@@ -158,7 +158,7 @@ export class SchedulingService {
 	hasTimeConflict(dateTime) {
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
 		return this.reminders.some((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			const timeToCheck = dateTime.getTime();
 			const minutesDiff = Math.abs(timeToCheck - reminderTime) / (1000 * 60);
 			return minutesDiff < minGap;
@@ -179,13 +179,13 @@ export class SchedulingService {
 		const dayStart = dt.startOf('day');
 		const dayEnd = dt.endOf('day');
 		const dayReminders = this.reminders.filter((r) => {
-			const reminderDate = DateTime.fromJSDate(r.date.toDate());
+			const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 			return reminderDate >= dayStart && reminderDate <= dayEnd;
 		});
 
 		const workingSlots = new Set(
 			dayReminders.map((r) => {
-				const d = DateTime.fromJSDate(r.date.toDate());
+				const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return `${d.hour}:${d.minute}`;
 			})
 		);
@@ -279,7 +279,7 @@ export class SchedulingService {
 							const dayStart = checkDate.startOf('day');
 							const dayEnd = checkDate.endOf('day');
 							const hasReminder = this.reminders.some((reminder) => {
-								const reminderDate = DateTime.fromJSDate(reminder.date.toDate());
+								const reminderDate = DateTime.fromJSDate(reminder.scheduledTime.toDate());
 								return reminderDate >= dayStart && reminderDate <= dayEnd;
 							});
 
@@ -315,13 +315,13 @@ export class SchedulingService {
 			const nextWeekEnd = currentDayStart.plus({ days: 7 }).endOf('day');
 
 			const existingSlots = this.reminders.filter((r) => {
-				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return reminderDate >= currentDayStart && reminderDate <= nextWeekEnd;
 			});
 
 			const daySlots = new Set(
 				existingSlots.map((r) => {
-					const d = DateTime.fromJSDate(r.date.toDate());
+					const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 					return `${d.toFormat('yyyy-MM-dd')}-${d.hour}:${d.minute}`;
 				})
 			);
@@ -365,7 +365,7 @@ export class SchedulingService {
 				const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
 				const existingSlots = new Set(
 					this.reminders.map((r) => {
-						const d = DateTime.fromJSDate(r.date.toDate());
+						const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 						return `${d.hour}:${d.minute}`;
 					})
 				);
@@ -393,15 +393,11 @@ export class SchedulingService {
 			const selectedSlot = topSlots[Math.floor(Math.random() * topSlots.length)];
 
 			this.reminders.push({
-				date: {
-					toDate: () => selectedSlot.date,
-					_seconds: Math.floor(selectedSlot.date.getTime() / 1000),
-					_nanoseconds: 0,
-				},
+				scheduledTime: Timestamp.fromDate(selectedSlot.date),
 			});
 
 			return {
-				date: Timestamp.fromDate(selectedSlot.date),
+				scheduledTime: Timestamp.fromDate(selectedSlot.date),
 				contact_id: contact.id,
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
@@ -428,7 +424,7 @@ export class SchedulingService {
 
 			// Check if this day has any slots available
 			const dayReminders = this.reminders.filter((r) => {
-				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return reminderDate >= dayStart && reminderDate <= dayEnd;
 			});
 
@@ -466,7 +462,7 @@ export class SchedulingService {
 							...baseSchedule,
 							frequency: frequency,
 							pattern_adjusted: false,
-							recurring_next_date: baseSchedule.date.toDate().toISOString(),
+							recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
 						};
 					}
 				}
@@ -474,7 +470,7 @@ export class SchedulingService {
 				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
 					const suggestedTime = await schedulingHistory.suggestOptimalTime(
 						contact.id,
-						DateTime.fromJSDate(baseSchedule.date.toDate()),
+						DateTime.fromJSDate(baseSchedule.scheduledTime.toDate()),
 						'recurring'
 					);
 
@@ -483,7 +479,7 @@ export class SchedulingService {
 						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
 							return {
 								...baseSchedule,
-								date: Timestamp.fromDate(suggestedJSDate),
+								scheduledTime: Timestamp.fromDate(suggestedJSDate),
 								frequency: frequency,
 								pattern_adjusted: true,
 								confidence: patterns.confidence,
@@ -501,7 +497,7 @@ export class SchedulingService {
 				...baseSchedule,
 				frequency: frequency,
 				pattern_adjusted: false,
-				recurring_next_date: baseSchedule.date.toDate().toISOString(),
+				recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
 			};
 		} catch (error) {
 			console.error('Error in scheduleRecurringReminder:', error);
@@ -545,7 +541,7 @@ export class SchedulingService {
 
 			// Create reminder object
 			return {
-				date: Timestamp.fromDate(scheduledDate),
+				scheduledTime: Timestamp.fromDate(scheduledDate),
 				contact_id: contact.id,
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
@@ -617,7 +613,7 @@ export class SchedulingService {
 
 		const timeToCheck = dateTime.getTime();
 		const gaps = this.reminders.map((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			return Math.abs(timeToCheck - reminderTime) / (1000 * 60);
 		});
 
@@ -674,7 +670,7 @@ export class SchedulingService {
 
 			const existingSlots = new Set(
 				this.reminders.map((r) => {
-					const d = DateTime.fromJSDate(r.date.toDate());
+					const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 					return `${d.hour}:${d.minute}`;
 				})
 			);
@@ -815,7 +811,7 @@ export class SchedulingService {
 
 		// Check existing reminders
 		const conflicts = this.reminders.filter((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			const proposedTimeMs = proposedTime.getTime();
 			const gapMinutes = Math.abs(proposedTimeMs - reminderTime) / (1000 * 60);
 			return gapMinutes < minGap;
@@ -874,7 +870,7 @@ export class SchedulingService {
 	}
 
 	async scheduleNotificationForReminder(reminder) {
-		const scheduledTime = reminder.scheduledTime?.toDate() || reminder.date?.toDate();
+		const scheduledTime = reminder.scheduledTime.toDate();
 		if (!scheduledTime) return;
 
 		const notificationContent = {
