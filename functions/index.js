@@ -85,13 +85,15 @@ exports.processReminders = onSchedule({
 
   try {
     const now = admin.firestore.Timestamp.now();
-    const oneMinuteFromNow = admin.firestore.Timestamp.fromMillis(now.toMillis() + 60 * 1000);
+    // Check 5 minutes ahead
+    const fiveMinutesFromNow = admin.firestore.Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
+    const fiveMinutesAgo = admin.firestore.Timestamp.fromMillis(now.toMillis() - 5 * 60 * 1000);
 
-    // Query for unnotified reminders due in the next minute
+    // Query for unnotified reminders in a wider window
     const remindersSnapshot = await admin.firestore()
       .collection("reminders")
-      .where("scheduledTime", ">=", now)
-      .where("scheduledTime", "<=", oneMinuteFromNow)
+      .where("scheduledTime", ">=", fiveMinutesAgo)
+      .where("scheduledTime", "<=", fiveMinutesFromNow)
       .where("notified", "==", false)
       .where("type", "==", "SCHEDULED")
       .get();
