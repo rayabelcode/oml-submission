@@ -38,6 +38,27 @@ jest.mock('firebase/firestore', () => {
 	const mockDoc = jest.fn();
 	const mockGetDoc = jest.fn();
 
+	class Timestamp {
+		constructor(seconds, nanoseconds) {
+			this.seconds = seconds;
+			this.nanoseconds = nanoseconds;
+		}
+
+		toDate() {
+			return new Date(this.seconds * 1000);
+		}
+
+		static now() {
+			const now = Date.now();
+			return new Timestamp(Math.floor(now / 1000), (now % 1000) * 1000000);
+		}
+
+		static fromDate(date) {
+			const timestamp = new Timestamp(Math.floor(date.getTime() / 1000), (date.getTime() % 1000) * 1000000);
+			return timestamp;
+		}
+	}
+
 	return {
 		collection: mockCollection,
 		query: mockQuery,
@@ -45,14 +66,7 @@ jest.mock('firebase/firestore', () => {
 		onSnapshot: mockOnSnapshot,
 		doc: mockDoc,
 		getDoc: mockGetDoc,
-		Timestamp: {
-			now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
-			fromDate: jest.fn((date) => ({
-				seconds: Math.floor(date.getTime() / 1000),
-				nanoseconds: 0,
-				toDate: () => date,
-			})),
-		},
+		Timestamp,
 		REMINDER_STATUS: {
 			PENDING: 'pending',
 		},
