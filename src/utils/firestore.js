@@ -468,21 +468,25 @@ export const getUserPreferences = async (userId) => {
 	}
 };
 
-export const getActiveReminders = async (userId) => {
+export async function getActiveReminders(userId) {
 	try {
+		if (!userId) {
+			return [];
+		}
+
 		const remindersRef = collection(db, 'reminders');
-		const q = query(
-			remindersRef,
-			where('user_id', '==', userId),
-			where('status', '==', REMINDER_STATUS.PENDING)
-		);
-		const snapshot = await getDocs(q);
-		return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+		const q = query(remindersRef, where('user_id', '==', userId), where('status', '==', 'pending'));
+
+		const querySnapshot = await getDocs(q);
+		return querySnapshot.docs.map((doc) => ({
+			id: doc.id,
+			...doc.data(),
+		}));
 	} catch (error) {
 		console.error('Error getting active reminders:', error);
 		return [];
 	}
-};
+}
 
 export async function updateContactScheduling(contactId, schedulingData) {
 	try {

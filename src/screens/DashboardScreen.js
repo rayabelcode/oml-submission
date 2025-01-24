@@ -15,7 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
-import { snoozeHandler } from '../utils/snoozeHandler';
+import { snoozeHandler, initializeSnoozeHandler } from '../utils/snoozeHandler';
 import { DateTime } from 'luxon';
 
 export default function DashboardScreen({ navigation, route }) {
@@ -131,19 +131,11 @@ export default function DashboardScreen({ navigation, route }) {
 	};
 
 	const handleSnooze = (reminder) => {
-		console.log('Reminder structure:', JSON.stringify(reminder, null, 2));
 		if (!reminder?.scheduledTime) {
 			console.error('Invalid reminder data:', reminder);
 			Alert.alert('Error', 'Unable to snooze reminder');
 			return;
 		}
-
-		// Log for debugging
-		console.log('Snoozing reminder:', {
-			reminderId: reminder.firestoreId,
-			scheduledTime: reminder.scheduledTime,
-			contactName: reminder.contactName,
-		});
 
 		setSelectedReminder(reminder);
 		setShowSnoozeOptions(true);
@@ -156,19 +148,18 @@ export default function DashboardScreen({ navigation, route }) {
 		setSnoozeError(null);
 
 		try {
-			const contactId = selectedReminder.data.contactId;
-			if (!contactId) {
-				throw new Error('No contact ID found for reminder');
-			}
+			// Initialize snoozeHandler with current user ID
+			await initializeSnoozeHandler(user.uid);
 
+			const contactId = selectedReminder.data.contactId;
 			const currentTime = DateTime.now();
+
 			await snoozeHandler.handleSnooze(contactId, option, currentTime);
 			await loadReminders();
 			setShowSnoozeOptions(false);
 		} catch (error) {
 			console.error('Error snoozing reminder:', error);
 			setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
-			Alert.alert('Error', 'Failed to snooze reminder');
 		} finally {
 			setSnoozeLoading(false);
 		}
