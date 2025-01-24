@@ -34,8 +34,8 @@ const MAX_ATTEMPTS = 32;
 
 const SCORE_WEIGHTS = {
 	DISTANCE_FROM_REMINDERS: 2.0,
-	PREFERRED_TIME_POSITION: 1.5,
-	PRIORITY_SCORE: 1.0,
+	PREFERRED_TIME_POSITION: 1.0,
+	PRIORITY_SCORE: 0.5,
 };
 
 export class SchedulingService {
@@ -348,12 +348,16 @@ export class SchedulingService {
 
 			while (currentSlot <= endTime) {
 				if (
-					!this.hasTimeConflict(currentSlot.toJSDate(), contact) &&
+					!this.hasTimeConflict(currentSlot.toJSDate()) &&
 					!this.isTimeBlocked(currentSlot.toJSDate(), contact)
 				) {
+					// Random minutes within the 15-minute slot
+					const randomMinutes = Math.floor(Math.random() * TIME_SLOT_INTERVAL);
+					const slotWithRandomMinutes = currentSlot.plus({ minutes: randomMinutes });
+
 					slots.push({
-						date: currentSlot.toJSDate(),
-						score: this.calculateTimeSlotScore(currentSlot.toJSDate(), contact),
+						scheduledTime: slotWithRandomMinutes.toJSDate(),
+						score: this.calculateTimeSlotScore(slotWithRandomMinutes.toJSDate(), contact),
 					});
 				}
 				currentSlot = currentSlot.plus({ minutes: TIME_SLOT_INTERVAL });
@@ -393,11 +397,13 @@ export class SchedulingService {
 			const selectedSlot = topSlots[Math.floor(Math.random() * topSlots.length)];
 
 			this.reminders.push({
-				scheduledTime: Timestamp.fromDate(selectedSlot.date),
+				scheduledTime: Timestamp.fromDate(selectedSlot.scheduledTime),
+				notified: false,
+				type: 'SCHEDULED'
 			});
 
 			return {
-				scheduledTime: Timestamp.fromDate(selectedSlot.date),
+				scheduledTime: Timestamp.fromDate(selectedSlot.scheduledTime),
 				contact_id: contact.id,
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
@@ -405,7 +411,7 @@ export class SchedulingService {
 				needs_attention: false,
 				ai_suggestions: [],
 				score: selectedSlot.score,
-				flexibility_used: selectedSlot.date.getTime() !== baseNextDate.getTime(),
+				flexibility_used: selectedSlot.scheduledTime.getTime() !== baseNextDate.getTime(),
 			};
 		} catch (error) {
 			console.error('Error in scheduleReminder:', error);
@@ -419,8 +425,11 @@ export class SchedulingService {
 
 		for (let i = 1; i <= 7; i++) {
 			const nextDay = dt.plus({ days: i });
-			const dayStart = nextDay.set({ hour: 9, minute: 0 });
-			const dayEnd = nextDay.set({ hour: 17, minute: 0 });
+			const { start, end } = preferences.active_hours || { start: '09:00', end: '17:00' };
+			const [startHour] = start.split(':').map(Number);
+			const [endHour] = end.split(':').map(Number);
+			const dayStart = nextDay.set({ hour: startHour, minute: 0 });
+			const dayEnd = nextDay.set({ hour: endHour, minute: 0 });
 
 			// Check if this day has any slots available
 			const dayReminders = this.reminders.filter((r) => {
@@ -516,7 +525,7 @@ export class SchedulingService {
 			let scheduledDate = customDate;
 
 			// Check if we have active hours for this day
-			const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+			const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 			if (typePrefs?.active_hours) {
 				const { start, end } = typePrefs.active_hours;
 				const [startHour] = start.split(':').map(Number);
@@ -566,7 +575,7 @@ export class SchedulingService {
 	}
 
 	adjustToPreferredDay(date, contact) {
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 		const preferredDays = typePrefs?.preferred_days || [];
 		if (preferredDays.length === 0) return date;
 
@@ -774,10 +783,7 @@ export class SchedulingService {
 
 		let current = expandedStart;
 		while (current <= expandedEnd) {
-			if (
-				!this.hasTimeConflict(currentSlot.toJSDate()) &&
-				!this.isTimeBlocked(currentSlot.toJSDate(), contact)
-			) {
+			if (!this.hasTimeConflict(current.toJSDate()) && !this.isTimeBlocked(current.toJSDate(), contact)) {
 				return current.toJSDate();
 			}
 			current = current.plus({ minutes: TIME_SLOT_INTERVAL });
