@@ -75,3 +75,92 @@ exports.scheduledNotification = onSchedule({
     return null;
   }
 });
+
+// Function to process reminders and send notifications
+exports.processReminders = onSchedule({
+  schedule: "* * * * *", // Check every minute
+  timeZone: "America/New_York",
+}, async (event) => {
+  console.log("Checking for due reminders...");
+
+  try {
+    const now = admin.firestore.Timestamp.now();
+    const oneMinuteFromNow = admin.firestore.Timestamp.fromMillis(now.toMillis() + 60 * 1000);
+
+    // Query for unnotified reminders due in the next minute
+    const remindersSnapshot = await admin.firestore()
+      .collection("reminders")
+      .where("scheduledTime", ">=", now)
+      .where("scheduledTime", "<=", oneMinuteFromNow)
+      .where("notified", "==", false)
+      .where("type", "==", "SCHEDULED")
+      .get();
+
+    console.log(`Found ${remindersSnapshot.size} reminders to process`);
+
+    for (const reminderDoc of remindersSnapshot.docs) {
+      const reminder = reminderDoc.data();
+
+      // Get user's push tokens
+      const userDoc = await admin.firestore()
+        .collection("users")
+        .doc(reminder.user_id)
+        .get();
+
+      if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
+        console.log(`No valid tokens for user ${reminder.user_id}`);
+        continue;
+      }
+
+      const userData = userDoc.data();
+      const messages = userData.expoPushTokens.map((token) => ({
+        to: token,
+        sound: "default",
+        title: "Scheduled Call",
+        body: `Time to call ${reminder.contactName}`,
+        data: {
+          type: "SCHEDULED",
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          userId: reminder.user_id,
+        },
+      }));
+
+      const chunks = expo.chunkPushNotifications(messages);
+      for (const chunk of chunks) {
+        try {
+          const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+          console.log("Notifications sent:", {
+            userId: reminder.user_id,
+            reminderId: reminderDoc.id,
+            result: ticketChunk,
+          });
+
+          // Handle invalid tokens
+          ticketChunk.forEach(async (ticket, index) => {
+            if (ticket.status === "error" && ticket.details && ticket.details.error === "DeviceNotRegistered") {
+              const invalidToken = userData.expoPushTokens[index];
+              console.log("Removing invalid token:", invalidToken);
+              await admin.firestore().collection("users").doc(reminder.user_id).update({
+                expoPushTokens: admin.firestore.FieldValue.arrayRemove(invalidToken),
+              });
+            }
+          });
+
+          // Mark reminder as notified
+          await reminderDoc.ref.update({
+            notified: true,
+            notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch (error) {
+          console.error("Error sending notifications:", error);
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error processing reminders:", error);
+    return null;
+  }
+});

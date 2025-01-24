@@ -4,7 +4,7 @@ const serviceAccount = require("./serviceAccountKey.json");
 
 // Initialize Firebase Admin
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
 });
 
 // New Expo SDK client
@@ -19,7 +19,7 @@ const sendNotification = async () => {
   try {
     // Get user document from Firestore
     const userDoc = await admin.firestore().collection("users").doc(TEST_USER_ID).get();
-    
+
     if (!userDoc.exists) {
       console.log("User not found");
       return;
@@ -31,7 +31,7 @@ const sendNotification = async () => {
     console.log(`Found ${pushTokens.length} tokens for user ${userData.username}:`, pushTokens);
 
     // Create messages for all tokens
-    const messages = pushTokens.map(token => ({
+    const messages = pushTokens.map((token) => ({
       to: token,
       sound: "default",
       title: "Hello, Ray!",
@@ -77,12 +77,12 @@ const sendNotification = async () => {
               console.log(`✓ Notification delivered successfully (Receipt ID: ${receiptId})`);
             } else {
               console.error(`✗ Delivery failed:`, receipt.message, receipt.details);
-              
+
               // Handle invalid tokens
               if (receipt.details?.error === "DeviceNotRegistered") {
                 console.log(`Removing invalid token: ${token}`);
                 admin.firestore().collection("users").doc(TEST_USER_ID).update({
-                  expoPushTokens: admin.firestore.FieldValue.arrayRemove(token)
+                  expoPushTokens: admin.firestore.FieldValue.arrayRemove(token),
                 });
               }
             }
