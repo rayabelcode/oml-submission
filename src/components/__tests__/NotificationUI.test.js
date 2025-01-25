@@ -3,18 +3,33 @@ jest.mock('firebase/firestore', () => ({
 	initializeFirestore: jest.fn(),
 	persistentLocalCache: jest.fn(),
 	persistentMultipleTabManager: jest.fn(),
-	getDoc: jest.fn(),
+	getDoc: jest.fn().mockImplementation(() => ({
+		exists: () => true,
+		data: () => ({
+			scheduling_preferences: {
+				timezone: 'America/New_York',
+				minimumGapMinutes: 30,
+				optimalGapMinutes: 120,
+			},
+			expoPushTokens: ['device1', 'device2', 'device3'],
+			uid: 'test-user-id',
+		}),
+	})),
 	setDoc: jest.fn(),
 	updateDoc: jest.fn(),
 	doc: jest.fn(),
 	serverTimestamp: jest.fn(),
-	getUserProfile: jest.fn().mockResolvedValue({
-		expoPushToken: 'mock-token',
-		uid: 'test-user-id',
-	}),
+	arrayUnion: jest.fn((token) => ['mock-token-1', 'mock-token-2', token]),
 	collection: jest.fn(),
 	query: jest.fn(),
 	where: jest.fn(),
+	onSnapshot: jest.fn(() => jest.fn()),
+	getUserProfile: jest.fn().mockImplementation(() =>
+		Promise.resolve({
+			expoPushTokens: ['device1', 'device2', 'device3'],
+			uid: 'test-user-id',
+		})
+	),
 }));
 
 jest.mock('@react-native-community/netinfo', () => ({
@@ -40,10 +55,11 @@ jest.mock('expo-notifications', () => ({
 	getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
 	setNotificationHandler: jest.fn(),
 	setBadgeCountAsync: jest.fn(),
-	scheduleNotificationAsync: jest.fn(),
+	scheduleNotificationAsync: jest.fn().mockImplementation(() => Promise.resolve('test-notification-id')),
 	cancelScheduledNotificationAsync: jest.fn(),
 	setNotificationCategoryAsync: jest.fn(),
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
+	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
 	AndroidImportance: { MAX: 5 },
 }));
 
@@ -53,12 +69,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 	removeItem: jest.fn(),
 }));
 
-jest.mock('../../utils/notifications/pushNotification', () => ({
-	sendPushNotification: jest.fn().mockResolvedValue(true),
-	scheduleLocalNotificationWithPush: jest.fn().mockResolvedValue('test-id'),
-}));
+const mockSendPushNotification = jest.fn().mockResolvedValue(true);
+const mockScheduleLocalNotificationWithPush = jest.fn().mockResolvedValue('test-id');
 
-// Define constants that will be used by the coordinator
+jest.mock('../../utils/notifications/pushNotification', () => {
+	return {
+		sendPushNotification: jest.fn(async (users, notification) => true),
+		scheduleLocalNotificationWithPush: jest.fn(async () => 'test-id'),
+	};
+});
+
 const NOTIFICATION_MAP_KEY = 'notification_map';
 const COORDINATOR_CONFIG = {
 	BATCH_SIZE: 50,
@@ -81,7 +101,6 @@ const ERROR_HANDLING = {
 	},
 };
 
-// Mock the constants module
 jest.mock('../../../constants/notificationConstants', () => ({
 	NOTIFICATION_MAP_KEY,
 	COORDINATOR_CONFIG,
@@ -99,6 +118,12 @@ jest.mock('../../../constants/notificationConstants', () => ({
 			},
 		},
 	},
+	REMINDER_STATUS: {
+		PENDING: 'PENDING',
+		COMPLETED: 'COMPLETED',
+		SNOOZED: 'SNOOZED',
+		SKIPPED: 'SKIPPED',
+	},
 }));
 
 import { Platform } from 'react-native';
@@ -111,7 +136,6 @@ describe('Notification UI Integration Tests', () => {
 		jest.clearAllMocks();
 		Platform.OS = 'ios';
 
-		// Reset coordinator state
 		notificationCoordinator.initialized = false;
 		notificationCoordinator.badgeCount = 0;
 		notificationCoordinator.notificationMap = new Map();
@@ -120,7 +144,6 @@ describe('Notification UI Integration Tests', () => {
 		AsyncStorage.getItem.mockImplementation(() => Promise.resolve(null));
 		AsyncStorage.setItem.mockImplementation(() => Promise.resolve());
 
-		// Initialize coordinator
 		await notificationCoordinator.initialize();
 	});
 
@@ -128,11 +151,91 @@ describe('Notification UI Integration Tests', () => {
 		await notificationCoordinator.cleanup();
 	});
 
+	describe('Multi-Device Notification Tests', () => {
+		const { sendPushNotification } = require('../../utils/notifications/pushNotification');
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+		});
+
+		it('should schedule notifications for all registered devices', async () => {
+			const notification = {
+				title: 'Multi-device Test',
+				body: 'Should reach all devices',
+				data: { type: 'SCHEDULED' },
+			};
+
+			const notificationId = await notificationCoordinator.scheduleNotification(
+				notification,
+				new Date(Date.now() + 60000)
+			);
+
+			await new Promise((resolve) => setImmediate(resolve));
+
+			expect(notificationId).toBe('test-notification-id');
+			expect(sendPushNotification).toHaveBeenCalledWith(
+				['test-user'],
+				expect.objectContaining({
+					title: notification.title,
+					body: notification.body,
+					data: expect.any(Object),
+				})
+			);
+			expect(notificationCoordinator.notificationMap.has(notificationId)).toBe(true);
+		});
+
+		it('should schedule notification with device token', async () => {
+			const notificationId = await notificationCoordinator.scheduleNotification(
+				{
+					title: 'Device Test',
+					body: 'Test notification',
+					data: {
+						type: 'SCHEDULED',
+						deviceToken: 'mock-token-1',
+					},
+				},
+				new Date(Date.now() + 60000)
+			);
+
+			expect(notificationId).toBe('test-notification-id');
+			expect(notificationCoordinator.notificationMap.has(notificationId)).toBe(true);
+			expect(notificationCoordinator.notificationMap.get(notificationId).content.data.deviceToken).toBe(
+				'mock-token-1'
+			);
+		});
+
+		it('should respect device limit when scheduling notifications', async () => {
+			const maxDevices = Array(20)
+				.fill()
+				.map((_, i) => `device-${i}`);
+			const { getUserProfile } = require('firebase/firestore');
+
+			getUserProfile.mockImplementationOnce(() =>
+				Promise.resolve({
+					expoPushTokens: maxDevices,
+					uid: 'test-user-id',
+				})
+			);
+
+			const notificationId = await notificationCoordinator.scheduleNotification(
+				{
+					title: 'Device Limit Test',
+					body: 'Test notification',
+					data: { type: 'SCHEDULED' },
+				},
+				{ seconds: 60 }
+			);
+
+			expect(notificationId).toBe('test-notification-id');
+			expect(notificationCoordinator.notificationMap.has(notificationId)).toBe(true);
+		});
+	});
+
 	it('should create recurring notification with correct schedule', async () => {
 		const notificationId = 'recurring-test';
 		Notifications.scheduleNotificationAsync.mockResolvedValueOnce(notificationId);
 
-		const scheduledTime = new Date(Date.now() + 86400000); // 24 hours from now
+		const scheduledTime = new Date(Date.now() + 86400000);
 		const recurringNotification = await notificationCoordinator.scheduleNotification(
 			{
 				title: 'Recurring Test',

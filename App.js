@@ -22,6 +22,8 @@ import { notificationCoordinator } from './src/utils/notificationCoordinator';
 import { callNotesService } from './src/utils/callNotes';
 import { scheduledCallService } from './src/utils/scheduledCalls';
 import { schedulingHistory } from './src/utils/schedulingHistory';
+import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from './src/config/firebase';
 
 // Disable ScrollView scrollbar globally
 const originalScrollViewRender = ScrollView.render;
@@ -45,21 +47,42 @@ async function registerForPushNotificationsAsync() {
 		return null;
 	}
 
-	const { status: existingStatus } = await Notifications.getPermissionsAsync();
-	let finalStatus = existingStatus;
+	try {
+		const { status: existingStatus } = await Notifications.getPermissionsAsync();
+		let finalStatus = existingStatus;
 
-	if (existingStatus !== 'granted') {
-		const { status } = await Notifications.requestPermissionsAsync();
-		finalStatus = status;
-	}
+		if (existingStatus !== 'granted') {
+			const { status } = await Notifications.requestPermissionsAsync();
+			finalStatus = status;
+		}
 
-	if (finalStatus !== 'granted') {
-		Alert.alert('Error', 'Push notifications permission not granted!');
+		if (finalStatus !== 'granted') {
+			Alert.alert('Error', 'Push notifications permission not granted!');
+			return null;
+		}
+
+		const tokenData = await Notifications.getExpoPushTokenAsync({
+			projectId: Constants.expoConfig.extra.eas.projectId,
+		});
+
+		if (auth.currentUser) {
+			const userRef = doc(db, 'users', auth.currentUser.uid);
+			const userDoc = await getDoc(userRef);
+
+			// Create or update expoPushTokens array
+			await updateDoc(userRef, {
+				expoPushTokens: arrayUnion(tokenData.data),
+				lastTokenUpdate: serverTimestamp(),
+				devicePlatform: Platform.OS,
+				appVersion: Constants.expoConfig.version,
+			});
+		}
+
+		return tokenData.data;
+	} catch (error) {
+		console.error('Push token error:', error);
 		return null;
 	}
-
-	const token = (await Notifications.getExpoPushTokenAsync()).data;
-	return token;
 }
 
 function AppContent() {
@@ -102,6 +125,14 @@ function AppContent() {
 		}
 
 		preloadData();
+	}, [user]);
+
+	useEffect(() => {
+		if (user) {
+			registerForPushNotificationsAsync().catch((error) => {
+				console.error('Error registering push token:', error);
+			});
+		}
 	}, [user]);
 
 	// Don't render the app until preload is complete

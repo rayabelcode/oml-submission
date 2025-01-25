@@ -116,16 +116,28 @@ class NotificationService {
 		}
 	}
 
-	async scheduleCallFollowUp(contact) {
-		try {
-			if (!this.initialized) {
-				await this.initialize();
-			}
-			return await callNotesService.scheduleFollowUp(contact);
-		} catch (error) {
-			console.error('Error scheduling call follow-up:', error);
-			throw error;
+	async scheduleCallFollowUp(contact, time) {
+		const notificationContent = {
+			title: 'Call Follow Up',
+			body: `How did your call with ${contact.first_name} go?`,
+			data: {
+				type: 'FOLLOW_UP',
+				contactId: contact.id,
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				callData: contact.callData,
+			},
+		};
+
+		// For immediate notifications - time is now or in the past
+		if (time <= new Date()) {
+			return await Notifications.presentNotificationAsync(notificationContent);
 		}
+
+		// For future notifications
+		return await Notifications.scheduleNotificationAsync({
+			content: notificationContent,
+			trigger: time,
+		});
 	}
 
 	async cancelNotification(localNotificationId) {

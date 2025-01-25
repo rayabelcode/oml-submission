@@ -6,6 +6,10 @@ import { schedulingHistory } from './schedulingHistory';
 import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
 // Fallback
 const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
+// Warning if MAX_AGE_DAYS is missing
+if (!RECURRENCE_METADATA?.MAX_AGE_DAYS) {
+	console.warn('MAX_AGE_DAYS not found in RECURRENCE_METADATA, using fallback value of 30');
+}
 
 const FREQUENCY_MAPPINGS = {
 	daily: 1,
@@ -34,8 +38,8 @@ const MAX_ATTEMPTS = 32;
 
 const SCORE_WEIGHTS = {
 	DISTANCE_FROM_REMINDERS: 2.0,
-	PREFERRED_TIME_POSITION: 1.5,
-	PRIORITY_SCORE: 1.0,
+	PREFERRED_TIME_POSITION: 1.0,
+	PRIORITY_SCORE: 0.5,
 };
 
 export class SchedulingService {
@@ -157,10 +161,14 @@ export class SchedulingService {
 
 	hasTimeConflict(dateTime) {
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
+		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+
 		return this.reminders.some((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			const timeToCheck = dateTime.getTime();
-			const minutesDiff = Math.abs(timeToCheck - reminderTime) / (1000 * 60);
+			const minutesDiff = Math.floor(Math.abs(timeToCheck - reminderTime) / (1000 * 60));
+
+			// Always enforce the minimum gap
 			return minutesDiff < minGap;
 		});
 	}
@@ -179,13 +187,13 @@ export class SchedulingService {
 		const dayStart = dt.startOf('day');
 		const dayEnd = dt.endOf('day');
 		const dayReminders = this.reminders.filter((r) => {
-			const reminderDate = DateTime.fromJSDate(r.date.toDate());
+			const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 			return reminderDate >= dayStart && reminderDate <= dayEnd;
 		});
 
 		const workingSlots = new Set(
 			dayReminders.map((r) => {
-				const d = DateTime.fromJSDate(r.date.toDate());
+				const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return `${d.hour}:${d.minute}`;
 			})
 		);
@@ -279,7 +287,7 @@ export class SchedulingService {
 							const dayStart = checkDate.startOf('day');
 							const dayEnd = checkDate.endOf('day');
 							const hasReminder = this.reminders.some((reminder) => {
-								const reminderDate = DateTime.fromJSDate(reminder.date.toDate());
+								const reminderDate = DateTime.fromJSDate(reminder.scheduledTime.toDate());
 								return reminderDate >= dayStart && reminderDate <= dayEnd;
 							});
 
@@ -315,13 +323,13 @@ export class SchedulingService {
 			const nextWeekEnd = currentDayStart.plus({ days: 7 }).endOf('day');
 
 			const existingSlots = this.reminders.filter((r) => {
-				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return reminderDate >= currentDayStart && reminderDate <= nextWeekEnd;
 			});
 
 			const daySlots = new Set(
 				existingSlots.map((r) => {
-					const d = DateTime.fromJSDate(r.date.toDate());
+					const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 					return `${d.toFormat('yyyy-MM-dd')}-${d.hour}:${d.minute}`;
 				})
 			);
@@ -351,9 +359,13 @@ export class SchedulingService {
 					!this.hasTimeConflict(currentSlot.toJSDate(), contact) &&
 					!this.isTimeBlocked(currentSlot.toJSDate(), contact)
 				) {
+					// Random minutes within the 15-minute slot
+					const randomMinutes = Math.floor(Math.random() * TIME_SLOT_INTERVAL);
+					const slotWithRandomMinutes = currentSlot.plus({ minutes: randomMinutes });
+
 					slots.push({
-						date: currentSlot.toJSDate(),
-						score: this.calculateTimeSlotScore(currentSlot.toJSDate(), contact),
+						scheduledTime: slotWithRandomMinutes.toJSDate(),
+						score: this.calculateTimeSlotScore(slotWithRandomMinutes.toJSDate(), contact),
 					});
 				}
 				currentSlot = currentSlot.plus({ minutes: TIME_SLOT_INTERVAL });
@@ -365,7 +377,7 @@ export class SchedulingService {
 				const availableSlots = Math.floor(workingMinutes / TIME_SLOT_INTERVAL);
 				const existingSlots = new Set(
 					this.reminders.map((r) => {
-						const d = DateTime.fromJSDate(r.date.toDate());
+						const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 						return `${d.hour}:${d.minute}`;
 					})
 				);
@@ -393,15 +405,24 @@ export class SchedulingService {
 			const selectedSlot = topSlots[Math.floor(Math.random() * topSlots.length)];
 
 			this.reminders.push({
-				date: {
-					toDate: () => selectedSlot.date,
-					_seconds: Math.floor(selectedSlot.date.getTime() / 1000),
-					_nanoseconds: 0,
-				},
+				scheduledTime: Timestamp.fromDate(selectedSlot.scheduledTime),
+				notified: false,
+				type: 'SCHEDULED',
+				contact_id: contact.id,
+				user_id: contact.user_id,
+				status: 'pending',
+				snoozed: false,
+				needs_attention: false,
+				completed: false,
+				completion_time: null,
+				notes_added: false,
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				created_at: Timestamp.now(),
+				updated_at: Timestamp.now(),
 			});
 
 			return {
-				date: Timestamp.fromDate(selectedSlot.date),
+				scheduledTime: Timestamp.fromDate(selectedSlot.scheduledTime),
 				contact_id: contact.id,
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
@@ -409,7 +430,7 @@ export class SchedulingService {
 				needs_attention: false,
 				ai_suggestions: [],
 				score: selectedSlot.score,
-				flexibility_used: selectedSlot.date.getTime() !== baseNextDate.getTime(),
+				flexibility_used: selectedSlot.scheduledTime.getTime() !== baseNextDate.getTime(),
 			};
 		} catch (error) {
 			console.error('Error in scheduleReminder:', error);
@@ -423,12 +444,15 @@ export class SchedulingService {
 
 		for (let i = 1; i <= 7; i++) {
 			const nextDay = dt.plus({ days: i });
-			const dayStart = nextDay.set({ hour: 9, minute: 0 });
-			const dayEnd = nextDay.set({ hour: 17, minute: 0 });
+			const { start, end } = preferences.active_hours || { start: '09:00', end: '17:00' };
+			const [startHour] = start.split(':').map(Number);
+			const [endHour] = end.split(':').map(Number);
+			const dayStart = nextDay.set({ hour: startHour, minute: 0 });
+			const dayEnd = nextDay.set({ hour: endHour, minute: 0 });
 
 			// Check if this day has any slots available
 			const dayReminders = this.reminders.filter((r) => {
-				const reminderDate = DateTime.fromJSDate(r.date.toDate());
+				const reminderDate = DateTime.fromJSDate(r.scheduledTime.toDate());
 				return reminderDate >= dayStart && reminderDate <= dayEnd;
 			});
 
@@ -466,7 +490,7 @@ export class SchedulingService {
 							...baseSchedule,
 							frequency: frequency,
 							pattern_adjusted: false,
-							recurring_next_date: baseSchedule.date.toDate().toISOString(),
+							recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
 						};
 					}
 				}
@@ -474,7 +498,7 @@ export class SchedulingService {
 				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
 					const suggestedTime = await schedulingHistory.suggestOptimalTime(
 						contact.id,
-						DateTime.fromJSDate(baseSchedule.date.toDate()),
+						DateTime.fromJSDate(baseSchedule.scheduledTime.toDate()),
 						'recurring'
 					);
 
@@ -483,7 +507,7 @@ export class SchedulingService {
 						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
 							return {
 								...baseSchedule,
-								date: Timestamp.fromDate(suggestedJSDate),
+								scheduledTime: Timestamp.fromDate(suggestedJSDate),
 								frequency: frequency,
 								pattern_adjusted: true,
 								confidence: patterns.confidence,
@@ -501,7 +525,7 @@ export class SchedulingService {
 				...baseSchedule,
 				frequency: frequency,
 				pattern_adjusted: false,
-				recurring_next_date: baseSchedule.date.toDate().toISOString(),
+				recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
 			};
 		} catch (error) {
 			console.error('Error in scheduleRecurringReminder:', error);
@@ -520,7 +544,7 @@ export class SchedulingService {
 			let scheduledDate = customDate;
 
 			// Check if we have active hours for this day
-			const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+			const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 			if (typePrefs?.active_hours) {
 				const { start, end } = typePrefs.active_hours;
 				const [startHour] = start.split(':').map(Number);
@@ -545,7 +569,7 @@ export class SchedulingService {
 
 			// Create reminder object
 			return {
-				date: Timestamp.fromDate(scheduledDate),
+				scheduledTime: Timestamp.fromDate(scheduledDate),
 				contact_id: contact.id,
 				created_at: Timestamp.now(),
 				updated_at: Timestamp.now(),
@@ -570,7 +594,7 @@ export class SchedulingService {
 	}
 
 	adjustToPreferredDay(date, contact) {
-		const typePrefs = this.relationshipPreferences[contact.scheduling?.relationship_type];
+		const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 		const preferredDays = typePrefs?.preferred_days || [];
 		if (preferredDays.length === 0) return date;
 
@@ -597,16 +621,21 @@ export class SchedulingService {
 		return dt.plus({ days: daysToAdd }).toJSDate();
 	}
 
-	calculateTimeSlotScore(dateTime, contact) {
-		const distanceScore = this.calculateDistanceScore(dateTime);
-		const positionScore = this.calculatePositionScore(dateTime, contact);
-		const priorityScore = this.calculatePriorityScore(contact);
+	calculateTimeSlotScore(proposedTime, existingReminders) {
+		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
+		let score = 100;
 
-		return (
-			distanceScore * SCORE_WEIGHTS.DISTANCE_FROM_REMINDERS +
-			positionScore * SCORE_WEIGHTS.PREFERRED_TIME_POSITION +
-			priorityScore * SCORE_WEIGHTS.PRIORITY_SCORE
-		);
+		// Check gaps with existing reminders
+		for (const reminder of this.reminders) {
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
+			const gap = Math.abs(proposedTime.getTime() - reminderTime) / (1000 * 60);
+
+			// Reduce score based on how far from optimal gap
+			const gapDifference = Math.abs(gap - optimalGap);
+			score -= (gapDifference / optimalGap) * 50; // Adjust score weight
+		}
+
+		return Math.max(0, score);
 	}
 
 	calculateDistanceScore(dateTime) {
@@ -617,7 +646,7 @@ export class SchedulingService {
 
 		const timeToCheck = dateTime.getTime();
 		const gaps = this.reminders.map((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			return Math.abs(timeToCheck - reminderTime) / (1000 * 60);
 		});
 
@@ -674,7 +703,7 @@ export class SchedulingService {
 
 			const existingSlots = new Set(
 				this.reminders.map((r) => {
-					const d = DateTime.fromJSDate(r.date.toDate());
+					const d = DateTime.fromJSDate(r.scheduledTime.toDate());
 					return `${d.hour}:${d.minute}`;
 				})
 			);
@@ -778,10 +807,7 @@ export class SchedulingService {
 
 		let current = expandedStart;
 		while (current <= expandedEnd) {
-			if (
-				!this.hasTimeConflict(currentSlot.toJSDate()) &&
-				!this.isTimeBlocked(currentSlot.toJSDate(), contact)
-			) {
+			if (!this.hasTimeConflict(current.toJSDate()) && !this.isTimeBlocked(current.toJSDate(), contact)) {
 				return current.toJSDate();
 			}
 			current = current.plus({ minutes: TIME_SLOT_INTERVAL });
@@ -815,7 +841,7 @@ export class SchedulingService {
 
 		// Check existing reminders
 		const conflicts = this.reminders.filter((reminder) => {
-			const reminderTime = reminder.date.toDate().getTime();
+			const reminderTime = reminder.scheduledTime.toDate().getTime();
 			const proposedTimeMs = proposedTime.getTime();
 			const gapMinutes = Math.abs(proposedTimeMs - reminderTime) / (1000 * 60);
 			return gapMinutes < minGap;
@@ -874,12 +900,35 @@ export class SchedulingService {
 	}
 
 	async scheduleNotificationForReminder(reminder) {
-		const scheduledTime = reminder.scheduledTime?.toDate() || reminder.date?.toDate();
-		if (!scheduledTime) return;
+		if (!reminder?.scheduledTime) {
+			console.error('No scheduledTime found for reminder:', reminder);
+			return;
+		}
+
+		let scheduledTime;
+		try {
+			// Handle different scheduledTime formats
+			if (reminder.scheduledTime instanceof Date) {
+				scheduledTime = reminder.scheduledTime;
+			} else if (typeof reminder.scheduledTime === 'string') {
+				scheduledTime = new Date(reminder.scheduledTime);
+			} else if (reminder.scheduledTime.toDate) {
+				scheduledTime = reminder.scheduledTime.toDate();
+			} else {
+				throw new Error('Invalid scheduledTime format');
+			}
+
+			if (isNaN(scheduledTime.getTime())) {
+				throw new Error('Invalid date value');
+			}
+		} catch (error) {
+			console.error('Invalid scheduledTime format:', reminder.scheduledTime, error);
+			return;
+		}
 
 		const notificationContent = {
-			title: `Scheduled Call: ${reminder.contactName}`,
-			body: `Time to connect with ${reminder.contactName}`,
+			title: `Scheduled Call: ${reminder.contactName || 'Contact'}`,
+			body: `Time to connect with ${reminder.contactName || 'your contact'}`,
 			data: {
 				type: 'SCHEDULED',
 				reminderId: reminder.id,
@@ -889,11 +938,7 @@ export class SchedulingService {
 		};
 
 		try {
-			await scheduleLocalNotificationWithPush(
-				reminder.user_id,
-				notificationContent,
-				scheduledTime // Pass Date object directly
-			);
+			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, scheduledTime);
 		} catch (error) {
 			console.error('Error scheduling notification:', error);
 			throw error;

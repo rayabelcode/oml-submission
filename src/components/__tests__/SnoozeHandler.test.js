@@ -75,14 +75,21 @@ jest.mock('../../utils/scheduler', () => ({
 	SchedulingService: jest.fn().mockImplementation(() => ({
 		findAvailableTimeSlot: jest.fn((date) => date),
 		initialize: jest.fn(),
-		scheduleNotificationForReminder: jest.fn().mockResolvedValue(true)
+		scheduleNotificationForReminder: jest.fn().mockResolvedValue(true),
+		getMinimumGap: jest.fn().mockReturnValue(30),
 	})),
 }));
 
 jest.mock('../../utils/firestore', () => ({
 	updateContactScheduling: jest.fn(),
-	getUserPreferences: jest.fn(),
-	getActiveReminders: jest.fn(),
+	getUserPreferences: jest.fn().mockResolvedValue({
+		scheduling_preferences: {
+			minimumGapMinutes: 20,
+			preferredTimeSlots: [],
+			timezone: 'America/New_York',
+		},
+	}),
+	getActiveReminders: jest.fn().mockResolvedValue([]),
 	getContactById: jest.fn().mockResolvedValue({
 		scheduling: { frequency: 'monthly' },
 	}),
@@ -252,6 +259,7 @@ describe('SnoozeHandler', () => {
 	describe('Error Handling', () => {
 		it('handles initialization failure gracefully', async () => {
 			getUserPreferences.mockRejectedValueOnce(new Error('Network error'));
+			snoozeHandler.initialized = false; // Reset initialization state
 			await expect(snoozeHandler.initialize()).rejects.toThrow('Network error');
 		});
 

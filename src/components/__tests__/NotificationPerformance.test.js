@@ -7,9 +7,11 @@ jest.mock('firebase/firestore', () => ({
 	doc: jest.fn(),
 	getDoc: jest.fn(),
 	updateDoc: jest.fn(),
+	query: jest.fn().mockReturnThis(),
 	serverTimestamp: jest.fn(() => ({ _seconds: Date.now() / 1000 })),
+	arrayUnion: jest.fn((token) => ['mock-token-1', 'mock-token-2', token]),
 	getUserProfile: jest.fn().mockResolvedValue({
-		expoPushToken: 'mock-token',
+		expoPushTokens: ['mock-token-1', 'mock-token-2'],
 		uid: 'test-user-id',
 	}),
 	collection: jest.fn(() => ({
@@ -385,6 +387,128 @@ describe('Notification Performance and Concurrency Tests', () => {
 
 			expect(notificationCoordinator.notificationMap.size).toBe(0);
 			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledTimes(5);
+		});
+	});
+
+	describe('Multi-Token Performance', () => {
+		beforeEach(async () => {
+			jest.clearAllMocks();
+			await notificationCoordinator.initialize();
+		});
+
+		it('should efficiently handle notifications for multiple devices', async () => {
+			const { getUserProfile } = require('firebase/firestore');
+
+			// Mock user with multiple devices
+			const devices = Array(20)
+				.fill()
+				.map((_, i) => `device-${i}`);
+			getUserProfile.mockResolvedValueOnce({
+				expoPushTokens: devices,
+				uid: 'test-user-id',
+			});
+
+			const startTime = Date.now();
+
+			// Schedule notifications that will trigger push to all devices
+			const results = await Promise.all(
+				Array(10)
+					.fill()
+					.map((_, i) =>
+						notificationCoordinator.scheduleNotification(
+							{
+								title: `Multi-device Test ${i}`,
+								body: 'Test notification',
+								data: { type: 'SCHEDULED' },
+							},
+							{ seconds: 60 + i }
+						)
+					)
+			);
+
+			const endTime = Date.now();
+			const processingTime = endTime - startTime;
+
+			expect(results).toHaveLength(10);
+			expect(processingTime).toBeLessThan(2000); // Reasonable time for processing
+			expect(notificationCoordinator.notificationMap.size).toBe(10);
+		});
+
+		it('should handle token cleanup efficiently', async () => {
+			const { doc, updateDoc } = require('firebase/firestore');
+			const { db } = require('../../config/firebase');
+
+			// Create a mock document reference
+			const userDocRef = { id: 'test-user-id' };
+			doc.mockReturnValue(userDocRef);
+
+			// Clear previous calls
+			updateDoc.mockClear();
+
+			const startTime = Date.now();
+
+			// Simulate token cleanup
+			await updateDoc(userDocRef, {
+				expoPushTokens: ['valid-1', 'valid-2', 'valid-3'],
+				lastTokenUpdate: expect.any(Object),
+			});
+
+			const endTime = Date.now();
+			const cleanupTime = endTime - startTime;
+
+			expect(cleanupTime).toBeLessThan(1000);
+			expect(updateDoc).toHaveBeenCalledWith(
+				userDocRef,
+				expect.objectContaining({
+					expoPushTokens: expect.any(Array),
+				})
+			);
+		});
+
+		it('should efficiently handle token updates during batch operations', async () => {
+			const { doc, updateDoc, arrayUnion } = require('firebase/firestore');
+			const { db } = require('../../config/firebase');
+
+			// Create a mock document reference
+			const userDocRef = { id: 'test-user-id' };
+			doc.mockReturnValue(userDocRef);
+
+			// Clear previous calls
+			updateDoc.mockClear();
+
+			// Reset coordinator state
+			notificationCoordinator.initialized = false;
+
+			// Initialize first to set up token handling
+			await notificationCoordinator.initialize();
+
+			// Schedule batch of notifications
+			const batchSize = 50;
+			const notifications = await Promise.all(
+				Array(batchSize)
+					.fill()
+					.map((_, i) =>
+						notificationCoordinator.scheduleNotification(
+							{
+								title: `Batch ${i}`,
+								body: 'Test',
+								data: { type: 'SCHEDULED' },
+							},
+							{ seconds: 60 + i }
+						)
+					)
+			);
+
+			// Verify token update
+			expect(updateDoc).toHaveBeenCalledWith(
+				userDocRef,
+				expect.objectContaining({
+					expoPushTokens: arrayUnion('mock-expo-token'),
+					devicePlatform: 'ios',
+					lastTokenUpdate: expect.any(Object),
+				})
+			);
+			expect(notifications).toHaveLength(batchSize);
 		});
 	});
 });

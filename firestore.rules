@@ -2,16 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Authentication check
     function isAuthenticated() {
       return request.auth != null;
     }
     
-    // Modified owner check specifically for contacts
+    // Validate push tokens array
+    function isValidPushTokens() {
+      let tokens = request.resource.data.expoPushTokens;
+      return tokens == null || (
+        tokens is list &&
+        tokens.size() <= 20 // Limit number of devices
+      );
+    }
+
+    // Validate scheduling preferences structure
+    function isValidSchedulingPreferences() {
+      let prefs = request.resource.data.scheduling_preferences;
+      return prefs == null || (
+        prefs.relationship_types is map &&
+        prefs.global_excluded_times is list &&
+        prefs.max_reminders_per_day is number &&
+        prefs.timezone is string
+      );
+    }
+
+    // Validate relationship types
+    function isValidRelationshipType() {
+      let types = ['work', 'personal', 'family', 'friend'];
+      return request.resource.data.scheduling_preferences.relationship_types.keys()
+        .hasAll(types);
+    }
+    
+    // Contacts rules
     match /contacts/{contactId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == resource.data.user_id || 
-        // Allow read during deletion process
-        resource == null
+        resource == null // Allow read during deletion process
       );
       allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
       allow update: if isAuthenticated() && 
@@ -26,46 +53,30 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.user_id;
     }
 
-    // Updated user rules to include scheduling preferences
+    // Users rules
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && request.auth.uid == userId;
+      
       // Allow checking usernames
       allow list: if isAuthenticated() 
         && request.query.limit <= 10 
         && ('username' in request.query.filters);
-        
-      // Validate scheduling preferences structure when updating
-      function isValidSchedulingPreferences() {
-        let prefs = request.resource.data.scheduling_preferences;
-        return prefs == null || (
-          prefs.relationship_types is map &&
-          prefs.global_excluded_times is list &&
-          prefs.max_reminders_per_day is number &&
-          prefs.timezone is string
-        );
-      }
 
-      // Additional validation for relationship type updates
-      function isValidRelationshipType() {
-        let types = ['work', 'personal', 'family', 'friend'];
-        return request.resource.data.scheduling_preferences.relationship_types.keys()
-          .hasAll(types);
-      }
-
-      // Add validation to write operations and allow push token storage
+      // Allow updates with validation
       allow update: if isAuthenticated() && 
         request.auth.uid == userId && 
         (
           // Scheduling preferences update
           (isValidSchedulingPreferences() && isValidRelationshipType()) ||
-          // Push token update
+          // Push token update with validation
           (request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['expoPushToken', 'devicePlatform', 'lastTokenUpdate']))
+            .hasOnly(['expoPushTokens', 'devicePlatform', 'lastTokenUpdate']) &&
+            isValidPushTokens())
         );
     }
     
-    // Updated reminders rules to handle batch operations and follow-ups
+    // Reminders rules
     match /reminders/{reminderId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;

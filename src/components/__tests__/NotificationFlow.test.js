@@ -178,7 +178,16 @@ jest.mock('../../config/firebase', () => ({
 // Mock firestore utilities
 jest.mock('../../utils/firestore', () => ({
 	...jest.requireActual('../../utils/firestore'),
-	getUserPreferences: jest.fn().mockResolvedValue({}),
+	getUserPreferences: jest.fn().mockImplementation(async (userId) => {
+		if (!userId) throw new Error('User not authenticated');
+		return {
+			scheduling_preferences: {
+				minimumGapMinutes: 30,
+				preferredTimeSlots: [],
+				timezone: 'America/New_York',
+			},
+		};
+	}),
 	getActiveReminders: jest.fn().mockResolvedValue([]),
 	updateContactScheduling: jest.fn().mockResolvedValue(true),
 	getContactById: jest.fn().mockImplementation(async (contactId) => {
@@ -301,9 +310,12 @@ const schedulingService = new SchedulingService(mockUserPreferences, [], 'Americ
 describe('Notification Flow Integration', () => {
 	const mockContactId = 'test-contact';
 	const mockCurrentTime = DateTime.fromObject({ hour: 14 }); // 2 PM
+	const mockUserId = 'test-user';
 
 	beforeEach(() => {
 		jest.clearAllMocks();
+		// Initialize snoozeHandler with userId
+		snoozeHandler.userId = mockUserId;
 	});
 
 	it('handles complete snooze flow', async () => {

@@ -10,7 +10,7 @@ import {
 	NOTIFICATION_CONFIGS,
 } from '../../constants/notificationConstants';
 import { sendPushNotification, scheduleLocalNotificationWithPush } from './notifications/pushNotification';
-import { doc, getUserProfile, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getUserProfile, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { reminderSync } from './notifications/reminderSync';
 
@@ -62,19 +62,16 @@ class NotificationCoordinator {
 						})
 					).data;
 
-					// Store token in user's Firestore document
 					const userDoc = doc(db, 'users', auth.currentUser.uid);
 					await updateDoc(userDoc, {
-						expoPushToken: token,
+						expoPushTokens: arrayUnion(token),
 						devicePlatform: Platform.OS,
 						lastTokenUpdate: serverTimestamp(),
 					});
 
-					// Start reminder sync after we confirm user is authenticated
 					await reminderSync.start();
 				} catch (tokenError) {
 					console.error('Error storing push token:', tokenError);
-					// Continue initialization even if token storage fails
 				}
 			}
 
@@ -292,7 +289,7 @@ class NotificationCoordinator {
 			if (secondsUntilNotification > 0) {
 				try {
 					const userDoc = await getUserProfile(userId);
-					if (userDoc?.expoPushToken) {
+					if (userDoc?.expoPushTokens?.length > 0) {
 						await sendPushNotification([userId], {
 							title: finalContent.title,
 							body: finalContent.body,
@@ -305,7 +302,6 @@ class NotificationCoordinator {
 					}
 				} catch (pushError) {
 					console.error('Error sending push notification:', pushError);
-					// Continue execution even if push notification fails
 				}
 			}
 

@@ -32,13 +32,16 @@ const shouldRetry = (errorType, attempt) => {
 const handlePushError = async (error, userIds) => {
 	console.error('Push notification error:', error);
 
-	// If token was invalid, remove it from the user's document
 	if (error.message?.includes('InvalidToken')) {
 		await Promise.all(
 			userIds.map(async (userId) => {
 				const userRef = doc(db, 'users', userId);
+				// Remove invalid token from array instead of setting to null
+				const userDoc = await getDoc(userRef);
+				const tokens = userDoc.data()?.expoPushTokens || [];
+				const validTokens = tokens.filter((token) => !error.message.includes(token));
 				await updateDoc(userRef, {
-					expoPushToken: null,
+					expoPushTokens: validTokens,
 					lastTokenUpdate: serverTimestamp(),
 				});
 			})
@@ -57,34 +60,33 @@ const handleFailedTokens = async (failedTokens, userIds) => {
 		await Promise.all(
 			userIds.map(async (userId) => {
 				const userDoc = await getDoc(doc(db, 'users', userId));
-				const token = userDoc.data()?.expoPushToken;
-				if (token && invalidTokens.includes(token)) {
-					await updateDoc(doc(db, 'users', userId), {
-						expoPushToken: null,
-						lastTokenUpdate: serverTimestamp(),
-					});
-				}
+				const tokens = userDoc.data()?.expoPushTokens || [];
+				const validTokens = tokens.filter((token) => !invalidTokens.includes(token));
+				await updateDoc(doc(db, 'users', userId), {
+					expoPushTokens: validTokens,
+					lastTokenUpdate: serverTimestamp(),
+				});
 			})
 		);
 	}
 };
 
-export const sendPushNotification = async (userIds, notification, attempt = 0) => {
+const sendPushNotification = async (userIds, notification, attempt = 0) => {
 	try {
-		// Get tokens for all users
+		// Get all tokens for all users
 		const tokenPromises = userIds.map(async (userId) => {
 			const userDoc = await getDoc(doc(db, 'users', userId));
-			return userDoc.data()?.expoPushToken;
+			return userDoc.data()?.expoPushTokens || [];
 		});
 
-		const tokens = (await Promise.all(tokenPromises)).filter(Boolean);
+		const tokenArrays = await Promise.all(tokenPromises);
+		// Flatten array of token arrays and remove any empty/null values
+		const tokens = tokenArrays.flat().filter(Boolean);
 
-		// Don't make the API call if there are no valid tokens
 		if (tokens.length === 0) {
-			return true; // Return true since this isn't an error case
+			return true;
 		}
 
-		// Send to each token
 		const messages = tokens.map((token) => ({
 			to: token,
 			sound: 'default',

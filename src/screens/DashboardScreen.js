@@ -15,7 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
-import { snoozeHandler } from '../utils/snoozeHandler';
+import { snoozeHandler, initializeSnoozeHandler } from '../utils/snoozeHandler';
 import { DateTime } from 'luxon';
 
 export default function DashboardScreen({ navigation, route }) {
@@ -131,6 +131,12 @@ export default function DashboardScreen({ navigation, route }) {
 	};
 
 	const handleSnooze = (reminder) => {
+		if (!reminder?.scheduledTime) {
+			console.error('Invalid reminder data:', reminder);
+			Alert.alert('Error', 'Unable to snooze reminder');
+			return;
+		}
+
 		setSelectedReminder(reminder);
 		setShowSnoozeOptions(true);
 	};
@@ -142,6 +148,9 @@ export default function DashboardScreen({ navigation, route }) {
 		setSnoozeError(null);
 
 		try {
+			// Initialize snoozeHandler with current user ID
+			await initializeSnoozeHandler(user.uid);
+
 			const contactId = selectedReminder.data.contactId;
 			const currentTime = DateTime.now();
 
