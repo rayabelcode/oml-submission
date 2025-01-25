@@ -157,9 +157,69 @@ exports.processReminders = onSchedule({
 
       // Only mark as notified if at least one notification was sent successfully
       if (notificationSent) {
-        await reminderDoc.ref.update({
+        const batch = admin.firestore().batch();
+
+        // Update reminder as notified and completed
+        batch.update(reminderDoc.ref, {
           notified: true,
+          status: "completed",
+          completion_time: admin.firestore.FieldValue.serverTimestamp(),
           notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Update contact's next_contact if it matches this reminder's scheduled time
+        const contactRef = admin.firestore().collection("contacts").doc(reminder.contact_id);
+        const contactDoc = await contactRef.get();
+        if (contactDoc.exists) {
+          const contactData = contactDoc.data();
+          const reminderTime = reminder.scheduledTime.toDate().getTime();
+          const nextContactTime = contactData.next_contact ? new Date(contactData.next_contact).getTime() : null;
+
+          if (nextContactTime === reminderTime) {
+            const updates = {
+              last_contacted: admin.firestore.FieldValue.serverTimestamp(),
+              last_updated: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            // Clear the specific date that matched (either recurring or custom)
+            if (contactData.scheduling?.recurring_next_date) {
+              const recurringTime = new Date(contactData.scheduling.recurring_next_date).getTime();
+              if (recurringTime === reminderTime) {
+                updates["scheduling.recurring_next_date"] = null;
+              }
+            }
+            if (contactData.scheduling?.custom_next_date) {
+              const customTime = new Date(contactData.scheduling.custom_next_date).getTime();
+              if (customTime === reminderTime) {
+                updates["scheduling.custom_next_date"] = null;
+              }
+            }
+
+            // Set next_contact to whichever date remains (if any)
+            if (contactData.scheduling?.recurring_next_date || contactData.scheduling?.custom_next_date) {
+              const remaining = [
+                contactData.scheduling?.recurring_next_date,
+                contactData.scheduling?.custom_next_date,
+              ].filter(Boolean).map((date) => new Date(date));
+
+              updates.next_contact = remaining.length > 0 ?
+                new Date(Math.min(...remaining.map((d) => d.getTime()))) :
+                null;
+            } else {
+              updates.next_contact = null;
+            }
+
+            batch.update(contactRef, updates);
+          }
+        }
+
+        // Commit all updates in a single batch
+        await batch.commit();
+
+        console.log("Updated reminder and contact:", {
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          status: "completed",
         });
       }
     }
