@@ -274,7 +274,24 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			}
 
 			if (nextContactDate) {
-				// Update only the root level next_contact
+				// First delete any existing SCHEDULED reminders
+				const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+				for (const reminder of existingReminders) {
+					if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+						await deleteReminder(reminder.id);
+					}
+				}
+
+				// Create new reminder with notified: false
+				await addReminder({
+					contactId: contact.id,
+					scheduledTime: nextContactDate,
+					type: REMINDER_TYPES.SCHEDULED,
+					status: 'pending',
+					contactName: `${contact.first_name} ${contact.last_name}`.trim(),
+				});
+
+				// Update contact scheduling
 				await updateContactScheduling(contact.id, {
 					next_contact: nextContactDate,
 				});

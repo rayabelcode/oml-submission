@@ -594,6 +594,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				completion_time: null,
 				notes_added: false,
 				contactName: contact.first_name + ' ' + contact.last_name,
+				notified: false,
 			};
 
 			batch.set(newReminderRef, reminderDoc);
@@ -677,6 +678,7 @@ export const addReminder = async (reminderData) => {
 			completion_time: null,
 			notes_added: false,
 			contactName: reminderData.contactName || '',
+			notified: false,
 		};
 
 		if (reminderData.call_data) {

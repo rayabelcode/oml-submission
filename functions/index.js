@@ -85,17 +85,16 @@ exports.processReminders = onSchedule({
 
   try {
     const now = admin.firestore.Timestamp.now();
-    // Check 5 minutes ahead
-    const fiveMinutesFromNow = admin.firestore.Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
-    const fiveMinutesAgo = admin.firestore.Timestamp.fromMillis(now.toMillis() - 5 * 60 * 1000);
+    const endTime = admin.firestore.Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
 
-    // Query for unnotified reminders in a wider window
+    // Query to handle time window filtering
     const remindersSnapshot = await admin.firestore()
       .collection("reminders")
-      .where("scheduledTime", ">=", fiveMinutesAgo)
-      .where("scheduledTime", "<=", fiveMinutesFromNow)
+      .where("scheduledTime", "<=", endTime)
       .where("notified", "==", false)
       .where("type", "==", "SCHEDULED")
+      .where("status", "==", "pending")
+      .where("snoozed", "==", false)
       .get();
 
     console.log(`Found ${remindersSnapshot.size} reminders to process`);
@@ -103,7 +102,6 @@ exports.processReminders = onSchedule({
     for (const reminderDoc of remindersSnapshot.docs) {
       const reminder = reminderDoc.data();
 
-      // Get user's push tokens
       const userDoc = await admin.firestore()
         .collection("users")
         .doc(reminder.user_id)
@@ -129,6 +127,8 @@ exports.processReminders = onSchedule({
       }));
 
       const chunks = expo.chunkPushNotifications(messages);
+      let notificationSent = false;
+
       for (const chunk of chunks) {
         try {
           const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
@@ -138,9 +138,11 @@ exports.processReminders = onSchedule({
             result: ticketChunk,
           });
 
+          notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
+
           // Handle invalid tokens
           ticketChunk.forEach(async (ticket, index) => {
-            if (ticket.status === "error" && ticket.details && ticket.details.error === "DeviceNotRegistered") {
+            if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
               const invalidToken = userData.expoPushTokens[index];
               console.log("Removing invalid token:", invalidToken);
               await admin.firestore().collection("users").doc(reminder.user_id).update({
@@ -148,15 +150,17 @@ exports.processReminders = onSchedule({
               });
             }
           });
-
-          // Mark reminder as notified
-          await reminderDoc.ref.update({
-            notified: true,
-            notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
         } catch (error) {
           console.error("Error sending notifications:", error);
         }
+      }
+
+      // Only mark as notified if at least one notification was sent successfully
+      if (notificationSent) {
+        await reminderDoc.ref.update({
+          notified: true,
+          notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
       }
     }
 
