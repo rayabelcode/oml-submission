@@ -16,10 +16,8 @@ import {
 	where,
 	writeBatch,
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { storage } from '../config/firebase';
+import { db, storage, auth } from '../config/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth } from '../config/firebase';
 import { createContactData, updateContactData, SCHEDULING_CONSTANTS } from './contactHelpers';
 import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
