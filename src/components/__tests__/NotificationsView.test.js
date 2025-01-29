@@ -144,4 +144,48 @@ describe('NotificationsView', () => {
 		// Check for reminder labels
 		expect(getAllByText('Recurring Call')).toHaveLength(2);
 	});
+
+	it('renders custom date reminders correctly', () => {
+		const customDateReminders = [
+			{
+				firestoreId: 'reminder3',
+				scheduledTime: '2024-12-31T17:21:18.881Z',
+				localId: 'local3',
+				type: REMINDER_TYPES.CUSTOM_DATE,
+				contactName: 'Bob Custom',
+			},
+		];
+
+		const { getByText } = render(<NotificationsView {...defaultProps} reminders={customDateReminders} />);
+
+		// Check for Custom Call label
+		expect(getByText('Custom Call')).toBeTruthy();
+		expect(getByText(/Call Bob Custom.*Dec 31, 2024/)).toBeTruthy();
+	});
+
+	it('renders mixed reminder types correctly', () => {
+		const mixedReminders = [
+			{
+				firestoreId: 'reminder1',
+				scheduledTime: '2024-12-31T17:21:18.881Z',
+				localId: 'local1',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'John Recurring',
+			},
+			{
+				firestoreId: 'reminder2',
+				scheduledTime: '2024-12-31T18:21:18.881Z',
+				localId: 'local2',
+				type: REMINDER_TYPES.CUSTOM_DATE,
+				contactName: 'Jane Custom',
+			},
+		];
+
+		const { getByText } = render(<NotificationsView {...defaultProps} reminders={mixedReminders} />);
+
+		expect(getByText('Recurring Call')).toBeTruthy();
+		expect(getByText('Custom Call')).toBeTruthy();
+		expect(getByText(/Call John Recurring.*Dec 31, 2024/)).toBeTruthy();
+		expect(getByText(/Call Jane Custom.*Dec 31, 2024/)).toBeTruthy();
+	});
 });
