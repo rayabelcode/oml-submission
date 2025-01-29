@@ -48,7 +48,7 @@ class CleanupService {
 				return now - reminderTime >= NOTIFICATION_CONFIGS.FOLLOW_UP.TIMEOUT;
 			}
 
-			if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+			if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
 				if (reminder.status === 'pending') {
 					const scheduledTime = reminder.scheduledTime?.toDate();
 					if (!scheduledTime || now < scheduledTime) return false;
