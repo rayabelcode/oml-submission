@@ -194,30 +194,16 @@ export const useScheduleStyles = () => {
 		},
 		// Next Contact Display
 		dateSection: {
-			flexDirection: 'row',
-			justifyContent: 'center',
-			alignItems: 'center',
 			marginBottom: spacing.md,
 			minHeight: 105,
-		},
-		nextContactContainer: {
-			flex: 1,
-			alignItems: 'center',
 			justifyContent: 'center',
-			padding: 15,
-			backgroundColor: 'transparent',
 		},
 		scheduledDatesContainer: {
-			flex: 0.9,
-			backgroundColor: colors.background.secondary,
-			borderRadius: 8,
-			paddingHorizontal: 8,
-			paddingVertical: 7,
-			borderWidth: 1,
-			borderColor: colors.border.light,
-			marginLeft: spacing.md,
+			flexDirection: 'row',
+			justifyContent: 'space-between',
 			alignItems: 'center',
-			justifyContent: 'center',
+			paddingHorizontal: spacing.md,
+			height: 80,
 		},
 		scheduledDateLabel: {
 			fontSize: 14,
@@ -225,30 +211,28 @@ export const useScheduleStyles = () => {
 			marginBottom: 4,
 			textAlign: 'center',
 		},
-		scheduledDateRow: {
-			fontSize: 14,
-			color: colors.text.primary,
-			marginBottom: 4,
-			textAlign: 'center',
-		},
-		nextContactLabel: {
-			fontSize: 15,
-			color: colors.text.secondary,
-			marginBottom: spacing.xs,
-			textAlign: 'center',
-		},
-		nextContactDate: {
+		scheduledDateValue: {
 			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
-			height: 30,
-			lineHeight: 30,
 			textAlign: 'center',
 		},
 		unscheduledText: {
 			color: colors.text.primary,
 			fontWeight: '500',
 			textAlign: 'center',
+		},
+		nextRecurringBox: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			height: '100%',
+		},
+		customDateBox: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			height: '100%',
 		},
 		// Animated Loading Screen
 		dotsContainer: {
