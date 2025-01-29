@@ -29,12 +29,6 @@ export const TIME_BUFFER = 5;
 export const TIME_SLOT_INTERVAL = 15;
 export const MAX_ATTEMPTS = 32;
 
-export const SCORE_WEIGHTS = {
-	DISTANCE_FROM_REMINDERS: 2.0,
-	PREFERRED_TIME_POSITION: 1.0,
-	PRIORITY_SCORE: 0.5,
-};
-
 // Recurring reminder configurations
 export const RECURRENCE_METADATA = {
 	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns

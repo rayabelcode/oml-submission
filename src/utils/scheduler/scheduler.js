@@ -1,6 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
-import { scheduleLocalNotificationWithPush } from './../notifications/pushNotification';
 // Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
 import {
@@ -12,7 +11,6 @@ import {
 	TIME_BUFFER,
 	TIME_SLOT_INTERVAL,
 	MAX_ATTEMPTS,
-	SCORE_WEIGHTS,
 } from './schedulerConstants';
 
 export class SchedulingService {
@@ -870,51 +868,5 @@ export class SchedulingService {
 		}
 
 		return adjustedTime;
-	}
-
-	async scheduleNotificationForReminder(reminder) {
-		if (!reminder?.scheduledTime) {
-			console.error('No scheduledTime found for reminder:', reminder);
-			return;
-		}
-
-		let scheduledTime;
-		try {
-			// Handle different scheduledTime formats
-			if (reminder.scheduledTime instanceof Date) {
-				scheduledTime = reminder.scheduledTime;
-			} else if (typeof reminder.scheduledTime === 'string') {
-				scheduledTime = new Date(reminder.scheduledTime);
-			} else if (reminder.scheduledTime.toDate) {
-				scheduledTime = reminder.scheduledTime.toDate();
-			} else {
-				throw new Error('Invalid scheduledTime format');
-			}
-
-			if (isNaN(scheduledTime.getTime())) {
-				throw new Error('Invalid date value');
-			}
-		} catch (error) {
-			console.error('Invalid scheduledTime format:', reminder.scheduledTime, error);
-			return;
-		}
-
-		const notificationContent = {
-			title: `Scheduled Call: ${reminder.contactName || 'Contact'}`,
-			body: `Time to connect with ${reminder.contactName || 'your contact'}`,
-			data: {
-				type: 'SCHEDULED',
-				reminderId: reminder.id,
-				contactId: reminder.contact_id,
-				userId: reminder.user_id,
-			},
-		};
-
-		try {
-			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, scheduledTime);
-		} catch (error) {
-			console.error('Error scheduling notification:', error);
-			throw error;
-		}
 	}
 }
