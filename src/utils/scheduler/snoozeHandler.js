@@ -112,7 +112,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleLaterToday(contactId, currentTime = DateTime.now()) {
+	async handleLaterToday(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) await this.initialize();
 			if (!this.schedulingService) {
@@ -181,7 +181,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleTomorrow(contactId, currentTime = DateTime.now()) {
+	async handleTomorrow(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
@@ -233,7 +233,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleNextWeek(contactId, currentTime = DateTime.now()) {
+	async handleNextWeek(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) {
 				await this.initialize();

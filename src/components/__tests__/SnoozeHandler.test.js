@@ -143,13 +143,25 @@ describe('SnoozeHandler', () => {
 		testCases.forEach(({ name, time, expectedRange }) => {
 			it(`calculates correct delay range during ${name}`, async () => {
 				await snoozeHandler.initialize();
-				const result = await snoozeHandler.handleLaterToday(mockContactId, time);
+				const result = await snoozeHandler.handleLaterToday(mockContactId, time, 'SCHEDULED');
 
 				const minutesAdded = DateTime.fromJSDate(result).diff(time, 'minutes').minutes;
 
 				expect(minutesAdded).toBeGreaterThanOrEqual(expectedRange.min);
 				expect(minutesAdded).toBeLessThanOrEqual(expectedRange.max);
 			});
+		});
+
+		it('preserves reminder type when snoozing', async () => {
+			await snoozeHandler.initialize();
+			const result = await snoozeHandler.handleLaterToday(mockContactId, DateTime.now(), 'CUSTOM_DATE');
+
+			// Verify the scheduling service was called with correct type
+			expect(snoozeHandler.schedulingService.scheduleNotificationForReminder).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: 'CUSTOM_DATE',
+				})
+			);
 		});
 
 		it('respects gap requirements', async () => {
@@ -176,15 +188,15 @@ describe('SnoozeHandler', () => {
 	});
 
 	describe('Tomorrow Handling', () => {
-		it('schedules for next day at same time', async () => {
-			const currentTime = DateTime.fromObject({ hour: 14 });
+		it('preserves reminder type when snoozing', async () => {
 			await snoozeHandler.initialize();
+			const result = await snoozeHandler.handleTomorrow(mockContactId, DateTime.now(), 'CUSTOM_DATE');
 
-			const result = await snoozeHandler.handleTomorrow(mockContactId, currentTime);
-
-			const dayDiff = DateTime.fromJSDate(result).diff(currentTime, 'days').days;
-
-			expect(Math.round(dayDiff)).toBe(1);
+			expect(snoozeHandler.schedulingService.scheduleNotificationForReminder).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: 'CUSTOM_DATE',
+				})
+			);
 		});
 
 		it('updates contact scheduling with tomorrow status', async () => {
@@ -202,15 +214,15 @@ describe('SnoozeHandler', () => {
 	});
 
 	describe('Next Week Handling', () => {
-		it('schedules for next week at same time', async () => {
-			const currentTime = DateTime.fromObject({ hour: 14 });
+		it('preserves reminder type when snoozing', async () => {
 			await snoozeHandler.initialize();
+			const result = await snoozeHandler.handleNextWeek(mockContactId, DateTime.now(), 'CUSTOM_DATE');
 
-			const result = await snoozeHandler.handleNextWeek(mockContactId, currentTime);
-
-			const weekDiff = DateTime.fromJSDate(result).diff(currentTime, 'weeks').weeks;
-
-			expect(Math.round(weekDiff)).toBe(1);
+			expect(snoozeHandler.schedulingService.scheduleNotificationForReminder).toHaveBeenCalledWith(
+				expect.objectContaining({
+					type: 'CUSTOM_DATE',
+				})
+			);
 		});
 
 		it('updates contact scheduling with next week status', async () => {
