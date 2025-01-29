@@ -4,43 +4,16 @@ import { scheduleLocalNotificationWithPush } from './../notifications/pushNotifi
 // Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
 import { RECURRENCE_METADATA } from '../../../constants/notificationConstants';
-// Fallback
-const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
-// Warning if MAX_AGE_DAYS is missing
-if (!RECURRENCE_METADATA?.MAX_AGE_DAYS) {
-	console.warn('MAX_AGE_DAYS not found in RECURRENCE_METADATA, using fallback value of 30');
-}
-
-const FREQUENCY_MAPPINGS = {
-	daily: 1,
-	weekly: 7,
-	biweekly: 14,
-	monthly: 30,
-	quarterly: 90,
-	yearly: 365,
-};
-
-const PRIORITY_FLEXIBILITY = {
-	high: 1,
-	normal: 3,
-	low: 5,
-};
-
-const BLOCKED_TIMES = [
-	{ hour: 9, minute: 0 },
-	{ hour: 15, minute: 0 },
-	{ hour: 18, minute: 0 },
-];
-
-const TIME_BUFFER = 5;
-const TIME_SLOT_INTERVAL = 15;
-const MAX_ATTEMPTS = 32;
-
-const SCORE_WEIGHTS = {
-	DISTANCE_FROM_REMINDERS: 2.0,
-	PREFERRED_TIME_POSITION: 1.0,
-	PRIORITY_SCORE: 0.5,
-};
+import { 
+    MAX_AGE_DAYS,
+    FREQUENCY_MAPPINGS,
+    PRIORITY_FLEXIBILITY,
+    BLOCKED_TIMES,
+    TIME_BUFFER,
+    TIME_SLOT_INTERVAL,
+    MAX_ATTEMPTS,
+    SCORE_WEIGHTS
+} from './schedulerConstants';
 
 export class SchedulingService {
 	constructor(userPreferences, existingReminders, timeZone) {

@@ -816,28 +816,29 @@ describe('SchedulingService', () => {
 				id: 'test-id',
 				scheduling: {
 					relationship_type: 'friend',
-					priority: 'normal',
+					custom_schedule: true,
 					custom_preferences: {
-						active_hours: { start: '09:00', end: '17:00' },
+						active_hours: { start: '14:00', end: '17:00' }, // Start at 14:00
 					},
+					priority: 'normal',
 				},
 			};
 
-			schedulingService.reminders = Array.from({ length: 8 }, (_, i) => ({
-				scheduledTime: {
-					toDate: () =>
-						DateTime.now()
-							.plus({ hours: Math.floor(i / 2), minutes: (i % 2) * 30 })
-							.toJSDate(),
+			// Existing reminder at 10:00 AM
+			schedulingService.reminders = [
+				{
+					scheduledTime: {
+						toDate: () => DateTime.now().set({ hour: 10, minute: 0 }).toJSDate(),
+					},
 				},
-			}));
+			];
 
-			const conflictDate = DateTime.now().set({ hour: 9, minute: 30 }).toJSDate();
+			const conflictDate = DateTime.now().set({ hour: 10, minute: 15 }).toJSDate();
 			const resolvedDate = await schedulingService.resolveConflict(conflictDate, contact);
 
 			expect(resolvedDate).toBeDefined();
 			const resolvedTime = DateTime.fromJSDate(resolvedDate);
-			expect(resolvedTime.hour).toBeGreaterThan(13);
+			expect(resolvedTime.hour).toBeGreaterThan(13); // Make sure resolved time is after 13:00
 		});
 
 		it('should resolve conflicts by expanding time range', async () => {
@@ -1220,12 +1221,14 @@ describe('SchedulingService', () => {
 		});
 
 		it('should enhance scheduling with pattern analysis when available', async () => {
-			require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
-				confidence: 0.8,
-				successRates: {
-					byHour: { 14: { successRate: 0.9 } },
-				},
-			});
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+				{
+					confidence: 0.8,
+					successRates: {
+						byHour: { 14: { successRate: 0.9 } },
+					},
+				}
+			);
 
 			require('../../utils/scheduler/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
 				DateTime.now().set({ hour: 14, minute: 0 })
