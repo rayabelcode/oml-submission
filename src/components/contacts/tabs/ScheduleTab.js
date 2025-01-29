@@ -337,7 +337,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								<Text style={styles.scheduledDateValue}>
 									{contact.scheduling?.recurring_next_date
 										? new Date(contact.scheduling.recurring_next_date).toLocaleDateString()
-										: 'None'}
+										: 'Not Set'}
 								</Text>
 							</>
 						)}
@@ -355,7 +355,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								<Text style={styles.scheduledDateValue}>
 									{contact.scheduling?.custom_next_date
 										? new Date(contact.scheduling.custom_next_date).toLocaleDateString()
-										: 'None'}
+										: 'Not Set'}
 								</Text>
 							</>
 						)}
