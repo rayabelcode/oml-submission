@@ -20,7 +20,6 @@ import {
 	deleteReminder,
 	getActiveReminders,
 } from '../../../utils/firestore';
-import { SchedulingService } from '../../../utils/scheduler/scheduler';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { updateDoc, doc } from 'firebase/firestore';
@@ -365,34 +364,12 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									// If the button is already active, turn it off
 									if (frequency === option.value) {
 										setFrequency(null);
-										const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+										// Let updateContactScheduling handle the reminder cleanup
+										const updatedContact = await updateContactScheduling(contact.id, {
+											frequency: null,
+											recurring_next_date: null,
+										});
 
-										if (!contact.scheduling?.custom_next_date) {
-											const deletePromises = existingReminders
-												.map((reminder) => {
-													if (reminder.type === REMINDER_TYPES.SCHEDULED) {
-														return deleteReminder(reminder.id);
-													}
-												})
-												.filter(Boolean);
-
-											await Promise.all([
-												updateContactScheduling(contact.id, {
-													frequency: null,
-													recurring_next_date: null,
-													next_contact: contact.scheduling?.custom_next_date || null,
-												}),
-												...deletePromises,
-											]);
-										} else {
-											await updateContactScheduling(contact.id, {
-												frequency: null,
-												recurring_next_date: null,
-												next_contact: contact.scheduling.custom_next_date,
-											});
-										}
-
-										const updatedContact = await getContactById(contact.id);
 										setSelectedContact(updatedContact);
 
 										if (loadContacts) {

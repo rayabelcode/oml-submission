@@ -501,36 +501,49 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			},
 		};
 
-		if (schedulingData.frequency) {
-			const userPrefs = await getUserPreferences(contact.user_id);
-			const activeReminders = await getActiveReminders(contact.user_id);
+		if ('frequency' in schedulingData) {
+			if (schedulingData.frequency === null) {
+				// Handle null frequency case
+				updateData.scheduling = {
+					...updateData.scheduling,
+					frequency: null,
+					recurring_next_date: null,
+					pattern_adjusted: false,
+					confidence: null,
+				};
+				updateData.next_contact = updateData.scheduling.custom_next_date || null;
+			} else {
+				// Handle setting new frequency
+				const userPrefs = await getUserPreferences(contact.user_id);
+				const activeReminders = await getActiveReminders(contact.user_id);
 
-			const schedulingService = new SchedulingService(
-				userPrefs?.scheduling_preferences,
-				activeReminders,
-				Intl.DateTimeFormat().resolvedOptions().timeZone
-			);
+				const schedulingService = new SchedulingService(
+					userPrefs?.scheduling_preferences,
+					activeReminders,
+					Intl.DateTimeFormat().resolvedOptions().timeZone
+				);
 
-			const lastContactDate = contact.last_contacted?.toDate() || new Date();
+				const lastContactDate = contact.last_contacted?.toDate() || new Date();
 
-			const reminderSchedule = await schedulingService.scheduleRecurringReminder(
-				{ ...contact, id: contactId },
-				lastContactDate,
-				schedulingData.frequency
-			);
+				const reminderSchedule = await schedulingService.scheduleRecurringReminder(
+					{ ...contact, id: contactId },
+					lastContactDate,
+					schedulingData.frequency
+				);
 
-			updateData.scheduling = {
-				...updateData.scheduling,
-				frequency: schedulingData.frequency,
-				pattern_adjusted: reminderSchedule.pattern_adjusted || false,
-				...(reminderSchedule.confidence !== undefined && {
-					confidence: reminderSchedule.confidence,
-				}),
-				recurring_next_date: reminderSchedule.recurring_next_date,
-			};
+				updateData.scheduling = {
+					...updateData.scheduling,
+					frequency: schedulingData.frequency,
+					pattern_adjusted: reminderSchedule.pattern_adjusted || false,
+					...(reminderSchedule.confidence !== undefined && {
+						confidence: reminderSchedule.confidence,
+					}),
+					recurring_next_date: reminderSchedule.recurring_next_date,
+				};
 
-			if (reminderSchedule.status !== 'SLOTS_FILLED') {
-				updateData.next_contact = reminderSchedule.date;
+				if (reminderSchedule.status !== 'SLOTS_FILLED') {
+					updateData.next_contact = reminderSchedule.date;
+				}
 			}
 		}
 
@@ -557,7 +570,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 		const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
 		// Handle recurring reminder (SCHEDULED type)
-		if ('recurring_next_date' in schedulingData) {
+		if ('recurring_next_date' in schedulingData || 'frequency' in schedulingData) {
 			// Delete existing SCHEDULED reminders
 			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
