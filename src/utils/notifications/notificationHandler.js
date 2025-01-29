@@ -1,5 +1,5 @@
 import { Notifications } from 'expo-notifications';
-import { snoozeHandler } from '../snoozeHandler';
+import { snoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 

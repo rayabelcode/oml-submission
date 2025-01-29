@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
 import { scheduleLocalNotificationWithPush } from './../notifications/pushNotification';
 // Recurring reminder configurations
-import { schedulingHistory } from '../schedulingHistory';
+import { schedulingHistory } from './schedulingHistory';
 import { RECURRENCE_METADATA } from '../../../constants/notificationConstants';
 // Fallback
 const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;

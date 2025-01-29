@@ -21,7 +21,7 @@ import { setupAvoidSoftInputGlobalSettings } from './src/utils/componentSettings
 import { notificationCoordinator } from './src/utils/notificationCoordinator';
 import { callNotesService } from './src/utils/callNotes';
 import { scheduledCallService } from './src/utils/scheduledCalls';
-import { schedulingHistory } from './src/utils/schedulingHistory';
+import { schedulingHistory } from './src/utils/scheduler/schedulingHistory';
 import { doc, getDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './src/config/firebase';
 

@@ -15,7 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
-import { snoozeHandler, initializeSnoozeHandler } from '../utils/snoozeHandler';
+import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
 import { DateTime } from 'luxon';
 
 export default function DashboardScreen({ navigation, route }) {
