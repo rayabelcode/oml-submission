@@ -1,5 +1,3 @@
-import { RECURRENCE_METADATA } from '../../../constants/notificationConstants';
-
 export const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
 
 if (!RECURRENCE_METADATA?.MAX_AGE_DAYS) {
@@ -35,4 +33,18 @@ export const SCORE_WEIGHTS = {
 	DISTANCE_FROM_REMINDERS: 2.0,
 	PREFERRED_TIME_POSITION: 1.0,
 	PRIORITY_SCORE: 0.5,
+};
+
+// Recurring reminder configurations
+export const RECURRENCE_METADATA = {
+	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns
+	MAX_AGE_DAYS: 30, // Time window to analyze patterns
+	TYPES: {
+		DAILY: 'daily',
+		WEEKLY: 'weekly',
+		BIWEEKLY: 'biweekly',
+		MONTHLY: 'monthly',
+		QUARTERLY: 'quarterly',
+		YEARLY: 'yearly',
+	},
 };

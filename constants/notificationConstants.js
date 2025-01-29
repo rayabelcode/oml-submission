@@ -14,20 +14,6 @@ export const REMINDER_STATUS = {
 	SKIPPED: 'skipped',
 };
 
-// Recurring reminder configurations
-export const RECURRENCE_METADATA = {
-	MIN_CONFIDENCE: 0.5, // Minimum confidence score to use patterns
-	MAX_AGE_DAYS: 30,  // Time window to analyze patterns
-	TYPES: {
-		DAILY: 'daily',
-		WEEKLY: 'weekly',
-		BIWEEKLY: 'biweekly',
-		MONTHLY: 'monthly',
-		QUARTERLY: 'quarterly',
-		YEARLY: 'yearly',
-	},
-};
-
 // Notification trigger validation
 export const NOTIFICATION_VALIDATION = {
 	validateTrigger: (trigger) => {

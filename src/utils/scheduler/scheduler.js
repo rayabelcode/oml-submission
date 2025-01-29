@@ -3,16 +3,16 @@ import { DateTime } from 'luxon';
 import { scheduleLocalNotificationWithPush } from './../notifications/pushNotification';
 // Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
-import { RECURRENCE_METADATA } from '../../../constants/notificationConstants';
-import { 
-    MAX_AGE_DAYS,
-    FREQUENCY_MAPPINGS,
-    PRIORITY_FLEXIBILITY,
-    BLOCKED_TIMES,
-    TIME_BUFFER,
-    TIME_SLOT_INTERVAL,
-    MAX_ATTEMPTS,
-    SCORE_WEIGHTS
+import {
+	RECURRENCE_METADATA,
+	MAX_AGE_DAYS,
+	FREQUENCY_MAPPINGS,
+	PRIORITY_FLEXIBILITY,
+	BLOCKED_TIMES,
+	TIME_BUFFER,
+	TIME_SLOT_INTERVAL,
+	MAX_ATTEMPTS,
+	SCORE_WEIGHTS,
 } from './schedulerConstants';
 
 export class SchedulingService {
