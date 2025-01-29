@@ -106,9 +106,9 @@ describe('NotificationsView', () => {
 	it('renders scheduled reminders correctly', () => {
 		const { getAllByText, getByText } = render(<NotificationsView {...defaultProps} />);
 
-		// Check for Scheduled Call label
-		const scheduledCallLabels = getAllByText('Scheduled Call');
-		expect(scheduledCallLabels).toHaveLength(2);
+		// Check for Recurring Call label
+		const recurringCallLabels = getAllByText('Recurring Call');
+		expect(recurringCallLabels).toHaveLength(2);
 
 		// Check for specific reminder texts
 		expect(getByText(/Call John Doe.*Dec 31, 2024/)).toBeTruthy();
@@ -142,6 +142,6 @@ describe('NotificationsView', () => {
 		expect(getAllByText('Snooze')).toHaveLength(2);
 
 		// Check for reminder labels
-		expect(getAllByText('Scheduled Call')).toHaveLength(2);
+		expect(getAllByText('Recurring Call')).toHaveLength(2);
 	});
 });
