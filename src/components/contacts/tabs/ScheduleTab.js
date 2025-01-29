@@ -85,7 +85,6 @@ const DAYS_OF_WEEK = [
 	{ label: 'S', value: 'saturday' },
 	{ label: 'S', value: 'sunday' },
 ];
-
 const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const { colors, spacing } = useTheme();
 	const styles = useScheduleStyles();
@@ -116,6 +115,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+	const [loadingType, setLoadingType] = useState(null);
 
 	// Helper function for checking if a date is today
 	const isToday = (date) => {
@@ -181,7 +181,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
 		return `${displayHour}:00 ${period}`;
 	};
-
 	// Handle scheduling updates
 	const handleUpdateScheduling = async (updates) => {
 		setError(null);
@@ -206,6 +205,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
+			setLoadingType('recurring');
 			setLoading(true);
 
 			// Update contact scheduling
@@ -248,12 +248,14 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			setFrequency(contact?.scheduling?.frequency || null);
 		} finally {
 			setLoading(false);
+			setLoadingType(null);
 		}
 	};
 
 	// Handle slots filled option
 	const handleSlotsFilledOption = async (option) => {
 		try {
+			setLoadingType('recurring');
 			setLoading(true);
 			let nextContactDate;
 
@@ -310,10 +312,10 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			setError('Failed to update schedule');
 		} finally {
 			setLoading(false);
+			setLoadingType(null);
 			setShowSlotsFilledModal(false);
 		}
 	};
-
 	return (
 		<ScrollView
 			style={styles.container}
@@ -321,38 +323,46 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			showsVerticalScrollIndicator={false}
 		>
 			<View style={styles.dateSection}>
-				<View style={styles.nextContactContainer}>
-					<Text style={styles.nextContactLabel}>Next Contact</Text>
-					{loading ? (
-						<View style={styles.dotsContainer}>
-							<Animated.View style={[styles.dot, { opacity: dot1 }]} />
-							<Animated.View style={[styles.dot, { opacity: dot2 }]} />
-							<Animated.View style={[styles.dot, { opacity: dot3 }]} />
-						</View>
-					) : (
-						<Text style={[styles.nextContactDate, !contact.next_contact && styles.unscheduledText]}>
-							{contact.next_contact ? new Date(contact.next_contact).toLocaleDateString() : 'Unscheduled'}
-						</Text>
-					)}
-				</View>
-
-				{Boolean(contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) && (
-					<View style={styles.scheduledDatesContainer}>
-						<Text style={{ marginBottom: 8 }}>
-							<Text style={styles.scheduledDateLabel}>Next Recurring: </Text>
-							<Text style={styles.scheduledDateRow}>
-								{new Date(contact.scheduling.recurring_next_date).toLocaleDateString()}
-							</Text>
-						</Text>
-						<Text>
-							<Text style={styles.scheduledDateLabel}>Custom Date: </Text>
-							<Text style={styles.scheduledDateRow}>
-								{new Date(contact.scheduling.custom_next_date).toLocaleDateString()}
-							</Text>
-						</Text>
+				<View style={styles.scheduledDatesContainer}>
+					<View style={styles.nextRecurringBox}>
+						{loading && loadingType === 'recurring' ? (
+							<View style={styles.dotsContainer}>
+								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
+								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
+								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+							</View>
+						) : (
+							<>
+								<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
+								<Text style={styles.scheduledDateValue}>
+									{contact.scheduling?.recurring_next_date
+										? new Date(contact.scheduling.recurring_next_date).toLocaleDateString()
+										: 'None'}
+								</Text>
+							</>
+						)}
 					</View>
-				)}
+					<View style={styles.customDateBox}>
+						{loading && loadingType === 'custom' ? (
+							<View style={styles.dotsContainer}>
+								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
+								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
+								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
+							</View>
+						) : (
+							<>
+								<Text style={styles.scheduledDateLabel}>Custom Date</Text>
+								<Text style={styles.scheduledDateValue}>
+									{contact.scheduling?.custom_next_date
+										? new Date(contact.scheduling.custom_next_date).toLocaleDateString()
+										: 'None'}
+								</Text>
+							</>
+						)}
+					</View>
+				</View>
 			</View>
+
 			<View style={styles.gridContainer}>
 				<Text style={styles.sectionTitle}>Contact Frequency</Text>
 				<View style={styles.frequencyGrid}>
@@ -363,6 +373,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							onPress={async () => {
 								if (loading) return;
 								try {
+									setLoadingType('recurring');
 									setLoading(true);
 									// If the button is already active, turn it off
 									if (frequency === option.value) {
@@ -401,6 +412,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											await loadContacts();
 										}
 										setLoading(false);
+										setLoadingType(null);
 										return;
 									}
 
@@ -425,6 +437,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									setError('Failed to update frequency');
 								} finally {
 									setLoading(false);
+									setLoadingType(null);
 								}
 							}}
 							disabled={loading}
@@ -450,6 +463,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 						if (contact.scheduling?.custom_next_date) {
 							try {
+								setLoadingType('custom');
 								setLoading(true);
 								const updates = {
 									custom_next_date: null,
@@ -482,6 +496,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								Alert.alert('Error', 'Failed to clear custom date');
 							} finally {
 								setLoading(false);
+								setLoadingType(null);
 							}
 						} else {
 							// Reset selectedDate to current date when opening picker
@@ -565,7 +580,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							))}
 						</View>
 					</View>
-
 					<View style={styles.daysContainer}>
 						<Text style={[styles.sectionTitle, loading && styles.disabledText]}>Preferred Days</Text>
 						<View style={styles.daysGrid}>
@@ -644,7 +658,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								disabled={loading}
 							>
 								<Text style={[styles.timeText, loading && styles.disabledText]}>
-									End:{formatTimeForDisplay(activeHours.end)}
+									End: {formatTimeForDisplay(activeHours.end)}
 								</Text>
 							</TouchableOpacity>
 						</View>
@@ -757,6 +771,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 					try {
 						setShowDatePicker(false);
+						setLoadingType('custom');
 						setLoading(true);
 
 						let finalDate;
@@ -793,6 +808,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						Alert.alert('Error', 'Failed to set custom date');
 					} finally {
 						setLoading(false);
+						setLoadingType(null);
 					}
 				}}
 			/>
