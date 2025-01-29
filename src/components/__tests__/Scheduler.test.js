@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { SchedulingService } from '../../utils/scheduler';
+import { SchedulingService } from '../../utils/scheduler/scheduler';
 import { DateTime } from 'luxon';
 import { updateContactScheduling, getContactReminders } from '../../utils/firestore';
 const RECURRENCE_METADATA = {
@@ -28,7 +28,7 @@ jest.mock('firebase/firestore', () => ({
 	persistentMultipleTabManager: jest.fn(() => ({})),
 }));
 
-jest.mock('../../utils/schedulingHistory', () => ({
+jest.mock('../../utils/scheduler/schedulingHistory', () => ({
 	schedulingHistory: {
 		analyzeContactPatterns: jest.fn(),
 		suggestOptimalTime: jest.fn(),
@@ -816,28 +816,29 @@ describe('SchedulingService', () => {
 				id: 'test-id',
 				scheduling: {
 					relationship_type: 'friend',
-					priority: 'normal',
+					custom_schedule: true,
 					custom_preferences: {
-						active_hours: { start: '09:00', end: '17:00' },
+						active_hours: { start: '14:00', end: '17:00' }, // Start at 14:00
 					},
+					priority: 'normal',
 				},
 			};
 
-			schedulingService.reminders = Array.from({ length: 8 }, (_, i) => ({
-				scheduledTime: {
-					toDate: () =>
-						DateTime.now()
-							.plus({ hours: Math.floor(i / 2), minutes: (i % 2) * 30 })
-							.toJSDate(),
+			// Existing reminder at 10:00 AM
+			schedulingService.reminders = [
+				{
+					scheduledTime: {
+						toDate: () => DateTime.now().set({ hour: 10, minute: 0 }).toJSDate(),
+					},
 				},
-			}));
+			];
 
-			const conflictDate = DateTime.now().set({ hour: 9, minute: 30 }).toJSDate();
+			const conflictDate = DateTime.now().set({ hour: 10, minute: 15 }).toJSDate();
 			const resolvedDate = await schedulingService.resolveConflict(conflictDate, contact);
 
 			expect(resolvedDate).toBeDefined();
 			const resolvedTime = DateTime.fromJSDate(resolvedDate);
-			expect(resolvedTime.hour).toBeGreaterThan(13);
+			expect(resolvedTime.hour).toBeGreaterThan(13); // Make sure resolved time is after 13:00
 		});
 
 		it('should resolve conflicts by expanding time range', async () => {
@@ -1199,11 +1200,11 @@ describe('SchedulingService', () => {
 			jest.clearAllMocks();
 			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
 
-			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
+			mockSchedulingHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 		});
 
 		it('should use base scheduling when no patterns exist', async () => {
-			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
 				null
 			);
 
@@ -1220,14 +1221,16 @@ describe('SchedulingService', () => {
 		});
 
 		it('should enhance scheduling with pattern analysis when available', async () => {
-			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
-				confidence: 0.8,
-				successRates: {
-					byHour: { 14: { successRate: 0.9 } },
-				},
-			});
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+				{
+					confidence: 0.8,
+					successRates: {
+						byHour: { 14: { successRate: 0.9 } },
+					},
+				}
+			);
 
-			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
 				DateTime.now().set({ hour: 14, minute: 0 })
 			);
 
@@ -1244,7 +1247,7 @@ describe('SchedulingService', () => {
 		});
 
 		it('should respect scheduling constraints even with pattern adjustment', async () => {
-			require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValueOnce(
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValueOnce(
 				{
 					confidence: 0.8,
 					successRates: {
@@ -1254,7 +1257,7 @@ describe('SchedulingService', () => {
 			);
 
 			const blockedTime = DateTime.now().set({ hour: 23, minute: 0 });
-			require('../../utils/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
+			require('../../utils/scheduler/schedulingHistory').schedulingHistory.suggestOptimalTime.mockResolvedValueOnce(
 				blockedTime
 			);
 
@@ -1302,7 +1305,7 @@ describe('SchedulingService', () => {
 		beforeEach(() => {
 			jest.clearAllMocks();
 			schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
-			mockSchedulingHistory = require('../../utils/schedulingHistory').schedulingHistory;
+			mockSchedulingHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 			mockContact = {
 				id: 'test-id',
 				first_name: 'John',

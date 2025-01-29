@@ -4,9 +4,9 @@ import {
 	SNOOZE_OPTIONS,
 	MAX_SNOOZE_ATTEMPTS,
 	PATTERN_TRACKING,
-} from '../../constants/notificationConstants';
+} from '../../../constants/notificationConstants';
 import { SchedulingService } from './scheduler';
-import { updateContactScheduling, getUserPreferences, getActiveReminders, getContactById } from './firestore';
+import { updateContactScheduling, getUserPreferences, getActiveReminders, getContactById } from '../firestore';
 import { schedulingHistory } from './schedulingHistory';
 
 export class SnoozeHandler {

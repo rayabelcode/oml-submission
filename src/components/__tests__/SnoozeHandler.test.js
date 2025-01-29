@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { DateTime } from 'luxon';
-import { SnoozeHandler } from '../../utils/snoozeHandler';
+import { SnoozeHandler } from '../../utils/scheduler/snoozeHandler';
 
 // Supress console.error
 beforeAll(() => {
@@ -49,7 +49,7 @@ const SNOOZE_OPTIONS = [
 const MAX_SNOOZE_ATTEMPTS = 4;
 
 // Mocks
-jest.mock('../../utils/schedulingHistory', () => ({
+jest.mock('../../utils/scheduler/schedulingHistory', () => ({
 	schedulingHistory: {
 		initialize: jest.fn(),
 		analyzeContactPatterns: jest.fn().mockImplementation((contactId) => {
@@ -71,7 +71,7 @@ jest.mock('../../utils/schedulingHistory', () => ({
 	},
 }));
 
-jest.mock('../../utils/scheduler', () => ({
+jest.mock('../../utils/scheduler/scheduler', () => ({
 	SchedulingService: jest.fn().mockImplementation(() => ({
 		findAvailableTimeSlot: jest.fn((date) => date),
 		initialize: jest.fn(),
@@ -97,7 +97,7 @@ jest.mock('../../utils/firestore', () => ({
 
 // Imports
 import { updateContactScheduling, getUserPreferences, getActiveReminders } from '../../utils/firestore';
-import { schedulingHistory } from '../../utils/schedulingHistory';
+import { schedulingHistory } from '../../utils/scheduler/schedulingHistory';
 
 describe('SnoozeHandler', () => {
 	let snoozeHandler;

@@ -20,10 +20,10 @@ import {
 	handleNotificationResponse,
 	setupNotificationHandlers,
 } from '../../utils/notifications/notificationHandler';
-import { snoozeHandler } from '../../utils/snoozeHandler';
+import { snoozeHandler } from '../../utils/scheduler/snoozeHandler';
 import { Notifications } from 'expo-notifications';
 
-jest.mock('../../utils/snoozeHandler', () => ({
+jest.mock('../../utils/scheduler/snoozeHandler', () => ({
 	snoozeHandler: {
 		handleSnooze: jest.fn().mockResolvedValue(true),
 	},

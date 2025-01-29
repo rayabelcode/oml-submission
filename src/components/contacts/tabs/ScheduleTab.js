@@ -20,7 +20,7 @@ import {
 	deleteReminder,
 	getActiveReminders,
 } from '../../../utils/firestore';
-import { SchedulingService } from '../../../utils/scheduler';
+import { SchedulingService } from '../../../utils/scheduler/scheduler';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
 import { updateDoc, doc } from 'firebase/firestore';

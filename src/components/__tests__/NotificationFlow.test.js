@@ -1,12 +1,12 @@
 import { DateTime } from 'luxon';
-import { snoozeHandler, SnoozeHandler } from '../../utils/snoozeHandler';
+import { snoozeHandler, SnoozeHandler } from '../../utils/scheduler/snoozeHandler';
 import { MAX_SNOOZE_ATTEMPTS } from '../../../constants/notificationConstants';
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 import { notificationCoordinator } from '../../utils/notificationCoordinator';
-import { schedulingHistory } from '../../utils/schedulingHistory';
+import { schedulingHistory } from '../../utils/scheduler/schedulingHistory';
 import { completeFollowUp } from '../../utils/callHandler';
 import { cleanupService } from '../../utils/cleanup';
-import { SchedulingService } from '../../utils/scheduler';
+import { SchedulingService } from '../../utils/scheduler/scheduler';
 import {
 	getReminder,
 	getContactById,
@@ -102,7 +102,7 @@ jest.mock('@react-native-community/netinfo', () => ({
 }));
 
 // Mock schedulingHistory with default export
-jest.mock('../../utils/schedulingHistory', () => {
+jest.mock('../../utils/scheduler/schedulingHistory', () => {
 	const mockHistory = {
 		initialize: jest.fn().mockResolvedValue(true),
 		trackSnooze: jest.fn().mockResolvedValue(true),
@@ -264,7 +264,7 @@ jest.mock('../../utils/notificationCoordinator', () => ({
 }));
 
 // Mock scheduler
-jest.mock('../../utils/scheduler', () => {
+jest.mock('../../utils/scheduler/scheduler', () => {
 	let callCount = 0;
 
 	return {
@@ -355,7 +355,7 @@ describe('Notification Flow Integration', () => {
 
 	it('tracks snooze attempts correctly', async () => {
 		await snoozeHandler.handleSnooze(mockContactId, 'later_today', mockCurrentTime);
-		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		const mockHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 		expect(mockHistory.trackSnooze).toHaveBeenCalled();
 	});
 
@@ -363,7 +363,7 @@ describe('Notification Flow Integration', () => {
 		await snoozeHandler.initialize();
 		const result = await snoozeHandler.handleSnooze(mockContactId, 'tomorrow', mockCurrentTime);
 		expect(result).toBeTruthy();
-		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		const mockHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 		expect(mockHistory.trackSnooze).toHaveBeenCalledWith(
 			mockContactId,
 			mockCurrentTime,
@@ -376,7 +376,7 @@ describe('Notification Flow Integration', () => {
 		await snoozeHandler.initialize();
 		const result = await snoozeHandler.handleSnooze(mockContactId, 'next_week', mockCurrentTime);
 		expect(result).toBeTruthy();
-		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		const mockHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 		expect(mockHistory.trackSnooze).toHaveBeenCalledWith(
 			mockContactId,
 			mockCurrentTime,
@@ -394,7 +394,7 @@ describe('Notification Flow Integration', () => {
 	});
 
 	it('uses optimal time from pattern analysis', async () => {
-		const mockHistory = require('../../utils/schedulingHistory').schedulingHistory;
+		const mockHistory = require('../../utils/scheduler/schedulingHistory').schedulingHistory;
 		mockHistory.analyzeContactPatterns.mockResolvedValueOnce({
 			successRates: {
 				byHour: {
@@ -448,9 +448,9 @@ describe('Complete Reminder Lifecycle', () => {
 		jest.clearAllMocks();
 		const { notificationCoordinator: mockCoordinator } = require('../../utils/notificationCoordinator');
 		mockCoordinator.notificationMap.clear();
-		require('../../utils/scheduler').__resetCallCount();
+		require('../../utils/scheduler/scheduler').__resetCallCount();
 		// Reset schedulingHistory mock to return consistent data
-		require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
+		require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
 			successRates: {
 				byHour: { 16: { successRate: 0.8 } },
 			},

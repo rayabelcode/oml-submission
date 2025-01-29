@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon';
-import { auth } from '../config/firebase';
-import { notificationCoordinator } from './notificationCoordinator';
-import { cacheManager } from './cache';
+import { auth } from '../../config/firebase';
+import { notificationCoordinator } from '../notificationCoordinator';
+import { cacheManager } from '../cache';
 
 const PATTERN_WEIGHTS = {
 	CALL_ATTEMPTS: 1.0,

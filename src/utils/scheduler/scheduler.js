@@ -1,46 +1,17 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
-import { scheduleLocalNotificationWithPush } from './notifications/pushNotification';
 // Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
-import { RECURRENCE_METADATA } from '../../constants/notificationConstants';
-// Fallback
-const MAX_AGE_DAYS = RECURRENCE_METADATA?.MAX_AGE_DAYS || 30;
-// Warning if MAX_AGE_DAYS is missing
-if (!RECURRENCE_METADATA?.MAX_AGE_DAYS) {
-	console.warn('MAX_AGE_DAYS not found in RECURRENCE_METADATA, using fallback value of 30');
-}
-
-const FREQUENCY_MAPPINGS = {
-	daily: 1,
-	weekly: 7,
-	biweekly: 14,
-	monthly: 30,
-	quarterly: 90,
-	yearly: 365,
-};
-
-const PRIORITY_FLEXIBILITY = {
-	high: 1,
-	normal: 3,
-	low: 5,
-};
-
-const BLOCKED_TIMES = [
-	{ hour: 9, minute: 0 },
-	{ hour: 15, minute: 0 },
-	{ hour: 18, minute: 0 },
-];
-
-const TIME_BUFFER = 5;
-const TIME_SLOT_INTERVAL = 15;
-const MAX_ATTEMPTS = 32;
-
-const SCORE_WEIGHTS = {
-	DISTANCE_FROM_REMINDERS: 2.0,
-	PREFERRED_TIME_POSITION: 1.0,
-	PRIORITY_SCORE: 0.5,
-};
+import {
+	RECURRENCE_METADATA,
+	MAX_AGE_DAYS,
+	FREQUENCY_MAPPINGS,
+	PRIORITY_FLEXIBILITY,
+	BLOCKED_TIMES,
+	TIME_BUFFER,
+	TIME_SLOT_INTERVAL,
+	MAX_ATTEMPTS,
+} from './schedulerConstants';
 
 export class SchedulingService {
 	constructor(userPreferences, existingReminders, timeZone) {
@@ -897,51 +868,5 @@ export class SchedulingService {
 		}
 
 		return adjustedTime;
-	}
-
-	async scheduleNotificationForReminder(reminder) {
-		if (!reminder?.scheduledTime) {
-			console.error('No scheduledTime found for reminder:', reminder);
-			return;
-		}
-
-		let scheduledTime;
-		try {
-			// Handle different scheduledTime formats
-			if (reminder.scheduledTime instanceof Date) {
-				scheduledTime = reminder.scheduledTime;
-			} else if (typeof reminder.scheduledTime === 'string') {
-				scheduledTime = new Date(reminder.scheduledTime);
-			} else if (reminder.scheduledTime.toDate) {
-				scheduledTime = reminder.scheduledTime.toDate();
-			} else {
-				throw new Error('Invalid scheduledTime format');
-			}
-
-			if (isNaN(scheduledTime.getTime())) {
-				throw new Error('Invalid date value');
-			}
-		} catch (error) {
-			console.error('Invalid scheduledTime format:', reminder.scheduledTime, error);
-			return;
-		}
-
-		const notificationContent = {
-			title: `Scheduled Call: ${reminder.contactName || 'Contact'}`,
-			body: `Time to connect with ${reminder.contactName || 'your contact'}`,
-			data: {
-				type: 'SCHEDULED',
-				reminderId: reminder.id,
-				contactId: reminder.contact_id,
-				userId: reminder.user_id,
-			},
-		};
-
-		try {
-			await scheduleLocalNotificationWithPush(reminder.user_id, notificationContent, scheduledTime);
-		} catch (error) {
-			console.error('Error scheduling notification:', error);
-			throw error;
-		}
 	}
 }

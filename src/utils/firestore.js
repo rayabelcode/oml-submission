@@ -23,7 +23,7 @@ import { cacheManager } from './cache';
 import NetInfo from '@react-native-community/netinfo';
 import { RELATIONSHIP_DEFAULTS } from '../../constants/relationships';
 import { REMINDER_TYPES, REMINDER_STATUS } from '../../constants/notificationConstants';
-import { SchedulingService } from './scheduler';
+import { SchedulingService } from './scheduler/scheduler';
 
 // Store active subscriptions
 const activeSubscriptions = new Map();

@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { DateTime } from 'luxon';
-import { schedulingHistory } from '../../utils/schedulingHistory';
+import { schedulingHistory } from '../../utils/scheduler/schedulingHistory';
 
 // Suppress console.error
 beforeAll(() => {

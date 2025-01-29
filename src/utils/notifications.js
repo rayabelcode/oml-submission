@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { callNotesService } from './callNotes';
 import { scheduledCallService } from './scheduledCalls';
-import { schedulingHistory } from './schedulingHistory';
+import { schedulingHistory } from './scheduler/schedulingHistory';
 import { NOTIFICATION_MAP_KEY, REMINDER_TYPES } from '../../constants/notificationConstants';
 import { notificationCoordinator } from './notificationCoordinator';
 
