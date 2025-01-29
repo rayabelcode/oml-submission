@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { SchedulingService } from '../../utils/scheduler';
+import { SchedulingService } from '../../utils/scheduler/scheduler';
 import { DateTime } from 'luxon';
 import { updateContactScheduling, getContactReminders } from '../../utils/firestore';
 const RECURRENCE_METADATA = {

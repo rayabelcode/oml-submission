@@ -71,7 +71,7 @@ jest.mock('../../utils/schedulingHistory', () => ({
 	},
 }));
 
-jest.mock('../../utils/scheduler', () => ({
+jest.mock('../../utils/scheduler/scheduler', () => ({
 	SchedulingService: jest.fn().mockImplementation(() => ({
 		findAvailableTimeSlot: jest.fn((date) => date),
 		initialize: jest.fn(),

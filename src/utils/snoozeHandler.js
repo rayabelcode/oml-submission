@@ -5,7 +5,7 @@ import {
 	MAX_SNOOZE_ATTEMPTS,
 	PATTERN_TRACKING,
 } from '../../constants/notificationConstants';
-import { SchedulingService } from './scheduler';
+import { SchedulingService } from './scheduler/scheduler';
 import { updateContactScheduling, getUserPreferences, getActiveReminders, getContactById } from './firestore';
 import { schedulingHistory } from './schedulingHistory';
 

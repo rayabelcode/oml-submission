@@ -6,7 +6,7 @@ import { notificationCoordinator } from '../../utils/notificationCoordinator';
 import { schedulingHistory } from '../../utils/schedulingHistory';
 import { completeFollowUp } from '../../utils/callHandler';
 import { cleanupService } from '../../utils/cleanup';
-import { SchedulingService } from '../../utils/scheduler';
+import { SchedulingService } from '../../utils/scheduler/scheduler';
 import {
 	getReminder,
 	getContactById,
@@ -264,7 +264,7 @@ jest.mock('../../utils/notificationCoordinator', () => ({
 }));
 
 // Mock scheduler
-jest.mock('../../utils/scheduler', () => {
+jest.mock('../../utils/scheduler/scheduler', () => {
 	let callCount = 0;
 
 	return {
@@ -448,7 +448,7 @@ describe('Complete Reminder Lifecycle', () => {
 		jest.clearAllMocks();
 		const { notificationCoordinator: mockCoordinator } = require('../../utils/notificationCoordinator');
 		mockCoordinator.notificationMap.clear();
-		require('../../utils/scheduler').__resetCallCount();
+		require('../../utils/scheduler/scheduler').__resetCallCount();
 		// Reset schedulingHistory mock to return consistent data
 		require('../../utils/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
 			successRates: {
