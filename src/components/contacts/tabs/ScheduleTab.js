@@ -219,19 +219,18 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			// Get and delete reminders
 			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 
-			// Delete reminders one by one with error handling
+			// Delete both types of reminders
 			for (const reminder of existingReminders) {
-				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+				if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
 					try {
 						await deleteReminder(reminder.id);
 					} catch (err) {
 						console.error('Error deleting reminder:', err);
-						// Continue with other deletions even if one fails
 					}
 				}
 			}
 
-			// Update local state after all operations complete
+			// Update local state
 			setSelectedContact({
 				...contact,
 				scheduling: {
@@ -276,30 +275,17 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			}
 
 			if (nextContactDate) {
-				// First delete any existing SCHEDULED reminders
-				const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
-				for (const reminder of existingReminders) {
-					if (reminder.type === REMINDER_TYPES.SCHEDULED) {
-						await deleteReminder(reminder.id);
-					}
-				}
-
-				// Create new reminder with notified: false
-				await addReminder({
-					contactId: contact.id,
-					scheduledTime: nextContactDate,
-					type: REMINDER_TYPES.SCHEDULED,
-					status: 'pending',
-					contactName: `${contact.first_name} ${contact.last_name}`.trim(),
-				});
-
-				// Update contact scheduling
+				// The updateContactScheduling function will handle the reminder creation/deletion
 				await updateContactScheduling(contact.id, {
-					next_contact: nextContactDate,
+					recurring_next_date: nextContactDate.toISOString(),
 				});
 
 				setSelectedContact({
 					...contact,
+					scheduling: {
+						...contact.scheduling,
+						recurring_next_date: nextContactDate.toISOString(),
+					},
 					next_contact: nextContactDate.toISOString(),
 				});
 
@@ -316,6 +302,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			setShowSlotsFilledModal(false);
 		}
 	};
+
 	return (
 		<ScrollView
 			style={styles.container}
@@ -474,7 +461,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 									const deletePromises = existingReminders
 										.map((reminder) => {
-											if (reminder.type === REMINDER_TYPES.SCHEDULED) {
+											if (reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
 												return deleteReminder(reminder.id);
 											}
 										})
@@ -499,7 +486,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								setLoadingType(null);
 							}
 						} else {
-							// Reset selectedDate to current date when opening picker
 							setSelectedDate(new Date());
 							setShowDatePicker(true);
 						}

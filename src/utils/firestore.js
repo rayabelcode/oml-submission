@@ -519,7 +519,6 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				schedulingData.frequency
 			);
 
-			// Update with flattened structure
 			updateData.scheduling = {
 				...updateData.scheduling,
 				frequency: schedulingData.frequency,
@@ -530,7 +529,6 @@ export async function updateContactScheduling(contactId, schedulingData) {
 				recurring_next_date: reminderSchedule.recurring_next_date,
 			};
 
-			// Set next_contact based on scheduled date
 			if (reminderSchedule.status !== 'SLOTS_FILLED') {
 				updateData.next_contact = reminderSchedule.date;
 			}
@@ -555,47 +553,79 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		batch.update(contactRef, updateData);
 
-		// Handle reminder updates if there's a new next_contact date
-		if (updateData.next_contact) {
-			const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
+		// Fetch existing reminders
+		const existingReminders = await getContactReminders(contactId, auth.currentUser.uid);
 
-			// Delete existing scheduled reminders - with existence check
+		// Handle recurring reminder (SCHEDULED type)
+		if ('recurring_next_date' in schedulingData) {
+			// Delete existing SCHEDULED reminders
 			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED) {
 					const reminderRef = doc(db, 'reminders', reminder.id);
-					const reminderDoc = await getDoc(reminderRef);
-					if (reminderDoc.exists()) {
-						batch.delete(reminderRef);
-					}
+					batch.delete(reminderRef);
 				}
 			}
 
-			// Create new reminder only if deletions successfully processed
-			const newReminderRef = doc(collection(db, 'reminders'));
-			const now = Timestamp.now();
-			const scheduledTimestamp =
-				updateData.next_contact instanceof Timestamp
-					? updateData.next_contact
-					: Timestamp.fromDate(new Date(updateData.next_contact));
+			// Create new SCHEDULED reminder if recurring_next_date exists
+			if (updateData.scheduling.recurring_next_date) {
+				const newScheduledReminderRef = doc(collection(db, 'reminders'));
+				const scheduledTimestamp = Timestamp.fromDate(new Date(updateData.scheduling.recurring_next_date));
 
-			const reminderDoc = {
-				created_at: now,
-				updated_at: now,
-				contact_id: contactId,
-				user_id: auth.currentUser.uid,
-				scheduledTime: scheduledTimestamp,
-				status: REMINDER_STATUS.PENDING,
-				type: REMINDER_TYPES.SCHEDULED,
-				snoozed: false,
-				needs_attention: false,
-				completed: false,
-				completion_time: null,
-				notes_added: false,
-				contactName: contact.first_name + ' ' + contact.last_name,
-				notified: false,
-			};
+				const scheduledReminder = {
+					created_at: Timestamp.now(),
+					updated_at: Timestamp.now(),
+					contact_id: contactId,
+					user_id: auth.currentUser.uid,
+					scheduledTime: scheduledTimestamp,
+					status: REMINDER_STATUS.PENDING,
+					type: REMINDER_TYPES.SCHEDULED,
+					snoozed: false,
+					needs_attention: false,
+					completed: false,
+					completion_time: null,
+					notes_added: false,
+					contactName: `${contact.first_name} ${contact.last_name}`,
+					notified: false,
+				};
 
-			batch.set(newReminderRef, reminderDoc);
+				batch.set(newScheduledReminderRef, scheduledReminder);
+			}
+		}
+
+		// Handle custom date reminder (CUSTOM_DATE type)
+		if ('custom_next_date' in schedulingData) {
+			// Delete existing CUSTOM_DATE reminders
+			for (const reminder of existingReminders) {
+				if (reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
+					const reminderRef = doc(db, 'reminders', reminder.id);
+					batch.delete(reminderRef);
+				}
+			}
+
+			// Create new CUSTOM_DATE reminder if custom_next_date exists
+			if (updateData.scheduling.custom_next_date) {
+				const newCustomReminderRef = doc(collection(db, 'reminders'));
+				const customTimestamp = Timestamp.fromDate(new Date(updateData.scheduling.custom_next_date));
+
+				const customReminder = {
+					created_at: Timestamp.now(),
+					updated_at: Timestamp.now(),
+					contact_id: contactId,
+					user_id: auth.currentUser.uid,
+					scheduledTime: customTimestamp,
+					status: REMINDER_STATUS.PENDING,
+					type: REMINDER_TYPES.CUSTOM_DATE,
+					snoozed: false,
+					needs_attention: false,
+					completed: false,
+					completion_time: null,
+					notes_added: false,
+					contactName: `${contact.first_name} ${contact.last_name}`,
+					notified: false,
+				};
+
+				batch.set(newCustomReminderRef, customReminder);
+			}
 		}
 
 		await batch.commit();
