@@ -341,4 +341,52 @@ describe('CleanupService', () => {
 			expect(updatedStats.failureCount).toBe(0);
 		});
 	});
+
+	describe('CUSTOM_DATE Cleanup', () => {
+		it('cleans up completed CUSTOM_DATE reminders', async () => {
+			const completedCustomReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				status: 'completed',
+				scheduledTime: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+			};
+
+			notificationCoordinator.notificationMap.set('custom-1', {
+				localId: 'local-1',
+				...completedCustomReminder,
+			});
+
+			await cleanupService.performCleanup();
+
+			// Verify reminder was cleaned up
+			expect(deleteReminder).toHaveBeenCalledWith('custom-1');
+			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('local-1');
+		});
+
+		it('retains pending CUSTOM_DATE reminders', async () => {
+			const pendingCustomReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				status: 'pending',
+				scheduledTime: {
+					// Match the format expected by toDate()
+					toDate: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day in future
+				},
+			};
+
+			// Mock getReminder to return pending reminder
+			getReminder.mockResolvedValue(pendingCustomReminder);
+
+			notificationCoordinator.notificationMap.set('custom-1', {
+				localId: 'local-1',
+				...pendingCustomReminder,
+			});
+
+			await cleanupService.performCleanup();
+
+			// Verify reminder was not cleaned up
+			expect(deleteReminder).not.toHaveBeenCalledWith('custom-1');
+			expect(Notifications.cancelScheduledNotificationAsync).not.toHaveBeenCalledWith('local-1');
+		});
+	});
 });
