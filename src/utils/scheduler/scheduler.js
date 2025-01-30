@@ -34,6 +34,39 @@ export class SchedulingService {
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
 	}
 
+	async scheduleNotificationForReminder(reminderData) {
+		if (!reminderData?.scheduledTime || !reminderData?.contactName) {
+			throw new Error('Invalid reminder data provided');
+		}
+
+		try {
+			const scheduledTime =
+				reminderData.scheduledTime instanceof Date
+					? reminderData.scheduledTime
+					: reminderData.scheduledTime.toDate();
+
+			// Add the reminder to the internal reminders array
+			this.reminders.push({
+				...reminderData,
+				scheduledTime: Timestamp.fromDate(scheduledTime),
+				notified: false,
+				status: 'pending',
+				created_at: Timestamp.now(),
+				updated_at: Timestamp.now(),
+			});
+
+			return {
+				success: true,
+				scheduledTime: scheduledTime,
+				contact_id: reminderData.contact_id,
+				reminder_id: reminderData.id,
+			};
+		} catch (error) {
+			console.error('Error scheduling notification:', error);
+			throw new Error('Failed to schedule notification: ' + error.message);
+		}
+	}
+
 	formatTimeForDisplay(timeString) {
 		const hour = parseInt(timeString.split(':')[0]);
 		const period = hour >= 12 ? TIME_DISPLAY.PERIODS.PM : TIME_DISPLAY.PERIODS.AM;
