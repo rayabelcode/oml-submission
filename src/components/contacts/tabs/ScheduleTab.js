@@ -1,24 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import {
-	View,
-	Text,
-	TouchableOpacity,
-	ScrollView,
-	Alert,
-	ActivityIndicator,
-	Animated,
-	Modal,
-} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, Animated, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../../context/ThemeContext';
 import { useScheduleStyles } from '../../../styles/contacts/scheduleStyle';
 import {
 	updateContactScheduling,
-	updateNextContact,
 	getContactById,
 	getContactReminders,
 	deleteReminder,
-	getActiveReminders,
 } from '../../../utils/firestore';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
@@ -26,6 +15,13 @@ import { updateDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../../../config/firebase';
 import { DateTime } from 'luxon';
 import { REMINDER_TYPES } from '../../../../constants/notificationConstants';
+import {
+	FREQUENCY_OPTIONS,
+	PRIORITY_OPTIONS,
+	DAYS_OF_WEEK,
+	DEFAULT_ACTIVE_HOURS,
+} from '../../../utils/scheduler/schedulerConstants';
+import { SchedulingService } from '../../../utils/scheduler/scheduler';
 
 const SlotsFilledModal = ({ isVisible, onClose, details, onOptionSelect }) => {
 	const styles = useScheduleStyles();
@@ -60,45 +56,24 @@ const SlotsFilledModal = ({ isVisible, onClose, details, onOptionSelect }) => {
 	);
 };
 
-const FREQUENCY_OPTIONS = [
-	{ label: 'Daily', value: 'daily' },
-	{ label: 'Weekly', value: 'weekly' },
-	{ label: 'Bi-Weekly', value: 'biweekly' },
-	{ label: 'Monthly', value: 'monthly' },
-	{ label: 'Quarterly', value: 'quarterly' },
-	{ label: 'Yearly', value: 'yearly' },
-];
-
-const PRIORITY_OPTIONS = [
-	{ label: 'Low', value: 'low' },
-	{ label: 'Normal', value: 'normal' },
-	{ label: 'High', value: 'high' },
-];
-
-const DAYS_OF_WEEK = [
-	{ label: 'M', value: 'monday' },
-	{ label: 'T', value: 'tuesday' },
-	{ label: 'W', value: 'wednesday' },
-	{ label: 'T', value: 'thursday' },
-	{ label: 'F', value: 'friday' },
-	{ label: 'S', value: 'saturday' },
-	{ label: 'S', value: 'sunday' },
-];
 const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const { colors, spacing } = useTheme();
 	const styles = useScheduleStyles();
+
+	const schedulingService = useRef(
+		new SchedulingService(
+			auth.currentUser?.scheduling_preferences,
+			[],
+			Intl.DateTimeFormat().resolvedOptions().timeZone
+		)
+	).current;
+
 	const [showSlotsFilledModal, setShowSlotsFilledModal] = useState(false);
 	const [slotsFilledDetails, setSlotsFilledDetails] = useState(null);
-
-	// Date Picker default
 	const [selectedDate, setSelectedDate] = useState(new Date());
-
-	// Loading Animation
 	const dot1 = new Animated.Value(0);
 	const dot2 = new Animated.Value(0);
 	const dot3 = new Animated.Value(0);
-
-	// State management
 	const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 	const [frequency, setFrequency] = useState(contact?.scheduling?.frequency || null);
 	const [priority, setPriority] = useState(contact?.scheduling?.priority || 'normal');
@@ -109,22 +84,12 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 	const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [activeHours, setActiveHours] = useState({
-		start: contact?.scheduling?.custom_preferences?.active_hours?.start || '09:00',
-		end: contact?.scheduling?.custom_preferences?.active_hours?.end || '17:00',
+		start: contact?.scheduling?.custom_preferences?.active_hours?.start || DEFAULT_ACTIVE_HOURS.start,
+		end: contact?.scheduling?.custom_preferences?.active_hours?.end || DEFAULT_ACTIVE_HOURS.end,
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [loadingType, setLoadingType] = useState(null);
-
-	// Helper function for checking if a date is today
-	const isToday = (date) => {
-		const today = new Date();
-		return (
-			date.getDate() === today.getDate() &&
-			date.getMonth() === today.getMonth() &&
-			date.getFullYear() === today.getFullYear()
-		);
-	};
 
 	useEffect(() => {
 		if (loading) {
@@ -171,16 +136,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	}, [loading]);
 
-	// Format time helpers
-	const getHourFromTimeString = (timeString) => parseInt(timeString.split(':')[0]);
-	const formatHourToTimeString = (hour) => `${hour.toString().padStart(2, '0')}:00`;
-	const formatTimeForDisplay = (timeString) => {
-		const hour = getHourFromTimeString(timeString);
-		const period = hour >= 12 ? 'PM' : 'AM';
-		const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-		return `${displayHour}:00 ${period}`;
-	};
-	// Handle scheduling updates
 	const handleUpdateScheduling = async (updates) => {
 		setError(null);
 		setLoading(true);
@@ -207,7 +162,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			setLoadingType('recurring');
 			setLoading(true);
 
-			// Update contact scheduling
 			await updateContactScheduling(contact.id, {
 				frequency: null,
 				next_contact: null,
@@ -215,10 +169,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				custom_next_date: null,
 			});
 
-			// Get and delete reminders
 			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
 
-			// Delete both types of reminders
 			for (const reminder of existingReminders) {
 				if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
 					try {
@@ -229,7 +181,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				}
 			}
 
-			// Update local state
 			setSelectedContact({
 				...contact,
 				scheduling: {
@@ -250,7 +201,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	};
 
-	// Handle slots filled option
 	const handleSlotsFilledOption = async (option) => {
 		try {
 			setLoadingType('recurring');
@@ -274,7 +224,6 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			}
 
 			if (nextContactDate) {
-				// The updateContactScheduling function will handle the reminder creation/deletion
 				await updateContactScheduling(contact.id, {
 					recurring_next_date: nextContactDate.toISOString(),
 				});
@@ -361,10 +310,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								try {
 									setLoadingType('recurring');
 									setLoading(true);
-									// If the button is already active, turn it off
 									if (frequency === option.value) {
 										setFrequency(null);
-										// Let updateContactScheduling handle the reminder cleanup
 										const updatedContact = await updateContactScheduling(contact.id, {
 											frequency: null,
 											recurring_next_date: null,
@@ -419,6 +366,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					))}
 				</View>
 			</View>
+
 			<View style={styles.actionButtonsContainer}>
 				<TouchableOpacity
 					style={[styles.customDateButton, loading && styles.disabledButton]}
@@ -482,7 +430,9 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					<Text style={styles.recurringOffText}>No Contact</Text>
 				</TouchableOpacity>
 			</View>
+
 			{error && <Text style={styles.errorText}>{error}</Text>}
+
 			<TouchableOpacity
 				style={[styles.advancedSettingsButton, loading && styles.disabledButton]}
 				onPress={() => setShowAdvancedSettings(!showAdvancedSettings)}
@@ -494,6 +444,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				/>
 				<Text style={styles.advancedSettingsText}>Advanced Settings</Text>
 			</TouchableOpacity>
+
 			{showAdvancedSettings && (
 				<View>
 					<View style={styles.priorityContainer}>
@@ -543,6 +494,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							))}
 						</View>
 					</View>
+
 					<View style={styles.daysContainer}>
 						<Text style={[styles.sectionTitle, loading && styles.disabledText]}>Preferred Days</Text>
 						<View style={styles.daysGrid}>
@@ -612,7 +564,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								disabled={loading}
 							>
 								<Text style={[styles.timeText, loading && styles.disabledText]}>
-									Start: {formatTimeForDisplay(activeHours.start)}
+									Start: {schedulingService.formatTimeForDisplay(activeHours.start)}
 								</Text>
 							</TouchableOpacity>
 							<TouchableOpacity
@@ -621,21 +573,22 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 								disabled={loading}
 							>
 								<Text style={[styles.timeText, loading && styles.disabledText]}>
-									End: {formatTimeForDisplay(activeHours.end)}
+									End: {schedulingService.formatTimeForDisplay(activeHours.end)}
 								</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
 				</View>
 			)}
+
 			<TimePickerModal
 				visible={showStartTimePicker}
 				onClose={() => setShowStartTimePicker(false)}
-				initialHour={getHourFromTimeString(activeHours.start)}
+				initialHour={parseInt(activeHours.start.split(':')[0])}
 				title="Earliest Call Time"
 				onSelect={async (hour) => {
-					const newTime = formatHourToTimeString(hour);
-					const endHour = getHourFromTimeString(activeHours.end);
+					const newTime = schedulingService.formatHourToTimeString(hour);
+					const endHour = parseInt(activeHours.end.split(':')[0]);
 
 					if (hour >= endHour) {
 						Alert.alert('Invalid Time', 'Start time must be before end time', [{ text: 'OK' }]);
@@ -673,14 +626,15 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					}
 				}}
 			/>
+
 			<TimePickerModal
 				visible={showEndTimePicker}
 				onClose={() => setShowEndTimePicker(false)}
-				initialHour={getHourFromTimeString(activeHours.end)}
+				initialHour={parseInt(activeHours.end.split(':')[0])}
 				title="Latest Call Time"
 				onSelect={async (hour) => {
-					const newTime = formatHourToTimeString(hour);
-					const startHour = getHourFromTimeString(activeHours.start);
+					const newTime = schedulingService.formatHourToTimeString(hour);
+					const startHour = parseInt(activeHours.start.split(':')[0]);
 
 					if (hour <= startHour) {
 						Alert.alert('Invalid Time', 'End time must be after start time', [{ text: 'OK' }]);
@@ -718,12 +672,14 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 					}
 				}}
 			/>
+
 			<SlotsFilledModal
 				isVisible={showSlotsFilledModal}
 				onClose={() => setShowSlotsFilledModal(false)}
 				details={slotsFilledDetails}
 				onOptionSelect={handleSlotsFilledOption}
 			/>
+
 			<DatePickerModal
 				visible={showDatePicker}
 				selectedDate={selectedDate}
@@ -737,25 +693,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 						setLoadingType('custom');
 						setLoading(true);
 
-						let finalDate;
-
-						// If today is selected pick a time using random minutes (between 120-180)
-						if (isToday(date)) {
-							finalDate = new Date();
-							const minutesToAdd = 120 + Math.floor(Math.random() * 60);
-							finalDate.setTime(Date.now() + minutesToAdd * 60000);
-						} else {
-							// For future dates pick random time within active hours
-							finalDate = new Date(date);
-							const [startHour] = activeHours.start.split(':').map(Number);
-							const [endHour] = activeHours.end.split(':').map(Number);
-
-							const totalHours = endHour - startHour;
-							const randomHour = startHour + Math.random() * totalHours;
-							const randomMinutes = Math.floor(Math.random() * 60);
-
-							finalDate.setHours(Math.floor(randomHour), randomMinutes, 0, 0);
-						}
+						const finalDate = schedulingService.generateCustomDate(date, activeHours);
 
 						const updatedContact = await updateContactScheduling(contact.id, {
 							custom_next_date: finalDate.toISOString(),
