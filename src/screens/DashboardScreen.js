@@ -152,9 +152,10 @@ export default function DashboardScreen({ navigation, route }) {
 			await initializeSnoozeHandler(user.uid);
 
 			const contactId = selectedReminder.data.contactId;
+			const reminderId = selectedReminder.firestoreId;
 			const currentTime = DateTime.now();
 
-			await snoozeHandler.handleSnooze(contactId, option, currentTime);
+			await snoozeHandler.handleSnooze(contactId, option, currentTime, 'SCHEDULED', reminderId);
 			await loadReminders();
 			setShowSnoozeOptions(false);
 		} catch (error) {

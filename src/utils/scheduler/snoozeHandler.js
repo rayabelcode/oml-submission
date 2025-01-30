@@ -1,4 +1,6 @@
 import { DateTime } from 'luxon';
+import { doc, updateDoc, serverTimestamp, Timestamp, increment } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import {
 	REMINDER_STATUS,
 	SNOOZE_OPTIONS,
@@ -112,7 +114,12 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleLaterToday(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
+	async handleLaterToday(
+		contactId,
+		currentTime = DateTime.now(),
+		reminderType = 'SCHEDULED',
+		reminderId = null
+	) {
 		try {
 			if (!this.schedulingService) await this.initialize();
 			if (!this.schedulingService) {
@@ -154,6 +161,16 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SNOOZED,
 			});
 
+			if (reminderId) {
+				await updateDoc(doc(db, 'reminders', reminderId), {
+					scheduledTime: Timestamp.fromDate(availableTime),
+					status: REMINDER_STATUS.SNOOZED,
+					updated_at: serverTimestamp(),
+					snoozed: true,
+					snooze_count: increment(1),
+				});
+			}
+
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -164,14 +181,13 @@ export class SnoozeHandler {
 			if (availableTime) {
 				const contact = await getContactById(contactId);
 				const reminderData = {
-					id: contactId,
+					id: reminderId || contactId,
 					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
 					type: reminderType,
 				};
-				// Use schedulingService directly
 				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
 			return availableTime;
@@ -181,7 +197,12 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleTomorrow(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
+	async handleTomorrow(
+		contactId,
+		currentTime = DateTime.now(),
+		reminderType = 'SCHEDULED',
+		reminderId = null
+	) {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
@@ -207,6 +228,16 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SNOOZED,
 			});
 
+			if (reminderId) {
+				await updateDoc(doc(db, 'reminders', reminderId), {
+					scheduledTime: Timestamp.fromDate(availableTime),
+					status: REMINDER_STATUS.SNOOZED,
+					updated_at: serverTimestamp(),
+					snoozed: true,
+					snooze_count: increment(1),
+				});
+			}
+
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -217,7 +248,7 @@ export class SnoozeHandler {
 			if (availableTime) {
 				const contact = await getContactById(contactId);
 				const reminderData = {
-					id: contactId,
+					id: reminderId || contactId,
 					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
@@ -233,7 +264,12 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleNextWeek(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
+	async handleNextWeek(
+		contactId,
+		currentTime = DateTime.now(),
+		reminderType = 'SCHEDULED',
+		reminderId = null
+	) {
 		try {
 			if (!this.schedulingService) {
 				await this.initialize();
@@ -267,6 +303,16 @@ export class SnoozeHandler {
 				status: REMINDER_STATUS.SNOOZED,
 			});
 
+			if (reminderId) {
+				await updateDoc(doc(db, 'reminders', reminderId), {
+					scheduledTime: Timestamp.fromDate(availableTime),
+					status: REMINDER_STATUS.SNOOZED,
+					updated_at: serverTimestamp(),
+					snoozed: true,
+					snooze_count: increment(1),
+				});
+			}
+
 			// Track the snooze
 			await schedulingHistory.trackSnooze(
 				contactId,
@@ -283,7 +329,7 @@ export class SnoozeHandler {
 				}
 
 				const reminderData = {
-					id: contactId,
+					id: reminderId || contactId,
 					contactName: `${contact.first_name} ${contact.last_name}`,
 					scheduledTime: availableTime,
 					contact_id: contactId,
@@ -301,13 +347,21 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleSkip(contactId, currentTime = DateTime.now()) {
+	async handleSkip(contactId, currentTime = DateTime.now(), reminderId = null) {
 		try {
 			await updateContactScheduling(contactId, {
 				custom_next_date: null,
 				last_snooze_type: 'skip',
 				status: REMINDER_STATUS.SKIPPED,
 			});
+
+			if (reminderId) {
+				await updateDoc(doc(db, 'reminders', reminderId), {
+					status: REMINDER_STATUS.SKIPPED,
+					updated_at: serverTimestamp(),
+					snoozed: false,
+				});
+			}
 
 			await schedulingHistory.trackSkip(contactId, currentTime);
 			return true;
@@ -317,7 +371,13 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleSnooze(contactId, option, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
+	async handleSnooze(
+		contactId,
+		option,
+		currentTime = DateTime.now(),
+		reminderType = 'SCHEDULED',
+		reminderId = null
+	) {
 		if (!contactId) {
 			throw new Error('Contact ID is required');
 		}
@@ -330,13 +390,13 @@ export class SnoozeHandler {
 
 		switch (option) {
 			case 'later_today':
-				return this.handleLaterToday(contactId, currentTime, reminderType);
+				return this.handleLaterToday(contactId, currentTime, reminderType, reminderId);
 			case 'tomorrow':
-				return this.handleTomorrow(contactId, currentTime, reminderType);
+				return this.handleTomorrow(contactId, currentTime, reminderType, reminderId);
 			case 'next_week':
-				return this.handleNextWeek(contactId, currentTime, reminderType);
+				return this.handleNextWeek(contactId, currentTime, reminderType, reminderId);
 			case 'skip':
-				return this.handleSkip(contactId, currentTime);
+				return this.handleSkip(contactId, currentTime, reminderId);
 			default:
 				throw new Error('Unsupported snooze option');
 		}
