@@ -159,7 +159,10 @@ describe('Reminder Sync System', () => {
 						originalTime: scheduledTime.toISOString(),
 					},
 				},
-				trigger: scheduledTime,
+				trigger: {
+					type: 'date',
+					date: scheduledTime,
+				},
 			});
 		});
 
@@ -230,7 +233,10 @@ describe('Reminder Sync System', () => {
 						contactId: undefined,
 					},
 				},
-				trigger: scheduledTime,
+				trigger: {
+					type: 'date',
+					date: scheduledTime,
+				},
 			});
 		});
 
@@ -372,7 +378,10 @@ describe('Reminder Sync System', () => {
 						contactId: undefined,
 					},
 				},
-				trigger: scheduledTime,
+				trigger: {
+					type: 'date',
+					date: scheduledTime,
+				},
 			});
 		});
 
@@ -469,7 +478,10 @@ describe('Reminder Sync System', () => {
 						originalTime: customDateReminder.scheduledTime.toISOString(),
 					},
 				},
-				trigger: customDateReminder.scheduledTime,
+				trigger: {
+					type: 'date',
+					date: customDateReminder.scheduledTime,
+				},
 			});
 		});
 
@@ -518,7 +530,10 @@ describe('Reminder Sync System', () => {
 						originalTime: scheduledTime.toISOString(),
 					},
 				},
-				trigger: scheduledTime,
+				trigger: {
+					type: 'date',
+					date: scheduledTime,
+				},
 			});
 		});
 	});
