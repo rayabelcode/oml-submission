@@ -11,10 +11,14 @@ import {
 	TIME_BUFFER,
 	TIME_SLOT_INTERVAL,
 	MAX_ATTEMPTS,
+	TIME_DISPLAY,
 } from './schedulerConstants';
 
 export class SchedulingService {
 	constructor(userPreferences, existingReminders, timeZone) {
+		if (!timeZone) {
+			console.warn('No timezone provided, using system default');
+		}
 		try {
 			const testDate = DateTime.now().setZone(timeZone);
 			if (!testDate.isValid) {
