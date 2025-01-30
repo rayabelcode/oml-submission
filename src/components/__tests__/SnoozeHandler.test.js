@@ -1,3 +1,17 @@
+jest.mock('firebase/firestore', () => ({
+	doc: jest.fn(),
+	updateDoc: jest.fn(),
+	serverTimestamp: jest.fn(),
+	Timestamp: {
+		fromDate: jest.fn((date) => ({ seconds: date.getTime() / 1000 })),
+	},
+	increment: jest.fn((num) => ({ increment: num })),
+}));
+
+jest.mock('../../config/firebase', () => ({
+	db: {},
+}));
+
 import { jest } from '@jest/globals';
 import { DateTime } from 'luxon';
 import { SnoozeHandler } from '../../utils/scheduler/snoozeHandler';

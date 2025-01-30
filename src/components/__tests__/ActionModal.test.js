@@ -7,17 +7,19 @@ jest.mock('react-native-vector-icons/Ionicons', () => 'MockedIonicons');
 
 // Mock the theme context
 jest.mock('../../context/ThemeContext', () => ({
-    useTheme: () => ({
-        colors: {
-            background: { secondary: '#fff' },
-            primary: '#000',
-            text: { primary: '#000', disabled: '#888' },
-            error: '#ff0000',
-            border: '#ccc'
-        }
-    }),
-    spacing: { md: 8, lg: 16, xl: 24 },
-    layout: { borderRadius: { lg: 8 } }
+	useTheme: () => ({
+		colors: {
+			background: { secondary: '#fff' },
+			primary: '#000',
+			text: { primary: '#000', disabled: '#888' },
+			error: '#ff0000',
+			border: '#ccc',
+		},
+		spacing: { md: 8, lg: 16, xl: 24 },
+		layout: {
+			borderRadius: { lg: 8 },
+		},
+	}),
 }));
 
 describe('ActionModal', () => {
