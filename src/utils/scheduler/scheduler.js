@@ -1,6 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
-import { schedulingHistory } from './schedulingHistory';
 import {
 	RECURRENCE_METADATA,
 	MAX_AGE_DAYS,
@@ -11,15 +10,14 @@ import {
 	TIME_SLOT_INTERVAL,
 	MAX_ATTEMPTS,
 	TIME_DISPLAY,
-} from './schedulerConstants';
+} from './schedulerConstants.js';
 
 // Environment check
 const isCloudFunction = typeof process !== 'undefined' && process.env.FUNCTION_TARGET !== undefined;
 
 export class SchedulingService {
 	constructor(userPreferences, existingReminders, timeZone, options = {}) {
-		// Environment flag
-		this.isCloudFunction = options.isCloudFunction || isCloudFunction;
+		this.isCloudFunction = options.isCloudFunction || false;
 
 		if (!timeZone) {
 			console.warn('No timezone provided, using system default');
@@ -565,49 +563,7 @@ export class SchedulingService {
 				return baseSchedule;
 			}
 
-			try {
-				const patterns = await schedulingHistory.analyzeContactPatterns(contact.id, 90);
-
-				if (patterns?.lastUpdated) {
-					const lastUpdate = DateTime.fromISO(patterns.lastUpdated);
-					const daysSinceUpdate = DateTime.now().diff(lastUpdate, 'days').days;
-
-					if (daysSinceUpdate > MAX_AGE_DAYS) {
-						return {
-							...baseSchedule,
-							frequency: frequency,
-							pattern_adjusted: false,
-							recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
-						};
-					}
-				}
-
-				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
-					const suggestedTime = await schedulingHistory.suggestOptimalTime(
-						contact.id,
-						DateTime.fromJSDate(baseSchedule.scheduledTime.toDate()),
-						'recurring'
-					);
-
-					if (suggestedTime) {
-						const suggestedJSDate = suggestedTime.toJSDate();
-						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
-							return {
-								...baseSchedule,
-								scheduledTime: Timestamp.fromDate(suggestedJSDate),
-								frequency: frequency,
-								pattern_adjusted: true,
-								confidence: patterns.confidence,
-								recurring_next_date: suggestedTime.toISO(),
-							};
-						}
-					}
-				}
-			} catch (error) {
-				// Silently fall back to base schedule
-			}
-
-			// Return base schedule if pattern analysis fails or suggested time is blocked
+			// Return base schedule with recurring metadata
 			return {
 				...baseSchedule,
 				frequency: frequency,
