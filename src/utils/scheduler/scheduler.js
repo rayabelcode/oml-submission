@@ -30,6 +30,68 @@ export class SchedulingService {
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
 	}
 
+	formatTimeForDisplay(timeString) {
+		const hour = parseInt(timeString.split(':')[0]);
+		const period = hour >= 12 ? TIME_DISPLAY.PERIODS.PM : TIME_DISPLAY.PERIODS.AM;
+		const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+		return `${displayHour}:00 ${period}`;
+	}
+
+	isToday(date) {
+		const today = DateTime.now().setZone(this.timeZone);
+		const checkDate = DateTime.fromJSDate(date).setZone(this.timeZone);
+		return checkDate.day === today.day && checkDate.month === today.month && checkDate.year === today.year;
+	}
+
+	validateTimeRange(startTime, endTime) {
+		const [startHour] = startTime.split(':').map(Number);
+		const [endHour] = endTime.split(':').map(Number);
+		return startHour < endHour;
+	}
+
+	formatHourToTimeString(hour) {
+		return `${hour.toString().padStart(2, '0')}:00`;
+	}
+
+	handleSlotsFilledScenario(targetDate, activeHours, contact) {
+		return {
+			status: 'SLOTS_FILLED',
+			message: 'This day is fully booked. Would you like to:',
+			options: ['Try the next available day', 'Schedule for next week'],
+			details: {
+				date: targetDate.toFormat('cccc, LLLL d'),
+				workingHours: `${activeHours.start} - ${activeHours.end}`,
+				nextAvailableDay: this.findNextAvailableDay(targetDate.toJSDate(), contact),
+			},
+		};
+	}
+
+	generateCustomDate(baseDate, activeHours) {
+		const dt = DateTime.fromJSDate(baseDate).setZone(this.timeZone);
+
+		if (this.isToday(baseDate)) {
+			const now = DateTime.now().setZone(this.timeZone);
+			const minutesToAdd = 120 + Math.floor(Math.random() * 60);
+			return now.plus({ minutes: minutesToAdd }).toJSDate();
+		}
+
+		const [startHour] = activeHours.start.split(':').map(Number);
+		const [endHour] = activeHours.end.split(':').map(Number);
+
+		const totalHours = endHour - startHour;
+		const randomHour = startHour + Math.random() * totalHours;
+		const randomMinutes = Math.floor(Math.random() * 60);
+
+		return dt
+			.set({
+				hour: Math.floor(randomHour),
+				minute: randomMinutes,
+				second: 0,
+				millisecond: 0,
+			})
+			.toJSDate();
+	}
+
 	getPreferencesForContact(contact) {
 		const defaultPrefs = {
 			active_hours: { start: '09:00', end: '17:00' },
