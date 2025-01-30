@@ -58,7 +58,38 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			expect(snoozeHandler.handleSnooze).toHaveBeenCalledWith('test-contact', 'later_today');
+			expect(snoozeHandler.handleSnooze).toHaveBeenCalledWith(
+				'test-contact', // contactId
+				'later_today', // option
+				undefined, // currentTime (optional)
+				'SCHEDULED' // reminderType
+			);
+		});
+
+		// Add test for CUSTOM_DATE type
+		it('should handle snooze action for custom date notifications', async () => {
+			const response = {
+				actionIdentifier: 'snooze',
+				notification: {
+					request: {
+						content: {
+							data: {
+								type: 'CUSTOM_DATE',
+								contactId: 'test-contact',
+							},
+						},
+					},
+				},
+			};
+
+			await handleNotificationResponse(response);
+
+			expect(snoozeHandler.handleSnooze).toHaveBeenCalledWith(
+				'test-contact', // contactId
+				'later_today', // option
+				undefined, // currentTime (optional)
+				'CUSTOM_DATE' // reminderType
+			);
 		});
 
 		it('should ignore notifications without type', async () => {

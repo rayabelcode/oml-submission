@@ -106,9 +106,9 @@ describe('NotificationsView', () => {
 	it('renders scheduled reminders correctly', () => {
 		const { getAllByText, getByText } = render(<NotificationsView {...defaultProps} />);
 
-		// Check for Scheduled Call label
-		const scheduledCallLabels = getAllByText('Scheduled Call');
-		expect(scheduledCallLabels).toHaveLength(2);
+		// Check for Recurring Call label
+		const recurringCallLabels = getAllByText('Recurring Call');
+		expect(recurringCallLabels).toHaveLength(2);
 
 		// Check for specific reminder texts
 		expect(getByText(/Call John Doe.*Dec 31, 2024/)).toBeTruthy();
@@ -142,6 +142,50 @@ describe('NotificationsView', () => {
 		expect(getAllByText('Snooze')).toHaveLength(2);
 
 		// Check for reminder labels
-		expect(getAllByText('Scheduled Call')).toHaveLength(2);
+		expect(getAllByText('Recurring Call')).toHaveLength(2);
+	});
+
+	it('renders custom date reminders correctly', () => {
+		const customDateReminders = [
+			{
+				firestoreId: 'reminder3',
+				scheduledTime: '2024-12-31T17:21:18.881Z',
+				localId: 'local3',
+				type: REMINDER_TYPES.CUSTOM_DATE,
+				contactName: 'Bob Custom',
+			},
+		];
+
+		const { getByText } = render(<NotificationsView {...defaultProps} reminders={customDateReminders} />);
+
+		// Check for Custom Call label
+		expect(getByText('Custom Call')).toBeTruthy();
+		expect(getByText(/Call Bob Custom.*Dec 31, 2024/)).toBeTruthy();
+	});
+
+	it('renders mixed reminder types correctly', () => {
+		const mixedReminders = [
+			{
+				firestoreId: 'reminder1',
+				scheduledTime: '2024-12-31T17:21:18.881Z',
+				localId: 'local1',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'John Recurring',
+			},
+			{
+				firestoreId: 'reminder2',
+				scheduledTime: '2024-12-31T18:21:18.881Z',
+				localId: 'local2',
+				type: REMINDER_TYPES.CUSTOM_DATE,
+				contactName: 'Jane Custom',
+			},
+		];
+
+		const { getByText } = render(<NotificationsView {...defaultProps} reminders={mixedReminders} />);
+
+		expect(getByText('Recurring Call')).toBeTruthy();
+		expect(getByText('Custom Call')).toBeTruthy();
+		expect(getByText(/Call John Recurring.*Dec 31, 2024/)).toBeTruthy();
+		expect(getByText(/Call Jane Custom.*Dec 31, 2024/)).toBeTruthy();
 	});
 });

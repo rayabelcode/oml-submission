@@ -6,7 +6,12 @@ import {
 	PATTERN_TRACKING,
 } from '../../../constants/notificationConstants';
 import { SchedulingService } from './scheduler';
-import { updateContactScheduling, getUserPreferences, getActiveReminders, getContactById } from '../firestore';
+import {
+	updateContactScheduling,
+	getUserPreferences,
+	getActiveReminders,
+	getContactById,
+} from '../firestore';
 import { schedulingHistory } from './schedulingHistory';
 
 export class SnoozeHandler {
@@ -107,7 +112,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleLaterToday(contactId, currentTime = DateTime.now()) {
+	async handleLaterToday(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) await this.initialize();
 			if (!this.schedulingService) {
@@ -164,7 +169,7 @@ export class SnoozeHandler {
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'SCHEDULED',
+					type: reminderType,
 				};
 				// Use schedulingService directly
 				await this.schedulingService.scheduleNotificationForReminder(reminderData);
@@ -176,7 +181,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleTomorrow(contactId, currentTime = DateTime.now()) {
+	async handleTomorrow(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
@@ -217,7 +222,7 @@ export class SnoozeHandler {
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'SCHEDULED',
+					type: reminderType,
 				};
 				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
@@ -228,7 +233,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleNextWeek(contactId, currentTime = DateTime.now()) {
+	async handleNextWeek(contactId, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		try {
 			if (!this.schedulingService) {
 				await this.initialize();
@@ -283,7 +288,7 @@ export class SnoozeHandler {
 					scheduledTime: availableTime,
 					contact_id: contactId,
 					user_id: this.userId,
-					type: 'SCHEDULED',
+					type: reminderType,
 				};
 
 				await this.schedulingService.scheduleNotificationForReminder(reminderData);
@@ -312,7 +317,7 @@ export class SnoozeHandler {
 		}
 	}
 
-	async handleSnooze(contactId, option, currentTime = DateTime.now()) {
+	async handleSnooze(contactId, option, currentTime = DateTime.now(), reminderType = 'SCHEDULED') {
 		if (!contactId) {
 			throw new Error('Contact ID is required');
 		}
@@ -325,11 +330,11 @@ export class SnoozeHandler {
 
 		switch (option) {
 			case 'later_today':
-				return this.handleLaterToday(contactId, currentTime);
+				return this.handleLaterToday(contactId, currentTime, reminderType);
 			case 'tomorrow':
-				return this.handleTomorrow(contactId, currentTime);
+				return this.handleTomorrow(contactId, currentTime, reminderType);
 			case 'next_week':
-				return this.handleNextWeek(contactId, currentTime);
+				return this.handleNextWeek(contactId, currentTime, reminderType);
 			case 'skip':
 				return this.handleSkip(contactId, currentTime);
 			default:

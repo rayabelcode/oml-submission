@@ -9,8 +9,9 @@ export const handleNotificationResponse = async (response) => {
 
 	switch (data.type) {
 		case REMINDER_TYPES.SCHEDULED:
+		case REMINDER_TYPES.CUSTOM_DATE:
 			if (response.actionIdentifier === 'snooze') {
-				await snoozeHandler.handleSnooze(data.contactId, 'later_today');
+				await snoozeHandler.handleSnooze(data.contactId, 'later_today', undefined, data.type);
 			}
 			break;
 

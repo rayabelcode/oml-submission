@@ -52,8 +52,13 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 		<View style={styles.card}>
 			<View style={styles.cardContent}>
 				<Text style={styles.cardName}>
-					{reminder.type === REMINDER_TYPES.FOLLOW_UP ? 'Call Follow-up' : 'Scheduled Call'}
+					{reminder.type === REMINDER_TYPES.FOLLOW_UP
+						? 'Call Follow-up'
+						: reminder.type === REMINDER_TYPES.CUSTOM_DATE
+						? 'Custom Call'
+						: 'Recurring Call'}
 				</Text>
+
 				<Text style={styles.cardDate}>
 					{reminder.type === REMINDER_TYPES.FOLLOW_UP
 						? `Add notes for call with ${reminder.contactName || 'Contact'} on ${formattedDate}`

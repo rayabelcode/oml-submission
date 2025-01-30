@@ -5,6 +5,7 @@ export const NOTIFICATION_MAP_KEY = 'notification_map';
 export const REMINDER_TYPES = {
 	SCHEDULED: 'SCHEDULED',
 	FOLLOW_UP: 'FOLLOW_UP',
+	CUSTOM_DATE: 'CUSTOM_DATE',
 };
 
 export const REMINDER_STATUS = {

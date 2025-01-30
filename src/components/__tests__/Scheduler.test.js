@@ -1477,4 +1477,72 @@ describe('SchedulingService', () => {
 			});
 		});
 	});
+
+	describe('CUSTOM_DATE Scheduling', () => {
+		it('schedules CUSTOM_DATE reminders correctly', async () => {
+			const customDateReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				scheduledTime: new Date('2024-12-31T12:00:00Z'),
+				contactName: 'John Custom',
+				scheduling: {
+					relationship_type: 'friend',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			const availableTime = await schedulingService.findAvailableTimeSlot(
+				customDateReminder.scheduledTime,
+				customDateReminder
+			);
+
+			expect(availableTime).toBeDefined();
+			const scheduledDateTime = DateTime.fromJSDate(availableTime);
+			expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(9);
+			expect(scheduledDateTime.hour).toBeLessThan(17);
+		});
+
+		it('handles scheduling conflicts for CUSTOM_DATE reminders', async () => {
+			const existingTime = new Date('2024-12-31T12:00:00Z');
+			schedulingService.reminders = [
+				{
+					scheduledTime: {
+						toDate: () => existingTime,
+					},
+				},
+			];
+
+			const customDateReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				scheduledTime: new Date('2024-12-31T12:00:00Z'),
+				scheduling: {
+					relationship_type: 'friend',
+					custom_preferences: {
+						active_hours: { start: '09:00', end: '17:00' },
+					},
+				},
+			};
+
+			const availableTime = await schedulingService.findAvailableTimeSlot(
+				customDateReminder.scheduledTime,
+				customDateReminder
+			);
+
+			expect(availableTime).toBeDefined();
+
+			// Verify minimum gap is respected
+			const minimumGapMs =
+				(schedulingService.userPreferences?.scheduling_preferences?.minimumGapMinutes || 30) * 60 * 1000;
+			const timeDiff = Math.abs(availableTime.getTime() - existingTime.getTime());
+			expect(timeDiff).toBeGreaterThanOrEqual(minimumGapMs);
+
+			// Verify time is within working hours
+			const scheduledDateTime = DateTime.fromJSDate(availableTime);
+			expect(scheduledDateTime.hour).toBeGreaterThanOrEqual(9);
+			expect(scheduledDateTime.hour).toBeLessThan(17);
+		});
+	});
 });

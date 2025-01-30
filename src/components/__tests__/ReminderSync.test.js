@@ -428,4 +428,98 @@ describe('Reminder Sync System', () => {
 			});
 		});
 	});
+
+	describe('CUSTOM_DATE Reminders', () => {
+		it('syncs CUSTOM_DATE reminders correctly', async () => {
+			const customDateReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				scheduledTime: new Date('2024-12-31T12:00:00Z'),
+				contact_id: 'contact-1',
+				status: 'pending',
+				title: 'Custom Date Reminder',
+				body: 'Test reminder',
+			};
+
+			// Simulate Firestore snapshot update
+			await new Promise((resolve) => {
+				onSnapshotCallback({
+					docChanges: () => [
+						{
+							type: 'added',
+							doc: {
+								id: customDateReminder.id,
+								data: () => customDateReminder,
+							},
+						},
+					],
+				});
+				setTimeout(resolve, 0);
+			});
+
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content: {
+					title: customDateReminder.title,
+					body: customDateReminder.body,
+					data: {
+						reminderId: customDateReminder.id,
+						contactId: customDateReminder.contact_id,
+						type: 'CUSTOM_DATE',
+						scheduledTimezone: 'America/New_York',
+						originalTime: customDateReminder.scheduledTime.toISOString(),
+					},
+				},
+				trigger: customDateReminder.scheduledTime,
+			});
+		});
+
+		it('handles updates to CUSTOM_DATE reminders', async () => {
+			const reminderId = 'custom-1';
+			const scheduledTime = new Date('2024-12-31T15:00:00Z');
+			const updatedReminder = {
+				id: reminderId,
+				type: 'CUSTOM_DATE',
+				scheduledTime,
+				contact_id: 'contact-1',
+				status: 'pending',
+				title: 'Updated Custom Reminder',
+				body: 'Updated test reminder',
+			};
+
+			// Setup existing notification in the Map
+			reminderSync.localNotifications.set(reminderId, 'local-notification-id');
+
+			// Simulate Firestore update
+			await new Promise((resolve) => {
+				onSnapshotCallback({
+					docChanges: () => [
+						{
+							type: 'modified',
+							doc: {
+								id: reminderId,
+								data: () => updatedReminder,
+							},
+						},
+					],
+				});
+				setTimeout(resolve, 0);
+			});
+
+			expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('local-notification-id');
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith({
+				content: {
+					title: updatedReminder.title,
+					body: updatedReminder.body,
+					data: {
+						reminderId: reminderId,
+						contactId: updatedReminder.contact_id,
+						type: 'CUSTOM_DATE',
+						scheduledTimezone: 'America/New_York',
+						originalTime: scheduledTime.toISOString(),
+					},
+				},
+				trigger: scheduledTime,
+			});
+		});
+	});
 });

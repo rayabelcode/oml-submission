@@ -7,6 +7,8 @@ import { schedulingHistory } from '../../utils/scheduler/schedulingHistory';
 import { completeFollowUp } from '../../utils/callHandler';
 import { cleanupService } from '../../utils/cleanup';
 import { SchedulingService } from '../../utils/scheduler/scheduler';
+import { handleNotificationResponse } from '../../utils/notifications/notificationHandler';
+import * as Notifications from 'expo-notifications';
 import {
 	getReminder,
 	getContactById,
@@ -90,6 +92,13 @@ jest.mock('@react-navigation/native', () => ({
 		select: jest.fn(),
 		OS: 'ios',
 	},
+}));
+
+// Mock Notifications
+jest.mock('expo-notifications', () => ({
+	scheduleNotificationAsync: jest.fn(),
+	cancelScheduledNotificationAsync: jest.fn(),
+	getAllScheduledNotificationsAsync: jest.fn(),
 }));
 
 // Mock NetInfo
@@ -260,7 +269,40 @@ jest.mock('../../utils/notificationCoordinator', () => ({
 		scheduleNotification: jest.fn().mockResolvedValue('notification-id'),
 		cancelNotification: jest.fn().mockResolvedValue(true),
 		saveNotificationMap: jest.fn().mockResolvedValue(true),
+		scheduleCustomDateReminder: jest.fn().mockImplementation(async (reminder) => {
+			const mockNotifications = require('expo-notifications');
+			await mockNotifications.scheduleNotificationAsync({
+				content: {
+					data: {
+						type: 'CUSTOM_DATE',
+						contactId: reminder.contactId,
+					},
+				},
+			});
+			return true;
+		}),
 	},
+}));
+
+// Mock for notificationHandler
+jest.mock('../../utils/notifications/notificationHandler', () => ({
+	handleNotificationResponse: jest.fn().mockImplementation(async (response) => {
+		if (response.actionIdentifier === 'complete') {
+			await require('../../utils/firestore').updateContactScheduling(
+				response.notification.request.content.data.contactId,
+				{ status: 'completed' }
+			);
+		} else if (response.actionIdentifier === 'snooze') {
+			const { snoozeHandler } = require('../../utils/scheduler/snoozeHandler');
+			await snoozeHandler.handleSnooze(
+				response.notification.request.content.data.contactId,
+				'later_today',
+				undefined,
+				response.notification.request.content.data.type
+			);
+		}
+		return true;
+	}),
 }));
 
 // Mock scheduler
@@ -450,12 +492,14 @@ describe('Complete Reminder Lifecycle', () => {
 		mockCoordinator.notificationMap.clear();
 		require('../../utils/scheduler/scheduler').__resetCallCount();
 		// Reset schedulingHistory mock to return consistent data
-		require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue({
-			successRates: {
-				byHour: { 16: { successRate: 0.8 } },
-			},
-			successfulAttempts: [1, 2, 3],
-		});
+		require('../../utils/scheduler/schedulingHistory').schedulingHistory.analyzeContactPatterns.mockResolvedValue(
+			{
+				successRates: {
+					byHour: { 16: { successRate: 0.8 } },
+				},
+				successfulAttempts: [1, 2, 3],
+			}
+		);
 	});
 
 	afterEach(() => {
@@ -749,5 +793,77 @@ describe('Complete Reminder Lifecycle', () => {
 			const history = await schedulingHistory.analyzeContactPatterns(mockContact.id);
 			expect(history.successfulAttempts.length).toBeGreaterThan(i);
 		}
+	});
+
+	describe('CUSTOM_DATE Notification Flow', () => {
+		it('handles complete flow for CUSTOM_DATE reminders', async () => {
+			const customReminder = {
+				id: 'custom-1',
+				type: 'CUSTOM_DATE',
+				scheduledTime: new Date('2024-12-31T12:00:00Z'),
+				contactId: 'contact-1',
+				contactName: 'John Custom',
+			};
+
+			// Test creation
+			await notificationCoordinator.scheduleCustomDateReminder(customReminder);
+			expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+				expect.objectContaining({
+					content: expect.objectContaining({
+						data: expect.objectContaining({
+							type: 'CUSTOM_DATE',
+						}),
+					}),
+				})
+			);
+
+			// Spy for this test
+			const { snoozeHandler } = require('../../utils/scheduler/snoozeHandler');
+			const spy = jest.spyOn(snoozeHandler, 'handleSnooze');
+
+			const response = {
+				actionIdentifier: 'snooze',
+				notification: {
+					request: {
+						content: {
+							data: {
+								type: 'CUSTOM_DATE',
+								contactId: 'custom-1',
+							},
+						},
+					},
+				},
+			};
+
+			await handleNotificationResponse(response);
+			expect(spy).toHaveBeenCalledWith('custom-1', 'later_today', undefined, 'CUSTOM_DATE');
+
+			// Clean up spy
+			spy.mockRestore();
+		});
+
+		it('handles completion of CUSTOM_DATE reminders', async () => {
+			const response = {
+				actionIdentifier: 'complete',
+				notification: {
+					request: {
+						content: {
+							data: {
+								type: 'CUSTOM_DATE',
+								contactId: 'custom-1',
+							},
+						},
+					},
+				},
+			};
+
+			await handleNotificationResponse(response);
+			expect(updateContactScheduling).toHaveBeenCalledWith(
+				'custom-1',
+				expect.objectContaining({
+					status: 'completed',
+				})
+			);
+		});
 	});
 });
