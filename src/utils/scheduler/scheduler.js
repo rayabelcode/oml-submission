@@ -1,6 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
-// Recurring reminder configurations
 import { schedulingHistory } from './schedulingHistory';
 import {
 	RECURRENCE_METADATA,
@@ -14,11 +13,18 @@ import {
 	TIME_DISPLAY,
 } from './schedulerConstants';
 
+// Environment check
+const isCloudFunction = typeof process !== 'undefined' && process.env.FUNCTION_TARGET !== undefined;
+
 export class SchedulingService {
-	constructor(userPreferences, existingReminders, timeZone) {
+	constructor(userPreferences, existingReminders, timeZone, options = {}) {
+		// Environment flag
+		this.isCloudFunction = options.isCloudFunction || isCloudFunction;
+
 		if (!timeZone) {
 			console.warn('No timezone provided, using system default');
 		}
+
 		try {
 			const testDate = DateTime.now().setZone(timeZone);
 			if (!testDate.isValid) {
@@ -26,12 +32,24 @@ export class SchedulingService {
 			}
 			this.timeZone = timeZone;
 		} catch (e) {
-			this.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			this.timeZone = this.isCloudFunction
+				? 'UTC' // Default to UTC in Cloud Functions
+				: Intl.DateTimeFormat().resolvedOptions().timeZone;
 		}
 
 		this.userPreferences = userPreferences;
 		this.reminders = existingReminders || [];
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
+	}
+
+	// Helper method for Timestamp
+	createTimestamp(date) {
+		try {
+			return Timestamp.fromDate(date);
+		} catch (error) {
+			console.error('Error creating timestamp:', error);
+			throw new Error('Failed to create timestamp');
+		}
 	}
 
 	async scheduleNotificationForReminder(reminderData) {
@@ -45,14 +63,13 @@ export class SchedulingService {
 					? reminderData.scheduledTime
 					: reminderData.scheduledTime.toDate();
 
-			// Add the reminder to the internal reminders array
 			this.reminders.push({
 				...reminderData,
-				scheduledTime: Timestamp.fromDate(scheduledTime),
+				scheduledTime: this.createTimestamp(scheduledTime),
 				notified: false,
 				status: 'pending',
-				created_at: Timestamp.now(),
-				updated_at: Timestamp.now(),
+				created_at: this.createTimestamp(new Date()),
+				updated_at: this.createTimestamp(new Date()),
 			});
 
 			return {
