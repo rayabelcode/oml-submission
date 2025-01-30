@@ -203,7 +203,11 @@ class ReminderSync {
 							originalTime: scheduledTime.toISOString(),
 						},
 					},
-					trigger: localDateTime.toJSDate(), // Use Date object directly
+					// Use Date object directly for the trigger to avoid timezone issues
+					trigger: {
+						type: 'date',
+						date: localDateTime.toJSDate(),
+					},
 				});
 
 				this.localNotifications.set(reminder.id, notificationId);
