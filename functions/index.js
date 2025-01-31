@@ -218,19 +218,6 @@ export const processReminders = onSchedule(
           if (contactDoc.exists) {
             const contactData = contactDoc.data();
             const reminderTime = reminder.scheduledTime.toDate().getTime();
-            const nextContactTime = contactData.next_contact ?
-              new Date(contactData.next_contact).getTime() :
-              null;
-
-            console.log("Processing contact:", {
-              contactId: reminder.contact_id,
-              contactName: reminder.contactName,
-              hasFrequency: !!contactData.scheduling?.frequency,
-              frequency: contactData.scheduling?.frequency,
-              reminderTime: new Date(reminderTime).toISOString(),
-              nextContactTime: nextContactTime ? new Date(nextContactTime).toISOString() : null,
-              scheduling: contactData.scheduling || null,
-            });
 
             // Simplified condition: process if contact has frequency
             if (contactData.scheduling?.frequency) {
@@ -254,18 +241,6 @@ export const processReminders = onSchedule(
               // Handle recurring schedule updates
               if (contactData.scheduling?.frequency) {
                 try {
-                  console.log("Starting recurring schedule process:", {
-                    contactId: reminder.contact_id,
-                    contactName: reminder.contactName,
-                    frequency: contactData.scheduling.frequency,
-                    activeHours: contactData.scheduling.custom_preferences.active_hours,
-                    preferredDays: contactData.scheduling.custom_preferences.preferred_days,
-                    currentScheduling: {
-                      recurringNextDate: contactData.scheduling.recurring_next_date,
-                      nextContact: contactData.next_contact,
-                    },
-                  });
-
                   const nextRecurring = await scheduler.scheduleRecurringReminder(
                     contactData,
                     new Date(),
@@ -304,13 +279,6 @@ export const processReminders = onSchedule(
                     };
 
                     batch.set(newReminderRef, newReminderData);
-
-                    console.log("Adding new reminder to batch:", {
-                      contactId: reminder.contact_id,
-                      reminderId: newReminderRef.id,
-                      scheduledFor: nextRecurring.scheduledTime.toDate(),
-                      reminderData: newReminderData,
-                    });
                   } else {
                     console.error("No valid next time found:", {
                       contactId: reminder.contact_id,
@@ -326,13 +294,6 @@ export const processReminders = onSchedule(
                   updates["scheduling.recurring_next_date"] = null;
                 }
               }
-
-              // After batch commit
-              console.log("Batch operation completed:", {
-                contactId: reminder.contact_id,
-                updates,
-                timestamp: new Date().toISOString(),
-              });
 
               // Clear custom date if it was used
               if (contactData.scheduling?.custom_next_date) {
@@ -357,16 +318,6 @@ export const processReminders = onSchedule(
               batch.update(contactRef, updates);
             }
           }
-
-          // Log batch operations before commit
-          console.log("Preparing to commit batch:", {
-            contactId: reminder.contact_id,
-            reminderDocId: reminderDoc.id,
-            operations: {
-              reminderUpdate: true,
-              contactUpdate: contactDoc.exists,
-            },
-          });
 
           // Commit all updates atomically
           await batch.commit();
