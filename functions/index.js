@@ -228,9 +228,12 @@ export const processReminders = onSchedule(
               // Calculate next contact date using scheduler
               const scheduler = new SchedulingService(
                 userPreferences,
-                [], // Empty array since we're just calculating next date
-                "UTC", // Use UTC for cloud functions
-                { isCloudFunction: true },
+                [], // Empty array since we're calculating next date
+                "America/New_York", // Use user's timezone
+                {
+                  isCloudFunction: true,
+                  enforceActiveHours: true,
+                },
               );
 
               const updates = {
