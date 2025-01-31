@@ -9,7 +9,10 @@
   "functions": [
     {
       "source": "functions",
-      "codebase": "default",
+      "runtime": "nodejs22",
+      "regions": ["us-central1"],
+      "memory": "256MB",
+      "timeout": "60s",
       "ignore": [
         "node_modules",
         ".git",

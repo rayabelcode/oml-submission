@@ -30,3 +30,8 @@ functions/serviceAccountKey.json
 
 # macOS
 .DS_Store
+
+# Cloud Functions Copied Files
+functions/src/utils/schedulerConstants.js
+functions/src/utils/snoozeHandler.js
+functions/src/utils/scheduler.js
