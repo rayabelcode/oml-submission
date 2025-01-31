@@ -458,3 +458,92 @@ function testErrorHandling() {
 
   return results;
 }
+
+// Test Recurring Schedule
+// Terminal: curl https://us-central1-onmylist-app.cloudfunctions.net/testRecurringSchedule
+export const testRecurringSchedule = onRequest({
+  timeoutSeconds: 60,
+  memory: "256MiB",
+}, async (req, res) => {
+  try {
+    const TEST_USER_ID = "LTQ2OSK61lTjRdyqF9qXn94HW0t1";
+    const TEST_CONTACT_ID = "16yYVlKogbB3eN0xLVPM"; // Stanley - Test Contact ID
+
+    // Get user preferences
+    const userPrefsDoc = await db.collection("user_preferences").doc(TEST_USER_ID).get();
+    const userPreferences = userPrefsDoc.exists ? userPrefsDoc.data() : {};
+
+    // Get initial contact data
+    const initialContactDoc = await db.collection("contacts").doc(TEST_CONTACT_ID).get();
+    if (!initialContactDoc.exists) {
+      throw new Error("Test contact not found");
+    }
+    const initialContact = initialContactDoc.data();
+
+    // Test different frequencies
+    const frequencies = ["daily", "weekly", "biweekly", "monthly"];
+    const results = {};
+
+    for (const frequency of frequencies) {
+      // Update contact frequency
+      await db.collection("contacts").doc(TEST_CONTACT_ID).update({
+        "scheduling.frequency": frequency,
+        "scheduling.updated_at": FieldValue.serverTimestamp(),
+      });
+
+      // Get fresh contact data
+      const contactDoc = await db.collection("contacts").doc(TEST_CONTACT_ID).get();
+      const contact = contactDoc.data();
+
+      // Create scheduler for this test
+      const scheduler = new SchedulingService(
+        userPreferences,
+        [], // Empty array since we're testing
+        "UTC",
+        { isCloudFunction: true },
+      );
+
+      // Test scheduling
+      const result = await scheduler.scheduleRecurringReminder(
+        contact,
+        new Date(),
+        frequency,
+      );
+
+      results[frequency] = {
+        scheduledTime: result.scheduledTime,
+        score: result.score,
+        flexibility_used: result.flexibility_used,
+        recurring_next_date: result.recurring_next_date,
+      };
+    }
+
+    // Reset contact to original frequency (null)
+    await db.collection("contacts").doc(TEST_CONTACT_ID).update({
+      "scheduling.frequency": null,
+      "scheduling.updated_at": FieldValue.serverTimestamp(),
+    });
+
+    // Consolidated test log
+    console.log("Test completed:", {
+      contactId: TEST_CONTACT_ID,
+      frequenciesTested: frequencies,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({
+      success: true,
+      userPreferences,
+      contactId: TEST_CONTACT_ID,
+      frequencyResults: results,
+      originalContact: initialContact,
+    });
+  } catch (error) {
+    console.error("Error in test:", error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
