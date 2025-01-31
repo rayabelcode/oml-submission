@@ -145,15 +145,18 @@ function testErrorHandling() {
 		results.invalidDate = 'Success: Error caught correctly';
 	}
 
-	// Test 3: Invalid timezone
+	// Test 3: Invalid timezone (updated to test fallback behavior)
 	try {
-		new SchedulingService({}, [], 'Invalid/NonExistentZone', { isCloudFunction: true });
-		results.invalidTimezone = 'Failed: Should have thrown error';
+		const invalidTzService = new SchedulingService({}, [], 'Invalid/Timezone', { isCloudFunction: true });
+		results.invalidTimezone =
+			invalidTzService.timeZone === 'UTC'
+				? 'Success: Fallback to UTC correctly'
+				: 'Failed: Did not fallback to UTC';
 	} catch (error) {
-		results.invalidTimezone = 'Success: Error caught correctly';
+		results.invalidTimezone = 'Failed: Should not throw error';
 	}
 
-	// Test 4: Missing required parameters
+	// Test 4: Missing parameters
 	try {
 		scheduler.calculatePreliminaryDate(null, null);
 		results.missingParams = 'Failed: Should have thrown error';

@@ -50,17 +50,15 @@ export class SchedulingService {
 		}
 
 		try {
-			// More strict timezone validation
 			const testDate = DateTime.now().setZone(timeZone);
 			if (!testDate.isValid || testDate.invalidReason === 'unsupported zone') {
-				throw new Error(`Invalid timezone: ${timeZone}`);
+				// Instead of throwing, fall back to default
+				this.timeZone = this.isCloudFunction ? 'UTC' : Intl.DateTimeFormat().resolvedOptions().timeZone;
+			} else {
+				this.timeZone = timeZone;
 			}
-			this.timeZone = timeZone;
 		} catch (e) {
-			if (e.message.includes('Invalid timezone')) {
-				throw e; // Re-throw invalid timezone errors
-			}
-			// Fall back to default timezone only for other errors
+			// Fall back to default timezone for any error
 			this.timeZone = this.isCloudFunction ? 'UTC' : Intl.DateTimeFormat().resolvedOptions().timeZone;
 		}
 
