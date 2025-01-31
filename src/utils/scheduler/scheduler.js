@@ -15,6 +15,32 @@ import {
 // Environment check
 const isCloudFunction = typeof process !== 'undefined' && process.env.FUNCTION_TARGET !== undefined;
 
+const validateDate = (date) => {
+	if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+		throw new Error('Invalid date provided');
+	}
+	return true;
+};
+
+const validateTimezone = (timezone) => {
+	try {
+		const testDate = DateTime.now().setZone(timezone);
+		if (!testDate.isValid) {
+			throw new Error(`Invalid timezone: ${timezone}`);
+		}
+		return true;
+	} catch (e) {
+		throw new Error(`Invalid timezone: ${timezone}`);
+	}
+};
+
+const validateFrequency = (frequency) => {
+	if (!frequency || !FREQUENCY_MAPPINGS[frequency.toLowerCase()]) {
+		throw new Error(`Invalid frequency: ${frequency}`);
+	}
+	return true;
+};
+
 export class SchedulingService {
 	constructor(userPreferences, existingReminders, timeZone, options = {}) {
 		this.isCloudFunction = options.isCloudFunction || false;
@@ -24,15 +50,18 @@ export class SchedulingService {
 		}
 
 		try {
+			// More strict timezone validation
 			const testDate = DateTime.now().setZone(timeZone);
-			if (!testDate.isValid) {
-				throw new Error('Invalid timezone');
+			if (!testDate.isValid || testDate.invalidReason === 'unsupported zone') {
+				throw new Error(`Invalid timezone: ${timeZone}`);
 			}
 			this.timeZone = timeZone;
 		} catch (e) {
-			this.timeZone = this.isCloudFunction
-				? 'UTC' // Default to UTC in Cloud Functions
-				: Intl.DateTimeFormat().resolvedOptions().timeZone;
+			if (e.message.includes('Invalid timezone')) {
+				throw e; // Re-throw invalid timezone errors
+			}
+			// Fall back to default timezone only for other errors
+			this.timeZone = this.isCloudFunction ? 'UTC' : Intl.DateTimeFormat().resolvedOptions().timeZone;
 		}
 
 		this.userPreferences = userPreferences;
@@ -166,6 +195,9 @@ export class SchedulingService {
 	}
 
 	calculatePreliminaryDate(lastContactDate, frequency) {
+		validateDate(lastContactDate);
+		validateFrequency(frequency);
+
 		const days = FREQUENCY_MAPPINGS[frequency.toLowerCase()];
 		if (!days) throw new Error(`Invalid frequency: ${frequency}`);
 
