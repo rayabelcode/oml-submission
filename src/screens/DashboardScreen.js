@@ -29,6 +29,7 @@ export default function DashboardScreen({ navigation, route }) {
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState('calendar');
 	const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
+	const [snoozeOptions, setSnoozeOptions] = useState([]);
 	const [snoozeLoading, setSnoozeLoading] = useState(false);
 	const [snoozeError, setSnoozeError] = useState(null);
 	const [selectedReminder, setSelectedReminder] = useState(null);
@@ -136,7 +137,8 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	};
 
-	const handleSnooze = (reminder) => {
+	// Options for snoozing reminders
+	const handleSnooze = async (reminder) => {
 		if (!reminder?.scheduledTime) {
 			console.error('Invalid reminder data:', reminder);
 			Alert.alert('Error', 'Unable to snooze reminder');
@@ -144,6 +146,10 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 
 		setSelectedReminder(reminder);
+
+		// Get available options based on reminder frequency
+		const options = await snoozeHandler.getAvailableSnoozeOptions(reminder.firestoreId);
+		setSnoozeOptions(options);
 		setShowSnoozeOptions(true);
 	};
 
@@ -287,32 +293,7 @@ export default function DashboardScreen({ navigation, route }) {
 				}}
 				loading={snoozeLoading}
 				error={snoozeError}
-				options={[
-					{
-						id: 'later_today',
-						icon: 'time-outline',
-						text: 'Later Today',
-						onPress: () => handleSnoozeSelection('later_today'),
-					},
-					{
-						id: 'tomorrow',
-						icon: 'calendar-outline',
-						text: 'Tomorrow',
-						onPress: () => handleSnoozeSelection('tomorrow'),
-					},
-					{
-						id: 'next_week',
-						icon: 'calendar-outline',
-						text: 'Next Week',
-						onPress: () => handleSnoozeSelection('next_week'),
-					},
-					{
-						id: 'skip',
-						icon: 'close-circle-outline',
-						text: 'Skip This Call',
-						onPress: () => handleSnoozeSelection('skip'),
-					},
-				]}
+				options={snoozeOptions}
 			/>
 		</View>
 	);

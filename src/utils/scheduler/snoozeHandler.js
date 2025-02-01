@@ -402,6 +402,65 @@ export class SnoozeHandler {
 		}
 	}
 
+	// Snooze options based on reminder frequency
+	async getAvailableSnoozeOptions(reminderId) {
+		try {
+			const reminder = await getReminder(reminderId);
+			const frequency = reminder?.frequency;
+			const snoozeCount = reminder?.snooze_count || 0;
+
+			// Base options that will be filtered based on rules
+			const allOptions = [
+				{
+					id: 'later_today',
+					icon: 'time-outline',
+					text: 'Later Today',
+				},
+				{
+					id: 'tomorrow',
+					icon: 'calendar-outline',
+					text: 'Tomorrow',
+				},
+				{
+					id: 'next_week',
+					icon: 'calendar-outline',
+					text: 'Next Week',
+				},
+				{
+					id: 'skip',
+					icon: 'close-circle-outline',
+					text: 'Skip This Call',
+				},
+			];
+
+			// If max snooze attempts reached, only show skip
+			if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
+				return allOptions.filter((opt) => opt.id === 'skip');
+			}
+
+			switch (frequency) {
+				case 'daily':
+					// Daily reminders can only be snoozed once, later today
+					return snoozeCount > 0
+						? allOptions.filter((opt) => opt.id === 'skip')
+						: allOptions.filter((opt) => opt.id === 'later_today' || opt.id === 'skip');
+
+				case 'weekly':
+					// Weekly reminders can be snoozed later today or tomorrow
+					return allOptions.filter(
+						(opt) => opt.id === 'later_today' || opt.id === 'tomorrow' || opt.id === 'skip'
+					);
+
+				default:
+					// All options for other frequencies
+					return allOptions;
+			}
+		} catch (error) {
+			console.error('Error getting snooze options:', error);
+			return []; // Return empty array if there's an error
+		}
+	}
+
 	clearPatternCache() {
 		this.patternCache.clear();
 	}
