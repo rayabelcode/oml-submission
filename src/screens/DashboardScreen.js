@@ -13,6 +13,7 @@ import ContactCard from '../components/dashboard/ContactCard';
 import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { REMINDER_TYPES } from '../../constants/notificationConstants';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
@@ -60,12 +61,17 @@ export default function DashboardScreen({ navigation, route }) {
 		}, [user])
 	);
 
+	// Function to show reminders
 	const loadReminders = async () => {
 		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
 			const activeReminders = await notificationService.getActiveReminders();
+
+			// Filter out daily reminders completely
+			const filteredReminders = activeReminders.filter((reminder) => reminder.frequency !== 'daily');
+
 			setRemindersState({
-				data: activeReminders,
+				data: filteredReminders,
 				loading: false,
 				error: null,
 			});
