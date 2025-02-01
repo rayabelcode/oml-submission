@@ -33,7 +33,7 @@ export default function TabNavigator() {
                 tabBarIcon: ({ focused, color, size }) => {
                     const iconNames = {
                         Contacts: focused ? 'people' : 'people-outline',
-                        Dashboard: focused ? 'calendar' : 'calendar-outline',
+                        Dashboard: focused ? 'grid' : 'grid-outline',
                         Stats: focused ? 'stats-chart' : 'stats-chart-outline',
                         Settings: focused ? 'settings' : 'settings-outline',
                     }[route.name];

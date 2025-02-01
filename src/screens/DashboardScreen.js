@@ -27,7 +27,6 @@ export default function DashboardScreen({ navigation, route }) {
 	const [contacts, setContacts] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
-	const [viewMode, setViewMode] = useState('calendar');
 	const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
 	const [snoozeOptions, setSnoozeOptions] = useState([]);
 	const [snoozeLoading, setSnoozeLoading] = useState(false);
@@ -38,11 +37,6 @@ export default function DashboardScreen({ navigation, route }) {
 		loading: true,
 		error: null,
 	});
-
-	const VIEW_MODES = {
-		UPCOMING: 'upcoming',
-		REMINDERS: 'reminders',
-	};
 
 	// Handle navigation from notifications
 	useEffect(() => {
@@ -242,62 +236,62 @@ export default function DashboardScreen({ navigation, route }) {
 	return (
 		<View style={commonStyles.container}>
 			<StatusBar style="auto" />
+			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+				{/* Needs Attention Section */}
+				{remindersState.data.length > 0 && (
+					<View style={styles.section}>
+						<Text style={styles.sectionHeader}>Needs Attention</Text>
+						<NotificationsView
+							reminders={remindersState.data}
+							onComplete={handleFollowUpComplete}
+							loading={remindersState.loading}
+							onSnooze={handleSnooze}
+						/>
+					</View>
+				)}
 
-			<View style={styles.buttonContainer}>
-				<TouchableOpacity
-					style={[commonStyles.toggleButton, viewMode === VIEW_MODES.UPCOMING && styles.toggleButtonActive]}
-					onPress={() => setViewMode(VIEW_MODES.UPCOMING)}
-				>
-					<Icon name="calendar-clear-outline" size={24} color={colors.primary} />
-					<Text style={styles.toggleButtonText}>Upcoming Calls</Text>
-				</TouchableOpacity>
-
-				<TouchableOpacity
-					style={[commonStyles.toggleButton, viewMode === VIEW_MODES.REMINDERS && styles.toggleButtonActive]}
-					onPress={() => setViewMode(VIEW_MODES.REMINDERS)}
-				>
-					<Icon name="notifications-outline" size={24} color={colors.primary} />
-					<Text style={styles.toggleButtonText}>Call Reminders</Text>
-				</TouchableOpacity>
-			</View>
-
-			{viewMode === VIEW_MODES.UPCOMING ? (
-				<ScrollView
-					style={styles.contactsList}
-					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-				>
+				{/* Upcoming Calls Section */}
+				<View style={styles.section}>
+					<Text style={styles.sectionHeader}>Upcoming Calls</Text>
 					{loading ? (
 						<Text style={commonStyles.message}>Loading contacts...</Text>
 					) : contacts.length === 0 ? (
 						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						contacts.map((contact) => (
-							<ContactCard
-								key={contact.id}
-								contact={{
-									...contact,
-									next_contact: contact.next_contact ? contact.next_contact.toDate().toISOString() : null,
-								}}
-								onPress={(contact) =>
-									navigation.navigate('ContactDetails', {
-										contact,
-										initialTab: 'Schedule',
-									})
+						contacts.map((contact) => {
+							let formattedDate = null;
+							if (contact.next_contact) {
+								try {
+									formattedDate = contact.next_contact.toDate().toISOString();
+								} catch (error) {
+									// If toDate() fails, check if it's already a Date or string
+									if (contact.next_contact instanceof Date) {
+										formattedDate = contact.next_contact.toISOString();
+									} else if (typeof contact.next_contact === 'string') {
+										formattedDate = contact.next_contact;
+									}
 								}
-							/>
-						))
+							}
+
+							return (
+								<ContactCard
+									key={contact.id}
+									contact={{
+										...contact,
+										next_contact: formattedDate,
+									}}
+									onPress={(contact) =>
+										navigation.navigate('ContactDetails', {
+											contact,
+											initialTab: 'Schedule',
+										})
+									}
+								/>
+							);
+						})
 					)}
-				</ScrollView>
-			) : (
-				<NotificationsView
-					reminders={remindersState.data}
-					onComplete={handleFollowUpComplete}
-					loading={remindersState.loading}
-					onRefresh={onRefresh}
-					refreshing={refreshing}
-					onSnooze={handleSnooze}
-				/>
-			)}
+				</View>
+			</ScrollView>
 
 			<ActionModal
 				show={showSnoozeOptions}
@@ -309,6 +303,7 @@ export default function DashboardScreen({ navigation, route }) {
 				loading={snoozeLoading}
 				error={snoozeError}
 				options={snoozeOptions}
+				onSelect={handleSnoozeSelection}
 			/>
 		</View>
 	);

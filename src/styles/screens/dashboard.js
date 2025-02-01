@@ -217,6 +217,26 @@ const useStyles = () => {
 			color: '#fff',
 			fontWeight: 'bold',
 		},
+		section: {
+			marginVertical: spacing.md,
+		},
+		sectionHeader: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.primary,
+			textAlign: 'center',
+			paddingVertical: spacing.sm,
+			marginBottom: spacing.sm,
+			backgroundColor: colors.background.secondary,
+		},
+		needsAttentionSection: {
+			marginBottom: spacing.lg,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		upcomingSection: {
+			flex: 1,
+		},
 	});
 };
 
