@@ -1,2 +1,7 @@
 node_modules/
 *.local
+
+# Files copied from React Native
+utils/scheduler.js
+utils/schedulerConstants.js
+utils/snoozeHandler.js

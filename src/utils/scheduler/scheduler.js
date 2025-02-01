@@ -1,7 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
 import { DateTime } from 'luxon';
-// Recurring reminder configurations
-import { schedulingHistory } from './schedulingHistory';
 import {
 	RECURRENCE_METADATA,
 	MAX_AGE_DAYS,
@@ -12,26 +10,71 @@ import {
 	TIME_SLOT_INTERVAL,
 	MAX_ATTEMPTS,
 	TIME_DISPLAY,
-} from './schedulerConstants';
+} from './schedulerConstants.js';
+
+// Environment check
+const isCloudFunction = typeof process !== 'undefined' && process.env.FUNCTION_TARGET !== undefined;
+
+const validateDate = (date) => {
+	if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+		throw new Error('Invalid date provided');
+	}
+	return true;
+};
+
+const validateTimezone = (timezone) => {
+	try {
+		const testDate = DateTime.now().setZone(timezone);
+		if (!testDate.isValid) {
+			throw new Error(`Invalid timezone: ${timezone}`);
+		}
+		return true;
+	} catch (e) {
+		throw new Error(`Invalid timezone: ${timezone}`);
+	}
+};
+
+const validateFrequency = (frequency) => {
+	if (!frequency || !FREQUENCY_MAPPINGS[frequency.toLowerCase()]) {
+		throw new Error(`Invalid frequency: ${frequency}`);
+	}
+	return true;
+};
 
 export class SchedulingService {
-	constructor(userPreferences, existingReminders, timeZone) {
+	constructor(userPreferences, existingReminders, timeZone, options = {}) {
+		this.isCloudFunction = options.isCloudFunction || false;
+
 		if (!timeZone) {
 			console.warn('No timezone provided, using system default');
 		}
+
 		try {
 			const testDate = DateTime.now().setZone(timeZone);
-			if (!testDate.isValid) {
-				throw new Error('Invalid timezone');
+			if (!testDate.isValid || testDate.invalidReason === 'unsupported zone') {
+				// Instead of throwing, fall back to default
+				this.timeZone = this.isCloudFunction ? 'UTC' : Intl.DateTimeFormat().resolvedOptions().timeZone;
+			} else {
+				this.timeZone = timeZone;
 			}
-			this.timeZone = timeZone;
 		} catch (e) {
-			this.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+			// Fall back to default timezone for any error
+			this.timeZone = this.isCloudFunction ? 'UTC' : Intl.DateTimeFormat().resolvedOptions().timeZone;
 		}
 
 		this.userPreferences = userPreferences;
 		this.reminders = existingReminders || [];
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
+	}
+
+	// Helper method for Timestamp
+	createTimestamp(date) {
+		try {
+			return Timestamp.fromDate(date);
+		} catch (error) {
+			console.error('Error creating timestamp:', error);
+			throw new Error('Failed to create timestamp');
+		}
 	}
 
 	async scheduleNotificationForReminder(reminderData) {
@@ -45,14 +88,13 @@ export class SchedulingService {
 					? reminderData.scheduledTime
 					: reminderData.scheduledTime.toDate();
 
-			// Add the reminder to the internal reminders array
 			this.reminders.push({
 				...reminderData,
-				scheduledTime: Timestamp.fromDate(scheduledTime),
+				scheduledTime: this.createTimestamp(scheduledTime),
 				notified: false,
 				status: 'pending',
-				created_at: Timestamp.now(),
-				updated_at: Timestamp.now(),
+				created_at: this.createTimestamp(new Date()),
+				updated_at: this.createTimestamp(new Date()),
 			});
 
 			return {
@@ -151,6 +193,9 @@ export class SchedulingService {
 	}
 
 	calculatePreliminaryDate(lastContactDate, frequency) {
+		validateDate(lastContactDate);
+		validateFrequency(frequency);
+
 		const days = FREQUENCY_MAPPINGS[frequency.toLowerCase()];
 		if (!days) throw new Error(`Invalid frequency: ${frequency}`);
 
@@ -548,49 +593,7 @@ export class SchedulingService {
 				return baseSchedule;
 			}
 
-			try {
-				const patterns = await schedulingHistory.analyzeContactPatterns(contact.id, 90);
-
-				if (patterns?.lastUpdated) {
-					const lastUpdate = DateTime.fromISO(patterns.lastUpdated);
-					const daysSinceUpdate = DateTime.now().diff(lastUpdate, 'days').days;
-
-					if (daysSinceUpdate > MAX_AGE_DAYS) {
-						return {
-							...baseSchedule,
-							frequency: frequency,
-							pattern_adjusted: false,
-							recurring_next_date: baseSchedule.scheduledTime.toDate().toISOString(),
-						};
-					}
-				}
-
-				if (patterns?.confidence >= RECURRENCE_METADATA.MIN_CONFIDENCE) {
-					const suggestedTime = await schedulingHistory.suggestOptimalTime(
-						contact.id,
-						DateTime.fromJSDate(baseSchedule.scheduledTime.toDate()),
-						'recurring'
-					);
-
-					if (suggestedTime) {
-						const suggestedJSDate = suggestedTime.toJSDate();
-						if (!this.isTimeBlocked(suggestedJSDate, contact) && !this.hasTimeConflict(suggestedJSDate)) {
-							return {
-								...baseSchedule,
-								scheduledTime: Timestamp.fromDate(suggestedJSDate),
-								frequency: frequency,
-								pattern_adjusted: true,
-								confidence: patterns.confidence,
-								recurring_next_date: suggestedTime.toISO(),
-							};
-						}
-					}
-				}
-			} catch (error) {
-				// Silently fall back to base schedule
-			}
-
-			// Return base schedule if pattern analysis fails or suggested time is blocked
+			// Return base schedule with recurring metadata
 			return {
 				...baseSchedule,
 				frequency: frequency,

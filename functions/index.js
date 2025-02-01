@@ -1,232 +1,596 @@
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const admin = require("firebase-admin");
-const { Expo } = require("expo-server-sdk");
+import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
+import { DateTime } from "luxon";
+import { Expo } from "expo-server-sdk";
+import { SchedulingService } from "./src/utils/scheduler.js";
 
-admin.initializeApp();
+// Initialize Firebase admin and services
+/* eslint-disable-next-line no-unused-vars */
+const app = initializeApp();
+const db = getFirestore();
+/* eslint-disable-next-line no-unused-vars */
+const messaging = getMessaging();
 const expo = new Expo();
 
-// Test function that sends to my device once per day at 10:20 AM Eastern Time
-exports.scheduledNotification = onSchedule({
-  schedule: "20 10 * * *",
-  timeZone: "America/New_York", // Local time zone
-}, async (event) => {
-  console.log("Running test notification function...");
-  const TEST_USER_ID = "LTQ2OSK61lTjRdyqF9qXn94HW0t1"; // Ray's User ID
+export const healthCheck = onRequest(
+  {
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  (req, res) => {
+    res.status(200).send("OK");
+  },
+);
 
-  try {
-    const userDoc = await admin.firestore().collection("users").doc(TEST_USER_ID).get();
+// Function 1: Test that sends a notification to my devices once per day at 10:20 AM Eastern Time
+export const scheduledNotification = onSchedule(
+  {
+    schedule: "20 10 * * *",
+    timeZone: "America/New_York",
+    timeoutSeconds: 120,
+    memory: "256MiB",
+    retryCount: 3,
+  },
+  async (event) => {
+    console.log("Running test notification function...");
+    const TEST_USER_ID = "LTQ2OSK61lTjRdyqF9qXn94HW0t1"; // Ray's User ID
 
-    if (!userDoc.exists) {
-      console.log("Test user not found");
-      return null;
-    }
+    try {
+      const userDoc = await db.collection("users").doc(TEST_USER_ID).get();
 
-    const userData = userDoc.data();
-    console.log("Processing test notification for:", {
-      username: userData.username,
-      tokens: userData.expoPushTokens,
-    });
-
-    if (!userData.expoPushTokens || !userData.expoPushTokens.length) {
-      console.log("No valid Expo push tokens found for test user");
-      return null;
-    }
-
-    const messages = userData.expoPushTokens.map((token) => ({
-      to: token,
-      sound: "default",
-      title: "Daily Test Notification",
-      body: `Hello ${userData.first_name}! This is your daily test notification.`,
-      data: {
-        type: "TEST",
-        timestamp: new Date().toISOString(),
-      },
-    }));
-
-    const chunks = expo.chunkPushNotifications(messages);
-    for (const chunk of chunks) {
-      try {
-        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-        console.log("Test notifications sent:", {
-          username: userData.username,
-          result: ticketChunk,
-        });
-
-        ticketChunk.forEach(async (ticket, index) => {
-          if (ticket.status === "error" && ticket.details && ticket.details.error === "DeviceNotRegistered") {
-            const invalidToken = userData.expoPushTokens[index];
-            console.log("Removing invalid token:", invalidToken);
-            await admin.firestore().collection("users").doc(TEST_USER_ID).update({
-              expoPushTokens: admin.firestore.FieldValue.arrayRemove(invalidToken),
-            });
-          }
-        });
-      } catch (error) {
-        console.error("Error sending test notifications:", {
-          username: userData.username,
-          error: error.message,
-        });
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error in test function:", error);
-    return null;
-  }
-});
-
-// Function to process reminders and send notifications
-exports.processReminders = onSchedule({
-  schedule: "* * * * *", // Check every minute
-  timeZone: "America/New_York",
-}, async (event) => {
-  console.log("Checking for due reminders...");
-
-  try {
-    const now = admin.firestore.Timestamp.now();
-    const endTime = admin.firestore.Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
-
-    // Query to handle time window filtering
-    const remindersSnapshot = await admin.firestore()
-      .collection("reminders")
-      .where("scheduledTime", "<=", endTime)
-      .where("notified", "==", false)
-      .where("type", "==", "SCHEDULED")
-      .where("status", "==", "pending")
-      .where("snoozed", "==", false)
-      .get();
-
-    console.log(`Found ${remindersSnapshot.size} reminders to process`);
-
-    for (const reminderDoc of remindersSnapshot.docs) {
-      const reminder = reminderDoc.data();
-
-      const userDoc = await admin.firestore()
-        .collection("users")
-        .doc(reminder.user_id)
-        .get();
-
-      if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
-        console.log(`No valid tokens for user ${reminder.user_id}`);
-        continue;
+      if (!userDoc.exists) {
+        console.log("Test user not found");
+        return null;
       }
 
       const userData = userDoc.data();
+      console.log("Processing test notification for:", {
+        username: userData.username,
+        tokens: userData.expoPushTokens,
+      });
+
+      if (!userData.expoPushTokens || !userData.expoPushTokens.length) {
+        console.log("No valid Expo push tokens found for test user");
+        return null;
+      }
+
+      // Map tokens to messages for batch sending
       const messages = userData.expoPushTokens.map((token) => ({
         to: token,
         sound: "default",
-        title: "Scheduled Call",
-        body: `Time to call ${reminder.contactName}`,
+        title: "Daily Test Notification",
+        body: `Hello ${userData.first_name}! This is your daily test notification.`,
         data: {
-          type: "SCHEDULED",
-          reminderId: reminderDoc.id,
-          contactId: reminder.contact_id,
-          userId: reminder.user_id,
+          type: "TEST",
+          timestamp: new Date().toISOString(),
         },
       }));
 
       const chunks = expo.chunkPushNotifications(messages);
-      let notificationSent = false;
-
       for (const chunk of chunks) {
         try {
           const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-          console.log("Notifications sent:", {
-            userId: reminder.user_id,
-            reminderId: reminderDoc.id,
+          console.log("Test notifications sent:", {
+            username: userData.username,
             result: ticketChunk,
           });
 
-          notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
-
-          // Handle invalid tokens
+          // Clean up invalid tokens
           ticketChunk.forEach(async (ticket, index) => {
-            if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+            if (
+              ticket.status === "error" &&
+							ticket.details &&
+							ticket.details.error === "DeviceNotRegistered"
+            ) {
               const invalidToken = userData.expoPushTokens[index];
               console.log("Removing invalid token:", invalidToken);
-              await admin.firestore().collection("users").doc(reminder.user_id).update({
-                expoPushTokens: admin.firestore.FieldValue.arrayRemove(invalidToken),
-              });
+              await db
+                .collection("users")
+                .doc(TEST_USER_ID)
+                .update({
+                  expoPushTokens: FieldValue.arrayRemove(invalidToken),
+                });
             }
           });
         } catch (error) {
-          console.error("Error sending notifications:", error);
+          console.error("Error sending test notifications:", {
+            username: userData.username,
+            error: error.message,
+          });
         }
       }
 
-      // Only mark as notified if at least one notification was sent successfully
-      if (notificationSent) {
-        const batch = admin.firestore().batch();
+      return null;
+    } catch (error) {
+      console.error("Error in test function:", error);
+      return null;
+    }
+  },
+);
 
-        // Update reminder as notified and completed
-        batch.update(reminderDoc.ref, {
-          notified: true,
-          status: "completed",
-          completion_time: admin.firestore.FieldValue.serverTimestamp(),
-          notifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+// Function 2: Process reminders and send notifications
+export const processReminders = onSchedule(
+  {
+    schedule: "* * * * *",
+    timeZone: "America/New_York",
+    timeoutSeconds: 120,
+    memory: "256MiB",
+    retryCount: 3,
+  },
+  async (event) => {
+    console.log("Checking for due reminders...");
 
-        // Update contact's next_contact if it matches this reminder's scheduled time
-        const contactRef = admin.firestore().collection("contacts").doc(reminder.contact_id);
-        const contactDoc = await contactRef.get();
-        if (contactDoc.exists) {
-          const contactData = contactDoc.data();
-          const reminderTime = reminder.scheduledTime.toDate().getTime();
-          const nextContactTime = contactData.next_contact ? new Date(contactData.next_contact).getTime() : null;
+    try {
+      // Check 5-minute window for due reminders
+      const now = Timestamp.now();
+      const endTime = Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
 
-          if (nextContactTime === reminderTime) {
-            const updates = {
-              last_contacted: admin.firestore.FieldValue.serverTimestamp(),
-              last_updated: admin.firestore.FieldValue.serverTimestamp(),
-            };
+      // Get all due, unnotified reminders
+      const remindersSnapshot = await db
+        .collection("reminders")
+        .where("scheduledTime", "<=", endTime)
+        .where("notified", "==", false)
+        .where("type", "==", "SCHEDULED")
+        .where("status", "==", "pending")
+        .where("snoozed", "==", false)
+        .get();
 
-            // Clear the specific date that matched (either recurring or custom)
-            if (contactData.scheduling?.recurring_next_date) {
-              const recurringTime = new Date(contactData.scheduling.recurring_next_date).getTime();
-              if (recurringTime === reminderTime) {
-                updates["scheduling.recurring_next_date"] = null;
+      console.log(`Found ${remindersSnapshot.size} reminders to process`);
+
+      for (const reminderDoc of remindersSnapshot.docs) {
+        const reminder = reminderDoc.data();
+        const userDoc = await db.collection("users").doc(reminder.user_id).get();
+
+        if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
+          console.log(`No valid tokens for user ${reminder.user_id}`);
+          continue;
+        }
+
+        // Prep notification messages for each user device
+        const userData = userDoc.data();
+        const messages = userData.expoPushTokens.map((token) => ({
+          to: token,
+          sound: "default",
+          title: "Scheduled Call",
+          body: `Time to call ${reminder.contactName}`,
+          data: {
+            type: "SCHEDULED",
+            reminderId: reminderDoc.id,
+            contactId: reminder.contact_id,
+            userId: reminder.user_id,
+          },
+        }));
+
+        const chunks = expo.chunkPushNotifications(messages);
+        let notificationSent = false;
+
+        for (const chunk of chunks) {
+          try {
+            const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+            console.log("Notifications sent:", {
+              userId: reminder.user_id,
+              reminderId: reminderDoc.id,
+              result: ticketChunk,
+            });
+
+            notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
+
+            // Clean up invalid tokens
+            ticketChunk.forEach(async (ticket, index) => {
+              if (
+                ticket.status === "error" &&
+                ticket.details &&
+                ticket.details.error === "DeviceNotRegistered"
+              ) {
+                const invalidToken = userData.expoPushTokens[index];
+                console.log("Removing invalid token:", invalidToken);
+                await db
+                  .collection("users")
+                  .doc(reminder.user_id)
+                  .update({
+                    expoPushTokens: FieldValue.arrayRemove(invalidToken),
+                  });
               }
-            }
-            if (contactData.scheduling?.custom_next_date) {
-              const customTime = new Date(contactData.scheduling.custom_next_date).getTime();
-              if (customTime === reminderTime) {
-                updates["scheduling.custom_next_date"] = null;
-              }
-            }
-
-            // Set next_contact to whichever date remains (if any)
-            if (contactData.scheduling?.recurring_next_date || contactData.scheduling?.custom_next_date) {
-              const remaining = [
-                contactData.scheduling?.recurring_next_date,
-                contactData.scheduling?.custom_next_date,
-              ].filter(Boolean).map((date) => new Date(date));
-
-              updates.next_contact = remaining.length > 0 ?
-                new Date(Math.min(...remaining.map((d) => d.getTime()))) :
-                null;
-            } else {
-              updates.next_contact = null;
-            }
-
-            batch.update(contactRef, updates);
+            });
+          } catch (error) {
+            console.error("Error sending notifications:", error);
           }
         }
 
-        // Commit all updates in a single batch
-        await batch.commit();
+        // Only update DB if notification was sent successfully
+        if (notificationSent) {
+          const batch = db.batch();
 
-        console.log("Updated reminder and contact:", {
-          reminderId: reminderDoc.id,
-          contactId: reminder.contact_id,
-          status: "completed",
-        });
+          // Mark reminder as completed
+          batch.update(reminderDoc.ref, {
+            notified: true,
+            status: "completed",
+            completion_time: FieldValue.serverTimestamp(),
+            notifiedAt: FieldValue.serverTimestamp(),
+          });
+
+          // Update contact's schedule if needed
+          const contactRef = db.collection("contacts").doc(reminder.contact_id);
+          const contactDoc = await contactRef.get();
+          if (contactDoc.exists) {
+            const contactData = contactDoc.data();
+            const reminderTime = reminder.scheduledTime.toDate().getTime();
+
+            // Simplified condition: process if contact has frequency
+            if (contactData.scheduling?.frequency) {
+              // Get scheduling preferences
+              const userPrefsDoc = await db.collection("user_preferences").doc(reminder.user_id).get();
+              const userPreferences = userPrefsDoc.exists ? userPrefsDoc.data() : {};
+
+              // Calculate next contact date using scheduler
+              const scheduler = new SchedulingService(
+                userPreferences,
+                [], // Empty array since we're calculating next date
+                "America/New_York", // Use user's timezone
+                {
+                  isCloudFunction: true,
+                  enforceActiveHours: true,
+                },
+              );
+
+              const updates = {
+                last_contacted: FieldValue.serverTimestamp(),
+                last_updated: FieldValue.serverTimestamp(),
+              };
+
+              // Handle recurring schedule updates
+              if (contactData.scheduling?.frequency) {
+                try {
+                  const nextRecurring = await scheduler.scheduleRecurringReminder(
+                    contactData,
+                    new Date(),
+                    contactData.scheduling.frequency,
+                  );
+
+                  console.log("Next recurring calculation result:", {
+                    contactId: reminder.contact_id,
+                    result: nextRecurring,
+                    scheduledTime: nextRecurring.scheduledTime ? nextRecurring.scheduledTime.toDate() : null,
+                  });
+
+                  if (nextRecurring.scheduledTime) {
+                    // Update contact's scheduling info
+                    updates["scheduling.recurring_next_date"] = nextRecurring.scheduledTime.toDate();
+                    updates["next_contact"] = nextRecurring.scheduledTime.toDate();
+
+                    // Create new reminder document reference
+                    const newReminderRef = db.collection("reminders").doc();
+
+                    const newReminderData = {
+                      created_at: FieldValue.serverTimestamp(),
+                      updated_at: FieldValue.serverTimestamp(),
+                      contact_id: reminder.contact_id,
+                      user_id: reminder.user_id,
+                      scheduledTime: nextRecurring.scheduledTime,
+                      status: "pending",
+                      type: "SCHEDULED",
+                      snoozed: false,
+                      needs_attention: false,
+                      completed: false,
+                      completion_time: null,
+                      notes_added: false,
+                      contactName: reminder.contactName,
+                      notified: false,
+                    };
+
+                    batch.set(newReminderRef, newReminderData);
+                  } else {
+                    console.error("No valid next time found:", {
+                      contactId: reminder.contact_id,
+                      nextRecurring,
+                    });
+                  }
+                } catch (error) {
+                  console.error("Error in recurring schedule update:", {
+                    contactId: reminder.contact_id,
+                    error: error.message,
+                    stack: error.stack,
+                  });
+                  updates["scheduling.recurring_next_date"] = null;
+                }
+              }
+
+              // Clear custom date if it was used
+              if (contactData.scheduling?.custom_next_date) {
+                const customTime = new Date(contactData.scheduling.custom_next_date).getTime();
+                if (customTime === reminderTime) {
+                  updates["scheduling.custom_next_date"] = null;
+                }
+              }
+
+              // Set next contact to earliest available date
+              const possibleDates = [
+                updates["scheduling.recurring_next_date"],
+                contactData.scheduling?.custom_next_date,
+              ]
+                .filter(Boolean)
+                .map((date) => (date instanceof Date ? date : new Date(date)));
+
+              updates.next_contact = possibleDates.length > 0 ?
+                new Date(Math.min(...possibleDates.map((d) => d.getTime()))) :
+                null;
+
+              batch.update(contactRef, updates);
+            }
+          }
+
+          // Commit all updates atomically
+          await batch.commit();
+
+          // Log success after commit
+          console.log("Batch commit successful:", {
+            reminderId: reminderDoc.id,
+            contactId: reminder.contact_id,
+            status: "completed",
+          });
+        }
       }
-    }
 
-    return null;
+      return null;
+    } catch (error) {
+      console.error("Error processing reminders:", error);
+      return null;
+    }
+  },
+);
+
+// Function 3: Test endpoint for verification 'firebase emulators:start --only functions'
+export const testScheduler = onRequest(
+  {
+    timeoutSeconds: 60,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    try {
+      // Test categories setup
+      const results = {
+        basicScheduling: {},
+        edgeCases: {},
+        timezones: {},
+        errorHandling: {},
+      };
+
+      // Init scheduler with basic config
+      const scheduler = new SchedulingService(
+        {
+          scheduling_preferences: {
+            minimumGapMinutes: 20,
+            optimalGapMinutes: 1440,
+          },
+        },
+        [],
+        "UTC",
+        { isCloudFunction: true },
+      );
+
+      // Run all test suites
+      results.basicScheduling = testBasicScheduling(scheduler);
+      results.edgeCases = testEdgeCases();
+      results.timezones = testTimezones();
+      results.errorHandling = testErrorHandling();
+
+      res.json({
+        success: true,
+        results,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error in test function:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
+
+// Test basic scheduling functionality
+function testBasicScheduling(scheduler) {
+  const lastContactDate = new Date();
+  return {
+    daily: scheduler.calculatePreliminaryDate(lastContactDate, "daily"),
+    weekly: scheduler.calculatePreliminaryDate(lastContactDate, "weekly"),
+    biweekly: scheduler.calculatePreliminaryDate(lastContactDate, "biweekly"),
+    monthly: scheduler.calculatePreliminaryDate(lastContactDate, "monthly"),
+  };
+}
+
+// Test calendar edge cases
+function testEdgeCases() {
+  const results = {};
+
+  // Test 1: Year boundary
+  const yearEndDate = new Date("2024-12-31T12:00:00Z");
+  const scheduler1 = new SchedulingService({}, [], "UTC", { isCloudFunction: true });
+  results.yearBoundary = {
+    input: yearEndDate.toISOString(),
+    weekly: scheduler1.calculatePreliminaryDate(yearEndDate, "weekly"),
+    monthly: scheduler1.calculatePreliminaryDate(yearEndDate, "monthly"),
+  };
+
+  // Test 2: DST transitions
+  const dstDate = new Date("2024-03-10T01:00:00Z"); // US DST start
+  const scheduler2 = new SchedulingService({}, [], "America/New_York", { isCloudFunction: true });
+  results.dstTransition = {
+    input: dstDate.toISOString(),
+    weekly: scheduler2.calculatePreliminaryDate(dstDate, "weekly"),
+  };
+
+  // Test 3: Leap year
+  const leapYearDate = new Date("2024-02-28T12:00:00Z");
+  results.leapYear = {
+    input: leapYearDate.toISOString(),
+    weekly: scheduler1.calculatePreliminaryDate(leapYearDate, "weekly"),
+    monthly: scheduler1.calculatePreliminaryDate(leapYearDate, "monthly"),
+  };
+
+  // Test 4: Month boundaries
+  const monthEndDate = new Date("2024-01-31T12:00:00Z");
+  results.monthBoundary = {
+    input: monthEndDate.toISOString(),
+    weekly: scheduler1.calculatePreliminaryDate(monthEndDate, "weekly"),
+    monthly: scheduler1.calculatePreliminaryDate(monthEndDate, "monthly"),
+  };
+
+  return results;
+}
+
+// Test timezone handling across regions
+function testTimezones() {
+  const results = {};
+  const testDate = new Date("2024-01-15T12:00:00Z");
+  const timezones = ["UTC", "America/New_York", "Asia/Tokyo", "Australia/Sydney", "Europe/London"];
+
+  timezones.forEach((tz) => {
+    const scheduler = new SchedulingService({}, [], tz, { isCloudFunction: true });
+    const localDateTime = DateTime.fromJSDate(testDate).setZone(tz);
+    results[tz] = {
+      input: testDate.toISOString(),
+      localTime: localDateTime.toFormat("yyyy-MM-dd HH:mm:ss Z"),
+      weekly: scheduler.calculatePreliminaryDate(testDate, "weekly"),
+      monthly: scheduler.calculatePreliminaryDate(testDate, "monthly"),
+      offset: localDateTime.offset / 60, // offset in hours
+    };
+  });
+
+  return results;
+}
+
+// Test error handling and edge cases
+function testErrorHandling() {
+  const results = {};
+  const scheduler = new SchedulingService({}, [], "UTC", { isCloudFunction: true });
+
+  // Test 1: Invalid frequency
+  try {
+    scheduler.calculatePreliminaryDate(new Date(), "invalid_frequency");
+    results.invalidFrequency = "Failed: Should have thrown error";
   } catch (error) {
-    console.error("Error processing reminders:", error);
-    return null;
+    results.invalidFrequency = "Success: Error caught correctly";
   }
-});
+
+  // Test 2: Invalid date
+  try {
+    scheduler.calculatePreliminaryDate(new Date("invalid_date"), "weekly");
+    results.invalidDate = "Failed: Should have thrown error";
+  } catch (error) {
+    results.invalidDate = "Success: Error caught correctly";
+  }
+
+  // Test 3: Invalid timezone (updated to test fallback behavior)
+  try {
+    const invalidTzService = new SchedulingService({}, [], "Invalid/Timezone", { isCloudFunction: true });
+    results.invalidTimezone = invalidTzService.timeZone === "UTC" ?
+      "Success: Fallback to UTC correctly" :
+      "Failed: Did not fallback to UTC";
+  } catch (error) {
+    results.invalidTimezone = "Failed: Should not throw error";
+  }
+
+  // Test 4: Missing parameters
+  try {
+    scheduler.calculatePreliminaryDate(null, null);
+    results.missingParams = "Failed: Should have thrown error";
+  } catch (error) {
+    results.missingParams = "Success: Error caught correctly";
+  }
+
+  return results;
+}
+
+// Test Recurring Schedule
+// Terminal: curl https://us-central1-onmylist-app.cloudfunctions.net/testRecurringSchedule
+export const testRecurringSchedule = onRequest(
+  {
+    timeoutSeconds: 60,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    try {
+      const TEST_USER_ID = "LTQ2OSK61lTjRdyqF9qXn94HW0t1";
+      const TEST_CONTACT_ID = "16yYVlKogbB3eN0xLVPM"; // Stanley - Test Contact ID
+
+      // Get user preferences
+      const userPrefsDoc = await db.collection("user_preferences").doc(TEST_USER_ID).get();
+      const userPreferences = userPrefsDoc.exists ? userPrefsDoc.data() : {};
+
+      // Get initial contact data
+      const initialContactDoc = await db.collection("contacts").doc(TEST_CONTACT_ID).get();
+      if (!initialContactDoc.exists) {
+        throw new Error("Test contact not found");
+      }
+      const initialContact = initialContactDoc.data();
+
+      // Test different frequencies
+      const frequencies = ["daily", "weekly", "biweekly", "monthly"];
+      const results = {};
+
+      for (const frequency of frequencies) {
+        // Update contact frequency
+        await db.collection("contacts").doc(TEST_CONTACT_ID).update({
+          "scheduling.frequency": frequency,
+          "scheduling.updated_at": FieldValue.serverTimestamp(),
+        });
+
+        // Get fresh contact data
+        const contactDoc = await db.collection("contacts").doc(TEST_CONTACT_ID).get();
+        const contact = contactDoc.data();
+
+        // Create scheduler for this test
+        const scheduler = new SchedulingService(
+          userPreferences,
+          [], // Empty array since we're testing
+          "UTC",
+          { isCloudFunction: true },
+        );
+
+        // Test scheduling
+        const result = await scheduler.scheduleRecurringReminder(contact, new Date(), frequency);
+
+        results[frequency] = {
+          scheduledTime: result.scheduledTime,
+          score: result.score,
+          flexibility_used: result.flexibility_used,
+          recurring_next_date: result.recurring_next_date,
+        };
+      }
+
+      // Reset contact to original frequency (null)
+      await db.collection("contacts").doc(TEST_CONTACT_ID).update({
+        "scheduling.frequency": null,
+        "scheduling.updated_at": FieldValue.serverTimestamp(),
+      });
+
+      // Consolidated test log
+      console.log("Test completed:", {
+        contactId: TEST_CONTACT_ID,
+        frequenciesTested: frequencies,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({
+        success: true,
+        userPreferences,
+        contactId: TEST_CONTACT_ID,
+        frequencyResults: results,
+        originalContact: initialContact,
+      });
+    } catch (error) {
+      console.error("Error in test:", error);
+      res.status(500).json({
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
