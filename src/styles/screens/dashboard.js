@@ -20,8 +20,17 @@ const useStyles = () => {
 			padding: spacing.md,
 		},
 		header: {
-			padding: spacing.md,
+			padding: spacing.sm,
 			alignItems: 'center',
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		headerContent: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			alignItems: 'center',
+			width: '100%',
+			paddingRight: spacing.sm,
 		},
 		title: {
 			fontSize: 24,
@@ -218,7 +227,9 @@ const useStyles = () => {
 			fontWeight: 'bold',
 		},
 		section: {
-			marginVertical: spacing.md,
+			padding: spacing.sm,
+			paddingHorizontal: spacing.xs,
+			marginTop: 0,
 		},
 		sectionHeader: {
 			fontSize: 16,
@@ -229,10 +240,26 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 			backgroundColor: colors.background.secondary,
 		},
+		groupHeader: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.sm,
+			marginBottom: spacing.xs,
+		},
+		groupTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		content: {
+			flex: 1,
+		},
 		needsAttentionSection: {
-			marginBottom: spacing.lg,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
+			backgroundColor: colors.background.primary,
+			marginBottom: spacing.sm,
+			paddingTop: spacing.lg,
 		},
 		upcomingSection: {
 			flex: 1,

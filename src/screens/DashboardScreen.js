@@ -239,8 +239,10 @@ export default function DashboardScreen({ navigation, route }) {
 			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
 				{/* Needs Attention Section */}
 				{remindersState.data.length > 0 && (
-					<View style={styles.section}>
-						<Text style={styles.sectionHeader}>Needs Attention</Text>
+					<View style={styles.needsAttentionSection}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Needs Attention</Text>
+						</View>
 						<NotificationsView
 							reminders={remindersState.data}
 							onComplete={handleFollowUpComplete}
@@ -252,12 +254,14 @@ export default function DashboardScreen({ navigation, route }) {
 
 				{/* Upcoming Calls Section */}
 				<View style={styles.section}>
-					<Text style={styles.sectionHeader}>Upcoming Calls</Text>
-					{loading ? (
-						<Text style={commonStyles.message}>Loading contacts...</Text>
-					) : contacts.length === 0 ? (
-						<Text style={commonStyles.message}>No upcoming contacts</Text>
-					) : (
+    <View style={styles.groupHeader}>
+        <Text style={styles.groupTitle}>Upcoming Calls</Text>
+    </View>
+    {loading ? (
+        <Text style={commonStyles.message}>Loading contacts...</Text>
+    ) : contacts.length === 0 ? (
+        <Text style={commonStyles.message}>No upcoming contacts</Text>
+    ) : (
 						contacts.map((contact) => {
 							let formattedDate = null;
 							if (contact.next_contact) {
