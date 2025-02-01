@@ -5,7 +5,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { DateTime } from "luxon";
 import { Expo } from "expo-server-sdk";
-import { SchedulingService } from "./src/utils/scheduler.js";
+import { SchedulingService } from "./src/schedulerCloud.js";
 
 // Initialize Firebase admin and services
 /* eslint-disable-next-line no-unused-vars */
