@@ -182,16 +182,28 @@ export default function DashboardScreen({ navigation, route }) {
 		try {
 			if (!user) return;
 
-			// Try to get cached data first
+			// Handle cached contacts
 			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
 			if (cachedContacts) {
-				setContacts(cachedContacts.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
+				setContacts(
+					cachedContacts.sort((a, b) => {
+						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+						return dateA - dateB;
+					})
+				);
 				setLoading(false);
 			}
 
-			// Then fetch fresh data
+			// Handle fresh contacts
 			const contactsList = await fetchUpcomingContacts(user.uid);
-			setContacts(contactsList.sort((a, b) => new Date(a.next_contact) - new Date(b.next_contact)));
+			setContacts(
+				contactsList.sort((a, b) => {
+					const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+					const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+					return dateA - dateB;
+				})
+			);
 		} catch (error) {
 			console.error('Error loading contacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
@@ -262,7 +274,10 @@ export default function DashboardScreen({ navigation, route }) {
 						contacts.map((contact) => (
 							<ContactCard
 								key={contact.id}
-								contact={contact}
+								contact={{
+									...contact,
+									next_contact: contact.next_contact ? contact.next_contact.toDate().toISOString() : null,
+								}}
 								onPress={(contact) =>
 									navigation.navigate('ContactDetails', {
 										contact,
