@@ -166,6 +166,12 @@ export class SnoozeHandler {
 				});
 			}
 
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'later_today',
+				snooze_count: increment(1),
+			});
+
 			// Track for analytics
 			await schedulingHistory.trackSnooze(
 				contactId,
@@ -226,6 +232,12 @@ export class SnoozeHandler {
 					snooze_count: increment(1),
 				});
 			}
+
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'tomorrow',
+				snooze_count: increment(1),
+			});
 
 			await schedulingHistory.trackSnooze(
 				contactId,
@@ -294,6 +306,12 @@ export class SnoozeHandler {
 				});
 			}
 
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'next_week',
+				snooze_count: increment(1),
+			});
+
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -328,7 +346,6 @@ export class SnoozeHandler {
 
 	async handleSkip(contactId, currentTime = DateTime.now(), reminderId = null) {
 		try {
-			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					status: REMINDER_STATUS.SKIPPED,
@@ -336,6 +353,12 @@ export class SnoozeHandler {
 					snoozed: false,
 				});
 			}
+
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SKIPPED,
+				last_snooze_type: 'skip',
+				custom_next_date: null,
+			});
 
 			await schedulingHistory.trackSkip(contactId, currentTime);
 			return true;

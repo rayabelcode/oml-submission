@@ -166,6 +166,7 @@ jest.mock('firebase/firestore', () => ({
 			_nanoseconds: 0,
 		}),
 	},
+	increment: jest.fn((num) => ({ increment: num })),
 	serverTimestamp: jest.fn(() => ({
 		_seconds: Math.floor(Date.now() / 1000),
 		_nanoseconds: 0,
