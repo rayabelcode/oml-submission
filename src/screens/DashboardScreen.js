@@ -223,38 +223,22 @@ export default function DashboardScreen({ navigation, route }) {
 	async function loadContacts() {
 		try {
 			if (!user) return;
-
-			// Always get fresh data first
-			const contactsList = await fetchUpcomingContacts(user.uid);
-			const sortedContacts = contactsList.sort((a, b) => {
-				const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
-				const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
-				return dateA - dateB;
-			});
-
-			// Update state with fresh data
-			setContacts(sortedContacts);
-
-			// Update cache with fresh data
-			await cacheManager.saveUpcomingContacts(user.uid, sortedContacts);
-		} catch (error) {
-			console.error('Error loading contacts:', error);
-			Alert.alert('Error', 'Failed to load contacts');
-
-			// Only use cache if fresh data fetch fails
 			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
-			if (cachedContacts?.length > 0) {
-				const sortedCached = cachedContacts.sort((a, b) => {
+			if (cachedContacts) {
+				setContacts(cachedContacts.sort((a, b) => {
 					const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
 					const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
 					return dateA - dateB;
-				});
-				setContacts(sortedCached);
+				}));
 			}
+		} catch (error) {
+			console.error('Error loading contacts:', error);
+			Alert.alert('Error', 'Failed to load contacts');
 		} finally {
 			setLoading(false);
 		}
 	}
+	
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);

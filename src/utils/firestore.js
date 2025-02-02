@@ -645,10 +645,32 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		await batch.commit();
 
+		// Get the fresh contact data after the update
 		const updatedContactDoc = await getDoc(contactRef);
-		const updatedContact = updatedContactDoc.data();
+		const updatedContact = { ...updatedContactDoc.data(), id: contactId };
 
-		return { ...updatedContact, id: contactId };
+		// Update the cache immediately after successful database update
+		try {
+			const userId = auth.currentUser.uid;
+			const cachedContacts = await cacheManager.getCachedUpcomingContacts(userId);
+			if (cachedContacts) {
+				// Replace the old contact with the updated one in the cache
+				const updatedCache = cachedContacts
+					.map((c) => (c.id === contactId ? updatedContact : c))
+					.sort((a, b) => {
+						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+						return dateA - dateB;
+					});
+
+				await cacheManager.saveUpcomingContacts(userId, updatedCache);
+			}
+		} catch (cacheError) {
+			console.error('Error updating cache:', cacheError);
+			// Return the updated contact even if cache fails
+		}
+
+		return updatedContact;
 	} catch (error) {
 		console.error('Error in updateContactScheduling:', error);
 		throw error;
