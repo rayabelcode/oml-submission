@@ -136,7 +136,10 @@ class NotificationService {
 		// For future notifications
 		return await Notifications.scheduleNotificationAsync({
 			content: notificationContent,
-			trigger: time,
+			trigger: {
+				type: 'date',
+				timestamp: time.getTime(),
+			},
 		});
 	}
 
@@ -182,8 +185,7 @@ class NotificationService {
 				await this.initialize();
 			}
 			const reminders = await scheduledCallService.getActiveReminders();
-			// Only return scheduled reminders, not follow-ups
-			return reminders.filter((reminder) => reminder.type === REMINDER_TYPES.SCHEDULED);
+			return reminders;
 		} catch (error) {
 			console.error('Error getting active reminders:', error);
 			return [];

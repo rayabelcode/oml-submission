@@ -18,6 +18,7 @@ import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
 import { DateTime } from 'luxon';
+import * as Notifications from 'expo-notifications';
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -60,13 +61,60 @@ export default function DashboardScreen({ navigation, route }) {
 	const loadReminders = async () => {
 		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
+			// Get Firestore reminders
 			const activeReminders = await notificationService.getActiveReminders();
 
-			// Filter out daily reminders completely
-			const filteredReminders = activeReminders.filter((reminder) => reminder.frequency !== 'daily');
+			// Get local notifications
+			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
 
+			// Convert local FOLLOW_UP notifications to our reminder format
+			const followUpReminders = scheduledNotifications
+				.filter((notification) => notification.content.data?.type === 'FOLLOW_UP')
+				.map((notification) => ({
+					type: 'FOLLOW_UP',
+					firestoreId: notification.identifier,
+					scheduledTime: new Date(notification.trigger.timestamp),
+					data: notification.content.data,
+					status: 'pending',
+				}));
+
+			const now = DateTime.now();
+
+			// Filter Firestore reminders
+			const filteredFirestoreReminders = activeReminders.filter((reminder) => {
+				// Skip daily reminders
+				if (reminder.frequency === 'daily') return false;
+
+				// Safely handle different date formats
+				let scheduledTime;
+				try {
+					if (reminder.scheduledTime) {
+						if (reminder.scheduledTime.toDate) {
+							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime.toDate());
+						} else if (reminder.scheduledTime instanceof Date) {
+							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime);
+						} else if (typeof reminder.scheduledTime === 'string') {
+							scheduledTime = DateTime.fromISO(reminder.scheduledTime);
+						} else if (typeof reminder.scheduledTime === 'number') {
+							scheduledTime = DateTime.fromMillis(reminder.scheduledTime);
+						}
+					}
+
+					if (!scheduledTime) {
+						console.warn('Could not parse scheduledTime for reminder:', reminder);
+						return false;
+					}
+
+					return scheduledTime <= now;
+				} catch (error) {
+					console.warn('Error processing reminder date:', error, reminder);
+					return false;
+				}
+			});
+
+			// Combine Firestore and local reminders
 			setRemindersState({
-				data: filteredReminders,
+				data: [...filteredFirestoreReminders, ...followUpReminders],
 				loading: false,
 				error: null,
 			});
@@ -254,14 +302,14 @@ export default function DashboardScreen({ navigation, route }) {
 
 				{/* Upcoming Calls Section */}
 				<View style={styles.section}>
-    <View style={styles.groupHeader}>
-        <Text style={styles.groupTitle}>Upcoming Calls</Text>
-    </View>
-    {loading ? (
-        <Text style={commonStyles.message}>Loading contacts...</Text>
-    ) : contacts.length === 0 ? (
-        <Text style={commonStyles.message}>No upcoming contacts</Text>
-    ) : (
+					<View style={styles.groupHeader}>
+						<Text style={styles.groupTitle}>Upcoming Calls</Text>
+					</View>
+					{loading ? (
+						<Text style={commonStyles.message}>Loading contacts...</Text>
+					) : contacts.length === 0 ? (
+						<Text style={commonStyles.message}>No upcoming contacts</Text>
+					) : (
 						contacts.map((contact) => {
 							let formattedDate = null;
 							if (contact.next_contact) {
