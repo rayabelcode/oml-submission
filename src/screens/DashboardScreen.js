@@ -52,6 +52,7 @@ export default function DashboardScreen({ navigation, route }) {
 	useFocusEffect(
 		React.useCallback(() => {
 			if (user) {
+				loadContacts();
 				loadReminders();
 			}
 		}, [user])
@@ -59,7 +60,6 @@ export default function DashboardScreen({ navigation, route }) {
 
 	// Function to show reminders
 	const loadReminders = async () => {
-		setRemindersState((prev) => ({ ...prev, loading: true, error: null }));
 		try {
 			// Get Firestore reminders
 			const activeReminders = await notificationService.getActiveReminders();
@@ -224,42 +224,37 @@ export default function DashboardScreen({ navigation, route }) {
 		try {
 			if (!user) return;
 
-			// Handle cached contacts
-			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
-			if (cachedContacts) {
-				setContacts(
-					cachedContacts.sort((a, b) => {
-						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
-						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
-						return dateA - dateB;
-					})
-				);
-				setLoading(false);
-			}
-
-			// Handle fresh contacts
+			// Always get fresh data first
 			const contactsList = await fetchUpcomingContacts(user.uid);
-			setContacts(
-				contactsList.sort((a, b) => {
-					const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
-					const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
-					return dateA - dateB;
-				})
-			);
+			const sortedContacts = contactsList.sort((a, b) => {
+				const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+				const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+				return dateA - dateB;
+			});
+
+			// Update state with fresh data
+			setContacts(sortedContacts);
+
+			// Update cache with fresh data
+			await cacheManager.saveUpcomingContacts(user.uid, sortedContacts);
 		} catch (error) {
 			console.error('Error loading contacts:', error);
 			Alert.alert('Error', 'Failed to load contacts');
+
+			// Only use cache if fresh data fetch fails
+			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
+			if (cachedContacts?.length > 0) {
+				const sortedCached = cachedContacts.sort((a, b) => {
+					const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+					const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+					return dateA - dateB;
+				});
+				setContacts(sortedCached);
+			}
 		} finally {
 			setLoading(false);
 		}
 	}
-
-	useEffect(() => {
-		if (user) {
-			loadContacts();
-			loadReminders();
-		}
-	}, [user]);
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
@@ -310,37 +305,64 @@ export default function DashboardScreen({ navigation, route }) {
 					) : contacts.length === 0 ? (
 						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						contacts.map((contact) => {
-							let formattedDate = null;
-							if (contact.next_contact) {
+						contacts
+							.filter((contact) => contact.next_contact) // Only include contacts with next_contact
+							.map((contact) => {
+								let formattedDate = null;
 								try {
-									formattedDate = contact.next_contact.toDate().toISOString();
+									if (contact.next_contact) {
+										// Handle Firestore timestamp object
+										if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
+											formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
+										}
+										// Handle Firebase timestamp with toDate method
+										else if (contact.next_contact.toDate) {
+											formattedDate = contact.next_contact.toDate().toISOString();
+										}
+										// Handle string ISO date
+										else if (typeof contact.next_contact === 'string') {
+											formattedDate = contact.next_contact;
+										}
+										// Handle Date object
+										else if (contact.next_contact instanceof Date) {
+											formattedDate = contact.next_contact.toISOString();
+										}
+										// Log unhandled formats for debugging
+										else {
+											console.warn(
+												'Unhandled next_contact format:',
+												typeof contact.next_contact,
+												contact.next_contact
+											);
+										}
+									}
 								} catch (error) {
-									// If toDate() fails, check if it's already a Date or string
-									if (contact.next_contact instanceof Date) {
-										formattedDate = contact.next_contact.toISOString();
-									} else if (typeof contact.next_contact === 'string') {
-										formattedDate = contact.next_contact;
-									}
+									console.warn('Error formatting date for contact:', contact.id, error);
+									return null;
 								}
-							}
 
-							return (
-								<ContactCard
-									key={contact.id}
-									contact={{
-										...contact,
-										next_contact: formattedDate,
-									}}
-									onPress={(contact) =>
-										navigation.navigate('ContactDetails', {
-											contact,
-											initialTab: 'Schedule',
-										})
-									}
-								/>
-							);
-						})
+								if (!formattedDate) {
+									console.warn('Could not format date for contact:', contact.id, contact.next_contact);
+									return null;
+								}
+
+								return (
+									<ContactCard
+										key={contact.id}
+										contact={{
+											...contact,
+											next_contact: formattedDate,
+										}}
+										onPress={(contact) =>
+											navigation.navigate('ContactDetails', {
+												contact,
+												initialTab: 'Schedule',
+											})
+										}
+									/>
+								);
+							})
+							.filter(Boolean)
 					)}
 				</View>
 			</ScrollView>
