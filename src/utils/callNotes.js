@@ -54,22 +54,25 @@ class CallNotesService {
 		}
 	};
 
-
 	async scheduleFollowUp(contact, notificationTime = new Date()) {
 		try {
+			// Generate a unique ID that includes both timestamp and contact ID
+			const firestoreId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
+			const callTime = new Date();
+
 			const reminderData = {
 				contactId: contact.id,
 				scheduledTime: notificationTime,
 				type: REMINDER_TYPES.FOLLOW_UP,
 				status: REMINDER_STATUS.PENDING,
 				contactName: `${contact.first_name} ${contact.last_name}`,
-				call_data: contact.callData,
+				call_data: {
+					...contact.callData,
+					callTime: callTime.toISOString(), // Store the actual call time
+				},
 				needs_attention: true,
 			};
-	
-			const firestoreId = `FOLLOW_UP_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-	
-			// Build local notification content and include the scheduledTime as an ISO string.
+
 			const content = {
 				title: `Add Notes for Call with ${contact.first_name}`,
 				body: 'Tap to add notes about your recent call',
@@ -77,26 +80,30 @@ class CallNotesService {
 					type: REMINDER_TYPES.FOLLOW_UP,
 					contactId: contact.id,
 					firestoreId: firestoreId,
-					callData: contact.callData,
-					scheduledTime: notificationTime.toISOString(), // pass the time here
+					callData: {
+						...contact.callData,
+						callTime: callTime.toISOString(),
+					},
+					contactName: `${contact.first_name} ${contact.last_name}`,
+					scheduledTime: notificationTime.toISOString(),
 				},
 				sound: true,
 			};
-	
-			// Schedule the local notification using your notificationCoordinator.
+
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				content,
 				notificationTime,
 				{ type: REMINDER_TYPES.FOLLOW_UP }
 			);
-	
-			// Save the mapping locally so you can manage this reminder later.
+
 			notificationCoordinator.notificationMap.set(firestoreId, {
 				localId: localNotificationId,
-				scheduledTime: notificationTime, // store the original Date
+				scheduledTime: notificationTime,
+				callTime: callTime.toISOString(),
+				contactName: `${contact.first_name} ${contact.last_name}`,
 			});
 			await notificationCoordinator.saveNotificationMap();
-	
+
 			return firestoreId;
 		} catch (error) {
 			console.error('[CallNotesService] Error scheduling follow-up:', error);
@@ -106,16 +113,16 @@ class CallNotesService {
 
 	async handleFollowUpComplete(reminderId, notes = '') {
 		try {
-		// For local follow-ups - do not call Firestore completeFollowUp
-		// Cancel the local notification if we have a stored mapping
-		const mapping = notificationCoordinator.notificationMap.get(reminderId);
-		if (mapping) {
-		await notificationCoordinator.cancelNotification(mapping.localId);
-		}
-		// Remove the mapping and decrement the badge.
-		notificationCoordinator.notificationMap.delete(reminderId);
-		await notificationCoordinator.saveNotificationMap();
-		await notificationCoordinator.decrementBadge();
+			// For local follow-ups - do not call Firestore completeFollowUp
+			// Cancel the local notification if we have a stored mapping
+			const mapping = notificationCoordinator.notificationMap.get(reminderId);
+			if (mapping) {
+				await notificationCoordinator.cancelNotification(mapping.localId);
+			}
+			// Remove the mapping and decrement the badge.
+			notificationCoordinator.notificationMap.delete(reminderId);
+			await notificationCoordinator.saveNotificationMap();
+			await notificationCoordinator.decrementBadge();
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			throw error;

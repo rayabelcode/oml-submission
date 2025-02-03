@@ -32,25 +32,27 @@ class CallHandler {
 				return false;
 			}
 
+			const callStartTime = new Date(); // Capture exact call start time
+
 			const callData = {
 				contact,
-				startTime: new Date().toISOString(),
+				startTime: callStartTime.toISOString(),
 				type: callType,
 			};
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
 			await this.notificationService.initialize();
 
-			const notificationTime = new Date(Date.now() + 5000);
+			const followUpTime = new Date(Date.now() + 5000); // 5 seconds after call
 			const notificationId = await this.notificationService.scheduleCallFollowUp(
 				{
 					...contact,
 					callData: {
 						type: callType,
-						startTime: callData.startTime,
+						startTime: callStartTime.toISOString(), // Pass the exact start time
 					},
 				},
-				notificationTime // Pass Date object directly
+				followUpTime
 			);
 
 			await Linking.openURL(urlScheme);

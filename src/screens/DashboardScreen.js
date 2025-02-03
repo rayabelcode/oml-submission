@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchUpcomingContacts } from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
 import { notificationService } from '../utils/notifications';
@@ -18,7 +19,9 @@ import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
 import { DateTime } from 'luxon';
+import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
+
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -70,35 +73,41 @@ export default function DashboardScreen({ navigation, route }) {
 
 			// Process a notification and extract follow-up info
 			const processReminder = (notification) => {
-				let scheduledTime;
-				// If the notification content includes scheduledTime ISO string, use it
-				if (notification.content && notification.content.data && notification.content.data.scheduledTime) {
-					scheduledTime = new Date(notification.content.data.scheduledTime);
-				} else if (notification.trigger) {
-					if (notification.trigger.seconds) {
-						scheduledTime = new Date(notification.trigger.seconds * 1000);
-					} else if (notification.trigger.timestamp) {
-						scheduledTime = new Date(notification.trigger.timestamp);
-					} else if (notification.trigger.date) {
-						scheduledTime = new Date(notification.trigger.date);
-					} else {
-						scheduledTime = new Date();
-					}
-				} else {
-					scheduledTime = new Date();
+				const content = notification.content || notification.request?.content;
+				const data = content?.data || {};
+
+				// Try to get the actual call time from all possible locations
+				let callTime;
+				if (data.callData?.startTime) {
+					callTime = new Date(data.callData.startTime);
+				} else if (data.callData?.callTime) {
+					callTime = new Date(data.callData.callTime);
+				} else if (data.startTime) {
+					callTime = new Date(data.startTime);
 				}
+
+				// If no call time found, fall back to the scheduled time
+				if (!callTime || isNaN(callTime.getTime())) {
+					if (data.scheduledTime) {
+						callTime = new Date(data.scheduledTime);
+					} else if (notification.trigger) {
+						callTime = new Date(notification.trigger.timestamp || notification.trigger.date);
+					} else {
+						callTime = new Date();
+					}
+				}
+
 				return {
 					type: 'FOLLOW_UP',
-					// Locally generated ID is stored in data.localId.
-					firestoreId:
-						(notification.content && notification.content.data && notification.content.data.localId) ||
-						notification.identifier ||
-						(notification.request && notification.request.identifier),
-					scheduledTime,
-					data:
-						(notification.content && notification.content.data) ||
-						(notification.request && notification.request.content && notification.request.content.data),
+					firestoreId: data.firestoreId || notification.identifier || notification.request?.identifier,
+					scheduledTime: callTime, // Use the actual call time
+					data: {
+						...data,
+						contactName: data.contactName,
+						callTime: callTime.toISOString(), // Include the call time in the data
+					},
 					status: 'pending',
+					contactName: data.contactName || 'Unknown Contact',
 				};
 			};
 
@@ -174,6 +183,41 @@ export default function DashboardScreen({ navigation, route }) {
 
 	const handleFollowUpComplete = async (reminderId, notes) => {
 		try {
+			// Try to cancel the local notification using the reminderId
+			try {
+				await Notifications.cancelScheduledNotificationAsync(reminderId);
+			} catch (error) {
+				console.log('No scheduled notification found for:', reminderId);
+			}
+
+			// Also try to cancel any presented notifications
+			try {
+				const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
+				const matchingNotification = presentedNotifications.find(
+					(n) => n.request.identifier === reminderId || n.request.content.data?.firestoreId === reminderId
+				);
+				if (matchingNotification) {
+					await Notifications.dismissNotificationAsync(matchingNotification.request.identifier);
+				}
+			} catch (error) {
+				console.log('Error dismissing presented notification:', error);
+			}
+
+			// Remove from notification coordinator
+			const mapping = notificationCoordinator.notificationMap.get(reminderId);
+			if (mapping) {
+				if (mapping.localId && mapping.localId !== reminderId) {
+					try {
+						await Notifications.cancelScheduledNotificationAsync(mapping.localId);
+					} catch (error) {
+						console.log('Error canceling mapped notification:', error);
+					}
+				}
+				notificationCoordinator.notificationMap.delete(reminderId);
+				await notificationCoordinator.saveNotificationMap();
+			}
+
+			// Handle notes if provided
 			if (notes) {
 				const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
 				const contactId = reminder.data?.contactId;
@@ -195,19 +239,32 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			}
 
-			// Update local state first
+			// Update UI
 			setRemindersState((prev) => ({
 				...prev,
 				data: prev.data.filter((r) => r.firestoreId !== reminderId),
 			}));
 
-			// Then update backend
+			// Update badge count
+			await notificationCoordinator.decrementBadge();
+
+			// Make sure notification service handles cleanup
 			await notificationService.handleFollowUpComplete(reminderId);
-			await loadContacts(); // Only reload contacts if needed
+
+			// Persist changes to AsyncStorage
+			try {
+				const storedNotifications = await AsyncStorage.getItem('follow_up_notifications');
+				if (storedNotifications) {
+					const notifications = JSON.parse(storedNotifications);
+					const updatedNotifications = notifications.filter((n) => n.id !== reminderId);
+					await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(updatedNotifications));
+				}
+			} catch (error) {
+				console.error('Error updating stored notifications:', error);
+			}
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			Alert.alert('Error', 'Failed to complete follow-up');
-			// Reload everything if there's an error
 			await loadReminders();
 		}
 	};

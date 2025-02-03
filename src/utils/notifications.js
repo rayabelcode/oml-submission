@@ -125,6 +125,7 @@ class NotificationService {
 				contactId: contact.id,
 				contactName: `${contact.first_name} ${contact.last_name}`,
 				callData: contact.callData,
+				startTime: contact.callData.startTime,
 			},
 		};
 
