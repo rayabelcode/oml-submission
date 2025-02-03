@@ -22,7 +22,6 @@ import { DateTime } from 'luxon';
 import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
 
-
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
 	const { colors } = useTheme();
@@ -164,9 +163,12 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			});
 
-			// Set the state to merge Firestore and local follow-up reminders
+			// Merge Firestore and local follow-up reminders - sort by date
+			const sortedReminders = [...filteredFirestoreReminders, ...followUpReminders].sort(
+				(a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime)
+			);
 			setRemindersState({
-				data: [...filteredFirestoreReminders, ...followUpReminders],
+				data: sortedReminders,
 				loading: false,
 				error: null,
 			});
