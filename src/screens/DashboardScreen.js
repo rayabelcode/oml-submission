@@ -75,7 +75,6 @@ export default function DashboardScreen({ navigation, route }) {
 				const content = notification.content || notification.request?.content;
 				const data = content?.data || {};
 
-				// Try to get the actual call time from all possible locations
 				let callTime;
 				if (data.callData?.startTime) {
 					callTime = new Date(data.callData.startTime);
@@ -85,25 +84,24 @@ export default function DashboardScreen({ navigation, route }) {
 					callTime = new Date(data.startTime);
 				}
 
-				// If no call time found, fall back to the scheduled time
 				if (!callTime || isNaN(callTime.getTime())) {
 					if (data.scheduledTime) {
 						callTime = new Date(data.scheduledTime);
 					} else if (notification.trigger) {
 						callTime = new Date(notification.trigger.timestamp || notification.trigger.date);
 					} else {
-						callTime = new Date();
+						callTime = new Date(0);
 					}
 				}
 
 				return {
 					type: 'FOLLOW_UP',
 					firestoreId: data.firestoreId || notification.identifier || notification.request?.identifier,
-					scheduledTime: callTime, // Use the actual call time
+					scheduledTime: callTime,
 					data: {
 						...data,
 						contactName: data.contactName,
-						callTime: callTime.toISOString(), // Include the call time in the data
+						callTime: callTime.toISOString(),
 					},
 					status: 'pending',
 					contactName: data.contactName || 'Unknown Contact',
