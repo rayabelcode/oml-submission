@@ -94,7 +94,7 @@ export const IOS_CONFIGS = {
 export const NOTIFICATION_CONFIGS = {
 	FOLLOW_UP: {
 		DELAY: 0, // immediate for now
-		TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours until auto-cleanup
+		TIMEOUT: 31536000000, // 1 year (in milliseconds)
 		CLEANUP: {
 			TRIGGERS: ['notes_added', 'dismissed', 'timeout'],
 			ACTIONS: {

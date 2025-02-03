@@ -54,6 +54,7 @@ class CallNotesService {
 		}
 	};
 
+
 	async scheduleFollowUp(contact, notificationTime = new Date()) {
 		try {
 			const reminderData = {
@@ -65,9 +66,10 @@ class CallNotesService {
 				call_data: contact.callData,
 				needs_attention: true,
 			};
-
-			const firestoreId = await addReminder(reminderData);
-
+	
+			const firestoreId = `FOLLOW_UP_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+	
+			// Build local notification content and include the scheduledTime as an ISO string.
 			const content = {
 				title: `Add Notes for Call with ${contact.first_name}`,
 				body: 'Tap to add notes about your recent call',
@@ -76,25 +78,25 @@ class CallNotesService {
 					contactId: contact.id,
 					firestoreId: firestoreId,
 					callData: contact.callData,
+					scheduledTime: notificationTime.toISOString(), // pass the time here
 				},
 				sound: true,
 			};
-
-			const trigger = notificationTime instanceof Date ? { date: notificationTime } : null;
+	
+			// Schedule the local notification using your notificationCoordinator.
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				content,
-				notificationTime, // Pass Date object directly
-				{
-					type: REMINDER_TYPES.FOLLOW_UP,
-				}
+				notificationTime,
+				{ type: REMINDER_TYPES.FOLLOW_UP }
 			);
-
+	
+			// Save the mapping locally so you can manage this reminder later.
 			notificationCoordinator.notificationMap.set(firestoreId, {
 				localId: localNotificationId,
-				scheduledTime: notificationTime,
+				scheduledTime: notificationTime, // store the original Date
 			});
 			await notificationCoordinator.saveNotificationMap();
-
+	
 			return firestoreId;
 		} catch (error) {
 			console.error('[CallNotesService] Error scheduling follow-up:', error);
@@ -104,22 +106,16 @@ class CallNotesService {
 
 	async handleFollowUpComplete(reminderId, notes = '') {
 		try {
-			if (!auth.currentUser) {
-				throw new Error('No authenticated user');
-			}
-
-			const mapping = notificationCoordinator.notificationMap.get(reminderId);
-			if (mapping) {
-				await notificationCoordinator.cancelNotification(mapping.localId);
-			}
-
-			await completeFollowUp(reminderId, notes);
-
-			notificationCoordinator.notificationMap.delete(reminderId);
-			await notificationCoordinator.saveNotificationMap();
-			await notificationCoordinator.decrementBadge();
-
-			return true;
+		// For local follow-ups - do not call Firestore completeFollowUp
+		// Cancel the local notification if we have a stored mapping
+		const mapping = notificationCoordinator.notificationMap.get(reminderId);
+		if (mapping) {
+		await notificationCoordinator.cancelNotification(mapping.localId);
+		}
+		// Remove the mapping and decrement the badge.
+		notificationCoordinator.notificationMap.delete(reminderId);
+		await notificationCoordinator.saveNotificationMap();
+		await notificationCoordinator.decrementBadge();
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			throw error;

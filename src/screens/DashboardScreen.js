@@ -71,7 +71,10 @@ export default function DashboardScreen({ navigation, route }) {
 			// Process a notification and extract follow-up info
 			const processReminder = (notification) => {
 				let scheduledTime;
-				if (notification.trigger) {
+				// If the notification content includes scheduledTime ISO string, use it
+				if (notification.content && notification.content.data && notification.content.data.scheduledTime) {
+					scheduledTime = new Date(notification.content.data.scheduledTime);
+				} else if (notification.trigger) {
 					if (notification.trigger.seconds) {
 						scheduledTime = new Date(notification.trigger.seconds * 1000);
 					} else if (notification.trigger.timestamp) {
@@ -81,14 +84,16 @@ export default function DashboardScreen({ navigation, route }) {
 					} else {
 						scheduledTime = new Date();
 					}
-				} else if (notification.date) {
-					scheduledTime = new Date(notification.date);
 				} else {
 					scheduledTime = new Date();
 				}
 				return {
 					type: 'FOLLOW_UP',
-					firestoreId: notification.identifier || (notification.request && notification.request.identifier),
+					// Locally generated ID is stored in data.localId.
+					firestoreId:
+						(notification.content && notification.content.data && notification.content.data.localId) ||
+						notification.identifier ||
+						(notification.request && notification.request.identifier),
 					scheduledTime,
 					data:
 						(notification.content && notification.content.data) ||
