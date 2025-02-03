@@ -64,32 +64,72 @@ export default function DashboardScreen({ navigation, route }) {
 			// Get Firestore reminders
 			const activeReminders = await notificationService.getActiveReminders();
 
-			// Get local notifications
+			// Retrieve both scheduled and presented (delivered) notifications from Expo
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+			const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
 
-			// Convert local FOLLOW_UP notifications to our reminder format
-			const followUpReminders = scheduledNotifications
-				.filter((notification) => notification.content.data?.type === 'FOLLOW_UP')
-				.map((notification) => ({
+			// Process a notification and extract follow-up info
+			const processReminder = (notification) => {
+				let scheduledTime;
+				if (notification.trigger) {
+					if (notification.trigger.seconds) {
+						scheduledTime = new Date(notification.trigger.seconds * 1000);
+					} else if (notification.trigger.timestamp) {
+						scheduledTime = new Date(notification.trigger.timestamp);
+					} else if (notification.trigger.date) {
+						scheduledTime = new Date(notification.trigger.date);
+					} else {
+						scheduledTime = new Date();
+					}
+				} else if (notification.date) {
+					scheduledTime = new Date(notification.date);
+				} else {
+					scheduledTime = new Date();
+				}
+				return {
 					type: 'FOLLOW_UP',
-					firestoreId: notification.identifier,
-					scheduledTime: new Date(notification.trigger.timestamp),
-					data: notification.content.data,
+					firestoreId: notification.identifier || (notification.request && notification.request.identifier),
+					scheduledTime,
+					data:
+						(notification.content && notification.content.data) ||
+						(notification.request && notification.request.content && notification.request.content.data),
 					status: 'pending',
-				}));
+				};
+			};
+
+			// Filter and process scheduled follow-up notifications
+			const scheduledFollowUpReminders = scheduledNotifications
+				.filter(
+					(notification) =>
+						notification.content &&
+						notification.content.data &&
+						notification.content.data.type === 'FOLLOW_UP'
+				)
+				.map(processReminder);
+
+			// Filter and process presented (delivered) follow-up notifications
+			const deliveredFollowUpReminders = presentedNotifications
+				.filter(
+					(notification) =>
+						notification.request &&
+						notification.request.content &&
+						notification.request.content.data &&
+						notification.request.content.data.type === 'FOLLOW_UP'
+				)
+				.map(processReminder);
+
+			// Merge both arrays so every follow-up reminder is included
+			const followUpReminders = [...scheduledFollowUpReminders, ...deliveredFollowUpReminders];
 
 			const now = DateTime.now();
 
-			// Filter Firestore reminders
+			// Filter Firestore reminders to include only those that are due
 			const filteredFirestoreReminders = activeReminders.filter((reminder) => {
-				// Skip daily reminders
 				if (reminder.frequency === 'daily') return false;
-
-				// Safely handle different date formats
 				let scheduledTime;
 				try {
 					if (reminder.scheduledTime) {
-						if (reminder.scheduledTime.toDate) {
+						if (typeof reminder.scheduledTime.toDate === 'function') {
 							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime.toDate());
 						} else if (reminder.scheduledTime instanceof Date) {
 							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime);
@@ -99,12 +139,10 @@ export default function DashboardScreen({ navigation, route }) {
 							scheduledTime = DateTime.fromMillis(reminder.scheduledTime);
 						}
 					}
-
 					if (!scheduledTime) {
 						console.warn('Could not parse scheduledTime for reminder:', reminder);
 						return false;
 					}
-
 					return scheduledTime <= now;
 				} catch (error) {
 					console.warn('Error processing reminder date:', error, reminder);
@@ -112,7 +150,7 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			});
 
-			// Combine Firestore and local reminders
+			// Set the state to merge Firestore and local follow-up reminders
 			setRemindersState({
 				data: [...filteredFirestoreReminders, ...followUpReminders],
 				loading: false,
@@ -225,11 +263,13 @@ export default function DashboardScreen({ navigation, route }) {
 			if (!user) return;
 			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
 			if (cachedContacts) {
-				setContacts(cachedContacts.sort((a, b) => {
-					const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
-					const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
-					return dateA - dateB;
-				}));
+				setContacts(
+					cachedContacts.sort((a, b) => {
+						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+						return dateA - dateB;
+					})
+				);
 			}
 		} catch (error) {
 			console.error('Error loading contacts:', error);
@@ -238,7 +278,6 @@ export default function DashboardScreen({ navigation, route }) {
 			setLoading(false);
 		}
 	}
-	
 
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
