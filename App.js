@@ -161,12 +161,6 @@ function App() {
 					notificationCoordinator.initialize(),
 				]);
 
-				Notifications.addNotificationReceivedListener((notification) => {
-					// Handle notifications received while app is in the foreground
-					if (Platform.OS === 'ios') {
-						notificationCoordinator.incrementBadge();
-					}
-				});
 			} catch (e) {
 				console.warn(e);
 			} finally {
