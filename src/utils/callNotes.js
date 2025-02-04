@@ -4,6 +4,7 @@ import { auth } from '../config/firebase';
 import { navigate } from '../navigation/RootNavigation';
 import { notificationCoordinator } from './notificationCoordinator';
 import { REMINDER_STATUS, REMINDER_TYPES, IOS_CONFIGS } from '../../constants/notificationConstants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 class CallNotesService {
 	constructor() {
@@ -56,30 +57,18 @@ class CallNotesService {
 
 	async scheduleFollowUp(contact, notificationTime = new Date()) {
 		try {
-			// Generate a unique ID that includes both timestamp and contact ID
-			const firestoreId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
+			// Create a unique id for this follow-up reminder
+			const followUpId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
 			const callTime = new Date();
 
-			const reminderData = {
-				contactId: contact.id,
-				scheduledTime: notificationTime,
-				type: REMINDER_TYPES.FOLLOW_UP,
-				status: REMINDER_STATUS.PENDING,
-				contactName: `${contact.first_name} ${contact.last_name}`,
-				call_data: {
-					...contact.callData,
-					callTime: callTime.toISOString(), // Store the actual call time
-				},
-				needs_attention: true,
-			};
-
+			// Build the notification content
 			const content = {
 				title: `Add Notes for Call with ${contact.first_name}`,
 				body: 'Tap to add notes about your recent call',
 				data: {
 					type: REMINDER_TYPES.FOLLOW_UP,
 					contactId: contact.id,
-					firestoreId: firestoreId,
+					followUpId: followUpId,
 					callData: {
 						...contact.callData,
 						callTime: callTime.toISOString(),
@@ -90,13 +79,15 @@ class CallNotesService {
 				sound: true,
 			};
 
+			// Schedule the local notification
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				content,
 				notificationTime,
 				{ type: REMINDER_TYPES.FOLLOW_UP }
 			);
 
-			notificationCoordinator.notificationMap.set(firestoreId, {
+			// Store in notification coordinator
+			notificationCoordinator.notificationMap.set(followUpId, {
 				localId: localNotificationId,
 				scheduledTime: notificationTime,
 				callTime: callTime.toISOString(),
@@ -104,25 +95,50 @@ class CallNotesService {
 			});
 			await notificationCoordinator.saveNotificationMap();
 
-			return firestoreId;
+			// Persist this follow-up reminder in AsyncStorage
+			let stored = await AsyncStorage.getItem('follow_up_notifications');
+			let notificationsList = stored ? JSON.parse(stored) : [];
+			notificationsList.push({
+				id: followUpId,
+				localNotificationId,
+				scheduledTime: notificationTime.toISOString(),
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				data: content.data,
+			});
+			await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(notificationsList));
+
+			// Update badge count
+			await notificationCoordinator.incrementBadge();
+
+			return followUpId;
 		} catch (error) {
 			console.error('[CallNotesService] Error scheduling follow-up:', error);
 			throw error;
 		}
 	}
 
-	async handleFollowUpComplete(reminderId, notes = '') {
+	async handleFollowUpComplete(followUpId, notes = '') {
 		try {
-			// For local follow-ups - do not call Firestore completeFollowUp
-			// Cancel the local notification if we have a stored mapping
-			const mapping = notificationCoordinator.notificationMap.get(reminderId);
+			// Cancel local notification
+			const mapping = notificationCoordinator.notificationMap.get(followUpId);
 			if (mapping) {
 				await notificationCoordinator.cancelNotification(mapping.localId);
+				notificationCoordinator.notificationMap.delete(followUpId);
+				await notificationCoordinator.saveNotificationMap();
 			}
-			// Remove the mapping and decrement the badge.
-			notificationCoordinator.notificationMap.delete(reminderId);
-			await notificationCoordinator.saveNotificationMap();
+
+			// Remove from AsyncStorage
+			let stored = await AsyncStorage.getItem('follow_up_notifications');
+			if (stored) {
+				let notificationsList = JSON.parse(stored);
+				notificationsList = notificationsList.filter((item) => item.id !== followUpId);
+				await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(notificationsList));
+			}
+
+			// Update badge count
 			await notificationCoordinator.decrementBadge();
+
+			return true;
 		} catch (error) {
 			console.error('Error completing follow-up:', error);
 			throw error;

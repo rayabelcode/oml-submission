@@ -161,10 +161,27 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			});
 
-			// Merge Firestore and local follow-up reminders - sort by date
-			const sortedReminders = [...filteredFirestoreReminders, ...followUpReminders].sort(
-				(a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime)
-			);
+			// Load stored follow-up reminders from AsyncStorage
+			const storedFollowUp = await AsyncStorage.getItem('follow_up_notifications');
+			const localFollowUpReminders = storedFollowUp ? JSON.parse(storedFollowUp) : [];
+
+			// Transform stored reminders to match our format
+			const processedFollowUps = localFollowUpReminders.map((local) => ({
+				type: 'FOLLOW_UP',
+				firestoreId: local.id,
+				scheduledTime: new Date(local.scheduledTime),
+				data: local.data,
+				contactName: local.contactName,
+				status: 'pending',
+			}));
+
+			// Merge all reminders and sort
+			const sortedReminders = [
+				...filteredFirestoreReminders,
+				...followUpReminders,
+				...processedFollowUps,
+			].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+
 			setRemindersState({
 				data: sortedReminders,
 				loading: false,
