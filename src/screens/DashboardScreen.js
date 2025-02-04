@@ -66,11 +66,9 @@ export default function DashboardScreen({ navigation, route }) {
 			// Get Firestore reminders
 			const activeReminders = await notificationService.getActiveReminders();
 
-			// Retrieve both scheduled and presented (delivered) notifications from Expo
+			// Only get scheduled (not yet delivered) notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-			const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
 
-			// Process a notification and extract follow-up info
 			const processReminder = (notification) => {
 				const content = notification.content || notification.request?.content;
 				const data = content?.data || {};
@@ -108,29 +106,10 @@ export default function DashboardScreen({ navigation, route }) {
 				};
 			};
 
-			// Filter and process scheduled follow-up notifications
-			const scheduledFollowUpReminders = scheduledNotifications
-				.filter(
-					(notification) =>
-						notification.content &&
-						notification.content.data &&
-						notification.content.data.type === 'FOLLOW_UP'
-				)
+			// Process scheduled follow-up notifications only
+			const followUpReminders = scheduledNotifications
+				.filter((notification) => notification.content?.data?.type === 'FOLLOW_UP')
 				.map(processReminder);
-
-			// Filter and process presented (delivered) follow-up notifications
-			const deliveredFollowUpReminders = presentedNotifications
-				.filter(
-					(notification) =>
-						notification.request &&
-						notification.request.content &&
-						notification.request.content.data &&
-						notification.request.content.data.type === 'FOLLOW_UP'
-				)
-				.map(processReminder);
-
-			// Merge both arrays so every follow-up reminder is included
-			const followUpReminders = [...scheduledFollowUpReminders, ...deliveredFollowUpReminders];
 
 			const now = DateTime.now();
 
@@ -175,7 +154,7 @@ export default function DashboardScreen({ navigation, route }) {
 				status: 'pending',
 			}));
 
-			// Merge all reminders and sort
+			// Merge and sort reminders (without presented notifications)
 			const sortedReminders = [
 				...filteredFirestoreReminders,
 				...followUpReminders,

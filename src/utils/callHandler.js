@@ -1,6 +1,7 @@
 import { Platform, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationService } from './notifications';
+import { callNotesService } from './callNotes';
 
 const ACTIVE_CALL_KEY = '@CallHandler:activeCall';
 
@@ -32,8 +33,7 @@ class CallHandler {
 				return false;
 			}
 
-			const callStartTime = new Date(); // Capture exact call start time
-
+			const callStartTime = new Date();
 			const callData = {
 				contact,
 				startTime: callStartTime.toISOString(),
@@ -41,15 +41,18 @@ class CallHandler {
 			};
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
-			await this.notificationService.initialize();
 
-			const followUpTime = new Date(Date.now() + 5000); // 5 seconds after call
+			// Initialize both services
+			await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
+
+			const followUpTime = new Date(Date.now() + 5000);
+			// Use notificationService since that's what was working before
 			const notificationId = await this.notificationService.scheduleCallFollowUp(
 				{
 					...contact,
 					callData: {
 						type: callType,
-						startTime: callStartTime.toISOString(), // Pass the exact start time
+						startTime: callStartTime.toISOString(),
 					},
 				},
 				followUpTime
