@@ -4,6 +4,7 @@ import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
 import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
+import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -428,19 +429,38 @@ export default function DashboardScreen({ navigation, route }) {
 								}
 
 								return (
-									<ContactCard
+									<TouchableOpacity
 										key={contact.id}
-										contact={{
-											...contact,
-											next_contact: formattedDate,
-										}}
-										onPress={(contact) =>
-											navigation.navigate('ContactDetails', {
-												contact,
-												initialTab: 'Schedule',
-											})
-										}
-									/>
+										style={[styles.upcomingContactCard, { alignItems: 'center' }]}
+										onPress={() => navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })}
+									>
+										<View style={[styles.cardHeader, { justifyContent: 'center' }]}>
+											<View style={styles.avatarContainer}>
+												{contact.photo_url ? (
+													<ExpoImage
+														source={{ uri: contact.photo_url }}
+														style={styles.avatar}
+														cachePolicy="memory-disk"
+														transition={200}
+													/>
+												) : (
+													<Icon name="person-outline" size={24} color={colors.primary} />
+												)}
+											</View>
+											<View style={styles.upcomingContactInfo}>
+												<Text style={styles.upcomingContactName}>
+													{contact.first_name} {contact.last_name}
+												</Text>
+												<Text style={styles.upcomingContactDate}>
+													{new Date(formattedDate).toLocaleDateString('en-US', {
+														month: 'long',
+														day: 'numeric',
+														year: 'numeric',
+													})}
+												</Text>
+											</View>
+										</View>
+									</TouchableOpacity>
 								);
 							})
 							.filter(Boolean)

@@ -1,4 +1,3 @@
-// src/styles/screens/dashboard.js
 import { StyleSheet, Platform } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
@@ -105,6 +104,8 @@ const useStyles = () => {
 		cardHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
+			width: '80%',
+			justifyContent: 'center',
 		},
 		cardInfo: {
 			flex: 1,
@@ -119,20 +120,6 @@ const useStyles = () => {
 			fontSize: 16,
 			color: colors.text.secondary,
 			marginBottom: 10,
-		},
-		avatarContainer: {
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			backgroundColor: colors.background.tertiary,
-			justifyContent: 'center',
-			alignItems: 'center',
-			marginRight: spacing.sm,
-		},
-		avatar: {
-			width: 40,
-			height: 40,
-			borderRadius: 20,
 		},
 		statCard: {
 			backgroundColor: colors.background.secondary,
@@ -183,6 +170,59 @@ const useStyles = () => {
 			flex: 1,
 			padding: spacing.md,
 			backgroundColor: colors.background.primary,
+		},
+		// Upcoming Calls
+		avatarContainer: {
+			width: 40,
+			height: 40,
+			borderRadius: 20,
+			backgroundColor: colors.background.tertiary,
+			justifyContent: 'center',
+			alignItems: 'center',
+			marginRight: spacing.sm,
+		},
+		avatar: {
+			width: 40,
+			height: 40,
+			borderRadius: 20,
+		},
+		upcomingContactCard: {
+			backgroundColor: colors.background.secondary,
+			padding: spacing.lg,
+			borderRadius: layout.borderRadius.md,
+			marginBottom: spacing.sm,
+			marginHorizontal: spacing.sm,
+			alignItems: 'center',
+		},
+		upcomingContactAvatar: {
+			width: 50,
+			height: 50,
+			borderRadius: 25,
+			marginBottom: spacing.sm,
+		},
+		upcomingContactAvatarContainer: {
+			width: 50,
+			height: 50,
+			borderRadius: 25,
+			backgroundColor: colors.background.tertiary,
+			justifyContent: 'center',
+			alignItems: 'center',
+			marginBottom: spacing.sm,
+		},
+		upcomingContactName: {
+			fontSize: 17,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.xs,
+			textAlign: 'left',
+		},
+		upcomingContactDate: {
+			fontSize: 15,
+			color: colors.text.secondary,
+			textAlign: 'left',
+		},
+		upcomingContactInfo: {
+			marginLeft: spacing.sm,
 		},
 		// Notification swiping
 		swipeActionContainer: {
