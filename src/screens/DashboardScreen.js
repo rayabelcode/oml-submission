@@ -82,8 +82,9 @@ export default function DashboardScreen({ navigation, route }) {
 			);
 			const remindersSnapshot = await getDocs(remindersQuery);
 			const allReminders = remindersSnapshot.docs.map((doc) => ({
-				id: doc.id,
+				firestoreId: doc.id,
 				...doc.data(),
+				scheduledTime: doc.data().scheduledTime?.toDate(), // Convert Firestore timestamp to Date
 			}));
 
 			// Only get scheduled (not yet delivered) notifications
@@ -138,26 +139,17 @@ export default function DashboardScreen({ navigation, route }) {
 				// Always include sent reminders
 				if (reminder.status === 'sent') return true;
 
-				// For pending reminders, check if they're due
+				// Skip daily reminders
 				if (reminder.frequency === 'daily') return false;
-				let scheduledTime;
+
 				try {
-					if (reminder.scheduledTime) {
-						if (typeof reminder.scheduledTime.toDate === 'function') {
-							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime.toDate());
-						} else if (reminder.scheduledTime instanceof Date) {
-							scheduledTime = DateTime.fromJSDate(reminder.scheduledTime);
-						} else if (typeof reminder.scheduledTime === 'string') {
-							scheduledTime = DateTime.fromISO(reminder.scheduledTime);
-						} else if (typeof reminder.scheduledTime === 'number') {
-							scheduledTime = DateTime.fromMillis(reminder.scheduledTime);
-						}
+					// For pending reminders, check if they're due
+					if (reminder.status === 'pending') {
+						const reminderTime = reminder.scheduledTime;
+						if (!reminderTime) return false;
+						return reminderTime <= now.toJSDate();
 					}
-					if (!scheduledTime) {
-						console.warn('Could not parse scheduledTime for reminder:', reminder);
-						return false;
-					}
-					return reminder.status === 'pending' && scheduledTime <= now;
+					return false;
 				} catch (error) {
 					console.warn('Error processing reminder date:', error, reminder);
 					return false;

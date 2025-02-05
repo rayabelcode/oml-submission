@@ -68,6 +68,30 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		)
 	).current;
 
+	// Function to format date for display
+	const formatStoredDate = (dateValue) => {
+		if (!dateValue) return 'Not Set';
+
+		try {
+			// Handle Firestore Timestamp
+			if (dateValue?.toDate) {
+				return dateValue.toDate().toLocaleDateString();
+			}
+			// Handle ISO string
+			if (typeof dateValue === 'string') {
+				return new Date(dateValue).toLocaleDateString();
+			}
+			// Handle Date object
+			if (dateValue instanceof Date) {
+				return dateValue.toLocaleDateString();
+			}
+			return 'Invalid Date';
+		} catch (error) {
+			console.warn('Error formatting date:', error);
+			return 'Invalid Date';
+		}
+	};
+
 	const [showSlotsFilledModal, setShowSlotsFilledModal] = useState(false);
 	const [slotsFilledDetails, setSlotsFilledDetails] = useState(null);
 	const [selectedDate, setSelectedDate] = useState(new Date());
@@ -270,9 +294,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							<>
 								<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
 								<Text style={styles.scheduledDateValue}>
-									{contact.scheduling?.recurring_next_date
-										? new Date(contact.scheduling.recurring_next_date).toLocaleDateString()
-										: 'Not Set'}
+									{formatStoredDate(contact.scheduling?.recurring_next_date)}
 								</Text>
 							</>
 						)}
@@ -288,9 +310,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 							<>
 								<Text style={styles.scheduledDateLabel}>Custom Date</Text>
 								<Text style={styles.scheduledDateValue}>
-									{contact.scheduling?.custom_next_date
-										? new Date(contact.scheduling.custom_next_date).toLocaleDateString()
-										: 'Not Set'}
+									{formatStoredDate(contact.scheduling?.custom_next_date)}
 								</Text>
 							</>
 						)}
