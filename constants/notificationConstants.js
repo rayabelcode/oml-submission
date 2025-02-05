@@ -10,9 +10,10 @@ export const REMINDER_TYPES = {
 
 export const REMINDER_STATUS = {
 	PENDING: 'pending',
-	COMPLETED: 'completed',
+	SENT: 'sent',
 	SNOOZED: 'snoozed',
 	SKIPPED: 'skipped',
+	COMPLETED: 'completed',
 };
 
 // Notification trigger validation

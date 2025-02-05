@@ -965,8 +965,12 @@ export const completeFollowUp = async (reminderId, notes) => {
 
 		const batch = writeBatch(db);
 
-		// Delete the reminder when dismiss is selected
-		batch.delete(reminderRef);
+		// Update reminder to 'completed'
+		batch.update(reminderRef, {
+			status: REMINDER_STATUS.COMPLETED,
+			completion_time: serverTimestamp(),
+			updated_at: serverTimestamp(),
+		});
 
 		// If there are notes, add them to contact history
 		if (notes && reminderData.contact_id) {

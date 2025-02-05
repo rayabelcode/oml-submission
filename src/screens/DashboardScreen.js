@@ -14,7 +14,16 @@ import { notificationService } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
 import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
-import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import {
+	doc,
+	updateDoc,
+	arrayUnion,
+	serverTimestamp,
+	collection,
+	query,
+	where,
+	getDocs,
+} from 'firebase/firestore';
 import { REMINDER_TYPES } from '../../constants/notificationConstants';
 import { db } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
@@ -64,8 +73,18 @@ export default function DashboardScreen({ navigation, route }) {
 	// Function to show reminders
 	const loadReminders = async () => {
 		try {
-			// Get Firestore reminders
-			const activeReminders = await notificationService.getActiveReminders();
+			// Get Firestore reminders that are either pending or sent
+			const remindersRef = collection(db, 'reminders');
+			const remindersQuery = query(
+				remindersRef,
+				where('user_id', '==', user.uid),
+				where('status', 'in', ['pending', 'sent'])
+			);
+			const remindersSnapshot = await getDocs(remindersQuery);
+			const allReminders = remindersSnapshot.docs.map((doc) => ({
+				id: doc.id,
+				...doc.data(),
+			}));
 
 			// Only get scheduled (not yet delivered) notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
@@ -114,8 +133,12 @@ export default function DashboardScreen({ navigation, route }) {
 
 			const now = DateTime.now();
 
-			// Filter Firestore reminders to include only those that are due
-			const filteredFirestoreReminders = activeReminders.filter((reminder) => {
+			// Filter Firestore reminders to include sent reminders and due pending reminders
+			const filteredFirestoreReminders = allReminders.filter((reminder) => {
+				// Always include sent reminders
+				if (reminder.status === 'sent') return true;
+
+				// For pending reminders, check if they're due
 				if (reminder.frequency === 'daily') return false;
 				let scheduledTime;
 				try {
@@ -134,7 +157,7 @@ export default function DashboardScreen({ navigation, route }) {
 						console.warn('Could not parse scheduledTime for reminder:', reminder);
 						return false;
 					}
-					return scheduledTime <= now;
+					return reminder.status === 'pending' && scheduledTime <= now;
 				} catch (error) {
 					console.warn('Error processing reminder date:', error, reminder);
 					return false;
@@ -155,7 +178,7 @@ export default function DashboardScreen({ navigation, route }) {
 				status: 'pending',
 			}));
 
-			// Merge and sort reminders (without presented notifications)
+			// Merge and sort reminders
 			const sortedReminders = [
 				...filteredFirestoreReminders,
 				...followUpReminders,

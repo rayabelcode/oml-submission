@@ -207,7 +207,7 @@ export const processReminders = onSchedule(
           // Mark reminder as completed
           batch.update(reminderDoc.ref, {
             notified: true,
-            status: "completed",
+            status: "sent",
             completion_time: FieldValue.serverTimestamp(),
             notifiedAt: FieldValue.serverTimestamp(),
           });
