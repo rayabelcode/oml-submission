@@ -202,6 +202,15 @@ export default function DashboardScreen({ navigation, route }) {
 				console.log('No scheduled notification found for:', reminderId);
 			}
 
+			// Find reminder in Firestore
+			const reminderRef = doc(db, 'reminders', reminderId);
+			await updateDoc(reminderRef, {
+				status: 'completed',
+				completed: true,
+				completion_time: serverTimestamp(),
+				updated_at: serverTimestamp(),
+			});
+
 			// Also try to cancel any presented notifications
 			try {
 				const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
@@ -319,9 +328,14 @@ export default function DashboardScreen({ navigation, route }) {
 
 			const contactId = selectedReminder.data.contactId;
 			const reminderId = selectedReminder.firestoreId;
-			const currentTime = DateTime.now();
 
-			await snoozeHandler.handleSnooze(contactId, option, currentTime, 'SCHEDULED', reminderId);
+			if (!contactId || !reminderId) {
+				throw new Error('Invalid reminder data');
+			}
+
+			// Handle the snooze in Firestore
+			await snoozeHandler.handleSnooze(contactId, option, DateTime.now(), selectedReminder.type, reminderId);
+
 			await loadReminders();
 			setShowSnoozeOptions(false);
 		} catch (error) {
