@@ -26,6 +26,7 @@ jest.mock('../../context/ThemeContext', () => ({
 			secondary: '#666',
 			success: '#4CAF50',
 			danger: '#ff0000',
+			warning: '#FF9500',
 			text: {
 				primary: '#000',
 				secondary: '#666',
@@ -36,7 +37,13 @@ jest.mock('../../context/ThemeContext', () => ({
 				tertiary: '#e0e0e0',
 			},
 			border: '#ddd',
+			reminderTypes: {
+				follow_up: '#1C2733',
+				scheduled: '#1C291C',
+				custom_date: '#291C33',
+			},
 		},
+		theme: 'light',
 	}),
 }));
 
@@ -106,13 +113,14 @@ describe('NotificationsView', () => {
 	it('renders scheduled reminders correctly', () => {
 		const { getAllByText, getByText } = render(<NotificationsView {...defaultProps} />);
 
-		// Check for Recurring Call label
-		const recurringCallLabels = getAllByText('Recurring Call');
-		expect(recurringCallLabels).toHaveLength(2);
+		const recurringReminders = getAllByText('Recurring Reminder');
+		expect(recurringReminders).toHaveLength(2);
 
-		// Check for specific reminder texts
-		expect(getByText(/Call John Doe.*Dec 31, 2024/)).toBeTruthy();
-		expect(getByText(/Call Jane Smith.*Dec 31, 2024/)).toBeTruthy();
+		expect(getByText('John Doe')).toBeTruthy();
+		expect(getByText('Jane Smith')).toBeTruthy();
+
+		const callReminders = getAllByText('12/31/2024 (weekly) Call Reminder');
+		expect(callReminders).toHaveLength(2);
 	});
 
 	it('handles reminder actions correctly', () => {
@@ -141,8 +149,7 @@ describe('NotificationsView', () => {
 		expect(getAllByText('Complete')).toHaveLength(2);
 		expect(getAllByText('Snooze')).toHaveLength(2);
 
-		// Check for reminder labels
-		expect(getAllByText('Recurring Call')).toHaveLength(2);
+		expect(getAllByText('Recurring Reminder')).toHaveLength(2);
 	});
 
 	it('renders custom date reminders correctly', () => {
@@ -158,9 +165,9 @@ describe('NotificationsView', () => {
 
 		const { getByText } = render(<NotificationsView {...defaultProps} reminders={customDateReminders} />);
 
-		// Check for Custom Call label
-		expect(getByText('Custom Call')).toBeTruthy();
-		expect(getByText(/Call Bob Custom.*Dec 31, 2024/)).toBeTruthy();
+		expect(getByText('Custom Reminder')).toBeTruthy();
+		expect(getByText('Bob Custom')).toBeTruthy();
+		expect(getByText('12/31/2024 Custom Call Reminder')).toBeTruthy();
 	});
 
 	it('renders mixed reminder types correctly', () => {
@@ -183,9 +190,11 @@ describe('NotificationsView', () => {
 
 		const { getByText } = render(<NotificationsView {...defaultProps} reminders={mixedReminders} />);
 
-		expect(getByText('Recurring Call')).toBeTruthy();
-		expect(getByText('Custom Call')).toBeTruthy();
-		expect(getByText(/Call John Recurring.*Dec 31, 2024/)).toBeTruthy();
-		expect(getByText(/Call Jane Custom.*Dec 31, 2024/)).toBeTruthy();
+		expect(getByText('Recurring Reminder')).toBeTruthy();
+		expect(getByText('Custom Reminder')).toBeTruthy();
+		expect(getByText('John Recurring')).toBeTruthy();
+		expect(getByText('Jane Custom')).toBeTruthy();
+		expect(getByText('12/31/2024 (weekly) Call Reminder')).toBeTruthy();
+		expect(getByText('12/31/2024 Custom Call Reminder')).toBeTruthy();
 	});
 });
