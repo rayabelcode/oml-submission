@@ -28,6 +28,7 @@ const lightTheme = {
 		primary: '#FFFFFF',
 		secondary: '#F2F2F7',
 		tertiary: '#E5E5EA',
+		quaternary: '#F5F5F5',
 		overlay: 'rgba(0, 0, 0, 0.75)',
 		statusBar: 'transparent',
 	},
@@ -40,13 +41,18 @@ const lightTheme = {
 	primary: '#007AFF',
 	secondary: '#4CD964',
 	danger: '#FF3B30',
-	warning: '#FFCC00',
+	warning: '#FF9500',
 	lightWarning: '#fa6b7e', // Lighter red warning
 	lightHighlight: '#87EF66', // Lighter green success
 	success: '#34C759',
 	border: '#E5E5EA',
 	tabBar: {
 		background: '#E0E0E0',
+	},
+	reminderTypes: {
+		follow_up: '#E6F3FF', // Light blue
+		scheduled: '#E6FFE6', // Light green
+		custom_date: '#F5E6FF', // Light purple
 	},
 };
 
@@ -56,6 +62,7 @@ const darkTheme = {
 		primary: '#000000',
 		secondary: '#1C1C1E',
 		tertiary: '#2C2C2E',
+		quaternary: '#3A3A3C',
 		overlay: 'rgba(0, 0, 0, 0.9)',
 		statusBar: 'transparent',
 	},
@@ -75,6 +82,11 @@ const darkTheme = {
 	border: '#3A3A3C',
 	tabBar: {
 		background: '#2C2C2E',
+	},
+	reminderTypes: {
+		follow_up: '#1C2733', // Dark blue
+		scheduled: '#1C291C', // Dark green
+		custom_date: '#291C33', // Dark purple
 	},
 };
 

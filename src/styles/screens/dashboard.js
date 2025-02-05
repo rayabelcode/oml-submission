@@ -67,34 +67,30 @@ const useStyles = () => {
 			backgroundColor: colors.background.tertiary,
 		},
 		card: {
-			backgroundColor: colors.background.secondary,
-			padding: spacing.md,
-			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.sm,
-			borderWidth: 1,
-			borderColor: colors.border,
+			marginHorizontal: spacing.sm,
+			borderRadius: layout.borderRadius.md,
 			overflow: 'hidden',
 		},
 		cardContent: {
 			flex: 1,
+			alignItems: 'flex-start',
 		},
 		cardActions: {
 			flexDirection: 'row',
-			justifyContent: 'space-between',
-			marginTop: spacing.md,
-			paddingTop: spacing.md,
-			borderTopWidth: 1,
-			borderTopColor: colors.border,
+			justifyContent: 'space-evenly',
+			padding: spacing.md,
+			backgroundColor: colors.background.secondary,
 		},
 		actionButton: {
-			flex: 1,
+			flexDirection: 'row',
 			alignItems: 'center',
-			justifyContent: 'center',
-			paddingVertical: spacing.sm,
+			paddingVertical: spacing.xs,
+			paddingHorizontal: spacing.sm,
 		},
 		actionText: {
-			fontSize: 12,
-			marginTop: 4,
+			marginLeft: spacing.xs,
+			fontSize: 14,
 			fontWeight: '500',
 		},
 		actionButtonSeparator: {
@@ -104,11 +100,47 @@ const useStyles = () => {
 		cardHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			width: '80%',
-			justifyContent: 'center',
+			paddingBottom: spacing.sm,
 		},
 		cardInfo: {
 			flex: 1,
+		},
+		cardIcon: {
+			marginRight: spacing.sm,
+		},
+		contactName: {
+			fontSize: 16,
+			color: colors.text.primary,
+			marginBottom: spacing.xs,
+			textAlign: 'center',
+		},
+		cardTop: {
+			padding: spacing.md,
+			alignItems: 'center',
+		},
+		titleRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			marginBottom: spacing.sm,
+		},
+		titleIcon: {
+			marginRight: spacing.xs,
+		},
+		reminderTitle: {
+			fontSize: 18,
+			fontWeight: 'bold',
+			color: colors.text.primary,
+			textAlign: 'center',
+		},
+		reminderDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			textAlign: 'center',
+		},
+		reminderDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
 		},
 		cardName: {
 			fontSize: 16,

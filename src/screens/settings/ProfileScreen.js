@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
-import { useTheme } from '../../context/ThemeContext'; // Import ThemeContext
+import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePickerComponent from '../../components/general/ImagePicker';
 import { useAuth } from '../../context/AuthContext';

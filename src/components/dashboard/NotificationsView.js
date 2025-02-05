@@ -7,17 +7,15 @@ import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
-	const { colors } = useTheme();
-	const noteInputRef = useRef('');
+	const { colors, theme } = useTheme();
 	const [hasText, setHasText] = useState(false);
+	const noteInputRef = useRef('');
 
 	const date = reminder.scheduledTime ? new Date(reminder.scheduledTime) : new Date();
 	const formattedDate = date.toLocaleDateString('en-US', {
-		month: 'short',
+		month: 'numeric',
 		day: 'numeric',
 		year: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
 	});
 
 	const isExpanded = expandedId === reminder.firestoreId;
@@ -50,32 +48,49 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 
 	return (
 		<View style={styles.card}>
-			<View style={styles.cardContent}>
-				<Text style={styles.cardName}>
-					{reminder.type === REMINDER_TYPES.FOLLOW_UP
-						? 'Call Follow-up'
-						: reminder.type === REMINDER_TYPES.CUSTOM_DATE
-						? 'Custom Call'
-						: 'Recurring Call'}
-				</Text>
+			<View style={[styles.cardTop, { backgroundColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}>
+				<View style={styles.titleRow}>
+					<Icon
+						name={
+							reminder.type === REMINDER_TYPES.FOLLOW_UP
+								? 'document-text-outline'
+								: reminder.type === REMINDER_TYPES.SCHEDULED
+								? 'repeat-outline'
+								: 'calendar-outline'
+						}
+						size={24}
+						color={colors.text.primary}
+						style={styles.titleIcon}
+					/>
+					<Text style={styles.reminderTitle}>
+						{reminder.type === REMINDER_TYPES.FOLLOW_UP
+							? 'Follow Up Reminder'
+							: reminder.type === REMINDER_TYPES.SCHEDULED
+							? 'Recurring Reminder'
+							: 'Custom Reminder'}
+					</Text>
+				</View>
 
-				<Text style={styles.cardDate}>
+				<Text style={styles.contactName}>{reminder.contactName}</Text>
+				<Text style={styles.reminderDescription}>
 					{reminder.type === REMINDER_TYPES.FOLLOW_UP
-						? `Add notes for call with ${reminder.contactName || 'Contact'} on ${formattedDate}`
-						: `Call ${reminder.contactName || 'Contact'} - ${formattedDate}`}
+						? `Add notes for the call on ${formattedDate}`
+						: reminder.type === REMINDER_TYPES.SCHEDULED
+						? `${formattedDate} (${reminder.frequency || 'weekly'}) Call Reminder`
+						: `${formattedDate} Custom Call Reminder`}
 				</Text>
 			</View>
 
 			{reminder.type === REMINDER_TYPES.FOLLOW_UP && isExpanded && (
-				<View style={styles.notesContainer}>
+				<View style={[styles.notesContainer, { backgroundColor: colors.background.secondary }]}>
 					<TextInput
 						style={[
 							styles.notesInput,
 							{
+								backgroundColor: colors.background.tertiary,
 								color: colors.text.primary,
 								borderColor: colors.border,
 								borderWidth: 1,
-								backgroundColor: colors.background.tertiary,
 							},
 						]}
 						multiline
@@ -86,24 +101,29 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 						autoFocus
 					/>
 					<TouchableOpacity
-						style={[styles.submitButton, !hasText && styles.submitButtonDisabled]}
+						style={[
+							styles.submitButton,
+							!hasText && styles.submitButtonDisabled,
+							{ backgroundColor: colors.primary },
+						]}
 						onPress={handleSubmitNotes}
 						disabled={!hasText}
 					>
-						<Text style={styles.submitButtonText}>Save Notes</Text>
+						<Text style={[styles.submitButtonText, { color: colors.background.primary }]}>Save Notes</Text>
 					</TouchableOpacity>
 				</View>
 			)}
 
-			<View style={styles.cardActions}>
+			<View style={[styles.cardActions, { backgroundColor: colors.background.quaternary }]}>
 				{reminder.type === REMINDER_TYPES.FOLLOW_UP ? (
 					<>
-						<TouchableOpacity style={styles.actionButton} onPress={() => onComplete(reminder.firestoreId)}>
+						<TouchableOpacity
+							style={[styles.actionButton, { borderRightWidth: 1, borderRightColor: colors.border }]}
+							onPress={() => onComplete(reminder.firestoreId)}
+						>
 							<Icon name="close-circle-outline" size={24} color={colors.danger} />
 							<Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
 						</TouchableOpacity>
-
-						<View style={styles.actionButtonSeparator} />
 
 						<TouchableOpacity style={styles.actionButton} onPress={handleExpand}>
 							<Icon name="create-outline" size={24} color={colors.primary} />
@@ -114,16 +134,17 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					</>
 				) : (
 					<>
-						<TouchableOpacity style={styles.actionButton} onPress={() => onComplete(reminder.firestoreId)}>
+						<TouchableOpacity
+							style={[styles.actionButton, { borderRightWidth: 1, borderRightColor: colors.border }]}
+							onPress={() => onComplete(reminder.firestoreId)}
+						>
 							<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
 							<Text style={[styles.actionText, { color: colors.success }]}>Complete</Text>
 						</TouchableOpacity>
 
-						<View style={styles.actionButtonSeparator} />
-
 						<TouchableOpacity style={styles.actionButton} onPress={() => onSnooze(reminder)}>
-							<Icon name="time-outline" size={24} color={colors.secondary} />
-							<Text style={[styles.actionText, { color: colors.secondary }]}>Snooze</Text>
+							<Icon name="time-outline" size={24} color={colors.warning} />
+							<Text style={[styles.actionText, { color: colors.warning }]}>Snooze</Text>
 						</TouchableOpacity>
 					</>
 				)}
