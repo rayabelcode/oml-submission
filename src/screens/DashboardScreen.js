@@ -115,15 +115,11 @@ export default function DashboardScreen({ navigation, route }) {
 
 				return {
 					type: 'FOLLOW_UP',
-					firestoreId: data.firestoreId || notification.identifier || notification.request?.identifier,
+					firestoreId: data.firestoreId || notification.identifier,
 					scheduledTime: callTime,
-					data: {
-						...data,
-						contactName: data.contactName,
-						callTime: callTime.toISOString(),
-					},
-					status: 'pending',
+					contact_id: data.contactId,
 					contactName: data.contactName || 'Unknown Contact',
+					status: 'pending',
 				};
 			};
 
@@ -308,42 +304,47 @@ export default function DashboardScreen({ navigation, route }) {
 			return;
 		}
 
+		// Get the snooze options based on reminder's frequency and snooze count
+		const options = await snoozeHandler.getAvailableSnoozeOptions(reminder.firestoreId);
+		if (!options || options.length === 0) {
+			Alert.alert('Error', 'No available snooze options');
+			return;
+		}
+
+		// Set the selected reminder BEFORE creating options
 		setSelectedReminder(reminder);
 
-		// Get available options based on reminder frequency
-		const options = await snoozeHandler.getAvailableSnoozeOptions(reminder.firestoreId);
-		setSnoozeOptions(options);
+		// Create options with handlers that use closure over the reminder
+		const optionsWithHandlers = options.map((option) => ({
+			...option,
+			onPress: async () => {
+				setSnoozeLoading(true);
+				setSnoozeError(null);
+
+				try {
+					await initializeSnoozeHandler(user.uid);
+
+					await snoozeHandler.handleSnooze(
+						reminder.contact_id,
+						option.id,
+						DateTime.now(),
+						reminder.type || 'SCHEDULED',
+						reminder.firestoreId
+					);
+
+					setShowSnoozeOptions(false);
+					await loadReminders();
+				} catch (error) {
+					console.error('Error in snooze process:', error);
+					setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
+				} finally {
+					setSnoozeLoading(false);
+				}
+			},
+		}));
+
+		setSnoozeOptions(optionsWithHandlers);
 		setShowSnoozeOptions(true);
-	};
-
-	const handleSnoozeSelection = async (option) => {
-		if (!selectedReminder) return;
-
-		setSnoozeLoading(true);
-		setSnoozeError(null);
-
-		try {
-			// Initialize snoozeHandler with current user ID
-			await initializeSnoozeHandler(user.uid);
-
-			const contactId = selectedReminder.data.contactId;
-			const reminderId = selectedReminder.firestoreId;
-
-			if (!contactId || !reminderId) {
-				throw new Error('Invalid reminder data');
-			}
-
-			// Handle the snooze in Firestore
-			await snoozeHandler.handleSnooze(contactId, option, DateTime.now(), selectedReminder.type, reminderId);
-
-			await loadReminders();
-			setShowSnoozeOptions(false);
-		} catch (error) {
-			console.error('Error snoozing reminder:', error);
-			setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
-		} finally {
-			setSnoozeLoading(false);
-		}
 	};
 
 	async function loadContacts() {
@@ -507,7 +508,6 @@ export default function DashboardScreen({ navigation, route }) {
 				loading={snoozeLoading}
 				error={snoozeError}
 				options={snoozeOptions}
-				onSelect={handleSnoozeSelection}
 			/>
 		</View>
 	);
