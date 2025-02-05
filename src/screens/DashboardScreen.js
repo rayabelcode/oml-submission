@@ -191,23 +191,14 @@ export default function DashboardScreen({ navigation, route }) {
 
 	const handleFollowUpComplete = async (reminderId, notes) => {
 		try {
-			// Try to cancel the local notification using the reminderId
+			// Cancel the local notification
 			try {
 				await Notifications.cancelScheduledNotificationAsync(reminderId);
 			} catch (error) {
 				console.log('No scheduled notification found for:', reminderId);
 			}
 
-			// Find reminder in Firestore
-			const reminderRef = doc(db, 'reminders', reminderId);
-			await updateDoc(reminderRef, {
-				status: 'completed',
-				completed: true,
-				completion_time: serverTimestamp(),
-				updated_at: serverTimestamp(),
-			});
-
-			// Also try to cancel any presented notifications
+			// Try to cancel any presented notifications
 			try {
 				const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
 				const matchingNotification = presentedNotifications.find(
@@ -268,7 +259,7 @@ export default function DashboardScreen({ navigation, route }) {
 			// Make sure notification service handles cleanup
 			await notificationService.handleFollowUpComplete(reminderId);
 
-			// Persist changes to AsyncStorage
+			// Update AsyncStorage
 			try {
 				const storedNotifications = await AsyncStorage.getItem('follow_up_notifications');
 				if (storedNotifications) {
