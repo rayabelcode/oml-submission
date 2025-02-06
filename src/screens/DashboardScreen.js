@@ -408,83 +408,93 @@ export default function DashboardScreen({ navigation, route }) {
 					) : contacts.length === 0 ? (
 						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						contacts
-							.filter((contact) => contact.next_contact) // Only include contacts with next_contact
-							.map((contact) => {
-								let formattedDate = null;
-								try {
-									if (contact.next_contact) {
-										// Handle Firestore timestamp object
-										if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
-											formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
+						<View style={styles.upcomingGrid}>
+							{contacts
+								.filter((contact) => contact.next_contact)
+								.map((contact) => {
+									let formattedDate = null;
+									try {
+										if (contact.next_contact) {
+											// Handle Firestore Timestamp
+											if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
+												formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
+											}
+											// Handle Firestore Timestamp toDate method
+											else if (contact.next_contact.toDate) {
+												formattedDate = contact.next_contact.toDate().toISOString();
+											}
+											// Handle string dates
+											else if (typeof contact.next_contact === 'string') {
+												formattedDate = contact.next_contact;
+											}
+											// Handle Date objects
+											else if (contact.next_contact instanceof Date) {
+												formattedDate = contact.next_contact.toISOString();
+											}
+											// Handle unexpected formats
+											else {
+												console.warn(
+													'Unhandled next_contact format:',
+													typeof contact.next_contact,
+													contact.next_contact
+												);
+											}
 										}
-										// Handle Firebase timestamp with toDate method
-										else if (contact.next_contact.toDate) {
-											formattedDate = contact.next_contact.toDate().toISOString();
-										}
-										// Handle string ISO date
-										else if (typeof contact.next_contact === 'string') {
-											formattedDate = contact.next_contact;
-										}
-										// Handle Date object
-										else if (contact.next_contact instanceof Date) {
-											formattedDate = contact.next_contact.toISOString();
-										}
-										// Log unhandled formats for debugging
-										else {
-											console.warn(
-												'Unhandled next_contact format:',
-												typeof contact.next_contact,
-												contact.next_contact
-											);
-										}
+									} catch (error) {
+										console.warn('Error formatting date for contact:', contact.id, error);
+										return null;
 									}
-								} catch (error) {
-									console.warn('Error formatting date for contact:', contact.id, error);
-									return null;
-								}
 
-								if (!formattedDate) {
-									console.warn('Could not format date for contact:', contact.id, contact.next_contact);
-									return null;
-								}
+									if (!formattedDate) {
+										console.warn('Could not format date for contact:', contact.id, contact.next_contact);
+										return null;
+									}
 
-								return (
-									<TouchableOpacity
-										key={contact.id}
-										style={[styles.upcomingContactCard, { alignItems: 'center' }]}
-										onPress={() => navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })}
-									>
-										<View style={[styles.cardHeader, { justifyContent: 'center' }]}>
-											<View style={styles.avatarContainer}>
-												{contact.photo_url ? (
-													<ExpoImage
-														source={{ uri: contact.photo_url }}
-														style={styles.avatar}
-														cachePolicy="memory-disk"
-														transition={200}
-													/>
-												) : (
-													<Icon name="person-outline" size={24} color={colors.primary} />
-												)}
-											</View>
-											<View style={styles.upcomingContactInfo}>
-												<Text style={styles.upcomingContactName}>
-													{contact.first_name} {contact.last_name}
-												</Text>
+									return (
+										<TouchableOpacity
+											key={contact.id}
+											style={styles.upcomingContactCard}
+											onPress={() =>
+												navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
+											}
+										>
+											<Text
+												style={styles.upcomingContactName}
+												numberOfLines={1}
+												adjustsFontSizeToFit={true}
+												minimumFontScale={0.8}
+											>
+												{contact.first_name} {contact.last_name}
+											</Text>
+
+											<View style={styles.contactRow}>
+												<View style={styles.avatarContainer}>
+													{contact.photo_url ? (
+														<ExpoImage
+															source={{ uri: contact.photo_url }}
+															style={styles.avatar}
+															cachePolicy="memory-disk"
+															transition={200}
+														/>
+													) : (
+														<Icon name="person-outline" size={24} color={colors.primary} />
+													)}
+												</View>
 												<Text style={styles.upcomingContactDate}>
-													{new Date(formattedDate).toLocaleDateString('en-US', {
-														month: 'long',
-														day: 'numeric',
-														year: 'numeric',
-													})}
+													{new Date(formattedDate)
+														.toLocaleDateString('en-US', {
+															month: 'numeric',
+															day: 'numeric',
+															year: 'numeric',
+														})
+														.replace(/\//g, '/')}
 												</Text>
 											</View>
-										</View>
-									</TouchableOpacity>
-								);
-							})
-							.filter(Boolean)
+										</TouchableOpacity>
+									);
+								})
+								.filter(Boolean)}
+						</View>
 					)}
 				</View>
 			</ScrollView>

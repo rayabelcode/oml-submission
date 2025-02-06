@@ -99,9 +99,8 @@ const useStyles = () => {
 			backgroundColor: colors.border,
 		},
 		cardHeader: {
-			flexDirection: 'row',
+			width: '100%',
 			alignItems: 'center',
-			paddingBottom: spacing.sm,
 		},
 		cardInfo: {
 			flex: 1,
@@ -219,13 +218,24 @@ const useStyles = () => {
 			height: 40,
 			borderRadius: 20,
 		},
+		contactRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			width: '100%',
+		},
+		upcomingGrid: {
+			flexDirection: 'row',
+			flexWrap: 'wrap',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.sm,
+		},
 		upcomingContactCard: {
 			backgroundColor: colors.background.secondary,
-			padding: spacing.lg,
+			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.sm,
-			marginHorizontal: spacing.sm,
-			alignItems: 'center',
+			marginHorizontal: spacing.xs,
+			width: '47%',
 		},
 		upcomingContactAvatar: {
 			width: 50,
@@ -243,16 +253,19 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 		},
 		upcomingContactName: {
-			fontSize: 17,
+			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.primary,
-			marginBottom: spacing.xs,
-			textAlign: 'left',
+			marginBottom: spacing.md,
+			textAlign: 'center',
+			width: '100%',
+			flexShrink: 1,
+			flexWrap: 'wrap',
 		},
 		upcomingContactDate: {
-			fontSize: 15,
+			fontSize: 16,
+			fontWeight: '600',
 			color: colors.text.secondary,
-			textAlign: 'left',
 		},
 		upcomingContactInfo: {
 			marginLeft: spacing.sm,
