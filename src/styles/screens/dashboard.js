@@ -80,13 +80,14 @@ const useStyles = () => {
 			flexDirection: 'row',
 			justifyContent: 'space-evenly',
 			padding: spacing.md,
-			backgroundColor: colors.background.secondary,
+			backgroundColor: 'transparent',
 		},
 		actionButton: {
 			flexDirection: 'row',
 			alignItems: 'center',
 			paddingVertical: spacing.xs,
 			paddingHorizontal: spacing.sm,
+			backgroundColor: 'transparent',
 		},
 		actionText: {
 			marginLeft: spacing.xs,

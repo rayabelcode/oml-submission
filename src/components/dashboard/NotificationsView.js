@@ -7,7 +7,7 @@ import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
-	const { colors, theme } = useTheme();
+	const { colors, theme, layout, spacing } = useTheme();
 	const [hasText, setHasText] = useState(false);
 	const noteInputRef = useRef('');
 
@@ -114,18 +114,50 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 				</View>
 			)}
 
-			<View style={[styles.cardActions, { backgroundColor: colors.background.quaternary }]}>
+			<View
+				style={[
+					styles.cardActions,
+					{
+						borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
+						borderWidth: 2,
+						borderBottomLeftRadius: layout.borderRadius.md,
+						borderBottomRightRadius: layout.borderRadius.md,
+						flexDirection: 'row',
+						justifyContent: 'space-between',
+						padding: spacing.md,
+					},
+				]}
+			>
 				{reminder.type === REMINDER_TYPES.FOLLOW_UP ? (
 					<>
 						<TouchableOpacity
-							style={[styles.actionButton, { borderRightWidth: 1, borderRightColor: colors.border }]}
+							style={[
+								styles.actionButton,
+								{
+									flex: 1,
+									justifyContent: 'center',
+									alignItems: 'center',
+									borderRightWidth: 2,
+									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
+								},
+							]}
 							onPress={() => onComplete(reminder.firestoreId)}
 						>
 							<Icon name="close-circle-outline" size={24} color={colors.danger} />
 							<Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
 						</TouchableOpacity>
 
-						<TouchableOpacity style={styles.actionButton} onPress={handleExpand}>
+						<TouchableOpacity
+							style={[
+								styles.actionButton,
+								{
+									flex: 1,
+									justifyContent: 'center',
+									alignItems: 'center',
+								},
+							]}
+							onPress={handleExpand}
+						>
 							<Icon name="create-outline" size={24} color={colors.primary} />
 							<Text style={[styles.actionText, { color: colors.primary }]}>
 								{isExpanded ? 'Cancel' : 'Add Notes'}
@@ -135,14 +167,33 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 				) : (
 					<>
 						<TouchableOpacity
-							style={[styles.actionButton, { borderRightWidth: 1, borderRightColor: colors.border }]}
+							style={[
+								styles.actionButton,
+								{
+									flex: 1,
+									justifyContent: 'center',
+									alignItems: 'center',
+									borderRightWidth: 2,
+									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
+								},
+							]}
 							onPress={() => onComplete(reminder.firestoreId)}
 						>
 							<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
 							<Text style={[styles.actionText, { color: colors.success }]}>Complete</Text>
 						</TouchableOpacity>
 
-						<TouchableOpacity style={styles.actionButton} onPress={() => onSnooze(reminder)}>
+						<TouchableOpacity
+							style={[
+								styles.actionButton,
+								{
+									flex: 1,
+									justifyContent: 'center',
+									alignItems: 'center',
+								},
+							]}
+							onPress={() => onSnooze(reminder)}
+						>
 							<Icon name="time-outline" size={24} color={colors.warning} />
 							<Text style={[styles.actionText, { color: colors.warning }]}>Snooze</Text>
 						</TouchableOpacity>
