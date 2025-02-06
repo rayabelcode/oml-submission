@@ -387,7 +387,7 @@ export default function DashboardScreen({ navigation, route }) {
 				{remindersState.data.length > 0 && (
 					<View style={styles.needsAttentionSection}>
 						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Needs Attention</Text>
+							<Text style={styles.groupTitle}>Reminders</Text>
 						</View>
 						<NotificationsView
 							reminders={remindersState.data}

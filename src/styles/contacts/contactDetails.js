@@ -15,10 +15,10 @@ export const useContactDetailsStyles = () => {
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
 			paddingVertical: spacing.md,
-            backgroundColor: theme === 'dark' ? '#1C1C1E' : '#F2F2F7',
-			borderBottomWidth: 0,
+			backgroundColor: colors.background.primary,
+			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
-		},
+		},		
 		headerButton: {
 			width: 44,
 			height: 44,
