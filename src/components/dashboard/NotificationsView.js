@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useRef, memo } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Keyboard } from 'react-native';
 import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { REMINDER_TYPES } from '../../../constants/notificationConstants';
+import { REMINDER_TYPES, FREQUENCY_DISPLAY_MAP } from '../../../constants/notificationConstants';
+import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
@@ -21,6 +22,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 	const isExpanded = expandedId === reminder.firestoreId;
 
 	const handleExpand = useCallback(() => {
+		Keyboard.dismiss();
 		if (isExpanded) {
 			setExpandedId(null);
 			noteInputRef.current = '';
@@ -48,7 +50,9 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 
 	return (
 		<View style={styles.card}>
-			<View style={[styles.cardTop, { backgroundColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}>
+			<View
+				style={[styles.headerRow, { backgroundColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}
+			>
 				<View style={styles.titleRow}>
 					<Icon
 						name={
@@ -70,19 +74,30 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							: 'Custom Reminder'}
 					</Text>
 				</View>
+			</View>
 
+			<View style={[styles.cardContent, { borderColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}>
 				<Text style={styles.contactName}>{reminder.contactName}</Text>
 				<Text style={styles.reminderDescription}>
 					{reminder.type === REMINDER_TYPES.FOLLOW_UP
 						? `Add notes for the call on ${formattedDate}`
 						: reminder.type === REMINDER_TYPES.SCHEDULED
-						? `${formattedDate} (${reminder.frequency || 'weekly'}) Call Reminder`
+						? `${formattedDate} ${FREQUENCY_DISPLAY_MAP[reminder.frequency] || 'Custom'} Call Reminder`
 						: `${formattedDate} Custom Call Reminder`}
 				</Text>
 			</View>
 
 			{reminder.type === REMINDER_TYPES.FOLLOW_UP && isExpanded && (
-				<View style={[styles.notesContainer, { backgroundColor: colors.background.secondary }]}>
+				<View
+					style={[
+						styles.notesContainer,
+						{
+							borderLeftWidth: 2,
+							borderRightWidth: 2,
+							borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
+						},
+					]}
+				>
 					<TextInput
 						style={[
 							styles.notesInput,
@@ -205,45 +220,55 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 });
 
 export function NotificationsView({ reminders, onComplete, loading, onRefresh, refreshing, onSnooze }) {
-	const styles = useStyles();
-	const { colors } = useTheme();
-	const [expandedId, setExpandedId] = useState(null);
+    const styles = useStyles();
+    const { colors } = useTheme();
+    const [expandedId, setExpandedId] = useState(null);
 
-	const handleSubmitNotes = useCallback(
-		(reminderId, notes) => {
-			onComplete(reminderId, notes);
-		},
-		[onComplete]
-	);
+    useEffect(() => {
+        AvoidSoftInput.setEnabled(true);
+        return () => {
+            AvoidSoftInput.setEnabled(false);
+        };
+    }, []);
 
-	return (
-		<View style={{ flex: 1 }}>
-			<ScrollView
-				style={styles.notificationsContainer}
-				refreshControl={
-					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-				}
-				keyboardShouldPersistTaps="handled"
-				keyboardDismissMode="none"
-			>
-				{loading ? (
-					<Text style={styles.message}>Loading notifications...</Text>
-				) : reminders.length === 0 ? (
-					<Text style={styles.message}>No notifications</Text>
-				) : (
-					reminders.map((reminder) => (
-						<ReminderCard
-							key={reminder.firestoreId}
-							reminder={reminder}
-							onComplete={onComplete}
-							onSnooze={onSnooze}
-							expandedId={expandedId}
-							setExpandedId={setExpandedId}
-							onSubmitNotes={handleSubmitNotes}
-						/>
-					))
-				)}
-			</ScrollView>
-		</View>
-	);
+    const handleSubmitNotes = useCallback(
+        (reminderId, notes) => {
+            onComplete(reminderId, notes);
+        },
+        [onComplete]
+    );
+
+    return (
+        <View style={{ flex: 1 }}>
+            <AvoidSoftInputView style={{ flex: 1 }}>
+                <ScrollView
+                    style={styles.notificationsContainer}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+                    }
+                    keyboardShouldPersistTaps="always"
+                >
+                    {loading ? (
+                        <Text style={styles.message}>Loading notifications...</Text>
+                    ) : reminders.length === 0 ? (
+                        <Text style={styles.message}>No notifications</Text>
+                    ) : (
+                        reminders.map((reminder) => (
+                            <ReminderCard
+                                key={reminder.firestoreId}
+                                reminder={reminder}
+                                onComplete={onComplete}
+                                onSnooze={onSnooze}
+                                expandedId={expandedId}
+                                setExpandedId={setExpandedId}
+                                onSubmitNotes={handleSubmitNotes}
+                            />
+                        ))
+                    )}
+                </ScrollView>
+            </AvoidSoftInputView>
+        </View>
+    );
 }
+
+

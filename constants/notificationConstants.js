@@ -27,6 +27,18 @@ export const NOTIFICATION_VALIDATION = {
 	},
 };
 
+// Display names for reminder types
+export const FREQUENCY_DISPLAY_MAP = {
+	weekly: 'Weekly',
+	biweekly: 'Bi-Weekly',
+	monthly: 'Monthly',
+	bimonthly: 'Bi-Monthly',
+	quarterly: 'Quarterly',
+	yearly: 'Yearly',
+	daily: 'Daily',
+	custom: 'Custom',
+};
+
 // iOS specific configurations
 export const IOS_CONFIGS = {
 	NOTIFICATION_SETTINGS: {

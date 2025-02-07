@@ -73,9 +73,13 @@ const useStyles = () => {
 			overflow: 'hidden',
 		},
 		cardContent: {
-			flex: 1,
-			alignItems: 'flex-start',
-		},
+			width: '100%',
+			padding: spacing.md,
+			alignItems: 'center',
+			backgroundColor: 'transparent',
+			borderLeftWidth: 2,
+			borderRightWidth: 2,
+		},		
 		cardActions: {
 			flexDirection: 'row',
 			justifyContent: 'space-evenly',
@@ -203,6 +207,17 @@ const useStyles = () => {
 			padding: spacing.md,
 			backgroundColor: colors.background.primary,
 		},
+		headerRow: {
+			paddingTop: spacing.md,
+			paddingBottom: spacing.sm,
+			borderTopLeftRadius: layout.borderRadius.md,
+			borderTopRightRadius: layout.borderRadius.md,
+			alignItems: 'center',
+		},
+		cardBody: {
+			padding: spacing.md,
+			backgroundColor: colors.background.secondary,
+		},		
 		// Upcoming Calls
 		avatarContainer: {
 			width: 40,
