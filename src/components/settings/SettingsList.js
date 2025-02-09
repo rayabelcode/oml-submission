@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Linking } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
+import Constants from 'expo-constants';
+import * as Sharing from 'expo-sharing';
 
 const SettingsList = ({
 	notificationsEnabled,
@@ -17,6 +19,17 @@ const SettingsList = ({
 }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
+
+	const handleShare = async () => {
+		try {
+			await Sharing.shareAsync('https://onmylist.pro', {
+				dialogTitle: 'Share OnMyList',
+				message: 'Check out OnMyList - a better way to stay in touch with your network!',
+			});
+		} catch (error) {
+			console.error('Error sharing:', error);
+		}
+	};
 
 	return (
 		<ScrollView style={styles.settingsList}>
@@ -85,12 +98,26 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Support</Text>
+				<Text style={styles.sectionTitle}>OnMyList</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Contact Support</Text>
 					</View>
+				</TouchableOpacity>
+
+				<TouchableOpacity style={styles.settingItem} onPress={handleShare}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="share-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Tell a Friend</Text>
+					</View>
+				</TouchableOpacity>
+				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('About')}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="information-circle-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>About</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 		</ScrollView>
