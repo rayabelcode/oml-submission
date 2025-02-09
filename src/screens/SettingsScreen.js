@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import ImagePickerComponent from '../components/general/ImagePicker';
 import * as MailComposer from 'expo-mail-composer';
 import * as FileSystem from 'expo-file-system';
+import * as Device from 'expo-device';
+import * as Network from 'expo-network';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import * as Sharing from 'expo-sharing';
@@ -125,18 +127,31 @@ export default function SettingsScreen({ navigation }) {
 
 	const handleSupport = async () => {
 		try {
-			const deviceInfo = `
-                App Version: ${Constants.expoConfig.version}
-                Platform: ${Platform.OS}
-                Device: ${Platform.OS === 'ios' ? 'iOS' : 'Android'}
-                User ID: ${user.uid}
-            `;
+			// Get free storage in MB
+			const freeStorage = await FileSystem.getFreeDiskStorageAsync();
+			const freeStorageMB = Math.round(freeStorage / (1024 * 1024));
 
+			// Get network state (WiFi or Cellular)
+			const networkState = await Network.getNetworkStateAsync();
+			const connectionType = networkState.type || 'Unknown'; // wifi, cellular, unknown
+
+			// Collect device information
+			const deviceInfo = `
+				App Version: ${Constants.expoConfig.version}
+				Platform: ${Platform.OS}
+				Device: ${Device.modelName || 'Unknown'}
+				OS Version: ${Device.osVersion || 'Unknown'}
+				Free Storage: ${freeStorageMB} MB
+				Network: ${connectionType}
+				User ID: ${user.uid}
+			`;
+
+			// Check if Mail Composer is available
 			const isAvailable = await MailComposer.isAvailableAsync();
 
 			if (isAvailable) {
 				await MailComposer.composeAsync({
-					recipients: ['ray.abel@gmail.com'],
+					recipients: ['support@onmylist.pro'],
 					subject: 'OnMyList Support Request',
 					body: `\n\n\n---------------\nDevice Information:\n${deviceInfo}`,
 				});
@@ -148,6 +163,7 @@ export default function SettingsScreen({ navigation }) {
 			Alert.alert('Error', 'Failed to open email composer');
 		}
 	};
+	
 
 	const handleExportData = async (contactsOnly = false) => {
 		try {

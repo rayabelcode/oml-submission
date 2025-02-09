@@ -89,7 +89,7 @@ const SettingsList = ({
 				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Help Center</Text>
+						<Text style={styles.settingText}>Contact Support</Text>
 					</View>
 				</TouchableOpacity>
 			</View>
