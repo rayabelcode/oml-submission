@@ -68,6 +68,7 @@ const ContactCard = ({
 	setDeleteButtonPosition,
 	setEditingContact,
 	nameDisplay,
+	showProfilePhotos,
 }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const { colors } = useTheme();
@@ -168,11 +169,20 @@ const ContactCard = ({
 				style={{ alignItems: 'center' }}
 				pointerEvents="none"
 			>
-				<View style={styles.cardAvatar}>
-					{contact.photo_url ? (
-						Platform.OS === 'web' ? (
-							contact.photo_url.startsWith('file://') ? (
-								<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+				{showProfilePhotos && (
+					<View style={styles.cardAvatar}>
+						{contact.photo_url ? (
+							Platform.OS === 'web' ? (
+								contact.photo_url.startsWith('file://') ? (
+									<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+								) : (
+									<ExpoImage
+										source={{ uri: contact.photo_url }}
+										style={styles.avatarImage}
+										cachePolicy="memory-disk"
+										transition={200}
+									/>
+								)
 							) : (
 								<ExpoImage
 									source={{ uri: contact.photo_url }}
@@ -182,17 +192,10 @@ const ContactCard = ({
 								/>
 							)
 						) : (
-							<ExpoImage
-								source={{ uri: contact.photo_url }}
-								style={styles.avatarImage}
-								cachePolicy="memory-disk"
-								transition={200}
-							/>
-						)
-					) : (
-						<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
-					)}
-				</View>
+							<Text style={styles.avatarText}>{getInitials(contact.first_name, contact.last_name)}</Text>
+						)}
+					</View>
+				)}
 
 				<View style={styles.nameContainer}>
 					{(() => {
@@ -232,6 +235,7 @@ export default function ContactsScreen({ navigation }) {
 	const { colors, theme } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
+	const [showProfilePhotos, setShowProfilePhotos] = useState(true);
 
 	// Editing state
 	const [editingContact, setEditingContact] = useState(null);
@@ -471,10 +475,12 @@ export default function ContactsScreen({ navigation }) {
 						sortType: savedSort,
 						groupBy: savedGroup,
 						nameDisplay: savedDisplay,
+						showProfilePhotos: savedShowPhotos,
 					} = JSON.parse(settings);
 					setSortType(savedSort);
 					setGroupBy(savedGroup);
 					setNameDisplay(savedDisplay);
+					setShowProfilePhotos(savedShowPhotos ?? true);
 				}
 			} catch (error) {
 				console.error('Error loading view settings:', error);
@@ -493,6 +499,7 @@ export default function ContactsScreen({ navigation }) {
 						sortType,
 						groupBy,
 						nameDisplay,
+						showProfilePhotos,
 					})
 				);
 			} catch (error) {
@@ -501,7 +508,7 @@ export default function ContactsScreen({ navigation }) {
 		};
 
 		saveViewSettings();
-	}, [sortType, groupBy, nameDisplay]);
+	}, [sortType, groupBy, nameDisplay, showProfilePhotos]);
 
 	// Reset editing state when leaving the screen
 	useEffect(() => {
@@ -620,6 +627,7 @@ export default function ContactsScreen({ navigation }) {
 								setDeleteButtonPosition={setDeleteButtonPosition}
 								setEditingContact={setEditingContact}
 								nameDisplay={nameDisplay}
+								showProfilePhotos={showProfilePhotos}
 							/>
 						))}
 					</View>
@@ -651,6 +659,7 @@ export default function ContactsScreen({ navigation }) {
 									setDeleteButtonPosition={setDeleteButtonPosition}
 									setEditingContact={setEditingContact}
 									nameDisplay={nameDisplay}
+									showProfilePhotos={showProfilePhotos}
 								/>
 							))}
 						</View>
@@ -689,6 +698,7 @@ export default function ContactsScreen({ navigation }) {
 									setDeleteButtonPosition={setDeleteButtonPosition}
 									setEditingContact={setEditingContact}
 									nameDisplay={nameDisplay}
+									showProfilePhotos={showProfilePhotos}
 								/>
 							))}
 						</View>
@@ -712,6 +722,7 @@ export default function ContactsScreen({ navigation }) {
 									setDeleteButtonPosition={setDeleteButtonPosition}
 									setEditingContact={setEditingContact}
 									nameDisplay={nameDisplay}
+									showProfilePhotos={showProfilePhotos}
 								/>
 							))}
 						</View>
@@ -955,9 +966,11 @@ export default function ContactsScreen({ navigation }) {
 				sortType={sortType}
 				groupBy={groupBy}
 				nameDisplay={nameDisplay}
+				showProfilePhotos={showProfilePhotos}
 				onSortTypeChange={setSortType}
 				onGroupByChange={setGroupBy}
 				onNameDisplayChange={setNameDisplay}
+				onShowProfilePhotosChange={setShowProfilePhotos}
 			/>
 		</SafeAreaView>
 	);

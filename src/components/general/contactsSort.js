@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, Modal, Platform, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { spacing, useTheme } from '../../context/ThemeContext';
+import { View, Text, Modal, Platform, TouchableOpacity, StyleSheet } from 'react-native';
+import { spacing, layout, useTheme } from '../../context/ThemeContext';
 import { useCommonStyles } from '../../styles/common';
 import Icon from 'react-native-vector-icons/Ionicons';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
@@ -11,18 +11,19 @@ const ContactsSortMenu = ({
 	sortType,
 	groupBy,
 	nameDisplay,
+	showProfilePhotos,
 	onSortTypeChange,
 	onGroupByChange,
 	onNameDisplayChange,
+	onShowProfilePhotosChange,
 }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
-	const windowHeight = Dimensions.get('window').height;
 
 	const styles = StyleSheet.create({
 		modalOverlay: {
 			flex: 1,
-			backgroundColor: 'rgba(0, 0, 0, 0.5)',
+			backgroundColor: colors.background.overlay,
 			justifyContent: 'center',
 			alignItems: 'center',
 		},
@@ -32,30 +33,29 @@ const ContactsSortMenu = ({
 		},
 		displayoptionsContent: {
 			backgroundColor: colors.background.primary,
-			borderRadius: 20,
-			paddingHorizontal: 20,
-			paddingVertical: 15,
+			borderRadius: layout.borderRadius.lg,
+			padding: spacing.lg,
 			width: '100%',
-			maxHeight: Platform.isPad ? 600 : undefined,
 		},
 		section: {
-			marginBottom: 15,
+			marginBottom: spacing.md,
 		},
 		sectionTitle: {
 			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.secondary,
-			marginBottom: 8,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
 		},
 		segmentedControl: {
 			height: 40,
-			marginBottom: 5,
+			marginBottom: spacing.xs,
 		},
 		header: {
 			flexDirection: 'row',
 			alignItems: 'center',
 			justifyContent: 'center',
-			marginBottom: 15,
+			marginBottom: spacing.md,
 			position: 'relative',
 		},
 		title: {
@@ -65,9 +65,9 @@ const ContactsSortMenu = ({
 		},
 		closeButton: {
 			position: 'absolute',
-			right: -12,
-			top: -15,
-			padding: 14,
+			right: -spacing.sm,
+			top: -spacing.md,
+			padding: spacing.md,
 		},
 	});
 
@@ -92,7 +92,7 @@ const ContactsSortMenu = ({
 									onSortTypeChange(event.nativeEvent.selectedSegmentIndex === 0 ? 'firstName' : 'lastName');
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary, fontWeight: '600' }}
+								fontStyle={{ color: colors.text.primary }}
 								tintColor={colors.primary}
 							/>
 						</View>
@@ -107,7 +107,7 @@ const ContactsSortMenu = ({
 									onGroupByChange(values[event.nativeEvent.selectedSegmentIndex]);
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary, fontWeight: '600' }}
+								fontStyle={{ color: colors.text.primary }}
 								tintColor={colors.primary}
 							/>
 						</View>
@@ -122,7 +122,21 @@ const ContactsSortMenu = ({
 									onNameDisplayChange(values[event.nativeEvent.selectedSegmentIndex]);
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary, fontWeight: '600' }}
+								fontStyle={{ color: colors.text.primary }}
+								tintColor={colors.primary}
+							/>
+						</View>
+
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Profile Photos</Text>
+							<SegmentedControl
+								values={['Show', 'Hide']}
+								selectedIndex={showProfilePhotos ? 0 : 1}
+								onChange={(event) => {
+									onShowProfilePhotosChange(event.nativeEvent.selectedSegmentIndex === 0);
+								}}
+								style={styles.segmentedControl}
+								fontStyle={{ color: colors.text.primary }}
 								tintColor={colors.primary}
 							/>
 						</View>
