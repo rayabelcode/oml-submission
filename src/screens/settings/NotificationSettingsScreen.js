@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
 import { useAuth } from '../../context/AuthContext';
@@ -13,6 +14,7 @@ import { REMINDER_STATUS } from '../../../constants/notificationConstants';
 import { reminderSync } from '../../utils/notifications/reminderSync';
 
 export default function NotificationSettingsScreen() {
+	const navigation = useNavigation();
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const { user } = useAuth();
