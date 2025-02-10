@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
+import ThemePickerModal from '../modals/ThemePickerModal';
 import Constants from 'expo-constants';
 import * as Sharing from 'expo-sharing';
 
@@ -10,15 +11,15 @@ const SettingsList = ({
 	notificationsEnabled,
 	handleNotificationToggle,
 	handleSupport,
-	handleLogout,
-	isDarkMode,
-	handleThemeToggle,
 	onProfilePress,
 	onAccountPress,
 	navigation,
+	handleExportData,
+	handleDeleteAccount,
 }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
+	const [showThemePicker, setShowThemePicker] = useState(false);
 
 	const handleShare = async () => {
 		try {
@@ -52,6 +53,17 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
+				<Text style={styles.sectionTitle}>Scheduler</Text>
+				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Scheduling')}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="time-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Scheduling Settings</Text>
+					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+			</View>
+
+			<View style={styles.settingSection}>
 				<Text style={styles.sectionTitle}>App Settings</Text>
 				<View style={styles.settingItem}>
 					<View style={styles.settingItemLeft}>
@@ -65,24 +77,11 @@ const SettingsList = ({
 						thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
 					/>
 				</View>
-				<View style={styles.settingItem}>
+				<TouchableOpacity style={styles.settingItem} onPress={() => setShowThemePicker(true)}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="moon-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Dark Mode</Text>
+						<Text style={styles.settingText}>Theme</Text>
 					</View>
-					<Switch
-						value={isDarkMode}
-						onValueChange={handleThemeToggle}
-						trackColor={{ false: '#767577', true: '#81b0ff' }}
-						thumbColor={isDarkMode ? colors.primary : '#f4f3f4'}
-					/>
-				</View>
-				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Scheduling')}>
-					<View style={styles.settingItemLeft}>
-						<Icon name="time-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Scheduling Settings</Text>
-					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 
@@ -120,6 +119,8 @@ const SettingsList = ({
 					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
+
+			<ThemePickerModal visible={showThemePicker} onClose={() => setShowThemePicker(false)} />
 		</ScrollView>
 	);
 };
