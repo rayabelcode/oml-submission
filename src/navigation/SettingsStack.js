@@ -6,6 +6,7 @@ import AccountScreen from '../screens/settings/AccountScreen';
 import PrivacyScreen from '../screens/settings/PrivacyScreen';
 import AboutScreen from '../screens/settings/AboutScreen';
 import SchedulingScreen from '../screens/settings/SchedulingScreen';
+import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import RelationshipTypeSettings from '../screens/settings/RelationshipTypeSettings';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,6 +30,7 @@ const SettingsStack = () => {
 			<Stack.Screen name="Privacy" component={PrivacyScreen} />
 			<Stack.Screen name="About" component={AboutScreen} />
 			<Stack.Screen name="Scheduling" component={SchedulingScreen} />
+			<Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
 			<Stack.Screen name="RelationshipTypeSettings" component={RelationshipTypeSettings} />
 		</Stack.Navigator>
 	);

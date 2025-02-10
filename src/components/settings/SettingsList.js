@@ -65,18 +65,17 @@ const SettingsList = ({
 
 			<View style={styles.settingSection}>
 				<Text style={styles.sectionTitle}>App Settings</Text>
-				<View style={styles.settingItem}>
+				<TouchableOpacity
+					style={styles.settingItem}
+					onPress={() => navigation.navigate('NotificationSettings')}
+				>
 					<View style={styles.settingItemLeft}>
 						<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Push Notifications</Text>
+						<Text style={styles.settingText}>Notification Settings</Text>
 					</View>
-					<Switch
-						value={notificationsEnabled}
-						onValueChange={handleNotificationToggle}
-						trackColor={{ false: '#767577', true: '#81b0ff' }}
-						thumbColor={notificationsEnabled ? colors.primary : '#f4f3f4'}
-					/>
-				</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+
 				<TouchableOpacity style={styles.settingItem} onPress={() => setShowThemePicker(true)}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="moon-outline" size={20} color={colors.text.secondary} />

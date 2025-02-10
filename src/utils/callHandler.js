@@ -42,21 +42,25 @@ class CallHandler {
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
 
-			// Initialize both services
-			await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
+			// Check if local notifications are enabled before scheduling
+			const localNotificationsEnabled = await AsyncStorage.getItem('localNotificationsEnabled');
 
-			const followUpTime = new Date(Date.now() + 5000);
-			// Use notificationService since that's what was working before
-			const notificationId = await this.notificationService.scheduleCallFollowUp(
-				{
-					...contact,
-					callData: {
-						type: callType,
-						startTime: callStartTime.toISOString(),
+			if (localNotificationsEnabled === 'true') {
+				// Initialize both services
+				await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
+
+				const followUpTime = new Date(Date.now() + 5000);
+				const notificationId = await this.notificationService.scheduleCallFollowUp(
+					{
+						...contact,
+						callData: {
+							type: callType,
+							startTime: callStartTime.toISOString(),
+						},
 					},
-				},
-				followUpTime
-			);
+					followUpTime
+				);
+			}
 
 			await Linking.openURL(urlScheme);
 			return true;
