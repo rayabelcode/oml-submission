@@ -164,6 +164,18 @@ class ReminderSync {
 
 	async scheduleLocalNotification(reminder) {
 		try {
+			// Get cloud notifications preference
+			const cloudNotificationsEnabled = await AsyncStorage.getItem('cloudNotificationsEnabled');
+
+			// If cloud notifications are disabled and this is a cloud notification, skip it
+			if (
+				cloudNotificationsEnabled !== 'true' &&
+				(reminder.type === 'SCHEDULED' || reminder.type === 'CUSTOM_DATE')
+			) {
+				await this.cancelLocalNotification(reminder.id);
+				return null;
+			}
+
 			await this.cancelLocalNotification(reminder.id);
 
 			let userTimezone;

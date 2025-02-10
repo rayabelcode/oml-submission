@@ -6,6 +6,11 @@ import { useAuth } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile } from '../../utils/firestore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import * as Notifications from 'expo-notifications';
+import { REMINDER_STATUS } from '../../../constants/notificationConstants';
+import { reminderSync } from '../../utils/notifications/reminderSync';
 
 export default function NotificationSettingsScreen() {
 	const { colors } = useTheme();
@@ -32,6 +37,33 @@ export default function NotificationSettingsScreen() {
 		setCloudNotifications(newState);
 		await AsyncStorage.setItem('cloudNotificationsEnabled', String(newState));
 		await updateUserProfile(user.uid, { cloud_notifications_enabled: newState });
+
+		if (newState) {
+			// Reactivate notifications for all existing future reminders
+			const remindersRef = collection(db, 'reminders');
+			const q = query(
+				remindersRef,
+				where('user_id', '==', user.uid),
+				where('status', '==', REMINDER_STATUS.PENDING)
+			);
+
+			const snapshot = await getDocs(q);
+			for (const doc of snapshot.docs) {
+				const reminder = { id: doc.id, ...doc.data() };
+				await reminderSync.scheduleLocalNotification(reminder);
+			}
+		} else {
+			// Cancel all pending cloud notifications (scheduled & custom date reminders)
+			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+			for (const notification of scheduledNotifications) {
+				if (
+					notification.content.data?.type === 'SCHEDULED' ||
+					notification.content.data?.type === 'CUSTOM_DATE'
+				) {
+					await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+				}
+			}
+		}
 	};
 
 	const handleLocalNotificationToggle = async () => {
