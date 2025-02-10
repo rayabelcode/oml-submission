@@ -8,7 +8,7 @@ import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchUpcomingContacts } from '../utils/firestore';
+import { fetchUpcomingContacts, subscribeToContacts } from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
 import { notificationService } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
@@ -66,6 +66,26 @@ export default function DashboardScreen({ navigation, route }) {
 			if (user) {
 				loadContacts();
 				loadReminders();
+
+				// Set up real-time listener
+				const unsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
+					const upcomingContacts = await fetchUpcomingContacts(user.uid);
+					if (upcomingContacts) {
+						setContacts(
+							upcomingContacts.sort((a, b) => {
+								const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+								const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+								return dateA - dateB;
+							})
+						);
+					}
+				});
+
+				return () => {
+					if (unsubscribe) {
+						unsubscribe();
+					}
+				};
 			}
 		}, [user])
 	);
@@ -341,6 +361,8 @@ export default function DashboardScreen({ navigation, route }) {
 	async function loadContacts() {
 		try {
 			if (!user) return;
+
+			// Load cached data
 			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
 			if (cachedContacts) {
 				setContacts(
@@ -350,6 +372,20 @@ export default function DashboardScreen({ navigation, route }) {
 						return dateA - dateB;
 					})
 				);
+			}
+
+			// Fetch fresh data from Firestore
+			const freshContacts = await fetchUpcomingContacts(user.uid);
+			if (freshContacts) {
+				setContacts(
+					freshContacts.sort((a, b) => {
+						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+						return dateA - dateB;
+					})
+				);
+				// Update cache
+				await cacheManager.saveUpcomingContacts(user.uid, freshContacts);
 			}
 		} catch (error) {
 			console.error('Error loading contacts:', error);
