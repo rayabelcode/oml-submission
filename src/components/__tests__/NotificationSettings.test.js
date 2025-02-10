@@ -55,6 +55,13 @@ jest.mock('../../context/ThemeContext', () => {
 	};
 });
 
+jest.mock('@react-navigation/native', () => ({
+	useNavigation: () => ({
+		goBack: jest.fn(),
+		navigate: jest.fn(),
+	}),
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
 	getItem: jest.fn(),
 	setItem: jest.fn(),
