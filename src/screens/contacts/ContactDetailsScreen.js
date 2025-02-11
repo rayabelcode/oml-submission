@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert, Appearance } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useContactDetailsStyles } from '../../styles/contacts/contactDetails';
@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 const ContactDetailsScreen = ({ route, navigation }) => {
 	const { contact: initialContact, initialTab = 'Notes' } = route.params;
 	const { colors, theme } = useTheme();
+	const currentTheme = theme === 'system' ? Appearance.getColorScheme() : theme === 'dimmed' ? 'dark' : theme;
 	const styles = useContactDetailsStyles();
 	const [contact, setContact] = useState({ ...initialContact });
 	const [history, setHistory] = useState([]);
@@ -181,7 +182,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 		},
 		segmentedWrapper: {
 			flexDirection: 'row',
-			backgroundColor: theme === 'dark' ? '#1C1C1E' : '#F2F2F7',
+			backgroundColor: currentTheme === 'dark' ? '#1C1C1E' : '#F2F2F7',
 			borderRadius: 12,
 			borderWidth: 1,
 			borderColor: colors.border,
@@ -197,7 +198,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 			gap: 6,
 		},
 		selectedSegment: {
-			backgroundColor: theme === 'dark' ? '#2C2C2E' : '#FFFFFF',
+			backgroundColor: currentTheme === 'dark' ? '#2C2C2E' : '#FFFFFF',
 		},
 		segmentText: {
 			fontSize: 13,
