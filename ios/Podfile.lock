@@ -15,7 +15,7 @@ PODS:
     - ExpoModulesCore
   - EXNotifications (0.29.13):
     - ExpoModulesCore
-  - Expo (52.0.31):
+  - Expo (52.0.32):
     - ExpoModulesCore
   - ExpoAppleAuthentication (7.1.3):
     - ExpoModulesCore
@@ -29,7 +29,7 @@ PODS:
     - ExpoModulesCore
   - ExpoFont (13.0.3):
     - ExpoModulesCore
-  - ExpoImage (2.0.4):
+  - ExpoImage (2.0.5):
     - ExpoModulesCore
     - libavif/libdav1d
     - SDWebImage (~> 5.19.1)
@@ -1716,7 +1716,7 @@ PODS:
     - React-logger (= 0.77.0)
     - React-perflogger (= 0.77.0)
     - React-utils (= 0.77.0)
-  - ReactNativeAvoidSoftinput (7.0.0):
+  - ReactNativeAvoidSoftinput (7.0.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1962,7 +1962,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNSentry (6.6.0):
+  - RNSentry (6.7.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2423,14 +2423,14 @@ SPEC CHECKSUMS:
   EXJSONUtils: 01fc7492b66c234e395dcffdd5f53439c5c29c93
   EXManifests: 15142dee1be3ea1cd0039feddef3888c3f0bb057
   EXNotifications: a762c9647d87682e9822f5798ca6666b5a81e213
-  Expo: 00d0b7e489e495472fa3d5ac20e267d174fe0c72
+  Expo: 96f872870465cfe54ebd655a2b334c7ba81e63a0
   ExpoAppleAuthentication: 52631ed9dcb71c65712a447bbb9a5667bb8fcf0c
   ExpoAsset: 715ce37a36951fee71c32773b3be50f2285e2fbe
   ExpoContacts: 98484e09e4caccd2daa6042f341dc2e62a29697e
   ExpoDevice: 1662ecdf42a8b5b2cf60ef7cecaf5a297639dd63
   ExpoFileSystem: 5df53001901f76b493bd5deb75ac506871cc9b2e
   ExpoFont: 38656978c2a4022fb7e0c43e4968d66340f5e2f3
-  ExpoImage: f2c9cfd2a4cb918bba7ddbb40da851858f7aece4
+  ExpoImage: 5d5e8b6dac825198fa38295b7da8d405657d0a2f
   ExpoImageManipulator: 4aca9cc1d84e31f62a7e8075c19026d3ad62f852
   ExpoKeepAwake: 62ff49bbc3bff90d8ee28329190f9ba371bf88e7
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
@@ -2515,7 +2515,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 6e8d68583f39dc31ee65235110287277eb8556ef
   ReactCodegen: 58a974a1a86362975fd49596480c5f0f17ee06a2
   ReactCommon: e686c5766f0ebe5293be5a3957b833645cdac8ad
-  ReactNativeAvoidSoftinput: 4c980bd87adff1369d78963e2aa35edcff153809
+  ReactNativeAvoidSoftinput: e75b62b96ac2d5ed6e0942e49f4bfba78a75e331
   RNCAsyncStorage: 923af351d21a33b6c57ed32ac9c25317ddbb0dd4
   RNCPicker: 21ca53c5927e9a7ad03eb4712dc55395114ebcc8
   RNDateTimePicker: 0e650fd3b08dca6e3a3b901f377e9049df804fa0
@@ -2523,7 +2523,7 @@ SPEC CHECKSUMS:
   RNImageCropPicker: b0afedeefd8655254a15c34103718455fde6ce59
   RNReanimated: 5b55896edb30f24afe430635cb6aecd110eb4b50
   RNScreens: 907675c47a5b44b8dbc5b507c66e5c70c8cb22be
-  RNSentry: f0dadf90fac9599a1a6b0d13e8dfe7d088314d4f
+  RNSentry: e721368198233ad7533bb63e2d074905e5774946
   RNSVG: c25b1978006ef9d0f200a4d2174617e59dcb9136
   RNVectorIcons: 1743deffb9c4b70f253704075dbac432cc802e74
   SDWebImage: 8a6b7b160b4d710e2a22b6900e25301075c34cb3
