@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 import './src/utils/notifications/notificationHandler';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -149,18 +150,44 @@ function App() {
 	useEffect(() => {
 		async function prepare() {
 			try {
-				// Register services
+				// Register notification services
 				notificationCoordinator.registerService('callNotes', callNotesService);
 				notificationCoordinator.registerService('scheduledCalls', scheduledCallService);
 				notificationCoordinator.registerService('schedulingHistory', schedulingHistory);
 
+				// Initialize notification settings
+				const initializeNotificationSettings = async () => {
+					try {
+						const [cloudEnabled, localEnabled] = await Promise.all([
+							AsyncStorage.getItem('cloudNotificationsEnabled'),
+							AsyncStorage.getItem('localNotificationsEnabled'),
+						]);
+
+						const updates = [];
+
+						if (cloudEnabled === null) {
+							updates.push(AsyncStorage.setItem('cloudNotificationsEnabled', 'true'));
+						}
+						if (localEnabled === null) {
+							updates.push(AsyncStorage.setItem('localNotificationsEnabled', 'true'));
+						}
+
+						if (updates.length > 0) {
+							await Promise.all(updates);
+						}
+					} catch (error) {
+						console.warn('Error initializing notification settings:', error);
+					}
+				};
+
+				// Run all initialization tasks in parallel
 				await Promise.all([
 					Font.loadAsync({
 						'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
 					}),
 					notificationCoordinator.initialize(),
+					initializeNotificationSettings(),
 				]);
-
 			} catch (e) {
 				console.warn(e);
 			} finally {

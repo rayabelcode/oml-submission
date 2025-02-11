@@ -26,12 +26,43 @@ export default function NotificationSettingsScreen() {
 	}, []);
 
 	const loadNotificationSettings = async () => {
-		const [cloudEnabled, localEnabled] = await Promise.all([
-			AsyncStorage.getItem('cloudNotificationsEnabled'),
-			AsyncStorage.getItem('localNotificationsEnabled'),
-		]);
-		setCloudNotifications(cloudEnabled === 'true');
-		setLocalNotifications(localEnabled === 'true');
+		try {
+			const [cloudEnabled, localEnabled] = await Promise.all([
+				AsyncStorage.getItem('cloudNotificationsEnabled'),
+				AsyncStorage.getItem('localNotificationsEnabled'),
+			]);
+
+			// Set default states immediately for UI responsiveness (Default to true unless explicitly false)
+			setCloudNotifications(cloudEnabled !== 'false');
+			setLocalNotifications(localEnabled !== 'false');
+
+			// Handle first-time setup or missing settings
+			const updates = [];
+
+			if (cloudEnabled === null) {
+				updates.push(
+					AsyncStorage.setItem('cloudNotificationsEnabled', 'true'),
+					updateUserProfile(user.uid, { cloud_notifications_enabled: true })
+				);
+			}
+
+			if (localEnabled === null) {
+				updates.push(
+					AsyncStorage.setItem('localNotificationsEnabled', 'true'),
+					updateUserProfile(user.uid, { local_notifications_enabled: true })
+				);
+			}
+
+			// Execute all updates in parallel if needed
+			if (updates.length > 0) {
+				await Promise.all(updates);
+			}
+		} catch (error) {
+			console.error('Error loading notification settings:', error);
+			// Set defaults even if there's an error
+			setCloudNotifications(true);
+			setLocalNotifications(true);
+		}
 	};
 
 	const handleCloudNotificationToggle = async () => {

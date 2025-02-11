@@ -186,4 +186,60 @@ describe('NotificationSettingsScreen', () => {
 			});
 		});
 	});
+
+	describe('NotificationSettingsScreen', () => {
+		beforeEach(() => {
+			jest.clearAllMocks();
+			// Update mock to test default enabled state
+			AsyncStorage.getItem.mockImplementation((key) => Promise.resolve(null));
+		});
+
+		// Add these new tests
+		it('should default to enabled notifications for new installations', async () => {
+			const { getAllByRole } = render(<NotificationSettingsScreen />);
+
+			await waitFor(() => {
+				const switches = getAllByRole('switch');
+				expect(switches[0].props.value).toBe(true); // Cloud notifications
+				expect(switches[1].props.value).toBe(true); // Local notifications
+			});
+
+			expect(AsyncStorage.setItem).toHaveBeenCalledWith('cloudNotificationsEnabled', 'true');
+			expect(AsyncStorage.setItem).toHaveBeenCalledWith('localNotificationsEnabled', 'true');
+		});
+
+		it('should preserve existing settings after updates', async () => {
+			// Mock existing settings
+			AsyncStorage.getItem.mockImplementation((key) => {
+				if (key === 'cloudNotificationsEnabled') return Promise.resolve('true');
+				if (key === 'localNotificationsEnabled') return Promise.resolve('false');
+				return Promise.resolve(null);
+			});
+
+			const { getAllByRole } = render(<NotificationSettingsScreen />);
+
+			await waitFor(() => {
+				const switches = getAllByRole('switch');
+				expect(switches[0].props.value).toBe(true); // Cloud should stay true
+				expect(switches[1].props.value).toBe(false); // Local should stay false
+			});
+
+			// Should not try to set defaults for existing settings
+			expect(AsyncStorage.setItem).not.toHaveBeenCalledWith('cloudNotificationsEnabled', 'true');
+			expect(AsyncStorage.setItem).not.toHaveBeenCalledWith('localNotificationsEnabled', 'true');
+		});
+
+		it('should handle error cases gracefully', async () => {
+			// Mock AsyncStorage error
+			AsyncStorage.getItem.mockRejectedValue(new Error('Storage error'));
+
+			const { getAllByRole } = render(<NotificationSettingsScreen />);
+
+			await waitFor(() => {
+				const switches = getAllByRole('switch');
+				expect(switches[0].props.value).toBe(true); // Should default to true on error
+				expect(switches[1].props.value).toBe(true); // Should default to true on error
+			});
+		});
+	});
 });
