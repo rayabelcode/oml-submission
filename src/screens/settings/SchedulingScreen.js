@@ -21,17 +21,19 @@ import TimePickerModal from '../../components/modals/TimePickerModal';
 const DURATION_OPTIONS = {
 	minimumGap: [
 		{ label: '5 minutes', value: 5 },
+		{ label: '15 minutes', value: 15 },
 		{ label: '30 minutes', value: 30 },
 		{ label: '1 hour', value: 60 },
+		{ label: '2 hours', value: 120 },
 		{ label: '4 hours', value: 240 },
-		{ label: '12 hours', value: 720 },
 	],
 	optimalGap: [
-		{ label: '30 minutes', value: 30 },
 		{ label: '1 hour', value: 60 },
+		{ label: '2 hours', value: 120 },
 		{ label: '4 hours', value: 240 },
 		{ label: '8 hours', value: 480 },
-		{ label: '1 day', value: 1440 },
+		{ label: '12 hours', value: 720 },
+		{ label: '24 hours', value: 1440 },
 	],
 };
 
@@ -59,10 +61,29 @@ const SchedulingScreen = ({ navigation }) => {
 		try {
 			const prefs = await getUserPreferences(user.uid);
 			setAllPreferences(prefs);
-			setMinGap(prefs.minimumGapMinutes || DEFAULT_MIN_GAP);
-			setOptimalGap(prefs.optimalGapMinutes || DEFAULT_OPTIMAL_GAP);
-			setGlobalExcludedTimes(prefs.global_excluded_times || defaultPreferences.global_excluded_times);
 
+			// Confirm valid default values
+			const savedMinGap = prefs.minimumGapMinutes || DEFAULT_MIN_GAP;
+			const savedOptimalGap = prefs.optimalGapMinutes || DEFAULT_OPTIMAL_GAP;
+
+			if (savedMinGap > savedOptimalGap) {
+				// If saved values are invalid, reset to defaults
+				setMinGap(DEFAULT_MIN_GAP);
+				setOptimalGap(DEFAULT_OPTIMAL_GAP);
+				// Update preferences with corrected values
+				await updateUserPreferences(user.uid, {
+					scheduling_preferences: {
+						...prefs,
+						minimumGapMinutes: DEFAULT_MIN_GAP,
+						optimalGapMinutes: DEFAULT_OPTIMAL_GAP,
+					},
+				});
+			} else {
+				setMinGap(savedMinGap);
+				setOptimalGap(savedOptimalGap);
+			}
+
+			setGlobalExcludedTimes(prefs.global_excluded_times || defaultPreferences.global_excluded_times);
 			setLoading(false);
 		} catch (error) {
 			console.error('Error loading preferences:', error);
@@ -70,9 +91,26 @@ const SchedulingScreen = ({ navigation }) => {
 		}
 	};
 
+	const validateGapTimes = (minGapValue, optimalGapValue) => {
+		if (minGapValue > optimalGapValue) {
+			Alert.alert(
+				'Invalid Time Gap',
+				'Minimum gap cannot be longer than optimal gap. Please select a shorter minimum gap or a longer optimal gap.',
+				[{ text: 'OK' }]
+			);
+			return false;
+		}
+		return true;
+	};
+
 	const handleMinGapChange = async (value) => {
 		try {
-			setMinGap(value); // Update the state
+			// Validate against current optimal gap
+			if (!validateGapTimes(value, optimalGap)) {
+				return;
+			}
+
+			setMinGap(value);
 			const updatedPreferences = {
 				...allPreferences,
 				minimumGapMinutes: value,
@@ -89,7 +127,12 @@ const SchedulingScreen = ({ navigation }) => {
 
 	const handleOptimalGapChange = async (value) => {
 		try {
-			setOptimalGap(value); // Update the state
+			// Validate against current minimum gap
+			if (!validateGapTimes(minGap, value)) {
+				return;
+			}
+
+			setOptimalGap(value);
 			const updatedPreferences = {
 				...allPreferences,
 				optimalGapMinutes: value,
@@ -108,7 +151,7 @@ const SchedulingScreen = ({ navigation }) => {
 		const timeString = `${hour.toString().padStart(2, '0')}:00`;
 		const index = activeTimePicker.index;
 		const timeType = activeTimePicker.timeType;
-	
+
 		// Clone the current times to avoid direct mutation
 		const updatedTimes = [...globalExcludedTimes];
 		if (!updatedTimes[index]) {
@@ -119,19 +162,19 @@ const SchedulingScreen = ({ navigation }) => {
 			};
 		}
 		updatedTimes[index][timeType] = timeString;
-	
+
 		// Temporarily save the updated time without validating yet
 		setGlobalExcludedTimes(updatedTimes);
-	
+
 		// Validate the full range only if both times are set
 		const { start, end } = updatedTimes[index];
 		if (start && end) {
 			const [startHour, startMinute] = start.split(':').map(Number);
 			const [endHour, endMinute] = end.split(':').map(Number);
-	
+
 			const startInMinutes = startHour * 60 + startMinute;
 			const endInMinutes = endHour * 60 + endMinute;
-	
+
 			let excludedDuration;
 			if (startInMinutes < endInMinutes) {
 				// Normal case: same day exclusion
@@ -140,9 +183,9 @@ const SchedulingScreen = ({ navigation }) => {
 				// Overnight case: spans two days
 				excludedDuration = 1440 - startInMinutes + endInMinutes; // Total minutes in a day = 1440
 			}
-	
+
 			const allowedDuration = 1440 - excludedDuration; // Total minutes in a day minus excluded time
-	
+
 			// Check if allowed duration is less than 8 hours
 			if (allowedDuration < 480) {
 				Alert.alert(
@@ -162,12 +205,11 @@ const SchedulingScreen = ({ navigation }) => {
 				return;
 			}
 		}
-	
+
 		// Close the picker after saving the temporary change
 		setTimePickerVisible(false);
 		handleGlobalExcludedTimeChange(updatedTimes);
 	};
-	
 
 	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
 		try {
@@ -187,7 +229,22 @@ const SchedulingScreen = ({ navigation }) => {
 	};
 
 	const showDurationPicker = (type) => {
-		const options = type === 'minimum' ? DURATION_OPTIONS.minimumGap : DURATION_OPTIONS.optimalGap;
+		let options = type === 'minimum' ? DURATION_OPTIONS.minimumGap : DURATION_OPTIONS.optimalGap;
+
+		// Filter options based on current values
+		if (type === 'minimum') {
+			options = options.filter((option) => option.value <= optimalGap);
+		} else {
+			options = options.filter((option) => option.value >= minGap);
+		}
+
+		// Check for empty options
+		if (options.length === 0) {
+			Alert.alert('No Valid Options', 'Please adjust the other gap time first to enable more options.', [
+				{ text: 'OK' },
+			]);
+			return;
+		}
 
 		if (Platform.OS === 'ios') {
 			ActionSheetIOS.showActionSheetWithOptions(
