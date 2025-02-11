@@ -510,6 +510,26 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			fontWeight: '700',
 		},
+		// Header for NotificationsSettingsScreen
+		sectionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: spacing.md,
+			marginTop: spacing.lg,
+		},
+		iconTitleContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			flex: 1,
+		},
+		sectionIcon: {
+			marginRight: spacing.md,
+		},
+		notificationTitle: {
+			fontSize: 24,
+			fontWeight: '600',
+			color: colors.primary,
+		},
 	});
 
 export const useStyles = () => {

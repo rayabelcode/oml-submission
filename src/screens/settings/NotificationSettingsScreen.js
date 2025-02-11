@@ -85,14 +85,18 @@ export default function NotificationSettingsScreen() {
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Cloud Notifications</Text>
+				<View style={styles.sectionHeader}>
+					<View style={styles.iconTitleContainer}>
+						<Icon name="calendar-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
+						<Text style={styles.notificationTitle}>Scheduled Reminders</Text>
+					</View>
+				</View>
 				<Text style={styles.sectionDescription}>
-					Receive notifications for scheduled reminders and custom date reminders. These help you stay on top
-					of your planned check-ins and important dates.
+					Receive notifications for upcoming check-ins and important dates.
 				</Text>
 				<View style={styles.settingItem}>
 					<View style={styles.settingItemLeft}>
-						<Text style={styles.settingText}>Enable Cloud Notifications</Text>
+						<Text style={styles.settingText}>Enable Scheduled Reminders</Text>
 					</View>
 					<Switch
 						value={cloudNotifications}
@@ -104,14 +108,18 @@ export default function NotificationSettingsScreen() {
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Local Notifications</Text>
+				<View style={styles.sectionHeader}>
+					<View style={styles.iconTitleContainer}>
+						<Icon name="call-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
+						<Text style={styles.notificationTitle}>Call Follow-Ups</Text>
+					</View>
+				</View>
 				<Text style={styles.sectionDescription}>
-					Receive follow-up reminders after phone calls to help you track conversations and maintain notes
-					about your interactions.
+					Get helpful reminders after phone calls to update your notes and track recent conversations.
 				</Text>
 				<View style={styles.settingItem}>
 					<View style={styles.settingItemLeft}>
-						<Text style={styles.settingText}>Enable Local Notifications</Text>
+						<Text style={styles.settingText}>Enable Follow-up Reminders</Text>
 					</View>
 					<Switch
 						value={localNotifications}
