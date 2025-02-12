@@ -533,6 +533,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 											const updatedDays = isSelected
 												? selectedDays.filter((d) => d !== day.value)
 												: [...selectedDays, day.value];
+
+											// Don't allow removing the last day
+											if (updatedDays.length === 0) {
+												Alert.alert('Required Selection', 'At least one preferred day must be selected.');
+												return;
+											}
+
 											try {
 												setSelectedDays(updatedDays);
 												const schedulingUpdate = {
