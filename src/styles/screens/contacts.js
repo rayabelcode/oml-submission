@@ -123,7 +123,7 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.md,
 			padding: spacing.md,
 			alignItems: 'center',
-			borderWidth: .5,
+			borderWidth: 0.5,
 			borderColor: colors.border,
 		},
 		cardAvatar: {
@@ -439,7 +439,6 @@ const useStyles = () => {
 			color: colors.text.primary,
 			width: '100%',
 		},
-
 		historyActions: {
 			flexDirection: 'row',
 			alignItems: 'center',

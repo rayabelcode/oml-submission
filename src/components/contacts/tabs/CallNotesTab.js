@@ -297,8 +297,6 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				animationType="fade"
 				onRequestClose={() => setShowAISuggestions(false)}
 			>
-				{' '}
-				onRequestClose={() => setShowAISuggestions(false)}
 				<View style={styles.aiModalContainer}>
 					<View style={styles.aiModalContent}>
 						<Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
