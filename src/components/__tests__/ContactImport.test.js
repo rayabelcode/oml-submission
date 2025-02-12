@@ -28,6 +28,24 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
 	alert: jest.fn(),
 }));
 
+// Function to format phone numbers
+function formatPhoneNumber(phone) {
+	// Remove all non-numeric characters
+	const cleaned = phone.replace(/\D/g, '');
+
+	// Handle different formats
+	if (cleaned.length === 10) {
+		return `+1${cleaned}`; // US number without country code
+	} else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+		return `+${cleaned}`; // US number with country code
+	} else if (cleaned.startsWith('44')) {
+		return `+${cleaned}`; // UK number
+	}
+
+	// For other international numbers, just add + if not present
+	return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+}
+
 describe('Contact Import', () => {
 	const mockUserId = 'test-user';
 	const mockContact = {
@@ -150,6 +168,140 @@ describe('Contact Import', () => {
 			);
 		});
 	});
+
+    describe('Phone Number Formatting', () => {
+        it('should handle US phone number formats', async () => {
+            const phoneFormats = [
+                { input: '1234567890', expected: '+11234567890' },  // 10 digits
+                { input: '123.456.7890', expected: '+11234567890' }, // 10 digits with punctuation
+                { input: '123-456-7890', expected: '+11234567890' }  // 10 digits with dashes
+            ];
+    
+            for (const format of phoneFormats) {
+                const contactWithPhone = {
+                    ...mockContact,
+                    phoneNumbers: [{ number: format.input }]
+                };
+                Contacts.getContactByIdAsync.mockResolvedValue(contactWithPhone);
+                const result = await handleContactSelection(contactWithPhone.id, mockUserId);
+                expect(result.phone).toBe(format.expected);
+            }
+        });
+    
+        it('should handle phone numbers with country code', async () => {
+            const contactWithCountryCode = {
+                ...mockContact,
+                phoneNumbers: [{ number: '11234567890' }]
+            };
+            Contacts.getContactByIdAsync.mockResolvedValue(contactWithCountryCode);
+            const result = await handleContactSelection(contactWithCountryCode.id, mockUserId);
+            expect(result.phone).toBe('+11234567890');
+        });
+    
+        it('should handle international numbers', async () => {
+            const contactWithIntl = {
+                ...mockContact,
+                phoneNumbers: [{ number: '441234567890' }]
+            };
+            Contacts.getContactByIdAsync.mockResolvedValue(contactWithIntl);
+            const result = await handleContactSelection(contactWithIntl.id, mockUserId);
+            expect(result.phone).toBe('+441234567890');
+        });
+    
+        it('should use first phone number when multiple exist', async () => {
+            const contactWithMultiplePhones = {
+                ...mockContact,
+                phoneNumbers: [
+                    { number: '1234567890', label: 'mobile' },
+                    { number: '0987654321', label: 'home' }
+                ]
+            };
+            Contacts.getContactByIdAsync.mockResolvedValue(contactWithMultiplePhones);
+            const result = await handleContactSelection(contactWithMultiplePhones.id, mockUserId);
+            expect(result.phone).toBe('+11234567890');
+        });
+    });
+    
+    
+
+	describe('Name Handling', () => {
+		it('should handle missing names', async () => {
+			const testCases = [
+				{ firstName: null, lastName: 'Doe', expectedFirst: '', expectedLast: 'Doe' },
+				{ firstName: 'John', lastName: null, expectedFirst: 'John', expectedLast: '' },
+				{ firstName: null, lastName: null, expectedFirst: '', expectedLast: '' },
+			];
+
+			for (const testCase of testCases) {
+				const contactWithMissingName = {
+					...mockContact,
+					firstName: testCase.firstName,
+					lastName: testCase.lastName,
+				};
+				Contacts.getContactByIdAsync.mockResolvedValue(contactWithMissingName);
+				const result = await handleContactSelection(contactWithMissingName.id, mockUserId);
+				expect(result.first_name).toBe(testCase.expectedFirst);
+				expect(result.last_name).toBe(testCase.expectedLast);
+			}
+		});
+
+		it('should handle special characters in names', async () => {
+			const contactWithSpecialChars = {
+				...mockContact,
+				firstName: 'María-José',
+				lastName: "O'Connor",
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithSpecialChars);
+			const result = await handleContactSelection(contactWithSpecialChars.id, mockUserId);
+			expect(result.first_name).toBe('María-José');
+			expect(result.last_name).toBe("O'Connor");
+		});
+	});
+
+	describe('Email Handling', () => {
+		it('should handle missing email', async () => {
+			const contactWithoutEmail = {
+				...mockContact,
+				emails: null,
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithoutEmail);
+			const result = await handleContactSelection(contactWithoutEmail.id, mockUserId);
+			expect(result.email).toBe('');
+		});
+
+		it('should use first email when multiple exist', async () => {
+			const contactWithMultipleEmails = {
+				...mockContact,
+				emails: [{ email: 'primary@example.com' }, { email: 'secondary@example.com' }],
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithMultipleEmails);
+			const result = await handleContactSelection(contactWithMultipleEmails.id, mockUserId);
+			expect(result.email).toBe('primary@example.com');
+		});
+	});
+
+	describe('Error Handling', () => {
+		it('should handle contact fetch failure', async () => {
+			Contacts.getContactByIdAsync.mockRejectedValue(new Error('Failed to fetch contact'));
+			const result = await handleContactSelection(mockContact.id, mockUserId);
+			expect(result).toBeNull();
+			expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to import contact: Failed to fetch contact');
+		});
+
+		it('should handle malformed contact data', async () => {
+			const malformedContact = {
+				id: 'test-contact',
+				// Missing all other fields
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(malformedContact);
+			const result = await handleContactSelection(malformedContact.id, mockUserId);
+			expect(result).toBeNull();
+			expect(Alert.alert).toHaveBeenCalledWith(
+				'Invalid Contact',
+				'Selected contact must have a phone number'
+			);
+		});
+	});
 });
 
 // Helper function to simulate the full contact import flow
@@ -185,7 +337,9 @@ async function handleContactSelection(contactId, userId) {
 		}
 
 		const phoneNumber = contact.phoneNumbers[0].number;
-		const isDuplicate = await checkForExistingContact(phoneNumber);
+		const formattedPhone = formatPhoneNumber(phoneNumber);
+
+		const isDuplicate = await checkForExistingContact(formattedPhone);
 		if (isDuplicate) {
 			Alert.alert('Duplicate Contact', 'This contact already exists in your list.');
 			return null;
@@ -215,7 +369,7 @@ async function handleContactSelection(contactId, userId) {
 		return {
 			first_name: contact.firstName || '',
 			last_name: contact.lastName || '',
-			phone: contact.phoneNumbers[0].number,
+			phone: formattedPhone,
 			email: contact.emails?.[0]?.email || '',
 			photo_url: photoUrl,
 			birthday,
