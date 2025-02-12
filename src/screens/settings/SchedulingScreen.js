@@ -152,22 +152,24 @@ const SchedulingScreen = ({ navigation }) => {
 		const index = activeTimePicker.index;
 		const timeType = activeTimePicker.timeType;
 
-		// Clone the current times to avoid direct mutation
-		const updatedTimes = [...globalExcludedTimes];
-		if (!updatedTimes[index]) {
-			updatedTimes[index] = {
+		// Create temporary copy to validate
+		const tempTimes = [...globalExcludedTimes];
+		if (!tempTimes[index]) {
+			tempTimes[index] = {
 				days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
 				start: '23:00',
 				end: '07:00',
 			};
 		}
-		updatedTimes[index][timeType] = timeString;
 
-		// Temporarily save the updated time without validating yet
-		setGlobalExcludedTimes(updatedTimes);
+		// Create temporary object for validation
+		const tempTimeRange = {
+			...tempTimes[index],
+			[timeType]: timeString,
+		};
 
-		// Validate the full range only if both times are set
-		const { start, end } = updatedTimes[index];
+		// Validate the time range
+		const { start, end } = tempTimeRange;
 		if (start && end) {
 			const [startHour, startMinute] = start.split(':').map(Number);
 			const [endHour, endMinute] = end.split(':').map(Number);
@@ -177,38 +179,31 @@ const SchedulingScreen = ({ navigation }) => {
 
 			let excludedDuration;
 			if (startInMinutes < endInMinutes) {
-				// Normal case: same day exclusion
 				excludedDuration = endInMinutes - startInMinutes;
 			} else {
-				// Overnight case: spans two days
-				excludedDuration = 1440 - startInMinutes + endInMinutes; // Total minutes in a day = 1440
+				excludedDuration = 1440 - startInMinutes + endInMinutes;
 			}
 
-			const allowedDuration = 1440 - excludedDuration; // Total minutes in a day minus excluded time
+			const allowedDuration = 1440 - excludedDuration;
 
-			// Check if allowed duration is less than 8 hours
 			if (allowedDuration < 480) {
 				Alert.alert(
 					'Invalid Time Range',
 					'Excluded time range leaves less than 8 hours for scheduling calls. Please adjust your times.',
-					[
-						{
-							text: 'OK',
-							onPress: () => {
-								// Revert the change if validation fails
-								setGlobalExcludedTimes(globalExcludedTimes);
-							},
-						},
-					]
+					[{ text: 'OK' }]
 				);
 				setTimePickerVisible(false);
 				return;
 			}
 		}
 
-		// Close the picker after saving the temporary change
+		// Only update the specific time range that passed validation
+		tempTimes[index] = tempTimeRange;
+
+		// Update states and Firestore only after validation passes
 		setTimePickerVisible(false);
-		handleGlobalExcludedTimeChange(updatedTimes);
+		setGlobalExcludedTimes(tempTimes);
+		handleGlobalExcludedTimeChange(tempTimes);
 	};
 
 	const handleGlobalExcludedTimeChange = async (updatedTimes) => {
