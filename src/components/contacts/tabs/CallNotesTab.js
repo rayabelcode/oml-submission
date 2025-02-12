@@ -19,11 +19,13 @@ import { addContactHistory, fetchContactHistory, updateContact } from '../../../
 import { generateTopicSuggestions } from '../../../utils/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
+import KeyboardDismiss from '../../../components/general/KeyboardDismiss';
 
 const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
+	const inputAccessoryViewID = 'notesInput';
 
 	const [callNotes, setCallNotes] = useState('');
 	const [callDate, setCallDate] = useState(new Date());
@@ -205,6 +207,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					onChangeText={setCallNotes}
 					placeholder="Add call notes, and pick a date!"
 					placeholderTextColor={colors.text.secondary}
+					inputAccessoryViewID={inputAccessoryViewID}
 				/>
 				<View style={styles.callNotesControls}>
 					<TouchableOpacity
@@ -286,36 +289,39 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				)}
 			</TouchableOpacity>
 
+			{Platform.OS === 'ios' && <KeyboardDismiss inputAccessoryViewID={inputAccessoryViewID} />}
+
 			<Modal
 				visible={showAISuggestions}
 				transparent={true}
 				animationType="fade"
 				onRequestClose={() => setShowAISuggestions(false)}
 			>
+				{' '}
+				onRequestClose={() => setShowAISuggestions(false)}
 				<View style={styles.aiModalContainer}>
-				<View style={styles.aiModalContent}>
-    <Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
-    <ScrollView style={styles.aiModalScrollContent}>
-        {loadingSuggestions ? (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
-                    Generating suggestions...
-                </Text>
-            </View>
-        ) : (
-            suggestions.map((suggestion, index) => (
-                <View key={index} style={styles.aiSuggestionCard}>
-                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
-                </View>
-            ))
-        )}
-    </ScrollView>
-    <TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-        <Icon name="close" size={24} color={colors.text.primary} />
-    </TouchableOpacity>
-</View>
-
+					<View style={styles.aiModalContent}>
+						<Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
+						<ScrollView style={styles.aiModalScrollContent}>
+							{loadingSuggestions ? (
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size="large" color={colors.primary} />
+									<Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
+										Generating suggestions...
+									</Text>
+								</View>
+							) : (
+								suggestions.map((suggestion, index) => (
+									<View key={index} style={styles.aiSuggestionCard}>
+										<Text style={styles.aiSuggestionText}>{suggestion}</Text>
+									</View>
+								))
+							)}
+						</ScrollView>
+						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+							<Icon name="close" size={24} color={colors.text.primary} />
+						</TouchableOpacity>
+					</View>
 				</View>
 			</Modal>
 

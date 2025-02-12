@@ -97,11 +97,13 @@ const SettingsList = ({
 
 			<View style={styles.settingSection}>
 				<Text style={styles.sectionTitle}>OnMyList</Text>
-				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
+
+				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('About')}>
 					<View style={styles.settingItemLeft}>
-						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Contact Support</Text>
+						<Icon name="information-circle-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>About</Text>
 					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 
 				<TouchableOpacity style={styles.settingItem} onPress={handleShare}>
@@ -110,12 +112,12 @@ const SettingsList = ({
 						<Text style={styles.settingText}>Tell a Friend</Text>
 					</View>
 				</TouchableOpacity>
-				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('About')}>
+
+				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
 					<View style={styles.settingItemLeft}>
-						<Icon name="information-circle-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>About</Text>
+						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Support</Text>
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 
