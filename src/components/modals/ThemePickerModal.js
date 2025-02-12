@@ -20,18 +20,17 @@ const ThemePickerModal = ({ visible, onClose }) => {
 	const styles = StyleSheet.create({
 		modalOverlay: {
 			flex: 1,
-			backgroundColor: 'rgba(0, 0, 0, 0.4)',
 			justifyContent: 'flex-end',
 		},
 		modalContent: {
-			backgroundColor: colors.background.primary,
+			backgroundColor: colors.background.secondary,
 			borderTopLeftRadius: layout.borderRadius.lg,
 			borderTopRightRadius: layout.borderRadius.lg,
 			paddingBottom: spacing.xl + 10,
 		},
 		handleContainer: {
 			alignItems: 'center',
-			paddingTop: spacing.md,
+			paddingTop: spacing.sm,
 		},
 		handle: {
 			width: 36,
@@ -43,9 +42,9 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			flexDirection: 'row',
 			justifyContent: 'center',
 			alignItems: 'center',
-			paddingVertical: spacing.lg,
-			paddingHorizontal: spacing.lg,
-			paddingBottom: spacing.md,
+			paddingVertical: spacing.xs,
+			paddingHorizontal: spacing.sm,
+			paddingBottom: spacing.sm,
 			borderBottomWidth: 0.5,
 			borderBottomColor: colors.border,
 			marginBottom: spacing.sm,
@@ -70,17 +69,17 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			alignItems: 'center',
 			padding: spacing.md,
 			paddingHorizontal: spacing.lg,
-			backgroundColor: colors.background.primary,
+			backgroundColor: colors.background.secondary,
 		},
 		optionText: {
 			fontSize: 17,
-			color: colors.text.primary,
+			color: colors.text.secondary,
 			marginLeft: spacing.md,
 		},
 		selectedOption: {},
 		checkmark: {
 			marginLeft: 'auto',
-			color: colors.primary,
+			color: colors.secondary,
 		},
 		themeIcon: {
 			width: 24,
@@ -89,7 +88,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 	});
 
 	return (
-		<Modal visible={visible} transparent onRequestClose={onClose}>
+		<Modal visible={visible} transparent onRequestClose={onClose} animationType="slide">
 			<TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
 				<TouchableOpacity style={styles.modalContent} activeOpacity={1} onPress={(e) => e.stopPropagation()}>
 					<View style={styles.handleContainer}>
