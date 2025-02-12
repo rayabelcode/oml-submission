@@ -387,6 +387,7 @@ export default function ContactsScreen({ navigation }) {
 				Contacts.Fields.PhoneNumbers,
 				Contacts.Fields.Emails,
 				Contacts.Fields.Image,
+				Contacts.Fields.Birthday,
 			]);
 
 			if (!fullContact.phoneNumbers?.length) {
@@ -412,13 +413,22 @@ export default function ContactsScreen({ navigation }) {
 			}
 
 			let photoUrl = null;
-			if (fullContact.image?.uri) {
-				try {
+			try {
+				if (fullContact.image?.uri) {
 					photoUrl = await uploadContactPhoto(user.uid, fullContact.image.uri);
-				} catch (photoError) {
-					console.error('Error uploading contact photo:', photoError);
-					photoUrl = null;
 				}
+			} catch (photoError) {
+				console.error('Error uploading contact photo:', photoError);
+			}
+
+			// Create pending contact - handle any birthday issues gracefully
+			let birthday = null;
+			try {
+				if (fullContact.birthday) {
+					birthday = fullContact.birthday;
+				}
+			} catch (birthdayError) {
+				console.error('Error processing birthday:', birthdayError);
 			}
 
 			setPendingContact({
@@ -427,6 +437,7 @@ export default function ContactsScreen({ navigation }) {
 				phone: formattedPhone,
 				email: fullContact.emails?.[0]?.email || '',
 				photo_url: photoUrl,
+				birthday,
 			});
 			setShowRelationshipModal(true);
 		} catch (error) {

@@ -1,4 +1,5 @@
 import { serverTimestamp } from 'firebase/firestore';
+import { formatBirthday } from './dateHelpers';
 import {
 	RELATIONSHIP_TYPES,
 	RELATIONSHIP_DEFAULTS,
@@ -35,34 +36,49 @@ export const SCHEDULING_CONSTANTS = {
 };
 
 export const createContactData = (basicData, userId) => {
-	// Destructure relationship_type out of basicData and create new object without it
-	const { relationship_type, phone, ...cleanedBasicData } = basicData;
-	const contactType = relationship_type || DEFAULT_RELATIONSHIP_TYPE;
+	// Destructure all expected fields including birthday
+	try {
+		const { relationship_type, phone, birthday, ...cleanedBasicData } = basicData;
 
-	return {
-		...cleanedBasicData,
-		phone: standardizePhoneNumber(phone),
-		archived: false,
-		notes: '',
-		contact_history: [],
-		tags: [],
-		next_contact: null,
-		created_at: serverTimestamp(),
-		last_updated: serverTimestamp(),
-		user_id: userId,
-		scheduling: {
-			relationship_type: contactType,
-			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
-			custom_schedule: false,
-			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
-			minimum_gap: 30,
-			custom_preferences: {
-				preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[contactType],
-				active_hours: RELATIONSHIP_DEFAULTS.active_hours[contactType],
-				excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[contactType],
+		const contactType = relationship_type || DEFAULT_RELATIONSHIP_TYPE;
+
+		// Format birthday, but don't let it break the contact creation
+		let formattedBirthday = null;
+		try {
+			formattedBirthday = formatBirthday(birthday);
+		} catch (error) {
+			console.error('Error formatting birthday during contact creation:', error);
+		}
+
+		return {
+			...cleanedBasicData,
+			phone: standardizePhoneNumber(phone),
+			birthday: formattedBirthday,
+			archived: false,
+			notes: '',
+			contact_history: [],
+			tags: [],
+			next_contact: null,
+			created_at: serverTimestamp(),
+			last_updated: serverTimestamp(),
+			user_id: userId,
+			scheduling: {
+				relationship_type: contactType,
+				frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
+				custom_schedule: false,
+				priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
+				minimum_gap: 30,
+				custom_preferences: {
+					preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[contactType],
+					active_hours: RELATIONSHIP_DEFAULTS.active_hours[contactType],
+					excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[contactType],
+				},
 			},
-		},
-	};
+		};
+	} catch (error) {
+		console.error('Error creating contact data:', error);
+		throw new Error('Failed to create contact data');
+	}
 };
 
 export const updateContactData = (contactData) => {
