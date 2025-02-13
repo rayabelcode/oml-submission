@@ -107,7 +107,7 @@ export const StatsScreen = () => {
 								icon="people"
 								title="Total Contacts"
 								value={stats?.basic.totalActive || 0}
-								subtitle="Active contacts in your list"
+								subtitle="All contacts 'On Your List'"
 								colors={colors}
 								styles={styles}
 							/>

@@ -1,4 +1,4 @@
-import { fetchUpcomingContacts } from '../../utils/firestore';
+import { fetchUpcomingContacts, fetchContacts } from '../../utils/firestore';
 import { FREQUENCY_MAPPINGS, RELATIONSHIP_TYPES } from '../../../constants/relationships';
 
 export const calculateStats = async (userId) => {
@@ -11,44 +11,40 @@ export const calculateStats = async (userId) => {
 		const now = new Date();
 		const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-		const allContacts = await fetchUpcomingContacts(userId);
+		// Get ALL contacts for distribution
+		const allContactsData = await fetchContacts(userId);
+		const allContacts = [...allContactsData.scheduledContacts, ...allContactsData.unscheduledContacts].filter(
+			(contact) => contact !== null && !contact.archived
+		);
 
-		if (!allContacts || !Array.isArray(allContacts)) {
-			console.error('Invalid contacts data:', allContacts);
-			return getDefaultStats();
-		}
+		// Get upcoming contacts for stats and suggestions
+		const upcomingContacts = await fetchUpcomingContacts(userId);
 
-		const contacts = allContacts.filter((contact) => contact !== null);
+		// Distribution calculation using ALL contacts
+		const distribution = Object.keys(RELATIONSHIP_TYPES).map((type) => {
+			const typeCount = allContacts.filter((contact) => {
+				const directType = contact?.relationship_type;
+				const schedulingType = contact?.scheduling?.relationship_type;
+				return directType === type || schedulingType === type;
+			}).length;
 
-		// Distribution calculation
-		const typeCount = {};
-		contacts.forEach((contact) => {
-			const type = contact?.relationship_type || 'unassigned';
-			typeCount[type] = (typeCount[type] || 0) + 1;
+			return {
+				type,
+				count: typeCount,
+				percentage: allContacts.length ? Math.round((typeCount / allContacts.length) * 100) : 0,
+				color: RELATIONSHIP_TYPES[type].color,
+				icon: RELATIONSHIP_TYPES[type].icon,
+			};
 		});
 
-		// Distribution calculation
-		const distribution = Object.entries(RELATIONSHIP_TYPES)
-			.map(([type, config]) => {
-				const count = contacts.filter((contact) => contact?.relationship_type === type).length;
-				return {
-					type,
-					count,
-					percentage: contacts.length ? Math.round((count / contacts.length) * 100) : 0,
-					color: config.color,
-					icon: config.icon,
-				};
-			})
-			.filter((item) => item.count > 0);
-
-		// Basic stats calculations
+		// Stats calculations using upcoming contacts
 		let streak = 0;
 		const today = new Date().setHours(0, 0, 0, 0);
 		let checkDate = today;
 		let hasContact = true;
 
 		while (hasContact) {
-			const dateContacts = contacts.some((contact) =>
+			const dateContacts = upcomingContacts.some((contact) =>
 				contact?.contact_history?.some((h) => new Date(h.date).setHours(0, 0, 0, 0) === checkDate)
 			);
 			if (dateContacts) {
@@ -62,31 +58,31 @@ export const calculateStats = async (userId) => {
 		const thirtyDaysAgo = new Date(now - 30 * 86400000);
 		const ninetyDaysAgo = new Date(now - 90 * 86400000);
 
-		const monthlyCount = contacts.reduce((count, contact) => {
+		const monthlyCount = upcomingContacts.reduce((count, contact) => {
 			return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
 		}, 0);
 
-		// Calculate contact stats
-		const contactStats = contacts.map((contact) => ({
+		// Calculate contact stats using upcoming contacts
+		const contactStats = upcomingContacts.map((contact) => ({
 			name: `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim(),
 			thirtyDayCount: contact?.contact_history?.filter((h) => new Date(h.date) >= thirtyDaysAgo).length || 0,
 			ninetyDayCount: contact?.contact_history?.filter((h) => new Date(h.date) >= ninetyDaysAgo).length || 0,
 			lastContact: contact?.contact_history?.[0]?.date || null,
 			relationship: contact?.relationship_type || 'unassigned',
-			preferredFrequency: 30, // Default to monthly if not specified
+			preferredFrequency: 30,
 		}));
 
-		// Calculate day stats
+		// Calculate day stats using upcoming contacts
 		const dayStats = {};
-		contacts.forEach((contact) => {
+		upcomingContacts.forEach((contact) => {
 			contact?.contact_history?.forEach((h) => {
 				const day = new Date(h.date).getDay();
 				dayStats[day] = (dayStats[day] || 0) + 1;
 			});
 		});
 
-		// Calculate needs attention
-		const needsAttention = contacts
+		// Calculate needs attention using upcoming contacts
+		const needsAttention = upcomingContacts
 			.filter((contact) => {
 				if (!contact) return false;
 				const lastContact = contact?.contact_history?.[0]?.date;
@@ -94,7 +90,7 @@ export const calculateStats = async (userId) => {
 				if (!lastContact) return true;
 
 				const daysSinceContact = Math.floor((now - new Date(lastContact)) / (1000 * 60 * 60 * 24));
-				return daysSinceContact > 30; // Default to monthly check
+				return daysSinceContact > 30;
 			})
 			.map((contact) => ({
 				id: contact.id,
@@ -111,7 +107,7 @@ export const calculateStats = async (userId) => {
 			basic: {
 				monthlyContacts: monthlyCount,
 				currentStreak: streak,
-				totalActive: contacts.length,
+				totalActive: upcomingContacts.length,
 				averageContactsPerWeek: Math.round(monthlyCount / 4),
 			},
 			detailed: {
