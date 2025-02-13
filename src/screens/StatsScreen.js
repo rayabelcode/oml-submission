@@ -8,6 +8,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import CallOptions from '../components/general/CallOptions';
 import { cacheManager } from '../utils/cache';
 import { useStyles } from '../styles/screens/stats';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const StatBox = ({ icon, title, value, subtitle, colors, styles }) => (
 	<View style={styles.statBox}>
@@ -71,10 +72,12 @@ export const StatsScreen = () => {
 	}
 
 	return (
-		<ScrollView
-			style={styles.statsContainer}
-			refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-		>
+		<View style={styles.container}>
+			<ScrollView
+				style={styles.statsContainer}
+				contentContainerStyle={styles.contentContainer}
+				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+			>
 			{error ? (
 				<View style={styles.section}>
 					<Text style={styles.message}>{error}</Text>
@@ -135,38 +138,31 @@ export const StatsScreen = () => {
 						</View>
 					</View>
 
-					{stats?.detailed?.needsAttention?.map((contact) => (
-						<View key={contact.id} style={styles.attentionItem}>
-							<View style={styles.attentionInfo}>
-								<Text style={styles.contactName}>{contact.name}</Text>
-								<Text
-									style={[
-										styles.overdueDays,
-										{ color: contact.daysOverdue > 30 ? colors.danger : colors.warning },
-									]}
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Suggested Calls</Text>
+						{stats?.detailed?.needsAttention?.map((contact) => (
+							<View key={contact.id} style={styles.attentionItem}>
+								<View style={styles.attentionInfo}>
+									<Text style={styles.contactName}>{contact.name}</Text>
+								</View>
+								<TouchableOpacity
+									style={styles.callButton}
+									onPress={() => {
+										const formattedContact = {
+											...contact,
+											first_name: contact.name.split(' ')[0],
+											last_name: contact.name.split(' ').slice(1).join(' '),
+										};
+										setSelectedContact(formattedContact);
+										setShowCallOptions(true);
+									}}
 								>
-									{contact.daysOverdue} days overdue
-								</Text>
-								{contact.isSnoozed && <Text style={styles.snoozed}>Snoozed {contact.snoozeCount} times</Text>}
+									<Icon name="call" size={20} color={colors.white} />
+									<Text style={styles.callButtonText}>Call Now</Text>
+								</TouchableOpacity>
 							</View>
-							<TouchableOpacity
-								style={styles.callButton}
-								onPress={() => {
-									// Format the contact object correctly before setting it
-									const formattedContact = {
-										...contact,
-										first_name: contact.name.split(' ')[0],
-										last_name: contact.name.split(' ').slice(1).join(' '),
-									};
-									setSelectedContact(formattedContact);
-									setShowCallOptions(true);
-								}}
-							>
-								<Icon name="call" size={20} color={colors.white} />
-								<Text style={styles.callButtonText}>Call Now</Text>
-							</TouchableOpacity>
-						</View>
-					))}
+						))}
+					</View>
 				</>
 			)}
 
@@ -180,8 +176,9 @@ export const StatsScreen = () => {
 					}}
 				/>
 			)}
-		</ScrollView>
-	);
+        </ScrollView>
+		</View>
+);
 };
 
 export default StatsScreen;

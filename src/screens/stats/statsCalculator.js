@@ -30,8 +30,7 @@ export const calculateStats = async (userId) => {
 		// Distribution calculation
 		const distribution = Object.entries(RELATIONSHIP_TYPES)
 			.map(([type, config]) => {
-				const count = contacts.filter((contact) => contact?.scheduling?.relationship_type === type).length;
-
+				const count = contacts.filter((contact) => contact?.relationship_type === type).length;
 				return {
 					type,
 					count,

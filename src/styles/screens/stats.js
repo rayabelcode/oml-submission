@@ -1,13 +1,25 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet,Platform } from 'react-native';
 import { spacing, layout } from '../../context/ThemeContext';
 
 export const useStyles = (colors) => {
 	return StyleSheet.create({
+		safeArea: {
+			flex: 1,
+			backgroundColor: colors.background.primary,
+		},
+		container: {
+			flex: 1,
+			backgroundColor: colors.background.primary,
+			paddingTop: Platform.OS === 'ios' ? 50 : 20,
+		},
 		statsContainer: {
 			flex: 1,
-			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.primary,
-			paddingVertical: spacing.xl,
+		},
+		contentContainer: {
+			paddingHorizontal: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.xl * 2,
 		},
 		section: {
 			marginBottom: spacing.xl,
