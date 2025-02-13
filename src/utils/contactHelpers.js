@@ -91,6 +91,10 @@ export const createContactData = (basicData, userId) => {
 };
 
 export const updateContactData = (contactData) => {
+	if (!contactData) {
+		throw new Error('Failed to update contact data');
+	}
+
 	try {
 		const updates = { ...contactData };
 

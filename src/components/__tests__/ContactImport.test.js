@@ -3,6 +3,38 @@ import { uploadContactPhoto, checkForExistingContact } from '../../utils/firesto
 import { createContactData } from '../../utils/contactHelpers';
 import { Alert } from 'react-native';
 
+import {
+    RELATIONSHIP_TYPES,
+    RELATIONSHIP_DEFAULTS,
+    DEFAULT_RELATIONSHIP_TYPE,
+} from '../../../constants/relationships';
+
+jest.mock('../../../constants/relationships', () => ({
+	RELATIONSHIP_TYPES: {
+		friend: 'Friend',
+		family: 'Family',
+		work: 'Work',
+	},
+	RELATIONSHIP_DEFAULTS: {
+		preferred_days: {
+			friend: ['monday', 'wednesday', 'friday'],
+			family: ['saturday', 'sunday'],
+			work: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+		},
+		active_hours: {
+			friend: { start: '09:00', end: '17:00' },
+			family: { start: '10:00', end: '20:00' },
+			work: { start: '09:00', end: '17:00' },
+		},
+		excluded_times: {
+			friend: [],
+			family: [],
+			work: [],
+		},
+	},
+	DEFAULT_RELATIONSHIP_TYPE: 'friend',
+}));
+
 jest.mock('expo-contacts', () => ({
 	requestPermissionsAsync: jest.fn(),
 	getContactByIdAsync: jest.fn(),
@@ -169,60 +201,58 @@ describe('Contact Import', () => {
 		});
 	});
 
-    describe('Phone Number Formatting', () => {
-        it('should handle US phone number formats', async () => {
-            const phoneFormats = [
-                { input: '1234567890', expected: '+11234567890' },  // 10 digits
-                { input: '123.456.7890', expected: '+11234567890' }, // 10 digits with punctuation
-                { input: '123-456-7890', expected: '+11234567890' }  // 10 digits with dashes
-            ];
-    
-            for (const format of phoneFormats) {
-                const contactWithPhone = {
-                    ...mockContact,
-                    phoneNumbers: [{ number: format.input }]
-                };
-                Contacts.getContactByIdAsync.mockResolvedValue(contactWithPhone);
-                const result = await handleContactSelection(contactWithPhone.id, mockUserId);
-                expect(result.phone).toBe(format.expected);
-            }
-        });
-    
-        it('should handle phone numbers with country code', async () => {
-            const contactWithCountryCode = {
-                ...mockContact,
-                phoneNumbers: [{ number: '11234567890' }]
-            };
-            Contacts.getContactByIdAsync.mockResolvedValue(contactWithCountryCode);
-            const result = await handleContactSelection(contactWithCountryCode.id, mockUserId);
-            expect(result.phone).toBe('+11234567890');
-        });
-    
-        it('should handle international numbers', async () => {
-            const contactWithIntl = {
-                ...mockContact,
-                phoneNumbers: [{ number: '441234567890' }]
-            };
-            Contacts.getContactByIdAsync.mockResolvedValue(contactWithIntl);
-            const result = await handleContactSelection(contactWithIntl.id, mockUserId);
-            expect(result.phone).toBe('+441234567890');
-        });
-    
-        it('should use first phone number when multiple exist', async () => {
-            const contactWithMultiplePhones = {
-                ...mockContact,
-                phoneNumbers: [
-                    { number: '1234567890', label: 'mobile' },
-                    { number: '0987654321', label: 'home' }
-                ]
-            };
-            Contacts.getContactByIdAsync.mockResolvedValue(contactWithMultiplePhones);
-            const result = await handleContactSelection(contactWithMultiplePhones.id, mockUserId);
-            expect(result.phone).toBe('+11234567890');
-        });
-    });
-    
-    
+	describe('Phone Number Formatting', () => {
+		it('should handle US phone number formats', async () => {
+			const phoneFormats = [
+				{ input: '1234567890', expected: '+11234567890' }, // 10 digits
+				{ input: '123.456.7890', expected: '+11234567890' }, // 10 digits with punctuation
+				{ input: '123-456-7890', expected: '+11234567890' }, // 10 digits with dashes
+			];
+
+			for (const format of phoneFormats) {
+				const contactWithPhone = {
+					...mockContact,
+					phoneNumbers: [{ number: format.input }],
+				};
+				Contacts.getContactByIdAsync.mockResolvedValue(contactWithPhone);
+				const result = await handleContactSelection(contactWithPhone.id, mockUserId);
+				expect(result.phone).toBe(format.expected);
+			}
+		});
+
+		it('should handle phone numbers with country code', async () => {
+			const contactWithCountryCode = {
+				...mockContact,
+				phoneNumbers: [{ number: '11234567890' }],
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithCountryCode);
+			const result = await handleContactSelection(contactWithCountryCode.id, mockUserId);
+			expect(result.phone).toBe('+11234567890');
+		});
+
+		it('should handle international numbers', async () => {
+			const contactWithIntl = {
+				...mockContact,
+				phoneNumbers: [{ number: '441234567890' }],
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithIntl);
+			const result = await handleContactSelection(contactWithIntl.id, mockUserId);
+			expect(result.phone).toBe('+441234567890');
+		});
+
+		it('should use first phone number when multiple exist', async () => {
+			const contactWithMultiplePhones = {
+				...mockContact,
+				phoneNumbers: [
+					{ number: '1234567890', label: 'mobile' },
+					{ number: '0987654321', label: 'home' },
+				],
+			};
+			Contacts.getContactByIdAsync.mockResolvedValue(contactWithMultiplePhones);
+			const result = await handleContactSelection(contactWithMultiplePhones.id, mockUserId);
+			expect(result.phone).toBe('+11234567890');
+		});
+	});
 
 	describe('Name Handling', () => {
 		it('should handle missing names', async () => {
@@ -379,3 +409,54 @@ async function handleContactSelection(contactId, userId) {
 		return null;
 	}
 }
+
+// New scheduling structure
+describe('Contact Data Structure', () => {
+	it('should create contact with correct scheduling defaults', async () => {
+		const basicData = {
+			first_name: 'John',
+			last_name: 'Doe',
+			phone: '1234567890',
+			relationship_type: 'friend',
+		};
+
+		const result = createContactData(basicData, 'test-user');
+
+		expect(result.scheduling).toMatchObject({
+			relationship_type: 'friend',
+			frequency: 'weekly',
+			custom_schedule: true, // Verify new default
+			priority: 'normal',
+			minimum_gap: 30,
+			custom_preferences: expect.any(Object),
+			recurring_next_date: null,
+			custom_next_date: null,
+			pattern_adjusted: false,
+			confidence: null,
+			snooze_count: { increment: 0 },
+			scheduling_status: {
+				wasRescheduled: false,
+				wasSnooze: false,
+			},
+			status: null,
+		});
+	});
+
+	it('should handle relationship type defaults correctly', async () => {
+		const basicData = {
+			first_name: 'John',
+			last_name: 'Doe',
+			phone: '1234567890',
+			// No relationship_type provided
+		};
+
+		const result = createContactData(basicData, 'test-user');
+
+		expect(result.scheduling.relationship_type).toBe(DEFAULT_RELATIONSHIP_TYPE);
+		expect(result.scheduling.custom_preferences).toMatchObject({
+			preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[DEFAULT_RELATIONSHIP_TYPE],
+			active_hours: RELATIONSHIP_DEFAULTS.active_hours[DEFAULT_RELATIONSHIP_TYPE],
+			excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[DEFAULT_RELATIONSHIP_TYPE],
+		});
+	});
+});
