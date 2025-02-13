@@ -24,7 +24,7 @@ export const healthCheck = onRequest(
   },
 );
 
-// Function 1: Test that sends a notification to my devices once per day at 10:20 AM Eastern Time
+// Function 1: Daily test notification sent at 10:20 AM ET
 export const scheduledNotification = onSchedule(
   {
     schedule: "20 10 * * *", // Every day at 10:20 AM
@@ -110,7 +110,7 @@ export const scheduledNotification = onSchedule(
   },
 );
 
-// Function 2: Process reminders and send notifications
+// Function 2: Process SCHEDULED reminders
 export const processReminders = onSchedule(
   {
     schedule: "* * * * *", // Every minute
@@ -464,123 +464,295 @@ export const processCustomReminders = onSchedule(
   },
 );
 
-// Function 4: Process snoozed reminders
-export const processSnoozedReminders = onSchedule(
-  {
-    schedule: "* * * * *", // Every minute
-    timeZone: "America/New_York",
-    timeoutSeconds: 120,
-    memory: "256MiB",
-    retryCount: 3,
-  },
-  async (event) => {
-    console.log("Checking for snoozed reminders...");
+// Function 4: Process 'snoozed' SCHEDULED reminders
+export const processSnoozedScheduledReminders = onSchedule({
+  schedule: "* * * * *",
+  timeZone: "America/New_York",
+  timeoutSeconds: 120,
+  memory: "256MiB",
+  retryCount: 3,
+},
+async (event) => {
+  console.log("Checking for snoozed SCHEDULED reminders...");
 
-    try {
-      const now = Timestamp.now();
-      const endTime = Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
+  try {
+    const now = Timestamp.now();
+    const endTime = Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
 
-      const snoozedSnapshot = await db
-        .collection("reminders")
-        .where("scheduledTime", "<=", endTime)
-        .where("status", "==", "snoozed")
-        .where("snoozed", "==", true)
-        .get();
+    const snoozedSnapshot = await db
+      .collection("reminders")
+      .where("scheduledTime", "<=", endTime)
+      .where("status", "==", "snoozed")
+      .where("snoozed", "==", true)
+      .where("type", "==", "SCHEDULED")
+      .get();
 
-      console.log(`Found ${snoozedSnapshot.size} snoozed reminders to process`);
+    console.log(`Found ${snoozedSnapshot.size} snoozed SCHEDULED reminders to process`);
 
-      for (const reminderDoc of snoozedSnapshot.docs) {
-        const reminder = reminderDoc.data();
-        const userDoc = await db.collection("users").doc(reminder.user_id).get();
+    for (const reminderDoc of snoozedSnapshot.docs) {
+      const reminder = reminderDoc.data();
+      const userDoc = await db.collection("users").doc(reminder.user_id).get();
 
-        if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
-          console.log(`No valid tokens for user ${reminder.user_id}`);
-          continue;
-        }
+      if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
+        console.log(`No valid tokens for user ${reminder.user_id}`);
+        continue;
+      }
 
-        const userData = userDoc.data();
-        const messages = userData.expoPushTokens.map((token) => ({
-          to: token,
-          sound: "default",
-          title: "Snoozed Call Reminder",
-          body: `Time to call ${reminder.contactName}`,
-          data: {
-            type: reminder.type, // Keeps original type (SCHEDULED or CUSTOM_DATE)
-            reminderId: reminderDoc.id,
-            contactId: reminder.contact_id,
+      const userData = userDoc.data();
+      const messages = userData.expoPushTokens.map((token) => ({
+        to: token,
+        sound: "default",
+        title: "Snoozed Call Reminder",
+        body: `Time to call ${reminder.contactName}`,
+        data: {
+          type: "SCHEDULED",
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          userId: reminder.user_id,
+        },
+      }));
+
+      const chunks = expo.chunkPushNotifications(messages);
+      let notificationSent = false;
+
+      for (const chunk of chunks) {
+        try {
+          const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+          console.log("Snoozed SCHEDULED reminder notification sent:", {
             userId: reminder.user_id,
-          },
-        }));
-
-        const chunks = expo.chunkPushNotifications(messages);
-        let notificationSent = false;
-
-        for (const chunk of chunks) {
-          try {
-            const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-            console.log("Snoozed reminder notification sent:", {
-              userId: reminder.user_id,
-              reminderId: reminderDoc.id,
-              result: ticketChunk,
-            });
-
-            notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
-
-            // Clean up invalid tokens
-            ticketChunk.forEach(async (ticket, index) => {
-              if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
-                const invalidToken = userData.expoPushTokens[index];
-                await db
-                  .collection("users")
-                  .doc(reminder.user_id)
-                  .update({
-                    expoPushTokens: FieldValue.arrayRemove(invalidToken),
-                  });
-              }
-            });
-          } catch (error) {
-            console.error("Error sending snoozed reminder notification:", error);
-          }
-        }
-
-        if (notificationSent) {
-          const batch = db.batch();
-
-          // Update reminder
-          batch.update(reminderDoc.ref, {
-            status: "sent",
-            snoozed: false,
-            completion_time: FieldValue.serverTimestamp(),
-            notifiedAt: FieldValue.serverTimestamp(),
-            updated_at: FieldValue.serverTimestamp(),
-          });
-
-          // Update contact's schedule
-          const contactRef = db.collection("contacts").doc(reminder.contact_id);
-          const contactDoc = await contactRef.get();
-
-          if (contactDoc.exists) {
-            batch.update(contactRef, {
-              last_contacted: FieldValue.serverTimestamp(),
-              last_updated: FieldValue.serverTimestamp(),
-            });
-          }
-
-          await batch.commit();
-
-          console.log("Snoozed reminder processed:", {
             reminderId: reminderDoc.id,
-            contactId: reminder.contact_id,
-            type: reminder.type,
-            status: "sent",
+            result: ticketChunk,
           });
+
+          notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
+
+          ticketChunk.forEach(async (ticket, index) => {
+            if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+              const invalidToken = userData.expoPushTokens[index];
+              await db
+                .collection("users")
+                .doc(reminder.user_id)
+                .update({
+                  expoPushTokens: FieldValue.arrayRemove(invalidToken),
+                });
+            }
+          });
+        } catch (error) {
+          console.error("Error sending snoozed SCHEDULED reminder notification:", error);
         }
       }
 
-      return null;
-    } catch (error) {
-      console.error("Error processing snoozed reminders:", error);
-      return null;
+      if (notificationSent) {
+        const batch = db.batch();
+
+        // Update current reminder
+        batch.update(reminderDoc.ref, {
+          status: "sent",
+          snoozed: false,
+          completion_time: FieldValue.serverTimestamp(),
+          notifiedAt: FieldValue.serverTimestamp(),
+          updated_at: FieldValue.serverTimestamp(),
+        });
+
+        // Get contact data and user preferences for scheduling
+        const contactRef = db.collection("contacts").doc(reminder.contact_id);
+        const contactDoc = await contactRef.get();
+        const userPrefsDoc = await db.collection("user_preferences").doc(reminder.user_id).get();
+        const userPreferences = userPrefsDoc.exists ? userPrefsDoc.data() : {};
+
+        if (contactDoc.exists) {
+          const contactData = contactDoc.data();
+          const updates = {
+            last_contacted: FieldValue.serverTimestamp(),
+            last_updated: FieldValue.serverTimestamp(),
+          };
+
+          // Calculate next reminder if contact has frequency
+          if (contactData.scheduling?.frequency) {
+            const scheduler = new SchedulingService(
+              userPreferences,
+              [],
+              "America/New_York",
+              {
+                isCloudFunction: true,
+                enforceActiveHours: true,
+              },
+            );
+
+            try {
+              const nextRecurring = await scheduler.scheduleRecurringReminder(
+                contactData,
+                new Date(),
+                contactData.scheduling.frequency,
+              );
+
+              if (nextRecurring.scheduledTime) {
+                updates["scheduling.recurring_next_date"] = nextRecurring.scheduledTime.toDate();
+                updates["next_contact"] = nextRecurring.scheduledTime.toDate();
+
+                // Create new reminder
+                const newReminderRef = db.collection("reminders").doc();
+                const newReminderData = {
+                  created_at: FieldValue.serverTimestamp(),
+                  updated_at: FieldValue.serverTimestamp(),
+                  contact_id: reminder.contact_id,
+                  user_id: reminder.user_id,
+                  scheduledTime: nextRecurring.scheduledTime,
+                  status: "pending",
+                  type: "SCHEDULED",
+                  frequency: contactData.scheduling.frequency,
+                  snoozed: false,
+                  needs_attention: false,
+                  completed: false,
+                  completion_time: null,
+                  notes_added: false,
+                  contactName: reminder.contactName,
+                  notified: false,
+                };
+
+                batch.set(newReminderRef, newReminderData);
+              }
+            } catch (error) {
+              console.error("Error calculating next reminder:", error);
+              updates["scheduling.recurring_next_date"] = null;
+            }
+          }
+
+          batch.update(contactRef, updates);
+        }
+
+        await batch.commit();
+
+        console.log("Snoozed SCHEDULED reminder processed:", {
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          status: "sent",
+        });
+      }
     }
-  },
+
+    return null;
+  } catch (error) {
+    console.error("Error processing snoozed SCHEDULED reminders:", error);
+    return null;
+  }
+},
+);
+
+// Function 5: Process 'snoozed' CUSTOM_DATE reminders
+export const processSnoozedCustomReminders = onSchedule({
+  schedule: "* * * * *",
+  timeZone: "America/New_York",
+  timeoutSeconds: 120,
+  memory: "256MiB",
+  retryCount: 3,
+},
+async (event) => {
+  console.log("Checking for snoozed CUSTOM_DATE reminders...");
+
+  try {
+    const now = Timestamp.now();
+    const endTime = Timestamp.fromMillis(now.toMillis() + 5 * 60 * 1000);
+
+    const snoozedSnapshot = await db
+      .collection("reminders")
+      .where("scheduledTime", "<=", endTime)
+      .where("status", "==", "snoozed")
+      .where("snoozed", "==", true)
+      .where("type", "==", "CUSTOM_DATE")
+      .get();
+
+    console.log(`Found ${snoozedSnapshot.size} snoozed CUSTOM_DATE reminders to process`);
+
+    for (const reminderDoc of snoozedSnapshot.docs) {
+      const reminder = reminderDoc.data();
+      const userDoc = await db.collection("users").doc(reminder.user_id).get();
+
+      if (!userDoc.exists || !userDoc.data().expoPushTokens || !userDoc.data().expoPushTokens.length) {
+        console.log(`No valid tokens for user ${reminder.user_id}`);
+        continue;
+      }
+
+      const userData = userDoc.data();
+      const messages = userData.expoPushTokens.map((token) => ({
+        to: token,
+        sound: "default",
+        title: "Snoozed Custom Call Reminder",
+        body: `Time to call ${reminder.contactName}`,
+        data: {
+          type: "CUSTOM_DATE",
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          userId: reminder.user_id,
+        },
+      }));
+
+      const chunks = expo.chunkPushNotifications(messages);
+      let notificationSent = false;
+
+      for (const chunk of chunks) {
+        try {
+          const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+          console.log("Snoozed CUSTOM_DATE reminder notification sent:", {
+            userId: reminder.user_id,
+            reminderId: reminderDoc.id,
+            result: ticketChunk,
+          });
+
+          notificationSent = ticketChunk.some((ticket) => ticket.status === "ok");
+
+          ticketChunk.forEach(async (ticket, index) => {
+            if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+              const invalidToken = userData.expoPushTokens[index];
+              await db
+                .collection("users")
+                .doc(reminder.user_id)
+                .update({
+                  expoPushTokens: FieldValue.arrayRemove(invalidToken),
+                });
+            }
+          });
+        } catch (error) {
+          console.error("Error sending snoozed CUSTOM_DATE reminder notification:", error);
+        }
+      }
+
+      if (notificationSent) {
+        const batch = db.batch();
+
+        batch.update(reminderDoc.ref, {
+          status: "sent",
+          snoozed: false,
+          completion_time: FieldValue.serverTimestamp(),
+          notifiedAt: FieldValue.serverTimestamp(),
+          updated_at: FieldValue.serverTimestamp(),
+        });
+
+        const contactRef = db.collection("contacts").doc(reminder.contact_id);
+        const contactDoc = await contactRef.get();
+
+        if (contactDoc.exists) {
+          batch.update(contactRef, {
+            "last_contacted": FieldValue.serverTimestamp(),
+            "last_updated": FieldValue.serverTimestamp(),
+            "scheduling.custom_next_date": null,
+          });
+        }
+
+        await batch.commit();
+
+        console.log("Snoozed CUSTOM_DATE reminder processed:", {
+          reminderId: reminderDoc.id,
+          contactId: reminder.contact_id,
+          status: "sent",
+        });
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error processing snoozed CUSTOM_DATE reminders:", error);
+    return null;
+  }
+},
 );
