@@ -5,8 +5,9 @@ export const useStyles = (colors) => {
 	return StyleSheet.create({
 		statsContainer: {
 			flex: 1,
-			padding: spacing.md,
+			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.primary,
+			paddingVertical: spacing.xl,
 		},
 		section: {
 			marginBottom: spacing.xl,
@@ -20,6 +21,13 @@ export const useStyles = (colors) => {
 			marginBottom: spacing.md,
 			color: colors.text.primary,
 			textAlign: 'center',
+		},
+		subsectionTitle: {
+			fontSize: 16,
+			fontWeight: '600',
+			marginTop: spacing.md,
+			marginBottom: spacing.sm,
+			color: colors.text.secondary,
 		},
 		statsGrid: {
 			flexDirection: 'row',
@@ -45,36 +53,11 @@ export const useStyles = (colors) => {
 			marginTop: spacing.xs,
 			color: colors.text.primary,
 		},
-		relationshipRow: {
-			flexDirection: 'row',
-			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		relationshipType: {
-			fontSize: 16,
-			color: colors.text.primary,
-		},
-		relationshipCount: {
-			fontSize: 16,
-			fontWeight: 'bold',
-			color: colors.primary,
-		},
-		contactRow: {
-			flexDirection: 'row',
-			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		contactName: {
-			fontSize: 16,
-			color: colors.text.primary,
-		},
-		lastContact: {
-			fontSize: 14,
+		statSubtitle: {
+			fontSize: 12,
 			color: colors.text.secondary,
+			marginTop: spacing.xs,
+			textAlign: 'center',
 		},
 		message: {
 			fontSize: 16,
@@ -82,32 +65,113 @@ export const useStyles = (colors) => {
 			textAlign: 'center',
 			paddingVertical: spacing.md,
 		},
-		frequencyRow: {
+		distributionGrid: {
+			flexDirection: 'row',
+			flexWrap: 'wrap',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.sm,
+		},
+		distributionItem: {
+			width: '48%',
+			padding: spacing.md,
+			marginBottom: spacing.md,
+			borderRadius: layout.borderRadius.sm,
+			backgroundColor: colors.background.tertiary,
+			alignItems: 'center',
+		},
+		distributionCount: {
+			fontSize: 24,
+			fontWeight: 'bold',
+			marginTop: spacing.xs,
+			color: colors.text.primary,
+		},
+		distributionLabel: {
+			fontSize: 14,
+			marginTop: spacing.xs,
+			color: colors.text.secondary,
+		},
+		distributionPercentage: {
+			fontSize: 12,
+			color: colors.text.secondary,
+			marginTop: spacing.xs,
+		},
+		attentionItem: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		frequencyCount: {
-			fontSize: 14,
-			color: colors.primary,
-			fontWeight: '500',
-		},
-		insightRow: {
-			flexDirection: 'row',
-			alignItems: 'flex-start',
+			alignItems: 'center',
 			paddingVertical: spacing.md,
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
 		},
-		insightText: {
+		attentionInfo: {
+			flex: 1,
+		},
+		contactName: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.xs,
+		},
+		overdueDays: {
+			fontSize: 14,
+			fontWeight: '500',
+		},
+		snoozed: {
+			fontSize: 12,
+			color: colors.warning,
+			marginTop: spacing.xs,
+		},
+		callButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.primary,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			marginLeft: spacing.md,
+		},
+		callButtonText: {
+			color: colors.white,
+			marginLeft: spacing.xs,
+			fontSize: 14,
+			fontWeight: '500',
+		},
+		insightItem: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			paddingVertical: spacing.md,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		insightLabel: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			marginLeft: spacing.md,
+		},
+		insightValue: {
 			fontSize: 16,
 			color: colors.text.primary,
+			fontWeight: '600',
+			marginLeft: spacing.sm,
 		},
-		insightContent: {
+		densityChart: {
+			flexDirection: 'row',
+			alignItems: 'flex-end',
+			height: 100,
+			marginTop: spacing.md,
+		},
+		densityBarContainer: {
 			flex: 1,
-			marginLeft: spacing.md,
+			alignItems: 'center',
+		},
+		densityBar: {
+			width: 4,
+			borderRadius: 2,
+		},
+		densityDate: {
+			fontSize: 10,
+			color: colors.text.secondary,
+			marginTop: spacing.xs,
 		},
 		retryButton: {
 			backgroundColor: colors.primary,
@@ -120,30 +184,6 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '500',
 			textAlign: 'center',
-		},
-		lastContactInfo: {
-			flexDirection: 'column',
-			alignItems: 'flex-end',
-		},
-		lastContactDate: {
-			fontSize: 14,
-			color: colors.text.primary,
-			marginBottom: 4,
-		},
-		lastContactDays: {
-			fontSize: 12,
-			color: colors.danger,
-		},
-		trendValue: {
-			fontSize: 22,
-			color: colors.primary,
-			fontWeight: 'bold',
-			marginTop: spacing.xs,
-		},
-		trendLabel: {
-			fontSize: 14,
-			marginTop: spacing.xs,
-			color: colors.text.secondary,
 		},
 	});
 };
