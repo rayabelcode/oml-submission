@@ -70,6 +70,26 @@ export class SchedulingService {
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
 	}
 
+	standardizeDate(dateValue) {
+		if (!dateValue) return null;
+
+		try {
+			if (dateValue instanceof Timestamp) {
+				return dateValue.toDate().toISOString();
+			}
+			if (dateValue instanceof Date) {
+				return dateValue.toISOString();
+			}
+			if (typeof dateValue === 'string') {
+				return new Date(dateValue).toISOString();
+			}
+			return null;
+		} catch (error) {
+			console.error('Error standardizing date:', error);
+			return null;
+		}
+	}
+
 	// Convert dates - transforms JS Date objects to Firebase Timestamp
 	createTimestamp(date) {
 		try {
