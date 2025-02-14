@@ -1,24 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useTheme } from '../../context/ThemeContext';
+import { spacing, layout, useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
 import { useAuth } from '../../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile } from '../../utils/firestore';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../config/firebase';
-import * as Notifications from 'expo-notifications';
-import { REMINDER_STATUS } from '../../../constants/notificationConstants';
-import { reminderSync } from '../../utils/notifications/reminderSync';
 
 export default function NotificationSettingsScreen() {
 	const navigation = useNavigation();
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const { user } = useAuth();
-	const [cloudNotifications, setCloudNotifications] = useState(false);
 	const [localNotifications, setLocalNotifications] = useState(false);
 
 	useEffect(() => {
@@ -27,75 +21,22 @@ export default function NotificationSettingsScreen() {
 
 	const loadNotificationSettings = async () => {
 		try {
-			const [cloudEnabled, localEnabled] = await Promise.all([
-				AsyncStorage.getItem('cloudNotificationsEnabled'),
-				AsyncStorage.getItem('localNotificationsEnabled'),
-			]);
+			const localEnabled = await AsyncStorage.getItem('localNotificationsEnabled');
 
 			// Set default states immediately for UI responsiveness (Default to true unless explicitly false)
-			setCloudNotifications(cloudEnabled !== 'false');
 			setLocalNotifications(localEnabled !== 'false');
 
 			// Handle first-time setup or missing settings
-			const updates = [];
-
-			if (cloudEnabled === null) {
-				updates.push(
-					AsyncStorage.setItem('cloudNotificationsEnabled', 'true'),
-					updateUserProfile(user.uid, { cloud_notifications_enabled: true })
-				);
-			}
-
 			if (localEnabled === null) {
-				updates.push(
+				await Promise.all([
 					AsyncStorage.setItem('localNotificationsEnabled', 'true'),
-					updateUserProfile(user.uid, { local_notifications_enabled: true })
-				);
-			}
-
-			// Execute all updates in parallel if needed
-			if (updates.length > 0) {
-				await Promise.all(updates);
+					updateUserProfile(user.uid, { local_notifications_enabled: true }),
+				]);
 			}
 		} catch (error) {
 			console.error('Error loading notification settings:', error);
 			// Set defaults even if there's an error
-			setCloudNotifications(true);
 			setLocalNotifications(true);
-		}
-	};
-
-	const handleCloudNotificationToggle = async () => {
-		const newState = !cloudNotifications;
-		setCloudNotifications(newState);
-		await AsyncStorage.setItem('cloudNotificationsEnabled', String(newState));
-		await updateUserProfile(user.uid, { cloud_notifications_enabled: newState });
-
-		if (newState) {
-			// Reactivate notifications for all existing future reminders
-			const remindersRef = collection(db, 'reminders');
-			const q = query(
-				remindersRef,
-				where('user_id', '==', user.uid),
-				where('status', '==', REMINDER_STATUS.PENDING)
-			);
-
-			const snapshot = await getDocs(q);
-			for (const doc of snapshot.docs) {
-				const reminder = { id: doc.id, ...doc.data() };
-				await reminderSync.scheduleLocalNotification(reminder);
-			}
-		} else {
-			// Cancel all pending cloud notifications (scheduled & custom date reminders)
-			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-			for (const notification of scheduledNotifications) {
-				if (
-					notification.content.data?.type === 'SCHEDULED' ||
-					notification.content.data?.type === 'CUSTOM_DATE'
-				) {
-					await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-				}
-			}
 		}
 	};
 
@@ -104,6 +45,10 @@ export default function NotificationSettingsScreen() {
 		setLocalNotifications(newState);
 		await AsyncStorage.setItem('localNotificationsEnabled', String(newState));
 		await updateUserProfile(user.uid, { local_notifications_enabled: newState });
+	};
+
+	const openNotificationSettings = () => {
+		Linking.openSettings();
 	};
 
 	return (
@@ -123,19 +68,36 @@ export default function NotificationSettingsScreen() {
 					</View>
 				</View>
 				<Text style={styles.sectionDescription}>
-					Receive notifications for upcoming check-ins and important dates.
+					Manage your scheduled reminder notifications in your device settings.
 				</Text>
-				<View style={styles.settingItem}>
-					<View style={styles.settingItemLeft}>
-						<Text style={styles.settingText}>Enable Scheduled Reminders</Text>
-					</View>
-					<Switch
-						value={cloudNotifications}
-						onValueChange={handleCloudNotificationToggle}
-						trackColor={{ false: '#767577', true: '#81b0ff' }}
-						thumbColor={cloudNotifications ? colors.primary : '#f4f3f4'}
-					/>
-				</View>
+				<TouchableOpacity
+					style={[
+						{
+							backgroundColor: colors.background.secondary,
+							borderRadius: layout.borderRadius.md,
+							borderWidth: 1,
+							borderColor: colors.primary,
+							marginTop: spacing.md,
+							marginBottom: spacing.md,
+							padding: spacing.sm,
+							alignSelf: 'center',
+						},
+					]}
+					onPress={openNotificationSettings}
+				>
+					<Text
+						style={[
+							styles.settingText,
+							{
+								color: colors.primary,
+								marginLeft: 0,
+								paddingHorizontal: spacing.md,
+							},
+						]}
+					>
+						Open System Settings
+					</Text>
+				</TouchableOpacity>
 			</View>
 
 			<View style={styles.settingSection}>
