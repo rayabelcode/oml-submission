@@ -565,8 +565,10 @@ const useStyles = () => {
 		tagInputHelper: {
 			textAlign: 'center',
 			color: colors.text.secondary,
-			fontSize: 14,
-			marginTop: 8,
+			fontSize: 16,
+			lineHeight: 20,
+			fontWeight: '500',
+			marginTop: spacing.sm,
 			fontStyle: 'italic',
 		},
 		tagDeleteIcon: {
