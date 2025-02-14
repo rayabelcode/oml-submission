@@ -284,7 +284,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					))
 				) : (
 					<Text style={styles.emptyHistoryText}>
-						Add your contact history above to view your call history...
+						Add call notes above, and your history will appear here!
 					</Text>
 				)}
 			</TouchableOpacity>

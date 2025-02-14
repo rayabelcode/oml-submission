@@ -452,12 +452,16 @@ const useStyles = () => {
 		emptyHistoryText: {
 			textAlign: 'center',
 			color: colors.text.secondary,
-			fontSize: 14,
+			fontSize: 17,
 			fontStyle: 'italic',
-			padding: spacing.sm,
+			lineHeight: 24,
+			fontWeight: '600',
+			paddingVertical: spacing.lg,
+			paddingHorizontal: spacing.xl,
 			backgroundColor: colors.background.secondary,
 			borderRadius: layout.borderRadius.md,
-			marginHorizontal: 0, // Full width
+			marginHorizontal: spacing.xl, // Full width
+			marginTop: spacing.md,
 		},
 		scheduleContainer: {
 			alignItems: 'center',
