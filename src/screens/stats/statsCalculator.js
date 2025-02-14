@@ -95,6 +95,7 @@ export const calculateStats = async (userId) => {
 			.map((contact) => ({
 				id: contact.id,
 				name: `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim(),
+				phone: contact.phone,
 				daysOverdue: contact?.contact_history?.[0]?.date
 					? Math.floor((now - new Date(contact.contact_history[0].date)) / (1000 * 60 * 60 * 24))
 					: Infinity,

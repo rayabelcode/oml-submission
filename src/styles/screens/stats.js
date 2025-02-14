@@ -1,4 +1,4 @@
-import { StyleSheet,Platform } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { spacing, layout } from '../../context/ThemeContext';
 
 export const useStyles = (colors) => {
@@ -91,6 +91,12 @@ export const useStyles = (colors) => {
 			backgroundColor: colors.background.tertiary,
 			alignItems: 'center',
 		},
+		distributionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: spacing.xs,
+			gap: spacing.xs,
+		},
 		distributionCount: {
 			fontSize: 24,
 			fontWeight: 'bold',
@@ -98,12 +104,13 @@ export const useStyles = (colors) => {
 			color: colors.text.primary,
 		},
 		distributionLabel: {
-			fontSize: 14,
-			marginTop: spacing.xs,
+			fontSize: 16,
+			fontWeight: '600',
 			color: colors.text.secondary,
 		},
 		distributionPercentage: {
-			fontSize: 12,
+			fontSize: 16,
+			fontWeight: '600',
 			color: colors.text.secondary,
 			marginTop: spacing.xs,
 		},
@@ -112,8 +119,6 @@ export const useStyles = (colors) => {
 			justifyContent: 'space-between',
 			alignItems: 'center',
 			paddingVertical: spacing.md,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
 		},
 		attentionInfo: {
 			flex: 1,

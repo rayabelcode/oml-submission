@@ -78,107 +78,123 @@ export const StatsScreen = () => {
 				contentContainerStyle={styles.contentContainer}
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 			>
-			{error ? (
-				<View style={styles.section}>
-					<Text style={styles.message}>{error}</Text>
-				</View>
-			) : (
-				<>
+				{error ? (
 					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Overview</Text>
-						<View style={styles.statsGrid}>
-							<StatBox
-								icon="calendar"
-								title="Calls This Month"
-								value={stats?.basic.monthlyContacts || 0}
-								subtitle="Total calls in current month"
-								colors={colors}
-								styles={styles}
-							/>
-							<StatBox
-								icon="flame"
-								title="Daily Streak"
-								value={stats?.basic.currentStreak || 0}
-								subtitle="Days in a row with calls"
-								colors={colors}
-								styles={styles}
-							/>
-							<StatBox
-								icon="people"
-								title="Total Contacts"
-								value={stats?.basic.totalActive || 0}
-								subtitle="All contacts 'On Your List'"
-								colors={colors}
-								styles={styles}
-							/>
-							<StatBox
-								icon="analytics"
-								title="Weekly Average"
-								value={stats?.basic.averageContactsPerWeek || 0}
-								subtitle="Average calls per week"
-								colors={colors}
-								styles={styles}
-							/>
-						</View>
+						<Text style={styles.message}>{error}</Text>
 					</View>
+				) : (
+					<>
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Overview</Text>
+							<View style={styles.statsGrid}>
+								<StatBox
+									icon="calendar"
+									title="Calls This Month"
+									value={stats?.basic.monthlyContacts || 0}
+									subtitle="Total calls in current month"
+									colors={colors}
+									styles={styles}
+								/>
+								<StatBox
+									icon="flame"
+									title="Daily Streak"
+									value={stats?.basic.currentStreak || 0}
+									subtitle="Days in a row with calls"
+									colors={colors}
+									styles={styles}
+								/>
+								<StatBox
+									icon="people"
+									title="Total Contacts"
+									value={stats?.basic.totalActive || 0}
+									subtitle="All contacts 'On Your List'"
+									colors={colors}
+									styles={styles}
+								/>
+								<StatBox
+									icon="analytics"
+									title="Weekly Average"
+									value={stats?.basic.averageContactsPerWeek || 0}
+									subtitle="Average calls per week"
+									colors={colors}
+									styles={styles}
+								/>
+							</View>
+						</View>
 
-					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Contact Types</Text>
-						<View style={styles.distributionGrid}>
-							{stats?.distribution?.map((item) => (
-								<View key={item.type} style={styles.distributionItem}>
-									<Icon name={RELATIONSHIP_TYPES[item.type]?.icon || 'people'} size={24} color={item.color} />
-									<Text style={styles.distributionCount}>{item.count}</Text>
-									<Text style={styles.distributionLabel}>
-										{RELATIONSHIP_TYPES[item.type]?.label || item.type}
-									</Text>
-									<Text style={styles.distributionPercentage}>{item.percentage}%</Text>
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Contacts by Type</Text>
+							<View style={styles.distributionGrid}>
+								{stats?.distribution?.map((item) => (
+									<View key={item.type} style={styles.distributionItem}>
+										<View style={styles.distributionHeader}>
+											<Icon
+												name={RELATIONSHIP_TYPES[item.type]?.icon || 'people'}
+												size={24}
+												color={item.color}
+											/>
+											<Text style={styles.distributionLabel}>
+												{RELATIONSHIP_TYPES[item.type]?.label || item.type}
+											</Text>
+										</View>
+										<Text style={styles.distributionCount}>{item.count}</Text>
+										<Text style={styles.distributionPercentage}>{item.percentage}%</Text>
+									</View>
+								))}
+							</View>
+						</View>
+
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Suggested Calls</Text>
+							{stats?.detailed?.needsAttention?.map((contact, index, array) => (
+								<View
+									key={contact.id}
+									style={[
+										styles.attentionItem,
+										index !== array.length - 1 && {
+											borderBottomWidth: 1,
+											borderBottomColor: colors.border,
+										},
+									]}
+								>
+									<View style={styles.attentionInfo}>
+										<Text style={styles.contactName}>{contact.name}</Text>
+									</View>
+									<TouchableOpacity
+										style={styles.callButton}
+										onPress={() => {
+											const formattedContact = {
+												...contact,
+												first_name: contact.name.split(' ')[0],
+												last_name: contact.name.split(' ').slice(1).join(' '),
+												phone: contact.phone,
+											};
+											setSelectedContact(formattedContact);
+											setShowCallOptions(true);
+										}}
+									>
+										<Icon name="call" size={20} color={colors.white} />
+										<Text style={styles.callButtonText}>Call Now</Text>
+									</TouchableOpacity>
 								</View>
 							))}
 						</View>
-					</View>
+					</>
+				)}
 
-					<View style={styles.section}>
-						<Text style={styles.sectionTitle}>Suggested Calls</Text>
-						{stats?.detailed?.needsAttention?.map((contact) => (
-							<View key={contact.id} style={styles.attentionItem}>
-								<View style={styles.attentionInfo}>
-									<Text style={styles.contactName}>{contact.name}</Text>
-								</View>
-								<TouchableOpacity
-									style={styles.callButton}
-									onPress={() => {
-										const formattedContact = {
-											...contact,
-											first_name: contact.name.split(' ')[0],
-											last_name: contact.name.split(' ').slice(1).join(' '),
-										};
-										setSelectedContact(formattedContact);
-										setShowCallOptions(true);
-									}}
-								>
-									<Icon name="call" size={20} color={colors.white} />
-									<Text style={styles.callButtonText}>Call Now</Text>
-								</TouchableOpacity>
-							</View>
-						))}
-					</View>
-				</>
-			)}
-
-			{selectedContact && (
-				<CallOptions
-					show={showCallOptions}
-					contact={selectedContact}
-					onClose={() => {
-						setShowCallOptions(false);
-						setSelectedContact(null);
-					}}
-				/>
-			)}
-        </ScrollView>
+				{selectedContact && (
+					<CallOptions
+						show={showCallOptions}
+						contact={selectedContact}
+						onClose={() => {
+							setShowCallOptions(false);
+							setSelectedContact(null);
+						}}
+					/>
+				)}
+			</ScrollView>
 		</View>
-);
+	);
 };
 
 export default StatsScreen;
