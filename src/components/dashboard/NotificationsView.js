@@ -59,7 +59,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							reminder.type === REMINDER_TYPES.FOLLOW_UP
 								? 'document-text-outline'
 								: reminder.type === REMINDER_TYPES.SCHEDULED
-								? 'repeat-outline'
+								? 'sync-outline'
 								: 'calendar-outline'
 						}
 						size={24}
@@ -68,7 +68,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					/>
 					<Text style={styles.reminderTitle}>
 						{reminder.type === REMINDER_TYPES.FOLLOW_UP
-							? 'Follow Up Reminder'
+							? 'Follow Up Notes'
 							: reminder.type === REMINDER_TYPES.SCHEDULED
 							? 'Recurring Reminder'
 							: 'Custom Reminder'}
@@ -80,7 +80,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 				<Text style={styles.contactName}>{reminder.contactName}</Text>
 				<Text style={styles.reminderDescription}>
 					{reminder.type === REMINDER_TYPES.FOLLOW_UP
-						? `Add notes for the call on ${formattedDate}`
+						? `Add notes for your ${formattedDate} call`
 						: reminder.type === REMINDER_TYPES.SCHEDULED
 						? `${formattedDate} ${FREQUENCY_DISPLAY_MAP[reminder.frequency] || 'Custom'} Call Reminder`
 						: `${formattedDate} Custom Call Reminder`}
@@ -195,7 +195,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							onPress={() => onComplete(reminder.firestoreId)}
 						>
 							<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
-							<Text style={[styles.actionText, { color: colors.success }]}>Complete</Text>
+							<Text style={[styles.actionText, { color: colors.success }]}>Skip</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity

@@ -129,7 +129,7 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 		},
 		titleIcon: {
-			marginRight: spacing.xs,
+			marginRight: spacing.sm,
 		},
 		reminderTitle: {
 			fontSize: 18,
