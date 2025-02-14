@@ -1,5 +1,5 @@
 import { fetchUpcomingContacts, fetchContacts } from '../../utils/firestore';
-import { FREQUENCY_MAPPINGS, RELATIONSHIP_TYPES } from '../../../constants/relationships';
+import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
 
 export const calculateStats = async (userId) => {
 	try {
@@ -9,18 +9,17 @@ export const calculateStats = async (userId) => {
 		}
 
 		const now = new Date();
-		const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-		// Get ALL contacts for distribution
+		// Get all contacts
 		const allContactsData = await fetchContacts(userId);
 		const allContacts = [...allContactsData.scheduledContacts, ...allContactsData.unscheduledContacts].filter(
 			(contact) => contact !== null && !contact.archived
 		);
 
-		// Get upcoming contacts for stats and suggestions
+		// Get contacts with scheduling info
 		const upcomingContacts = await fetchUpcomingContacts(userId);
 
-		// Distribution calculation using ALL contacts
+		// Calculate distribution by relationship type
 		const distribution = Object.keys(RELATIONSHIP_TYPES).map((type) => {
 			const typeCount = allContacts.filter((contact) => {
 				const directType = contact?.relationship_type;
@@ -37,51 +36,7 @@ export const calculateStats = async (userId) => {
 			};
 		});
 
-		// Stats calculations using upcoming contacts
-		let streak = 0;
-		const today = new Date().setHours(0, 0, 0, 0);
-		let checkDate = today;
-		let hasContact = true;
-
-		while (hasContact) {
-			const dateContacts = upcomingContacts.some((contact) =>
-				contact?.contact_history?.some((h) => new Date(h.date).setHours(0, 0, 0, 0) === checkDate)
-			);
-			if (dateContacts) {
-				streak++;
-				checkDate -= 86400000;
-			} else {
-				hasContact = false;
-			}
-		}
-
-		const thirtyDaysAgo = new Date(now - 30 * 86400000);
-		const ninetyDaysAgo = new Date(now - 90 * 86400000);
-
-		const monthlyCount = upcomingContacts.reduce((count, contact) => {
-			return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
-		}, 0);
-
-		// Calculate contact stats using upcoming contacts
-		const contactStats = upcomingContacts.map((contact) => ({
-			name: `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim(),
-			thirtyDayCount: contact?.contact_history?.filter((h) => new Date(h.date) >= thirtyDaysAgo).length || 0,
-			ninetyDayCount: contact?.contact_history?.filter((h) => new Date(h.date) >= ninetyDaysAgo).length || 0,
-			lastContact: contact?.contact_history?.[0]?.date || null,
-			relationship: contact?.relationship_type || 'unassigned',
-			preferredFrequency: 30,
-		}));
-
-		// Calculate day stats using upcoming contacts
-		const dayStats = {};
-		upcomingContacts.forEach((contact) => {
-			contact?.contact_history?.forEach((h) => {
-				const day = new Date(h.date).getDay();
-				dayStats[day] = (dayStats[day] || 0) + 1;
-			});
-		});
-
-		// Calculate needs attention using upcoming contacts
+		// Calculate contacts needing attention
 		const needsAttention = upcomingContacts
 			.filter((contact) => {
 				if (!contact) return false;
@@ -106,22 +61,16 @@ export const calculateStats = async (userId) => {
 
 		return {
 			basic: {
-				monthlyContacts: monthlyCount,
-				currentStreak: streak,
-				totalActive: upcomingContacts.length,
-				averageContactsPerWeek: Math.round(monthlyCount / 4),
+				totalActive: allContacts.length, // Total non-archived contacts
+				unscheduled: allContacts.filter((contact) => !contact.next_contact).length, // Contacts without next call date
 			},
 			detailed: {
-				frequentContacts: contactStats
-					.filter((c) => c.thirtyDayCount > 0)
-					.sort((a, b) => b.thirtyDayCount - a.thirtyDayCount)
-					.slice(0, 5),
 				needsAttention,
-				mostActiveDay: Number(Object.entries(dayStats).sort(([, a], [, b]) => b - a)[0]?.[0] || 0),
+				mostActiveDay: 0,
 			},
 			distribution,
 			trends: {
-				ninetyDayTrend: contactStats.reduce((sum, contact) => sum + contact.ninetyDayCount, 0) / 3,
+				ninetyDayTrend: 0,
 			},
 		};
 	} catch (error) {
@@ -132,13 +81,10 @@ export const calculateStats = async (userId) => {
 
 const getDefaultStats = () => ({
 	basic: {
-		monthlyContacts: 0,
-		currentStreak: 0,
 		totalActive: 0,
-		averageContactsPerWeek: 0,
+		unscheduled: 0,
 	},
 	detailed: {
-		frequentContacts: [],
 		needsAttention: [],
 		mostActiveDay: 0,
 	},

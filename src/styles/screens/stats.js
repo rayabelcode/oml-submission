@@ -30,7 +30,8 @@ export const useStyles = (colors) => {
 		sectionTitle: {
 			fontSize: 18,
 			fontWeight: 'bold',
-			marginBottom: spacing.md,
+			marginTop: spacing.xs,
+			marginBottom: spacing.lg,
 			color: colors.text.primary,
 			textAlign: 'center',
 		},
@@ -56,6 +57,7 @@ export const useStyles = (colors) => {
 		},
 		statTitle: {
 			fontSize: 14,
+			fontWeight: '800',
 			marginTop: spacing.xs,
 			color: colors.text.secondary,
 		},
@@ -68,6 +70,7 @@ export const useStyles = (colors) => {
 		statSubtitle: {
 			fontSize: 12,
 			color: colors.text.secondary,
+			fontWeight: '500',
 			marginTop: spacing.xs,
 			textAlign: 'center',
 		},
@@ -105,7 +108,7 @@ export const useStyles = (colors) => {
 		},
 		distributionLabel: {
 			fontSize: 16,
-			fontWeight: '600',
+			fontWeight: '700',
 			color: colors.text.secondary,
 		},
 		distributionPercentage: {

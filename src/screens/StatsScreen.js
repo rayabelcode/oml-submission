@@ -88,34 +88,18 @@ export const StatsScreen = () => {
 							<Text style={styles.sectionTitle}>Overview</Text>
 							<View style={styles.statsGrid}>
 								<StatBox
-									icon="calendar"
-									title="Calls This Month"
-									value={stats?.basic.monthlyContacts || 0}
-									subtitle="Total calls in current month"
-									colors={colors}
-									styles={styles}
-								/>
-								<StatBox
-									icon="flame"
-									title="Daily Streak"
-									value={stats?.basic.currentStreak || 0}
-									subtitle="Days in a row with calls"
-									colors={colors}
-									styles={styles}
-								/>
-								<StatBox
 									icon="people"
 									title="Total Contacts"
 									value={stats?.basic.totalActive || 0}
-									subtitle="All contacts 'On Your List'"
+									subtitle="Contacts 'On Your List'"
 									colors={colors}
 									styles={styles}
 								/>
 								<StatBox
-									icon="analytics"
-									title="Weekly Average"
-									value={stats?.basic.averageContactsPerWeek || 0}
-									subtitle="Average calls per week"
+									icon="alert-circle"
+									title="Unscheduled"
+									value={stats?.basic.unscheduled || 0}
+									subtitle="Contacts without a next call"
 									colors={colors}
 									styles={styles}
 								/>

@@ -164,7 +164,7 @@ describe('NotificationsView', () => {
 		);
 
 		// Test Complete action
-		const completeButtons = getAllByText('Complete');
+		const completeButtons = getAllByText('Skip');
 		fireEvent.press(completeButtons[0]);
 		expect(onComplete).toHaveBeenCalledWith(mockReminders[0].firestoreId);
 
@@ -178,7 +178,7 @@ describe('NotificationsView', () => {
 		const { getAllByText } = render(<NotificationsView {...defaultProps} />);
 
 		// Check for action buttons
-		expect(getAllByText('Complete')).toHaveLength(2);
+		expect(getAllByText('Skip')).toHaveLength(2);
 		expect(getAllByText('Snooze')).toHaveLength(2);
 
 		expect(getAllByText('Recurring Reminder')).toHaveLength(2);

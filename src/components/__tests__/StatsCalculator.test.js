@@ -124,10 +124,8 @@ describe('statsCalculator', () => {
 			const stats = await calculateStats(mockUserId);
 
 			expect(stats.basic).toEqual({
-				monthlyContacts: 2,
-				currentStreak: 2,
 				totalActive: 1,
-				averageContactsPerWeek: 1, // monthlyCount / 4, rounded
+				unscheduled: 1,
 			});
 		});
 	});
@@ -137,13 +135,10 @@ describe('statsCalculator', () => {
 			const stats = await calculateStats(null);
 			expect(stats).toEqual({
 				basic: {
-					monthlyContacts: 0,
-					currentStreak: 0,
 					totalActive: 0,
-					averageContactsPerWeek: 0,
+					unscheduled: 0,
 				},
 				detailed: {
-					frequentContacts: [],
 					needsAttention: [],
 					mostActiveDay: 0,
 				},
