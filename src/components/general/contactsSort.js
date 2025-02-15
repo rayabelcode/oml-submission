@@ -43,7 +43,8 @@ const ContactsSortMenu = ({
 		sectionTitle: {
 			fontSize: 16,
 			fontWeight: '600',
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.8,
 			marginBottom: spacing.sm,
 			textAlign: 'center',
 		},
@@ -57,6 +58,7 @@ const ContactsSortMenu = ({
 			justifyContent: 'center',
 			marginBottom: spacing.md,
 			position: 'relative',
+			height: 40,
 		},
 		title: {
 			fontSize: 18,
@@ -65,9 +67,11 @@ const ContactsSortMenu = ({
 		},
 		closeButton: {
 			position: 'absolute',
-			right: -spacing.sm,
-			top: -spacing.md,
-			padding: spacing.md,
+			right: 0,
+			alignItems: 'center',
+			justifyContent: 'center',
+			height: 40,
+			width: 40,
 		},
 	});
 
@@ -79,7 +83,7 @@ const ContactsSortMenu = ({
 						<View style={styles.header}>
 							<Text style={styles.title}>Display Options</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close" size={30} color={colors.text.primary} />
+								<Icon name="close" size={24} color={colors.text.primary} />
 							</TouchableOpacity>
 						</View>
 
@@ -92,7 +96,16 @@ const ContactsSortMenu = ({
 									onSortTypeChange(event.nativeEvent.selectedSegmentIndex === 0 ? 'firstName' : 'lastName');
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary }}
+								fontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
+								activeFontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
 								tintColor={colors.primary}
 							/>
 						</View>
@@ -107,7 +120,16 @@ const ContactsSortMenu = ({
 									onGroupByChange(values[event.nativeEvent.selectedSegmentIndex]);
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary }}
+								fontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
+								activeFontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
 								tintColor={colors.primary}
 							/>
 						</View>
@@ -122,7 +144,16 @@ const ContactsSortMenu = ({
 									onNameDisplayChange(values[event.nativeEvent.selectedSegmentIndex]);
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary }}
+								fontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
+								activeFontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
 								tintColor={colors.primary}
 							/>
 						</View>
@@ -136,7 +167,16 @@ const ContactsSortMenu = ({
 									onShowProfilePhotosChange(event.nativeEvent.selectedSegmentIndex === 0);
 								}}
 								style={styles.segmentedControl}
-								fontStyle={{ color: colors.text.primary }}
+								fontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
+								activeFontStyle={{
+									fontSize: 15,
+									fontWeight: '600',
+									color: colors.text.primary,
+								}}
 								tintColor={colors.primary}
 							/>
 						</View>
