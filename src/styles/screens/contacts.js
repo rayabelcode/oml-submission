@@ -154,7 +154,7 @@ const useStyles = () => {
 		},
 		firstName: {
 			fontSize: 15,
-			fontWeight: '600',
+			fontWeight: '700',
 			textAlign: 'center',
 			marginTop: 4,
 			color: colors.text.primary,
@@ -164,9 +164,10 @@ const useStyles = () => {
 		},
 		lastName: {
 			fontSize: 14,
-			fontWeight: '500',
+			fontWeight: '600',
 			textAlign: 'center',
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.6,
 			marginTop: 2,
 			flexShrink: 1,
 			flexWrap: 'wrap',
