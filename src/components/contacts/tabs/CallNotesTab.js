@@ -221,13 +221,15 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
-						style={styles.submitCallButton}
+						style={styles.addNoteButton}
 						onPress={() => handleAddCallNotes(callNotes, callDate)}
 					>
-						<Text style={[styles.buttonText, { color: colors.background.primary }]}>Add Note</Text>
+						<Text style={styles.addNoteButtonText}>Add Note</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
+
+			<View style={styles.sectionSeparator} />
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
 				{/* History Header with AI Button */}
