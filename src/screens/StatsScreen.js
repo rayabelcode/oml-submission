@@ -91,7 +91,7 @@ export const StatsScreen = () => {
 									icon="people"
 									title="Total Contacts"
 									value={stats?.basic.totalActive || 0}
-									subtitle="Contacts 'On Your List'"
+									subtitle="Contacts that are 'On Your List'"
 									colors={colors}
 									styles={styles}
 								/>
@@ -99,7 +99,7 @@ export const StatsScreen = () => {
 									icon="alert-circle"
 									title="Unscheduled"
 									value={stats?.basic.unscheduled || 0}
-									subtitle="Contacts without a next call"
+									subtitle="Contacts with no call scheduled"
 									colors={colors}
 									styles={styles}
 								/>
@@ -158,7 +158,7 @@ export const StatsScreen = () => {
 										}}
 									>
 										<Icon name="call" size={20} color={colors.white} />
-										<Text style={styles.callButtonText}>Call Now</Text>
+										<Text style={styles.callButtonText}>Call</Text>
 									</TouchableOpacity>
 								</View>
 							))}

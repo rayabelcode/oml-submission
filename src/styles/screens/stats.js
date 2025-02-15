@@ -28,7 +28,7 @@ export const useStyles = (colors) => {
 			padding: spacing.md,
 		},
 		sectionTitle: {
-			fontSize: 18,
+			fontSize: 19,
 			fontWeight: 'bold',
 			marginTop: spacing.xs,
 			marginBottom: spacing.lg,
@@ -59,7 +59,8 @@ export const useStyles = (colors) => {
 			fontSize: 14,
 			fontWeight: '800',
 			marginTop: spacing.xs,
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.75,
 		},
 		statValue: {
 			fontSize: 24,
@@ -108,14 +109,16 @@ export const useStyles = (colors) => {
 		},
 		distributionLabel: {
 			fontSize: 16,
-			fontWeight: '700',
-			color: colors.text.secondary,
+			fontWeight: '800',
+			color: colors.text.primary,
+			opacity: 0.75,			
 		},
 		distributionPercentage: {
 			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.secondary,
 			marginTop: spacing.xs,
+			marginLeft: spacing.xs,
 		},
 		attentionItem: {
 			flexDirection: 'row',
@@ -130,7 +133,7 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.primary,
-			marginBottom: spacing.xs,
+			marginLeft: spacing.md,
 		},
 		overdueDays: {
 			fontSize: 14,
@@ -152,9 +155,9 @@ export const useStyles = (colors) => {
 		},
 		callButtonText: {
 			color: colors.white,
-			marginLeft: spacing.xs,
-			fontSize: 14,
-			fontWeight: '500',
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		insightItem: {
 			flexDirection: 'row',
