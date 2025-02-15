@@ -354,6 +354,7 @@ const useStyles = () => {
 			marginTop: 5,
 			fontSize: 12,
 		},
+		// CallNotesTab Styles
 		callNotesSection: {
 			marginBottom: spacing.lg,
 		},

@@ -231,7 +231,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						style={styles.submitCallButton}
 						onPress={() => handleAddCallNotes(callNotes, callDate)}
 					>
-						<Text style={commonStyles.primaryButtonText}>Submit</Text>
+						<Text style={commonStyles.primaryButtonText}>Add Note</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
