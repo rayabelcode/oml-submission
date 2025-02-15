@@ -205,22 +205,15 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					multiline
 					value={callNotes}
 					onChangeText={setCallNotes}
-					placeholder="Add call notes, and pick a date!"
+					placeholder="Add call notes..."
 					placeholderTextColor={colors.text.secondary}
 					inputAccessoryViewID={inputAccessoryViewID}
 				/>
 				<View style={styles.callNotesControls}>
-					<TouchableOpacity
-						style={styles.aiButton}
-						onPress={() => {
-							handleGetSuggestions();
-							setShowAISuggestions(true);
-						}}
-					>
-						<Icon name="bulb-outline" size={18} color="#FFFFFF" />
-						<Text style={styles.aiButtonText}>AI Topics</Text>
-					</TouchableOpacity>
 					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+						{callDate.toDateString() === new Date().toDateString() && (
+							<Icon name="calendar-outline" size={18} color={colors.text.primary} />
+						)}
 						<Text style={styles.dateButtonText}>
 							{callDate.toDateString() === new Date().toDateString()
 								? 'Today'
@@ -231,62 +224,77 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						style={styles.submitCallButton}
 						onPress={() => handleAddCallNotes(callNotes, callDate)}
 					>
-						<Text style={commonStyles.primaryButtonText}>Add Note</Text>
+						<Text style={[styles.buttonText, { color: colors.background.primary }]}>Add Note</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
 
 			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
-				<Text style={styles.sectionTitle}>Contact History</Text>
-				{history.length > 0 ? (
-					history.map((entry, index) => (
-						<View key={index} style={styles.historyEntry}>
-							<View style={styles.historyEntryHeader}>
-								<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-								<View style={styles.historyActions}>
-									<TouchableOpacity
-										style={styles.historyActionButton}
-										onPress={() => {
-											if (editMode === index) {
-												handleEditHistory(index);
-											} else {
-												setEditMode(index);
-												setEditingText(entry.notes);
-											}
-										}}
-									>
-										<Icon
-											name={editMode === index ? 'checkmark-outline' : 'create'}
-											size={30}
-											color={colors.primary}
-										/>
-									</TouchableOpacity>
-
-									<TouchableOpacity
-										style={[styles.historyActionButton, { marginLeft: spacing.md }]}
-										onPress={() => handleDeleteHistory(index)}
-									>
-										<Icon name="trash-outline" size={24} color={colors.danger} />
-									</TouchableOpacity>
+				{/* History Header with AI Button */}
+				<View style={styles.historyHeader}>
+					<Text style={styles.historyTitle}>Contact History</Text>
+					<TouchableOpacity
+						style={styles.aiRecapButton}
+						onPress={() => {
+							handleGetSuggestions();
+							setShowAISuggestions(true);
+						}}
+					>
+						<Icon name="bulb-outline" size={16} color={colors.text.secondary} />
+						<Text style={styles.aiRecapText}>AI Recap</Text>
+					</TouchableOpacity>
+				</View>
+				{/* Notes History */}
+				<View style={styles.noteHistorySection}>
+					{history.length > 0 ? (
+						history.map((entry, index) => (
+							<View key={index} style={styles.historyEntry}>
+								<View style={styles.historyEntryHeader}>
+									<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+									<View style={styles.historyActions}>
+										<TouchableOpacity
+											style={styles.historyActionButton}
+											onPress={() => {
+												if (editMode === index) {
+													handleEditHistory(index);
+												} else {
+													setEditMode(index);
+													setEditingText(entry.notes);
+												}
+											}}
+										>
+											<Icon
+												name={editMode === index ? 'checkmark-outline' : 'create-outline'}
+												size={24}
+												color={colors.text.secondary}
+											/>
+										</TouchableOpacity>
+										<TouchableOpacity
+											style={styles.historyActionButton}
+											onPress={() => handleDeleteHistory(index)}
+										>
+											<Icon name="trash-outline" size={24} color={colors.text.secondary} />
+										</TouchableOpacity>
+									</View>
 								</View>
+								{editMode === index ? (
+									<TextInput
+										style={[styles.historyNotesInput, { color: colors.text.primary }]}
+										value={editingText}
+										onChangeText={setEditingText}
+										multiline
+									/>
+								) : (
+									<Text style={styles.historyNotes}>{entry.notes}</Text>
+								)}
 							</View>
-							{editMode === index ? (
-								<TextInput
-									style={[styles.historyNotesInput, { color: colors.text.primary }]}
-									value={editingText}
-									onChangeText={setEditingText}
-									multiline
-								/>
-							) : (
-								<Text style={styles.historyNotes}>{entry.notes}</Text>
-							)}
-						</View>
-					))
-				) : (
-					<Text style={styles.emptyHistoryText}>
-						Add call notes above, and your history will appear here!
-					</Text>
-				)}
+						))
+					) : (
+						<Text style={styles.emptyHistoryText}>
+							Add call notes above, and your history will appear here!
+						</Text>
+					)}
+				</View>
 			</TouchableOpacity>
 
 			{Platform.OS === 'ios' && <KeyboardDismiss inputAccessoryViewID={inputAccessoryViewID} />}
