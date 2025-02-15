@@ -435,30 +435,34 @@ const EditContactTab = ({ contact, setSelectedContact, loadContacts, onClose, cl
 										<Text style={styles.tagInputHelper}>Tags help you remember what matters most.</Text>
 									</View>
 									<View style={styles.tagsContainer}>
-										{(formData.tags || []).map((tag, index) => (
-											<View key={index} style={styles.tagBubble}>
-												<Text style={styles.tagText}>{tag}</Text>
-												<TouchableOpacity
-													onPress={() => {
-														Alert.alert('Delete Tag', `Are you sure you want to delete "${tag}"?`, [
-															{ text: 'Cancel', style: 'cancel' },
-															{
-																text: 'Delete',
-																style: 'destructive',
-																onPress: () => handleDeleteTag(tag),
-															},
-														]);
-													}}
-												>
-													<Icon
-														name="close-circle"
-														size={16}
-														color={colors.text.secondary}
-														style={styles.tagDeleteIcon}
-													/>
-												</TouchableOpacity>
-											</View>
-										))}
+										{(formData.tags || []).map((tag, index) => {
+											const tagColors = Object.values(colors.tags);
+											const backgroundColor = tagColors[index % tagColors.length];
+											return (
+												<View key={index} style={[styles.tagBubble, { backgroundColor }]}>
+													<Text style={styles.tagText}>{tag}</Text>
+													<TouchableOpacity
+														onPress={() => {
+															Alert.alert('Delete Tag', `Are you sure you want to delete "${tag}"?`, [
+																{ text: 'Cancel', style: 'cancel' },
+																{
+																	text: 'Delete',
+																	style: 'destructive',
+																	onPress: () => handleDeleteTag(tag),
+																},
+															]);
+														}}
+													>
+														<Icon
+															name="close-circle"
+															size={22}
+															color={colors.text.secondary}
+															style={styles.tagDeleteIcon}
+														/>
+													</TouchableOpacity>
+												</View>
+											);
+										})}
 									</View>
 								</View>
 							)}

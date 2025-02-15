@@ -21,6 +21,25 @@ export const layout = {
 	},
 };
 
+const tagColors = {
+	light: {
+		blue: '#E8F3FF',
+		green: '#E6F6ED',
+		purple: '#F3E8FF',
+		orange: '#FFF1E6',
+		pink: '#FCE8FF',
+		yellow: '#FFF9E6',
+	},
+	dark: {
+		blue: '#1A2733',
+		green: '#1A2B22',
+		purple: '#261A33',
+		orange: '#332B1A',
+		pink: '#331A2B',
+		yellow: '#332E1A',
+	},
+};
+
 const lightTheme = {
 	background: {
 		primary: '#FFFFFF',
@@ -52,6 +71,7 @@ const lightTheme = {
 		scheduled: '#E6FFE6',
 		custom_date: '#F5E6FF',
 	},
+	tags: tagColors.light,
 };
 
 const darkTheme = {
@@ -85,6 +105,7 @@ const darkTheme = {
 		scheduled: '#1C291C',
 		custom_date: '#291C33',
 	},
+	tags: tagColors.dark,
 };
 
 const dimmedTheme = {
@@ -118,6 +139,7 @@ const dimmedTheme = {
 		scheduled: '#064E3B',
 		custom_date: '#3D1B40',
 	},
+	tags: tagColors.dark,
 };
 
 export function ThemeProvider({ children }) {

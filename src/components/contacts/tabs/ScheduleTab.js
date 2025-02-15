@@ -318,6 +318,8 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				</View>
 			</View>
 
+			<View style={styles.sectionSeparator} />
+
 			<View style={styles.gridContainer}>
 				<Text style={styles.sectionTitle}>Contact Frequency</Text>
 				<View style={styles.frequencyGrid}>

@@ -361,7 +361,7 @@ const useStyles = () => {
 			paddingHorizontal: spacing.md,
 		},
 		callNotesInput: {
-			borderWidth: 1,
+			borderWidth: 2,
 			borderColor: colors.border,
 			borderRadius: layout.borderRadius.md,
 			padding: spacing.lg,
@@ -564,33 +564,36 @@ const useStyles = () => {
 			flexWrap: 'wrap',
 			justifyContent: 'center',
 			alignItems: 'center',
-			paddingHorizontal: 15,
-			gap: 8,
+			gap: spacing.sm,
 		},
 		tagBubble: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			backgroundColor:
-				colors.background.primary === '#FFFFFF'
-					? '#EDF3F8' // Light blue-gray for light mode
-					: '#2C3E50', // Keep current dark mode color
-			borderRadius: 20,
-			paddingVertical: 9,
-			paddingHorizontal: 16,
-			marginBottom: 8,
+			backgroundColor: (index) => {
+				const colorKeys = Object.keys(colors.tags);
+				return colors.tags[colorKeys[index % colorKeys.length]];
+			},
+			borderRadius: layout.borderRadius.circle,
+			paddingVertical: spacing.xs,
+			paddingLeft: spacing.md,
+			paddingRight: spacing.xs,
+			borderWidth: 0,
+			borderColor: colors.border,
+			shadowColor: colors.text.primary,
+			shadowOffset: {
+				width: 0,
+				height: 1,
+			},
+			shadowOpacity: 0.1,
+			shadowRadius: 2,
 			elevation: 2,
-			borderWidth: 1,
-			borderColor:
-				colors.background.primary === '#FFFFFF'
-					? '#E0E8EF' // Light border for light mode
-					: '#536878', // Keep current dark mode border
 		},
 		tagText: {
-			fontSize: 14,
-			marginRight: 4,
+			fontSize: 15,
+			opacity: 0.8,
 			color: colors.text.primary,
-			fontWeight: '500',
-			letterSpacing: 0.3,
+			fontWeight: '700',
+			padding: spacing.xs,
 		},
 		tagInput: {
 			height: 44,
@@ -598,6 +601,7 @@ const useStyles = () => {
 			borderColor: colors.border,
 			borderRadius: layout.borderRadius.md,
 			fontSize: 16,
+			fontWeight: '700',
 			textAlign: 'center',
 			color: colors.text.primary,
 			marginBottom: 8,
@@ -609,20 +613,21 @@ const useStyles = () => {
 			marginBottom: spacing.sm,
 		},
 		tagInputWrapper: {
-			marginVertical: 20,
-			paddingHorizontal: 20,
+			marginVertical: spacing.lg,
+			paddingHorizontal: spacing.lg,
 		},
 		tagInputHelper: {
 			textAlign: 'center',
 			color: colors.text.secondary,
-			fontSize: 16,
-			lineHeight: 20,
-			fontWeight: '500',
-			marginTop: spacing.sm,
-			fontStyle: 'italic',
+			fontSize: 14,
+			lineHeight: 19,
+			fontWeight: '600',
+			marginTop: spacing.xs,
+			opacity: 0.8,
+			paddingHorizontal: spacing.lg,
 		},
 		tagDeleteIcon: {
-			marginLeft: 2,
+			padding: spacing.xs,
 		},
 		addTagButton: {
 			backgroundColor: colors.primary,
