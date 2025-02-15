@@ -23,7 +23,7 @@ const ContactsSortMenu = ({
 	const styles = StyleSheet.create({
 		modalOverlay: {
 			flex: 1,
-			backgroundColor: colors.background.overlay,
+			backgroundColor: 'rgba(0, 0, 0, 0.7)',
 			justifyContent: 'center',
 			alignItems: 'center',
 		},
@@ -49,7 +49,7 @@ const ContactsSortMenu = ({
 			textAlign: 'center',
 		},
 		segmentedControl: {
-			height: 40,
+			height: 45,
 			marginBottom: spacing.xs,
 		},
 		header: {
@@ -83,7 +83,7 @@ const ContactsSortMenu = ({
 						<View style={styles.header}>
 							<Text style={styles.title}>Display Options</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close" size={24} color={colors.text.primary} />
+								<Icon name="close-circle-outline" size={35} color={colors.warning} />
 							</TouchableOpacity>
 						</View>
 
@@ -98,12 +98,12 @@ const ContactsSortMenu = ({
 								style={styles.segmentedControl}
 								fontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								tintColor={colors.primary}
@@ -122,12 +122,12 @@ const ContactsSortMenu = ({
 								style={styles.segmentedControl}
 								fontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								tintColor={colors.primary}
@@ -146,12 +146,12 @@ const ContactsSortMenu = ({
 								style={styles.segmentedControl}
 								fontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								tintColor={colors.primary}
@@ -169,12 +169,12 @@ const ContactsSortMenu = ({
 								style={styles.segmentedControl}
 								fontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
 									fontSize: 15,
-									fontWeight: '600',
+									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								tintColor={colors.primary}
