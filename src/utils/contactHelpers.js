@@ -63,7 +63,7 @@ export const createContactData = (basicData, userId) => {
 			user_id: userId,
 			scheduling: {
 				relationship_type: contactType,
-				frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
+				frequency: null,
 				custom_schedule: true,
 				priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
 				minimum_gap: 30,
