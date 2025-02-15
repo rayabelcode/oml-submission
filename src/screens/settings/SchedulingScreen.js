@@ -309,17 +309,8 @@ const SchedulingScreen = ({ navigation }) => {
 			<ScrollView style={styles.settingsList}>
 				{/* Call Gap Section */}
 				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.label, { fontSize: 18, textAlign: 'center', marginTop: spacing.md }]}>
-						Time Between Calls
-					</Text>
-					<Text
-						style={[
-							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
-						]}
-					>
-						Minimum time between scheduled calls.
-					</Text>
+					<Text style={styles.settingsHeader}>Time Between Calls</Text>
+					<Text style={styles.settingsExplanation}>Minimum time between scheduled calls.</Text>
 
 					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('minimum')}>
 						<View style={styles.settingItemLeft}>
@@ -350,13 +341,8 @@ const SchedulingScreen = ({ navigation }) => {
 
 				{/* Global Excluded Times Section */}
 				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Sleep Hours</Text>
-					<Text
-						style={[
-							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
-						]}
-					>
+					<Text style={styles.settingsHeader}>Sleep Hours</Text>
+					<Text style={styles.settingsExplanation}>
 						Set your sleeping hours so calls are not scheduled during this time.
 					</Text>
 
@@ -402,15 +388,8 @@ const SchedulingScreen = ({ navigation }) => {
 
 				{/* Relationship Settings Section */}
 				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.label, { fontSize: 18, textAlign: 'center' }]}>Relationship Settings</Text>
-					<Text
-						style={[
-							styles.settingText,
-							{ fontSize: 14, color: colors.text.secondary, marginBottom: spacing.md, textAlign: 'center' },
-						]}
-					>
-						Set preferences by relationship type.
-					</Text>
+					<Text style={styles.settingsHeader}>Relationship Settings</Text>
+					<Text style={styles.settingsExplanation}>Set preferences by relationship type.</Text>
 
 					<TouchableOpacity
 						style={styles.settingItem}

@@ -40,7 +40,9 @@ const AboutScreen = ({ navigation }) => {
 							<Text style={[styles.settingText, { color: colors.primary }]}>onmylist.pro</Text>
 						</TouchableOpacity>
 					</View>
+				</View>
 
+				<View style={[styles.formSection, styles.card]}>
 					<View style={[styles.settingSection, { borderBottomWidth: 0 }]}>
 						<Text style={styles.sectionTitle}>Legal & Privacy</Text>
 						<TouchableOpacity

@@ -449,6 +449,23 @@ const createStyles = (colors) =>
 			paddingRight: spacing.md,
 			textAlign: 'center',
 		},
+		// SchedulingScreen
+		settingsHeader: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
+			marginTop: spacing.xs,
+			marginBottom: spacing.xs,
+		},
+		settingsExplanation: {
+			fontSize: 14,
+			fontWeight: '500',
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+			textAlign: 'center',
+			marginTop: spacing.xs,
+		},
 		// Headers for each page under settings
 		headerSettingsPages: {
 			paddingLeft: spacing.xs,
@@ -485,11 +502,12 @@ const createStyles = (colors) =>
 			marginHorizontal: spacing.md,
 		},
 		relationshipIntroText: {
-			fontSize: 14,
+			fontSize: 15,
 			fontWeight: '600',
 			fontStyle: 'italic',
-			lineHeight: 24,
+			lineHeight: 20,
 			color: colors.text.primary,
+			opacity: 0.7,
 			textAlign: 'center',
 		},
 		resetContainer: {
