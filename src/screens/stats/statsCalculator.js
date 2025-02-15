@@ -37,15 +37,35 @@ export const calculateStats = async (userId) => {
 		});
 
 		// Calculate contacts needing attention
+		const getThresholdDays = (frequency) => {
+			switch (frequency) {
+				case 'daily':
+					return 2;
+				case 'weekly':
+					return 9;
+				case 'biweekly':
+					return 17;
+				case 'monthly':
+					return 35;
+				case 'quarterly':
+					return 95;
+				case 'yearly':
+					return 370;
+				default:
+					return 30;
+			}
+		};
+
 		const needsAttention = upcomingContacts
 			.filter((contact) => {
 				if (!contact) return false;
 				const lastContact = contact?.contact_history?.[0]?.date;
+				const frequency = contact?.scheduling?.frequency;
 
 				if (!lastContact) return true;
 
 				const daysSinceContact = Math.floor((now - new Date(lastContact)) / (1000 * 60 * 60 * 24));
-				return daysSinceContact > 30;
+				return daysSinceContact > getThresholdDays(frequency);
 			})
 			.map((contact) => ({
 				id: contact.id,
@@ -56,8 +76,10 @@ export const calculateStats = async (userId) => {
 					: Infinity,
 				isOverdue: true,
 				lastContact: contact?.contact_history?.[0]?.date,
+				frequency: contact?.scheduling?.frequency,
 			}))
-			.sort((a, b) => b.daysOverdue - a.daysOverdue);
+			.sort((a, b) => b.daysOverdue - a.daysOverdue)
+			.slice(0, 3);
 
 		return {
 			basic: {

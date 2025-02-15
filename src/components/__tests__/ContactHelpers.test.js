@@ -114,7 +114,7 @@ describe('contactHelpers', () => {
 		it('sets correct default scheduling values', () => {
 			const result = createContactData(basicData, 'test-user');
 			expect(result.scheduling).toMatchObject({
-				frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
+				frequency: null,
 				custom_schedule: true,
 				priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
 				minimum_gap: 30,

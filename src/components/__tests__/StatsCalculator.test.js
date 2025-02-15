@@ -164,4 +164,81 @@ describe('statsCalculator', () => {
 			);
 		});
 	});
+
+	describe('Needs Attention Calculation', () => {
+		it('suggests contacts based on frequency settings', async () => {
+			const mockUpcomingContacts = [
+				{
+					id: '1',
+					first_name: 'Weekly',
+					last_name: 'Contact',
+					scheduling: { frequency: 'weekly' },
+					contact_history: [
+						{ date: new Date(mockDate.getTime() - 10 * 86400000).toISOString() }, // 10 days ago
+					],
+				},
+				{
+					id: '2',
+					first_name: 'Monthly',
+					last_name: 'Contact',
+					scheduling: { frequency: 'monthly' },
+					contact_history: [
+						{ date: new Date(mockDate.getTime() - 20 * 86400000).toISOString() }, // 20 days ago
+					],
+				},
+				{
+					id: '3',
+					first_name: 'Quarterly',
+					last_name: 'Contact',
+					scheduling: { frequency: 'quarterly' },
+					contact_history: [
+						{ date: new Date(mockDate.getTime() - 100 * 86400000).toISOString() }, // 100 days ago
+					],
+				},
+			];
+
+			const mockAllContacts = {
+				scheduledContacts: mockUpcomingContacts,
+				unscheduledContacts: [],
+			};
+
+			fetchContacts.mockResolvedValue(mockAllContacts);
+			fetchUpcomingContacts.mockResolvedValue(mockUpcomingContacts);
+
+			const stats = await calculateStats(mockUserId);
+
+			expect(stats.detailed.needsAttention).toHaveLength(2); // Weekly and Quarterly contacts should need attention
+			expect(stats.detailed.needsAttention[0].name).toBe('Quarterly Contact'); // Most overdue relative to frequency should be first
+			expect(stats.detailed.needsAttention[1].name).toBe('Weekly Contact'); // Second most overdue
+			expect(stats.detailed.needsAttention.map((contact) => contact.name)).not.toContain('Monthly Contact'); // Monthly contact shouldn't need attention yet
+		});
+
+		it('limits suggestions to 3 contacts maximum', async () => {
+			const mockUpcomingContacts = Array.from({ length: 5 }, (_, i) => ({
+				id: `${i}`,
+				first_name: `Contact`,
+				last_name: `${i}`,
+				scheduling: { frequency: 'weekly' },
+				contact_history: [
+					{ date: new Date(mockDate.getTime() - (10 + i) * 86400000).toISOString() }, // Each progressively more overdue
+				],
+			}));
+
+			const mockAllContacts = {
+				scheduledContacts: mockUpcomingContacts,
+				unscheduledContacts: [],
+			};
+
+			fetchContacts.mockResolvedValue(mockAllContacts);
+			fetchUpcomingContacts.mockResolvedValue(mockUpcomingContacts);
+
+			const stats = await calculateStats(mockUserId);
+
+			expect(stats.detailed.needsAttention).toHaveLength(3);
+			// Should contain the 3 most overdue contacts
+			expect(stats.detailed.needsAttention[0].name).toBe('Contact 4');
+			expect(stats.detailed.needsAttention[1].name).toBe('Contact 3');
+			expect(stats.detailed.needsAttention[2].name).toBe('Contact 2');
+		});
+	});
 });

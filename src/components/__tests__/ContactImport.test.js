@@ -4,9 +4,9 @@ import { createContactData } from '../../utils/contactHelpers';
 import { Alert } from 'react-native';
 
 import {
-    RELATIONSHIP_TYPES,
-    RELATIONSHIP_DEFAULTS,
-    DEFAULT_RELATIONSHIP_TYPE,
+	RELATIONSHIP_TYPES,
+	RELATIONSHIP_DEFAULTS,
+	DEFAULT_RELATIONSHIP_TYPE,
 } from '../../../constants/relationships';
 
 jest.mock('../../../constants/relationships', () => ({
@@ -410,7 +410,7 @@ async function handleContactSelection(contactId, userId) {
 	}
 }
 
-// New scheduling structure
+// Scheduling structure
 describe('Contact Data Structure', () => {
 	it('should create contact with correct scheduling defaults', async () => {
 		const basicData = {
@@ -424,8 +424,8 @@ describe('Contact Data Structure', () => {
 
 		expect(result.scheduling).toMatchObject({
 			relationship_type: 'friend',
-			frequency: 'weekly',
-			custom_schedule: true, // Verify new default
+			frequency: null,
+			custom_schedule: true,
 			priority: 'normal',
 			minimum_gap: 30,
 			custom_preferences: expect.any(Object),

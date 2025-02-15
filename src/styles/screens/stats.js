@@ -111,7 +111,7 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '800',
 			color: colors.text.primary,
-			opacity: 0.75,			
+			opacity: 0.75,
 		},
 		distributionPercentage: {
 			fontSize: 16,
@@ -159,6 +159,20 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '700',
 		},
+		sectionDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginTop: -spacing.md,
+			marginBottom: spacing.md,
+		},
+		emptyMessage: {
+			textAlign: 'center',
+			color: colors.text.secondary,
+			fontSize: 16,
+			fontStyle: 'italic',
+			paddingVertical: spacing.md,
+		},		
 		insightItem: {
 			flexDirection: 'row',
 			alignItems: 'center',

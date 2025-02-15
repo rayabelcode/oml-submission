@@ -130,38 +130,45 @@ export const StatsScreen = () => {
 
 						<View style={styles.section}>
 							<Text style={styles.sectionTitle}>Suggested Calls</Text>
-							{stats?.detailed?.needsAttention?.map((contact, index, array) => (
-								<View
-									key={contact.id}
-									style={[
-										styles.attentionItem,
-										index !== array.length - 1 && {
-											borderBottomWidth: 1,
-											borderBottomColor: colors.border,
-										},
-									]}
-								>
-									<View style={styles.attentionInfo}>
-										<Text style={styles.contactName}>{contact.name}</Text>
-									</View>
-									<TouchableOpacity
-										style={styles.callButton}
-										onPress={() => {
-											const formattedContact = {
-												...contact,
-												first_name: contact.name.split(' ')[0],
-												last_name: contact.name.split(' ').slice(1).join(' '),
-												phone: contact.phone,
-											};
-											setSelectedContact(formattedContact);
-											setShowCallOptions(true);
-										}}
+							<Text style={styles.sectionDescription}>Based on your call frequency</Text>
+							{stats?.detailed?.needsAttention?.length > 0 ? (
+								stats.detailed.needsAttention.map((contact, index, array) => (
+									<View
+										key={contact.id}
+										style={[
+											styles.attentionItem,
+											index !== array.length - 1 && {
+												borderBottomWidth: 1,
+												borderBottomColor: colors.border,
+											},
+										]}
 									>
-										<Icon name="call" size={20} color={colors.white} />
-										<Text style={styles.callButtonText}>Call</Text>
-									</TouchableOpacity>
-								</View>
-							))}
+										<View style={styles.attentionInfo}>
+											<Text style={styles.contactName}>{contact.name}</Text>
+										</View>
+										<TouchableOpacity
+											style={styles.callButton}
+											onPress={() => {
+												const formattedContact = {
+													...contact,
+													first_name: contact.name.split(' ')[0],
+													last_name: contact.name.split(' ').slice(1).join(' '),
+													phone: contact.phone,
+												};
+												setSelectedContact(formattedContact);
+												setShowCallOptions(true);
+											}}
+										>
+											<Icon name="call" size={20} color={colors.white} />
+											<Text style={styles.callButtonText}>Call</Text>
+										</TouchableOpacity>
+									</View>
+								))
+							) : (
+								<Text style={styles.emptyMessage}>
+									Great job! You're up to date with all your contacts. 🎉
+								</Text>
+							)}
 						</View>
 					</>
 				)}
