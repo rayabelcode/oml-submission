@@ -23,6 +23,7 @@ import {
 	query,
 	where,
 	getDocs,
+	orderBy,
 } from 'firebase/firestore';
 import { REMINDER_TYPES } from '../../constants/notificationConstants';
 import { db } from '../config/firebase';
@@ -31,6 +32,76 @@ import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snooz
 import { DateTime } from 'luxon';
 import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
+
+// Helper functions for reminders
+const getScheduledReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const scheduledQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'SCHEDULED'),
+		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(scheduledQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const getCustomReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const customQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'CUSTOM_DATE'),
+		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(customQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const getFollowUpReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const followUpQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'FOLLOW_UP'),
+		where('status', 'in', ['pending', 'sent']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(followUpQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const groupByContact = (reminders) => {
+	return reminders.reduce((acc, reminder) => {
+		if (!acc[reminder.contact_id]) {
+			acc[reminder.contact_id] = [];
+		}
+		acc[reminder.contact_id].push(reminder);
+		return acc;
+	}, {});
+};
+
+const getNewestPerContact = (groupedReminders) => {
+	return Object.values(groupedReminders).map((group) =>
+		group.reduce((newest, current) =>
+			new Date(current.scheduledTime) > new Date(newest.scheduledTime) ? current : newest
+		)
+	);
+};
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -93,121 +164,121 @@ export default function DashboardScreen({ navigation, route }) {
 	// Function to show reminders
 	const loadReminders = async () => {
 		try {
-			// Get Firestore reminders that are either pending or sent
-			const remindersRef = collection(db, 'reminders');
-			const remindersQuery = query(
-				remindersRef,
-				where('user_id', '==', user.uid),
-				where('status', 'in', ['pending', 'sent'])
-			);
-			const remindersSnapshot = await getDocs(remindersQuery);
-			const allReminders = remindersSnapshot.docs.map((doc) => ({
-				firestoreId: doc.id,
-				...doc.data(),
-				scheduledTime: doc.data().scheduledTime?.toDate(), // Convert Firestore timestamp to Date
-			}));
-
-			// Only get scheduled (not yet delivered) notifications
-			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-
-			const processReminder = (notification) => {
-				const content = notification.content || notification.request?.content;
-				const data = content?.data || {};
-
-				let callTime;
-				if (data.callData?.startTime) {
-					callTime = new Date(data.callData.startTime);
-				} else if (data.callData?.callTime) {
-					callTime = new Date(data.callData.callTime);
-				} else if (data.startTime) {
-					callTime = new Date(data.startTime);
-				}
-
-				if (!callTime || isNaN(callTime.getTime())) {
-					if (data.scheduledTime) {
-						callTime = new Date(data.scheduledTime);
-					} else if (notification.trigger) {
-						callTime = new Date(notification.trigger.timestamp || notification.trigger.date);
-					} else {
-						callTime = new Date(0);
-					}
-				}
-
-				return {
-					type: 'FOLLOW_UP',
-					firestoreId: data.firestoreId || notification.identifier,
-					scheduledTime: callTime,
-					contact_id: data.contactId,
-					contactName: data.contactName || 'Unknown Contact',
-					status: 'pending',
-				};
+		  // 1. Get cloud reminders
+		  const [scheduledReminders, customReminders, followUpReminders] = await Promise.all([
+			getScheduledReminders(user.uid),
+			getCustomReminders(user.uid),
+			getFollowUpReminders(user.uid)
+		  ]);
+	  
+		  // 2. Get local notifications (this was in the original code)
+		  const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+	  
+		  // Process local follow-up notifications (restored from original code)
+		  const processReminder = (notification) => {
+			const content = notification.content || notification.request?.content;
+			const data = content?.data || {};
+	  
+			let callTime;
+			if (data.callData?.startTime) {
+			  callTime = new Date(data.callData.startTime);
+			} else if (data.callData?.callTime) {
+			  callTime = new Date(data.callData.callTime);
+			} else if (data.startTime) {
+			  callTime = new Date(data.startTime);
+			}
+	  
+			if (!callTime || isNaN(callTime.getTime())) {
+			  if (data.scheduledTime) {
+				callTime = new Date(data.scheduledTime);
+			  } else if (notification.trigger) {
+				callTime = new Date(notification.trigger.timestamp || notification.trigger.date);
+			  } else {
+				callTime = new Date(0);
+			  }
+			}
+	  
+			return {
+			  type: 'FOLLOW_UP',
+			  firestoreId: data.firestoreId || notification.identifier,
+			  scheduledTime: callTime,
+			  contact_id: data.contactId,
+			  contactName: data.contactName || 'Unknown Contact',
+			  status: 'pending',
 			};
-
-			// Process scheduled follow-up notifications only
-			const followUpReminders = scheduledNotifications
-				.filter((notification) => notification.content?.data?.type === 'FOLLOW_UP')
-				.map(processReminder);
-
-			const now = DateTime.now();
-
-			// Filter Firestore reminders to include sent reminders and due pending reminders
-			const filteredFirestoreReminders = allReminders.filter((reminder) => {
-				// Always include sent reminders
-				if (reminder.status === 'sent') return true;
-
-				// Skip daily reminders
-				if (reminder.frequency === 'daily') return false;
-
-				try {
-					// For pending reminders, check if they're due
-					if (reminder.status === 'pending') {
-						const reminderTime = reminder.scheduledTime;
-						if (!reminderTime) return false;
-						return reminderTime <= now.toJSDate();
-					}
-					return false;
-				} catch (error) {
-					console.warn('Error processing reminder date:', error, reminder);
-					return false;
-				}
-			});
-
-			// Load stored follow-up reminders from AsyncStorage
-			const storedFollowUp = await AsyncStorage.getItem('follow_up_notifications');
-			const localFollowUpReminders = storedFollowUp ? JSON.parse(storedFollowUp) : [];
-
-			// Transform stored reminders to match our format
-			const processedFollowUps = localFollowUpReminders.map((local) => ({
-				type: 'FOLLOW_UP',
-				firestoreId: local.id,
-				scheduledTime: new Date(local.scheduledTime),
-				data: local.data,
-				contactName: local.contactName,
-				status: 'pending',
-			}));
-
-			// Merge and sort reminders
-			const sortedReminders = [
-				...filteredFirestoreReminders,
-				...followUpReminders,
-				...processedFollowUps,
-			].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
-
-			setRemindersState({
-				data: sortedReminders,
-				loading: false,
-				error: null,
-			});
+		  };
+	  
+		  // Get follow-up reminders from local notifications
+		  const followUpFromNotifications = scheduledNotifications
+			.filter((notification) => notification.content?.data?.type === 'FOLLOW_UP')
+			.map(processReminder);
+	  
+		  // Get stored follow-up notifications
+		  const storedFollowUp = await AsyncStorage.getItem('follow_up_notifications');
+		  const localFollowUpReminders = storedFollowUp ? JSON.parse(storedFollowUp) : [];
+	  
+		  // Process stored follow-ups
+		  const processedFollowUps = localFollowUpReminders.map((local) => ({
+			type: 'FOLLOW_UP',
+			firestoreId: local.id,
+			scheduledTime: new Date(local.scheduledTime),
+			data: local.data,
+			contactName: local.contactName,
+			status: 'pending',
+		  }));
+	  
+		  // Process each type according to rules
+		  const now = DateTime.now();
+		  const sevenDaysAgo = now.minus({ days: 7 }).toJSDate();
+	  
+		  // Combine all follow-ups from different sources
+		  const allFollowUps = [
+			...followUpReminders,
+			...followUpFromNotifications,
+			...processedFollowUps
+		  ].filter(r => new Date(r.scheduledTime) >= sevenDaysAgo);
+	  
+		  // Handle SCHEDULED and CUSTOM_DATE as before
+		  const groupedScheduled = groupByContact(
+			scheduledReminders.filter(r => 
+			  new Date(r.scheduledTime) <= now.toJSDate() && 
+			  r.status !== 'completed'
+			)
+		  );
+		  const newestScheduled = getNewestPerContact(groupedScheduled);
+	  
+		  const groupedCustom = groupByContact(
+			customReminders.filter(r => 
+			  new Date(r.scheduledTime) <= now.toJSDate() && 
+			  r.status !== 'completed'
+			)
+		  );
+		  const newestCustom = getNewestPerContact(groupedCustom);
+	  
+		  // Combine and sort all reminders
+		  const sortedReminders = [
+			...allFollowUps,
+			...newestScheduled,
+			...newestCustom
+		  ].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+	  
+		  setRemindersState({
+			data: sortedReminders,
+			loading: false,
+			error: null
+		  });
+	  
 		} catch (error) {
-			console.error('[DashboardScreen] Error loading reminders:', error);
-			setRemindersState({
-				data: [],
-				loading: false,
-				error: 'Failed to load reminders',
-			});
-			Alert.alert('Error', 'Failed to load reminders');
+		  console.error('[DashboardScreen] Error loading reminders:', error);
+		  setRemindersState({
+			data: [],
+			loading: false,
+			error: 'Failed to load reminders'
+		  });
+		  Alert.alert('Error', 'Failed to load reminders');
 		}
-	};
+	  };
+	  
 
 	const handleFollowUpComplete = async (reminderId, notes) => {
 		try {
