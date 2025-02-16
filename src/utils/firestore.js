@@ -946,33 +946,34 @@ export const getFollowUpReminders = async (userId) => {
 	}
 };
 
-export const completeFollowUp = async (reminderId, notes) => {
+// Complete Follow-up
+export const completeFollowUp = async (reminderId, notes = '') => {
 	try {
 		const reminderRef = doc(db, 'reminders', reminderId);
 		const reminderDoc = await getDoc(reminderRef);
 
 		if (!reminderDoc.exists()) {
-			console.error('[Firestore] Reminder not found:', reminderId);
 			throw new Error('Reminder not found');
 		}
 
 		const reminderData = reminderDoc.data();
 
 		if (reminderData.user_id !== auth.currentUser?.uid) {
-			console.error('[Firestore] Permission denied for user:', auth.currentUser?.uid);
-			throw new Error('User does not have permission to modify this reminder');
+			throw new Error('Permission denied');
 		}
 
 		const batch = writeBatch(db);
 
-		// Update reminder to 'completed'
+		// Update reminder status
 		batch.update(reminderRef, {
-			status: REMINDER_STATUS.COMPLETED,
+			status: 'completed',
 			completion_time: serverTimestamp(),
 			updated_at: serverTimestamp(),
+			completed_by: auth.currentUser.uid,
+			notes: notes || null,
 		});
 
-		// If there are notes, add them to contact history
+		// Add to contact history if notes provided
 		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -991,14 +992,68 @@ export const completeFollowUp = async (reminderId, notes) => {
 				batch.update(contactRef, {
 					contact_history: [newHistoryEntry, ...history],
 					last_updated: serverTimestamp(),
+					last_contacted: serverTimestamp(),
 				});
 			}
 		}
 
 		await batch.commit();
+
 		return true;
 	} catch (error) {
-		console.error('[Firestore] Error completing follow-up:', error);
+		console.error('Error completing follow-up:', error);
+		throw error;
+	}
+};
+
+// Complete Scheduled Reminder
+export const completeScheduledReminder = async (reminderId, contactId) => {
+	try {
+		const batch = writeBatch(db);
+
+		// Get the reminder being completed
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderDoc = await getDoc(reminderRef);
+
+		if (!reminderDoc.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		const completedReminder = reminderDoc.data();
+
+		// Get all older SCHEDULED reminders for this contact
+		const olderRemindersQuery = query(
+			collection(db, 'reminders'),
+			where('contact_id', '==', contactId),
+			where('type', '==', 'SCHEDULED'),
+			where('status', 'in', ['pending', 'sent', 'snoozed']),
+			where('scheduledTime', '<=', completedReminder.scheduledTime)
+		);
+
+		const olderReminders = await getDocs(olderRemindersQuery);
+
+		// Update all older reminders and the current one
+		olderReminders.forEach((doc) => {
+			batch.update(doc.ref, {
+				status: 'completed',
+				completion_time: serverTimestamp(),
+				updated_at: serverTimestamp(),
+				completed_by: auth.currentUser.uid,
+			});
+		});
+
+		// Update contact's last_contacted
+		const contactRef = doc(db, 'contacts', contactId);
+		batch.update(contactRef, {
+			last_contacted: serverTimestamp(),
+			last_updated: serverTimestamp(),
+		});
+
+		await batch.commit();
+
+		return true;
+	} catch (error) {
+		console.error('Error completing scheduled reminder:', error);
 		throw error;
 	}
 };
