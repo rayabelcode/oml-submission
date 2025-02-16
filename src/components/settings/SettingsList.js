@@ -35,7 +35,7 @@ const SettingsList = ({
 	return (
 		<ScrollView style={styles.settingsList}>
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>User Settings</Text>
+				<Text style={styles.mainSettingTitle}>User Settings</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={onProfilePress}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="person-outline" size={20} color={colors.text.secondary} />
@@ -53,7 +53,7 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Scheduler</Text>
+				<Text style={styles.mainSettingTitle}>Scheduler</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Scheduling')}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="time-outline" size={20} color={colors.text.secondary} />
@@ -64,7 +64,7 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>App Settings</Text>
+				<Text style={styles.mainSettingTitle}>App Settings</Text>
 				<TouchableOpacity
 					style={styles.settingItem}
 					onPress={() => navigation.navigate('NotificationSettings')}
@@ -85,18 +85,18 @@ const SettingsList = ({
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>Data | Privacy</Text>
+				<Text style={styles.mainSettingTitle}>Data | Privacy</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Privacy')}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Privacy Settings</Text>
+						<Text style={styles.settingText}>Privacy and Export</Text>
 					</View>
 					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 
 			<View style={styles.settingSection}>
-				<Text style={styles.sectionTitle}>OnMyList</Text>
+				<Text style={styles.mainSettingTitle}>OnMyList</Text>
 
 				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('About')}>
 					<View style={styles.settingItemLeft}>

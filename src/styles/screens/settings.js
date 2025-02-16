@@ -11,6 +11,13 @@ const createStyles = (colors) =>
 		settingsList: {
 			flex: 1,
 		},
+		mainSettingTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			opacity: 0.6,
+			marginBottom: spacing.sm,
+		},
 		profileBackground: {
 			backgroundColor: colors.background.secondary,
 			marginTop: -50,
