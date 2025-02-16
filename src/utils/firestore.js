@@ -1031,7 +1031,7 @@ export const completeScheduledReminder = async (reminderId, contactId) => {
 		const olderRemindersQuery = query(
 			collection(db, 'reminders'),
 			where('contact_id', '==', contactId),
-			where('type', '==', 'SCHEDULED'),
+			where('type', 'in', ['SCHEDULED', 'CUSTOM_DATE']),
 			where('status', 'in', ['pending', 'sent', 'snoozed']),
 			where('scheduledTime', '<=', completedReminder.scheduledTime)
 		);

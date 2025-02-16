@@ -288,14 +288,8 @@ export default function DashboardScreen({ navigation, route }) {
 			// Handle Firestore updates first
 			switch (reminder.type) {
 				case 'SCHEDULED':
-					await completeScheduledReminder(reminderId, reminder.contact_id);
-					break;
 				case 'CUSTOM_DATE':
-					await updateReminder(reminderId, {
-						status: 'completed',
-						completion_time: serverTimestamp(),
-						completed_by: auth.currentUser.uid,
-					});
+					await completeScheduledReminder(reminderId, reminder.contact_id);
 					break;
 				case 'FOLLOW_UP':
 					await handleFollowUpComplete(reminderId, notes);
