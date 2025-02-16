@@ -152,20 +152,27 @@ export function ThemeProvider({ children }) {
 		});
 	}, []);
 
-	// Recalculate colors when systemTheme changes
-	const colors = React.useMemo(
-		() =>
-			userTheme === 'system'
-				? systemTheme === 'dark'
-					? darkTheme
-					: lightTheme
-				: userTheme === 'light'
-				? lightTheme
-				: userTheme === 'dimmed'
-				? dimmedTheme
-				: darkTheme,
-		[userTheme, systemTheme]
-	);
+	// Calculate the theme based on user selection and system setting
+	const effectiveTheme = React.useMemo(() => {
+		if (userTheme === 'system') {
+			return systemTheme === 'dark' ? 'dark' : 'light';
+		}
+		return userTheme;
+	}, [userTheme, systemTheme]);
+
+	// Get the correct color theme based on theme
+	const colors = React.useMemo(() => {
+		switch (effectiveTheme) {
+			case 'dark':
+				return darkTheme;
+			case 'dimmed':
+				return dimmedTheme;
+			case 'light':
+				return lightTheme;
+			default:
+				return lightTheme;
+		}
+	}, [effectiveTheme]);
 
 	const setThemeValue = async (newTheme) => {
 		setUserTheme(newTheme);
@@ -176,6 +183,7 @@ export function ThemeProvider({ children }) {
 		<ThemeContext.Provider
 			value={{
 				theme: userTheme,
+				effectiveTheme,
 				setThemeValue,
 				colors,
 				spacing,

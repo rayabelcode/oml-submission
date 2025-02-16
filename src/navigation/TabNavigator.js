@@ -13,51 +13,54 @@ import ContactsStack from './ContactsStack';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-    const { colors, theme } = useTheme();
-    const { user } = useAuth();
+	const { colors, theme } = useTheme();
+	const { user } = useAuth();
 
-    useEffect(() => {
-        const updateStatusBar = async () => {
-            await StatusBar.setBarStyle(theme === 'dark' ? 'light-content' : 'dark-content', true);
-        };
-        updateStatusBar();
-    }, [theme, user]);
+	useEffect(() => {
+		const updateStatusBar = async () => {
+			await StatusBar.setBarStyle(
+				theme === 'dark' || theme === 'dimmed' ? 'light-content' : 'dark-content',
+				true
+			);
+		};
+		updateStatusBar();
+	}, [theme, user]);
 
-    if (!user) {
-        return <SettingsStack />;
-    }
+	if (!user) {
+		return <SettingsStack />;
+	}
 
-    return (
-        <Tab.Navigator
-            screenOptions={({ route }) => ({
-                tabBarIcon: ({ focused, color, size }) => {
-                    const iconNames = {
-                        Contacts: focused ? 'people' : 'people-outline',
-                        Dashboard: focused ? 'grid' : 'grid-outline',
-                        Stats: focused ? 'stats-chart' : 'stats-chart-outline',
-                        Settings: focused ? 'settings' : 'settings-outline',
-                    }[route.name];
-                    return <Icon name={iconNames} size={size} color={color} />;
-                },
-                tabBarStyle: {
-                    backgroundColor: colors.background.primary,
-                    borderTopColor: colors.border,
-                    borderTopWidth: 1,
-                    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-                    height: Platform.OS === 'ios' ? 85 : 60,
-                },
-                tabBarActiveTintColor: colors.primary,
-                tabBarInactiveTintColor: colors.text.secondary,
-                headerShown: false,
-                tabBarLabelStyle: {
-                    color: colors.text.primary,
-                },
-            })}
-        >
-            <Tab.Screen name="Contacts" component={ContactsStack} />
-            <Tab.Screen name="Dashboard" component={DashboardScreen} />
-            <Tab.Screen name="Stats" component={StatsScreen} />
-            <Tab.Screen name="Settings" component={SettingsStack} />
-        </Tab.Navigator>
-    );
+	return (
+		<Tab.Navigator
+			screenOptions={({ route }) => ({
+				tabBarIcon: ({ focused, color, size }) => {
+					const iconNames = {
+						Contacts: focused ? 'people' : 'people-outline',
+						Dashboard: focused ? 'grid' : 'grid-outline',
+						Stats: focused ? 'stats-chart' : 'stats-chart-outline',
+						Settings: focused ? 'settings' : 'settings-outline',
+					}[route.name];
+					return <Icon name={iconNames} size={size} color={color} />;
+				},
+				tabBarStyle: {
+					backgroundColor: colors.background.primary,
+					borderTopColor: colors.border,
+					borderTopWidth: 1,
+					paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+					height: Platform.OS === 'ios' ? 85 : 60,
+				},
+				tabBarActiveTintColor: colors.primary,
+				tabBarInactiveTintColor: colors.text.secondary,
+				headerShown: false,
+				tabBarLabelStyle: {
+					color: colors.text.primary,
+				},
+			})}
+		>
+			<Tab.Screen name="Contacts" component={ContactsStack} />
+			<Tab.Screen name="Dashboard" component={DashboardScreen} />
+			<Tab.Screen name="Stats" component={StatsScreen} />
+			<Tab.Screen name="Settings" component={SettingsStack} />
+		</Tab.Navigator>
+	);
 }

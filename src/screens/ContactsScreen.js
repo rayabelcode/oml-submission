@@ -20,6 +20,7 @@ import { useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import { useLogo } from '../hooks/useLogo';
 import {
 	fetchContacts,
 	archiveContact,
@@ -237,6 +238,8 @@ export default function ContactsScreen({ navigation }) {
 	const commonStyles = useCommonStyles();
 	const [showProfilePhotos, setShowProfilePhotos] = useState(true);
 
+	const logoSource = useLogo();
+
 	// Editing state
 	const [editingContact, setEditingContact] = useState(null);
 	const [isAnyEditing, setIsAnyEditing] = useState(false);
@@ -256,10 +259,6 @@ export default function ContactsScreen({ navigation }) {
 	const [nameDisplay, setNameDisplay] = useState('full'); // 'full', 'firstOnly', or 'initials'
 	const [showSortMenu, setShowSortMenu] = useState(false);
 
-	const logoSource =
-		theme === 'dark'
-			? require('../../assets/full-logo-darkmode.png')
-			: require('../../assets/full-logo-color.png');
 	const [contacts, setContacts] = useState({ scheduledContacts: [], unscheduledContacts: [] });
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
