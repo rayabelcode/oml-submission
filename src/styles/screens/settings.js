@@ -80,7 +80,8 @@ const createStyles = (colors) =>
 			fontSize: 20,
 			fontWeight: '500',
 			marginBottom: spacing.sm,
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.9,
 		},
 		settingItem: {
 			flexDirection: 'row',
@@ -129,6 +130,14 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			color: colors.text.primary,
 			textAlign: 'center',
+		},
+		inputLabel: {
+			fontSize: 16,
+			fontWeight: '700',
+			textAlign: 'center',
+			color: colors.text.primary,
+			opacity: 0.7,
+			marginBottom: spacing.sm,
 		},
 		loginButton: {
 			backgroundColor: colors.primary,
