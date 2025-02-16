@@ -11,6 +11,13 @@ const createStyles = (colors) =>
 		settingsList: {
 			flex: 1,
 		},
+		mainSettingTitle: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			opacity: 0.6,
+			marginBottom: spacing.sm,
+		},
 		profileBackground: {
 			backgroundColor: colors.background.secondary,
 			marginTop: -50,
@@ -80,7 +87,8 @@ const createStyles = (colors) =>
 			fontSize: 20,
 			fontWeight: '500',
 			marginBottom: spacing.sm,
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.9,
 		},
 		settingItem: {
 			flexDirection: 'row',
@@ -129,6 +137,14 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			color: colors.text.primary,
 			textAlign: 'center',
+		},
+		inputLabel: {
+			fontSize: 16,
+			fontWeight: '700',
+			textAlign: 'center',
+			color: colors.text.primary,
+			opacity: 0.7,
+			marginBottom: spacing.sm,
 		},
 		loginButton: {
 			backgroundColor: colors.primary,
@@ -449,6 +465,23 @@ const createStyles = (colors) =>
 			paddingRight: spacing.md,
 			textAlign: 'center',
 		},
+		// SchedulingScreen
+		settingsHeader: {
+			fontSize: 19,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
+			marginTop: spacing.xs,
+			marginBottom: spacing.xs,
+		},
+		settingsExplanation: {
+			fontSize: 14,
+			fontWeight: '500',
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+			textAlign: 'center',
+			marginTop: spacing.xs,
+		},
 		// Headers for each page under settings
 		headerSettingsPages: {
 			paddingLeft: spacing.xs,
@@ -485,11 +518,12 @@ const createStyles = (colors) =>
 			marginHorizontal: spacing.md,
 		},
 		relationshipIntroText: {
-			fontSize: 14,
+			fontSize: 15,
 			fontWeight: '600',
 			fontStyle: 'italic',
-			lineHeight: 24,
+			lineHeight: 20,
 			color: colors.text.primary,
+			opacity: 0.7,
 			textAlign: 'center',
 		},
 		resetContainer: {
@@ -509,6 +543,26 @@ const createStyles = (colors) =>
 			color: colors.background.primary,
 			fontSize: 16,
 			fontWeight: '700',
+		},
+		// Header for NotificationsSettingsScreen
+		sectionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: spacing.md,
+			marginTop: spacing.lg,
+		},
+		iconTitleContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			flex: 1,
+		},
+		sectionIcon: {
+			marginRight: spacing.md,
+		},
+		notificationTitle: {
+			fontSize: 24,
+			fontWeight: '600',
+			color: colors.primary,
 		},
 	});
 

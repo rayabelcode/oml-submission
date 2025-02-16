@@ -2,11 +2,22 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.75",
+		"version": "1.0.89",
 		"runtimeVersion": {
 			"policy": "sdkVersion"
 		},
 		"orientation": "portrait",
+		"splash": {
+			"image": "./assets/splash.png",
+			"resizeMode": "contain",
+			"backgroundColor": "#000000",
+			"dark": {
+				"backgroundColor": "#000000"
+			},
+			"light": {
+				"backgroundColor": "#FFFFFF"
+			}
+		},
 		"icon": "./assets/icon.png",
 		"notification": {
 			"icon": "./assets/icon.png",

@@ -59,13 +59,13 @@ export const TIME_SLOT_INTERVAL = 15;
 export const MAX_ATTEMPTS = 32;
 
 export const DAYS_OF_WEEK = [
-	{ label: 'M', value: 'monday' },
-	{ label: 'T', value: 'tuesday' },
-	{ label: 'W', value: 'wednesday' },
-	{ label: 'T', value: 'thursday' },
-	{ label: 'F', value: 'friday' },
-	{ label: 'S', value: 'saturday' },
-	{ label: 'S', value: 'sunday' },
+    { label: 'S', value: 'sunday' },
+    { label: 'M', value: 'monday' },
+    { label: 'T', value: 'tuesday' },
+    { label: 'W', value: 'wednesday' },
+    { label: 'T', value: 'thursday' },
+    { label: 'F', value: 'friday' },
+    { label: 'S', value: 'saturday' },
 ];
 
 export const DEFAULT_ACTIVE_HOURS = {

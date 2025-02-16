@@ -1,4 +1,5 @@
 import { serverTimestamp } from 'firebase/firestore';
+import { formatBirthday } from './dateHelpers';
 import {
 	RELATIONSHIP_TYPES,
 	RELATIONSHIP_DEFAULTS,
@@ -35,57 +36,123 @@ export const SCHEDULING_CONSTANTS = {
 };
 
 export const createContactData = (basicData, userId) => {
-	// Destructure relationship_type out of basicData and create new object without it
-	const { relationship_type, phone, ...cleanedBasicData } = basicData;
-	const contactType = relationship_type || DEFAULT_RELATIONSHIP_TYPE;
+	// Destructure all expected fields including birthday
+	try {
+		const { relationship_type, phone, birthday, ...cleanedBasicData } = basicData;
+		const contactType = relationship_type || DEFAULT_RELATIONSHIP_TYPE;
 
-	return {
-		...cleanedBasicData,
-		phone: standardizePhoneNumber(phone),
-		archived: false,
-		notes: '',
-		contact_history: [],
-		tags: [],
-		next_contact: null,
-		created_at: serverTimestamp(),
-		last_updated: serverTimestamp(),
-		user_id: userId,
-		scheduling: {
-			relationship_type: contactType,
-			frequency: SCHEDULING_CONSTANTS.FREQUENCIES.WEEKLY,
-			custom_schedule: false,
-			priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
-			minimum_gap: 30,
-			custom_preferences: {
-				preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[contactType],
-				active_hours: RELATIONSHIP_DEFAULTS.active_hours[contactType],
-				excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[contactType],
+		// Format birthday, but don't let it break the contact creation
+		let formattedBirthday = null;
+		try {
+			formattedBirthday = formatBirthday(birthday);
+		} catch (error) {
+			console.error('Error formatting birthday during contact creation:', error);
+		}
+
+		return {
+			...cleanedBasicData,
+			phone: standardizePhoneNumber(phone),
+			birthday: formattedBirthday,
+			archived: false,
+			notes: '',
+			contact_history: [],
+			tags: [],
+			next_contact: null,
+			created_at: serverTimestamp(),
+			last_updated: serverTimestamp(),
+			user_id: userId,
+			scheduling: {
+				relationship_type: contactType,
+				frequency: null,
+				custom_schedule: true,
+				priority: SCHEDULING_CONSTANTS.PRIORITIES.NORMAL,
+				minimum_gap: 30,
+				custom_preferences: {
+					preferred_days: RELATIONSHIP_DEFAULTS.preferred_days[contactType],
+					active_hours: RELATIONSHIP_DEFAULTS.active_hours[contactType],
+					excluded_times: RELATIONSHIP_DEFAULTS.excluded_times[contactType],
+				},
+				recurring_next_date: null,
+				custom_next_date: null,
+				pattern_adjusted: false,
+				confidence: null,
+				snooze_count: { increment: 0 },
+				scheduling_status: {
+					wasRescheduled: false,
+					wasSnooze: false,
+				},
+				status: null,
 			},
-		},
-	};
+		};
+	} catch (error) {
+		console.error('Error creating contact data:', error);
+		throw new Error('Failed to create contact data');
+	}
 };
 
 export const updateContactData = (contactData) => {
-	const updates = {
-		...contactData,
-		last_updated: serverTimestamp(),
-	};
-
-	// Remove updated_at if it exists
-	if ('updated_at' in updates) {
-		delete updates.updated_at;
+	if (!contactData) {
+		throw new Error('Failed to update contact data');
 	}
 
-	// Move relationship_type to scheduling if it exists at root level
-	if ('relationship_type' in updates && updates.scheduling) {
-		updates.scheduling.relationship_type = updates.relationship_type;
-		delete updates.relationship_type;
-	}
+	try {
+		const updates = { ...contactData };
 
-	// Format phone number if it exists
-	if (updates.phone) {
-		updates.phone = standardizePhoneNumber(updates.phone);
-	}
+		// Remove raw updated_at if present
+		if ('updated_at' in updates) {
+			delete updates.updated_at;
+		}
 
-	return updates;
+		// Standardize scheduling fields
+		if (updates.scheduling) {
+			// Standardize snooze_count
+			if (typeof updates.scheduling.snooze_count === 'number') {
+				updates.scheduling.snooze_count = {
+					increment: updates.scheduling.snooze_count,
+				};
+			}
+
+			// Ensure scheduling_status exists
+			if (!updates.scheduling.scheduling_status) {
+				updates.scheduling.scheduling_status = {
+					wasRescheduled: false,
+					wasSnooze: false,
+				};
+			}
+
+			// Convert dates to ISO strings if they exist
+			if (updates.scheduling.recurring_next_date) {
+				updates.scheduling.recurring_next_date = new Date(
+					updates.scheduling.recurring_next_date
+				).toISOString();
+			}
+			if (updates.scheduling.custom_next_date) {
+				updates.scheduling.custom_next_date = new Date(updates.scheduling.custom_next_date).toISOString();
+			}
+		}
+
+		// Handle relationship type updates
+		if ('relationship_type' in updates && updates.scheduling) {
+			updates.scheduling.relationship_type = updates.relationship_type;
+			delete updates.relationship_type;
+		}
+
+		// Standardize phone if present
+		if (updates.phone) {
+			updates.phone = standardizePhoneNumber(updates.phone);
+		}
+
+		// Standardize next_contact if present
+		if (updates.next_contact) {
+			updates.next_contact = new Date(updates.next_contact).toISOString();
+		}
+
+		// Always update last_updated
+		updates.last_updated = serverTimestamp();
+
+		return updates;
+	} catch (error) {
+		console.error('Error updating contact data:', error);
+		throw new Error('Failed to update contact data');
+	}
 };

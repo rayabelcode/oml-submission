@@ -53,11 +53,17 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 					<Text
 						style={[
 							commonStyles.message,
-							{ color: colors.text.primary, marginTop: spacing.sm, marginBottom: spacing.md },
+							{
+								color: colors.text.primary,
+								marginBottom: spacing.md,
+								fontWeight: '700',
+								fontSize: 17,
+							},
 						]}
 					>
-						How do you know this person?{'\n'}You can edit this at any time.
+						How do you know this person?
 					</Text>
+
 					<View style={{ marginBottom: spacing.xs }}>
 						<RelationshipPicker
 							value={selectedType}
@@ -74,6 +80,7 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 									paddingHorizontal: spacing.xl,
 									backgroundColor: colors.primary,
 									minWidth: 120,
+									marginBottom: spacing.md,
 								},
 							]}
 							onPress={handleConfirm}
@@ -96,17 +103,17 @@ const RelationshipTypeModal = ({ visible, onClose, onSelect }) => {
 					onPress={handleDismiss}
 					style={{
 						marginTop: spacing.xl,
-						width: 50,
-						height: 50,
+						width: 55,
+						height: 55,
 						borderRadius: 40,
 						backgroundColor: colors.background.secondary,
 						justifyContent: 'center',
 						alignItems: 'center',
 						borderWidth: 1,
-						borderColor: colors.border,
+						borderColor: colors.lightHighlight,
 					}}
 				>
-					<Icon name="close" size={24} color={colors.text.primary} />
+					<Icon name="close" size={28} color={colors.text.primary} />
 				</TouchableOpacity>
 			</View>
 		</Modal>

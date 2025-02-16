@@ -92,17 +92,18 @@ describe('CleanupService', () => {
 			expect(result).toBe(true);
 		});
 
-		it('should cleanup expired follow-up', async () => {
+		it('should not cleanup unexpired follow-up', async () => {
 			const reminder = {
 				type: REMINDER_TYPES.FOLLOW_UP,
 				notes_added: false,
+				status: 'pending',
 				scheduledTime: {
 					toDate: () => new Date(Date.now() - 25 * 60 * 60 * 1000),
 				},
 			};
 
 			const result = await cleanupService.shouldCleanupReminder(reminder, new Date());
-			expect(result).toBe(true);
+			expect(result).toBe(false); // False since we only clean up completed notifications
 		});
 
 		it('should not cleanup active scheduled reminder', async () => {
@@ -292,7 +293,7 @@ describe('CleanupService', () => {
 
 		it('should handle reminders with missing scheduledTime', async () => {
 			const mockReminder = {
-				type: REMINDER_TYPES.FOLLOW_UP,
+				type: REMINDER_TYPES.SCHEDULED,
 				notes_added: false,
 				scheduledTime: null,
 			};

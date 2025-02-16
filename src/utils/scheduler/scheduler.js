@@ -15,6 +15,7 @@ import {
 // Environment check
 const isCloudFunction = typeof process !== 'undefined' && process.env.FUNCTION_TARGET !== undefined;
 
+// Validation helper functions - checks data for scheduling operations
 const validateDate = (date) => {
 	if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
 		throw new Error('Invalid date provided');
@@ -41,7 +42,9 @@ const validateFrequency = (frequency) => {
 	return true;
 };
 
+// Main scheduling service - handles scheduling operations and time calculations
 export class SchedulingService {
+	// Constructor - initializes service with user preferences and existing reminders
 	constructor(userPreferences, existingReminders, timeZone, options = {}) {
 		this.isCloudFunction = options.isCloudFunction || false;
 
@@ -67,7 +70,27 @@ export class SchedulingService {
 		this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
 	}
 
-	// Helper method for Timestamp
+	standardizeDate(dateValue) {
+		if (!dateValue) return null;
+
+		try {
+			if (dateValue instanceof Timestamp) {
+				return dateValue.toDate().toISOString();
+			}
+			if (dateValue instanceof Date) {
+				return dateValue.toISOString();
+			}
+			if (typeof dateValue === 'string') {
+				return new Date(dateValue).toISOString();
+			}
+			return null;
+		} catch (error) {
+			console.error('Error standardizing date:', error);
+			return null;
+		}
+	}
+
+	// Convert dates - transforms JS Date objects to Firebase Timestamp
 	createTimestamp(date) {
 		try {
 			return Timestamp.fromDate(date);
@@ -77,6 +100,7 @@ export class SchedulingService {
 		}
 	}
 
+	// Create reminder notification - adds new reminder with timestamps
 	async scheduleNotificationForReminder(reminderData) {
 		if (!reminderData?.scheduledTime || !reminderData?.contactName) {
 			throw new Error('Invalid reminder data provided');
@@ -109,6 +133,7 @@ export class SchedulingService {
 		}
 	}
 
+	// Time helpers - formats and validates time operations
 	formatTimeForDisplay(timeString) {
 		const hour = parseInt(timeString.split(':')[0]);
 		const period = hour >= 12 ? TIME_DISPLAY.PERIODS.PM : TIME_DISPLAY.PERIODS.AM;
@@ -132,6 +157,7 @@ export class SchedulingService {
 		return `${hour.toString().padStart(2, '0')}:00`;
 	}
 
+	// Gives options when no slots available
 	handleSlotsFilledScenario(targetDate, activeHours, contact) {
 		return {
 			status: 'SLOTS_FILLED',
@@ -145,6 +171,7 @@ export class SchedulingService {
 		};
 	}
 
+	// Custom date generator - creates random time within working hours
 	generateCustomDate(baseDate, activeHours) {
 		const dt = DateTime.fromJSDate(baseDate).setZone(this.timeZone);
 
@@ -171,6 +198,7 @@ export class SchedulingService {
 			.toJSDate();
 	}
 
+	// Contact preferences - gets scheduling rules based on relationship type
 	getPreferencesForContact(contact) {
 		const defaultPrefs = {
 			active_hours: { start: '09:00', end: '17:00' },
@@ -192,6 +220,7 @@ export class SchedulingService {
 		return defaultPrefs;
 	}
 
+	// Preliminary date - calculates next date using frequency and last contact date
 	calculatePreliminaryDate(lastContactDate, frequency) {
 		validateDate(lastContactDate);
 		validateFrequency(frequency);
@@ -213,6 +242,7 @@ export class SchedulingService {
 		return result.toJSDate();
 	}
 
+	// Check if time is blocked using user and contact preferences
 	isTimeBlocked(dateTime, contact) {
 		const dt = DateTime.fromJSDate(dateTime).setZone(this.timeZone);
 		const timeInMinutes = dt.hour * 60 + dt.minute;
@@ -274,6 +304,7 @@ export class SchedulingService {
 		});
 	}
 
+	// Checks for overlaps with scheduled reminders
 	hasTimeConflict(dateTime) {
 		const minGap = this.userPreferences?.scheduling_preferences?.minimumGapMinutes || 20;
 		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
@@ -288,6 +319,7 @@ export class SchedulingService {
 		});
 	}
 
+	// Finds available time slot within working hours
 	findAvailableTimeSlot(date, contact) {
 		const preferences = this.getPreferencesForContact(contact);
 		if (!preferences?.active_hours) return date;
@@ -364,6 +396,7 @@ export class SchedulingService {
 		throw new Error('No available time slots found within working hours');
 	}
 
+	// Core scheduling - schedules reminders based on contact preferences and user settings
 	async scheduleReminder(contact, lastContactDate, frequency) {
 		try {
 			const preferences = this.getPreferencesForContact(contact);
@@ -449,7 +482,7 @@ export class SchedulingService {
 				})
 			);
 
-			// If we have filled all slots for the next week
+			// If all slots are filled for the next week
 			if (daySlots.size >= slotsPerDay * 5) {
 				// 5 working days
 				return {
@@ -553,6 +586,7 @@ export class SchedulingService {
 		}
 	}
 
+	// Checks for open slots in the next week
 	findNextAvailableDay(date, contact) {
 		const dt = DateTime.fromJSDate(date);
 		const preferences = this.getPreferencesForContact(contact);
@@ -606,6 +640,7 @@ export class SchedulingService {
 		}
 	}
 
+	// Custom Date Scheduling - allows user to pick a specific date and time
 	async scheduleCustomDate(contact, customDate) {
 		try {
 			// Validate input
@@ -616,7 +651,7 @@ export class SchedulingService {
 			const dt = DateTime.fromJSDate(customDate).setZone(this.timeZone);
 			let scheduledDate = customDate;
 
-			// Check if we have active hours for this day
+			// Check if there are active hours for this day
 			const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 			if (typePrefs?.active_hours) {
 				const { start, end } = typePrefs.active_hours;
@@ -657,6 +692,7 @@ export class SchedulingService {
 		}
 	}
 
+	// Adjusts date based on priority level
 	adjustForPriorityFlexibility(date, priority = 'normal') {
 		const flexibility = PRIORITY_FLEXIBILITY[priority.toLowerCase()] || PRIORITY_FLEXIBILITY.normal;
 		const dt = DateTime.fromJSDate(date).setZone(this.timeZone);
@@ -666,6 +702,7 @@ export class SchedulingService {
 		};
 	}
 
+	// Adjusts date to preferred day if possible
 	adjustToPreferredDay(date, contact) {
 		const typePrefs = this.userPreferences?.relationship_types?.[contact.scheduling?.relationship_type];
 		const preferredDays = typePrefs?.preferred_days || [];
@@ -694,6 +731,7 @@ export class SchedulingService {
 		return dt.plus({ days: daysToAdd }).toJSDate();
 	}
 
+	// Slot scoring - rates time slots based on gaps and existing reminders
 	calculateTimeSlotScore(proposedTime, existingReminders) {
 		const optimalGap = this.userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
 		let score = 100;
@@ -711,6 +749,7 @@ export class SchedulingService {
 		return Math.max(0, score);
 	}
 
+	// Distance scoring - rates time slots based on closeness to existing reminders
 	calculateDistanceScore(dateTime) {
 		if (this.reminders.length === 0) return 1.0;
 
@@ -729,6 +768,7 @@ export class SchedulingService {
 		return (currentGap - minGap) / (optimalGap - minGap);
 	}
 
+	// Position scoring - rates time slots based on closeness to preferred hours
 	calculatePositionScore(dateTime, contact) {
 		const preferences = this.getPreferencesForContact(contact);
 		if (!preferences?.active_hours) return 0.5;
@@ -752,6 +792,7 @@ export class SchedulingService {
 		return 0;
 	}
 
+	// Priority scoring - rates time slots based on contact's priority level
 	calculatePriorityScore(contact) {
 		const priority = contact.scheduling?.priority?.toLowerCase() || 'normal';
 		const priorityScores = {
@@ -762,6 +803,7 @@ export class SchedulingService {
 		return priorityScores[priority] || 0.5;
 	}
 
+	// Conflict resolution - finds alternative slots when primary slot unavailable
 	async resolveConflict(date, contact, attempts = 0) {
 		if (attempts >= MAX_ATTEMPTS) {
 			throw new Error('Maximum scheduling attempts exceeded');
@@ -819,6 +861,7 @@ export class SchedulingService {
 		throw new Error('Maximum scheduling attempts exceeded');
 	}
 
+	// Find nearest preferred day - checks for preferred days within range
 	async findNearestPreferredDay(date, contact) {
 		const preferences = this.getPreferencesForContact(contact);
 		if (!preferences?.preferred_days?.length) return null;
@@ -842,6 +885,7 @@ export class SchedulingService {
 		return null;
 	}
 
+	// Tries to find a slot later in the same day
 	async shiftWithinDay(date, contact) {
 		const preferences = this.getPreferencesForContact(contact);
 		if (!preferences?.active_hours) return null;
@@ -866,6 +910,7 @@ export class SchedulingService {
 		return null;
 	}
 
+	// Tries to find a slot later in the same day using active hours
 	async expandTimeRange(date, contact) {
 		const preferences = this.getPreferencesForContact(contact);
 		if (!preferences?.active_hours) return null;
@@ -889,6 +934,7 @@ export class SchedulingService {
 		return null;
 	}
 
+	// Priority adjustment - finds other slots based on priority level
 	async adjustForPriority(date, contact) {
 		const priority = contact.scheduling?.priority?.toLowerCase() || 'normal';
 		const flexibility = PRIORITY_FLEXIBILITY[priority];
@@ -905,7 +951,7 @@ export class SchedulingService {
 		return null;
 	}
 
-	// Gap Scheduling
+	// Gap management - proper spacing between reminders and time gap validation
 	validateGapRequirements(proposedTime, userPreferences) {
 		const minGap = userPreferences?.scheduling_preferences?.minimumGapMinutes || 20; // fallback to 20
 		const optimalGap = userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
@@ -931,6 +977,7 @@ export class SchedulingService {
 		return { isValid: true };
 	}
 
+	// Finds next available time slot with gap requirements
 	findNextAvailableTimeWithGap(baseTime, userPreferences) {
 		const minGap = userPreferences?.scheduling_preferences?.minimumGapMinutes || 5;
 		const optimalGap = userPreferences?.scheduling_preferences?.optimalGapMinutes || 1440;
@@ -953,6 +1000,7 @@ export class SchedulingService {
 		throw new Error('No available time slot found within reasonable range');
 	}
 
+	// Adjusts time for gaps and contact preferences
 	adjustTimeForGaps(proposedTime, contact, userPreferences) {
 		// First try the exact proposed time
 		const validation = this.validateGapRequirements(proposedTime, userPreferences);

@@ -7,26 +7,32 @@ import { useStyles } from '../../styles/screens/dashboard';
 import { useCommonStyles } from '../../styles/common';
 import { useTheme } from '../../context/ThemeContext';
 
-const ContactCard = ({ contact, onPress }) => {
+const ContactCard = ({ contact, onPress, showProfilePhotos = true }) => {
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 
+	const renderAvatar = () => {
+		if (!showProfilePhotos) {
+			return <Icon name="person-outline" size={24} color={colors.primary} />;
+		}
+
+		return contact.photo_url ? (
+			<ExpoImage
+				source={{ uri: contact.photo_url }}
+				style={styles.avatar}
+				cachePolicy="memory-disk"
+				transition={200}
+			/>
+		) : (
+			<Icon name="person-outline" size={24} color={colors.primary} />
+		);
+	};
+
 	return (
 		<TouchableOpacity style={commonStyles.card} onPress={() => onPress(contact)}>
 			<View style={styles.cardHeader}>
-				<View style={styles.avatarContainer}>
-					{contact.photo_url ? (
-						<ExpoImage
-							source={{ uri: contact.photo_url }}
-							style={styles.avatar}
-							cachePolicy="memory-disk"
-							transition={200}
-						/>
-					) : (
-						<Icon name="person-outline" size={24} color={colors.primary} />
-					)}
-				</View>
+				<View style={styles.avatarContainer}>{renderAvatar()}</View>
 				<View style={styles.cardInfo}>
 					<Text style={styles.cardName}>{`${contact.first_name} ${contact.last_name || ''}`}</Text>
 					<Text style={styles.cardDate}>
@@ -48,6 +54,7 @@ ContactCard.propTypes = {
 		next_contact: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]).isRequired,
 	}).isRequired,
 	onPress: PropTypes.func.isRequired,
+	showProfilePhotos: PropTypes.bool,
 };
 
 export default ContactCard;

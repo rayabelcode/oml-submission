@@ -1,39 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, Text, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
-import { useCommonStyles } from '../styles/common';
-import { useStyles } from '../styles/screens/stats';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { calculateStats } from './stats/statsCalculator';
-import { useTheme } from '../context/ThemeContext';
+import { RELATIONSHIP_TYPES } from '../../constants/relationships';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useIsFocused } from '@react-navigation/native';
+import CallOptions from '../components/general/CallOptions';
 import { cacheManager } from '../utils/cache';
+import { useStyles } from '../styles/screens/stats';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Helper to convert day number to name
-const getDayName = (dayNum) => {
-	const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-	return days[dayNum] || 'Not enough data';
-};
-
-const StatBox = ({ icon, title, value, colors, styles }) => (
+const StatBox = ({ icon, title, value, subtitle, colors, styles }) => (
 	<View style={styles.statBox}>
 		<Icon name={icon} size={24} color={colors.primary} />
 		<Text style={styles.statTitle}>{title}</Text>
-		<Text style={styles.statValue}>{value || 0}</Text>
+		<Text style={styles.statValue}>{value}</Text>
+		{subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
 	</View>
 );
 
-export default function StatsScreen() {
-	const { user } = useAuth();
-	const { colors, spacing } = useTheme();
-	const commonStyles = useCommonStyles();
+export const StatsScreen = () => {
+	const { colors } = useTheme();
 	const styles = useStyles(colors);
-	const [loading, setLoading] = useState(false);
-	const [refreshing, setRefreshing] = useState(false);
+	const { user } = useAuth();
 	const [stats, setStats] = useState(null);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const scrollViewRef = useRef(null);
-	const isFocused = useIsFocused();
+	const [refreshing, setRefreshing] = useState(false);
+	const [showCallOptions, setShowCallOptions] = useState(false);
+	const [selectedContact, setSelectedContact] = useState(null);
 
 	const loadStats = async (showLoading = false) => {
 		if (!user) return;
@@ -41,13 +36,13 @@ export default function StatsScreen() {
 			setError(null);
 			if (showLoading) setLoading(true);
 
-			// Try to get cached stats first
+			// Get cached stats
 			const cachedStats = await cacheManager.getCachedStats(user.uid);
 			if (cachedStats) {
 				setStats(cachedStats);
 			}
 
-			// Then fetch fresh stats
+			// Calculate new stats
 			const calculatedStats = await calculateStats(user.uid);
 			setStats(calculatedStats);
 			await cacheManager.saveStats(user.uid, calculatedStats);
@@ -59,135 +54,138 @@ export default function StatsScreen() {
 		}
 	};
 
-	const onRefresh = async () => {
+	const onRefresh = useCallback(() => {
 		setRefreshing(true);
-		await loadStats(false);
-		setRefreshing(false);
-	};
+		loadStats(false).finally(() => setRefreshing(false));
+	}, []);
 
 	useEffect(() => {
-		loadStats(false);
+		loadStats(true);
 	}, [user]);
-
-	useEffect(() => {
-		if (!isFocused && scrollViewRef.current) {
-			scrollViewRef.current.scrollTo({ x: 0, y: 0, animated: false });
-		}
-	}, [isFocused]);
 
 	if (loading && !stats) {
 		return (
-			<View style={[commonStyles.container, commonStyles.centered]}>
+			<View style={styles.statsContainer}>
 				<ActivityIndicator size="large" color={colors.primary} />
 			</View>
 		);
 	}
 
-	if (error) {
-		return (
-			<View style={[commonStyles.container, commonStyles.centered]}>
-				<Icon name="alert-circle" size={48} color={colors.danger} />
-				<Text style={[styles.message, { color: colors.danger }]}>{error}</Text>
-				<TouchableOpacity style={styles.retryButton} onPress={() => loadStats(true)}>
-					<Text style={styles.retryText}>Retry</Text>
-				</TouchableOpacity>
-			</View>
-		);
-	}
-
 	return (
-		<ScrollView
-			ref={scrollViewRef}
-			showsVerticalScrollIndicator={false}
-			style={commonStyles.container}
-			refreshControl={
-				<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-			}
-		>
-			<View style={styles.statsContainer}>
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Overview</Text>
-					<View style={styles.statsGrid}>
-						<StatBox
-							icon="calendar"
-							title="Calls This Month"
-							value={stats?.basic.monthlyContacts}
-							colors={colors}
-							styles={styles}
-						/>
-						<StatBox
-							icon="flame"
-							title="Days in a Row"
-							value={stats?.basic.currentStreak}
-							colors={colors}
-							styles={styles}
-						/>
-						<StatBox
-							icon="people"
-							title="Total Contacts"
-							value={stats?.basic.totalActive}
-							colors={colors}
-							styles={styles}
-						/>
-						<StatBox
-							icon="analytics"
-							title="Avg Calls/Week"
-							value={Math.round(stats?.basic.averageContactsPerWeek)}
-							colors={colors}
-							styles={styles}
-						/>
+		<View style={styles.container}>
+			<ScrollView
+				style={styles.statsContainer}
+				contentContainerStyle={styles.contentContainer}
+				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+			>
+				{error ? (
+					<View style={styles.section}>
+						<Text style={styles.message}>{error}</Text>
 					</View>
-				</View>
-
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Needs Attention</Text>
-					{!stats?.detailed.needsAttention?.length ? (
-						<Text style={styles.message}>All caught up! No contacts need attention.</Text>
-					) : (
-						stats.detailed.needsAttention.map((contact, index) => (
-							<View key={index} style={styles.contactRow}>
-								<Text style={styles.contactName}>{contact.name}</Text>
-								<View style={styles.lastContactInfo}>
-									<Text style={styles.lastContactDate}>
-										{contact.lastContact
-											? new Date(contact.lastContact).toLocaleDateString()
-											: 'Never contacted'}
-									</Text>
-									{contact.lastContact && (
-										<Text style={styles.lastContactDays}>
-											{Math.floor((new Date() - new Date(contact.lastContact)) / 86400000)} days ago
-										</Text>
-									)}
-								</View>
+				) : (
+					<>
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Overview</Text>
+							<View style={styles.statsGrid}>
+								<StatBox
+									icon="people"
+									title="Total Contacts"
+									value={stats?.basic.totalActive || 0}
+									subtitle="Contacts that are 'On Your List'"
+									colors={colors}
+									styles={styles}
+								/>
+								<StatBox
+									icon="alert-circle"
+									title="Unscheduled"
+									value={stats?.basic.unscheduled || 0}
+									subtitle="Contacts with no call scheduled"
+									colors={colors}
+									styles={styles}
+								/>
 							</View>
-						))
-					)}
-				</View>
+						</View>
 
-				<View style={styles.section}>
-					<Text style={styles.sectionTitle}>Activity Insights</Text>
-					<View style={styles.insightRow}>
-						<Icon name="trending-up" size={24} color={colors.primary} />
-						<View style={styles.insightContent}>
-							<Text style={styles.insightText}>
-								{stats?.trends.ninetyDayTrend > stats?.basic.averageContactsPerWeek
-									? "You're making more calls lately!"
-									: 'Your calls have decreased'}
-							</Text>
-							<Text style={styles.trendValue}>{Math.round(stats?.trends.ninetyDayTrend)} calls/week</Text>
-							<Text style={styles.trendLabel}>
-								vs {Math.round(stats?.basic.averageContactsPerWeek)} average
-							</Text>
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Contacts by Type</Text>
+							<View style={styles.distributionGrid}>
+								{stats?.distribution?.map((item) => (
+									<View key={item.type} style={styles.distributionItem}>
+										<View style={styles.distributionHeader}>
+											<Icon
+												name={RELATIONSHIP_TYPES[item.type]?.icon || 'people'}
+												size={24}
+												color={item.color}
+											/>
+											<Text style={styles.distributionLabel}>
+												{RELATIONSHIP_TYPES[item.type]?.label || item.type}
+											</Text>
+										</View>
+										<Text style={styles.distributionCount}>{item.count}</Text>
+										<Text style={styles.distributionPercentage}>{item.percentage}%</Text>
+									</View>
+								))}
+							</View>
 						</View>
-					</View>
-					<View style={styles.insightRow}>
-						<Icon name="time" size={24} color={colors.primary} />
-						<View style={styles.insightContent}>
-							<Text style={styles.insightText}>Most active: {getDayName(stats?.detailed.mostActiveDay)}</Text>
+
+						<View style={styles.section}>
+							<Text style={styles.sectionTitle}>Suggested Calls</Text>
+							<Text style={styles.sectionDescription}>Based on your call frequency</Text>
+							{stats?.detailed?.needsAttention?.length > 0 ? (
+								stats.detailed.needsAttention.map((contact, index, array) => (
+									<View
+										key={contact.id}
+										style={[
+											styles.attentionItem,
+											index !== array.length - 1 && {
+												borderBottomWidth: 1,
+												borderBottomColor: colors.border,
+											},
+										]}
+									>
+										<View style={styles.attentionInfo}>
+											<Text style={styles.contactName}>{contact.name}</Text>
+										</View>
+										<TouchableOpacity
+											style={styles.callButton}
+											onPress={() => {
+												const formattedContact = {
+													...contact,
+													first_name: contact.name.split(' ')[0],
+													last_name: contact.name.split(' ').slice(1).join(' '),
+													phone: contact.phone,
+												};
+												setSelectedContact(formattedContact);
+												setShowCallOptions(true);
+											}}
+										>
+											<Icon name="call" size={20} color={colors.white} />
+											<Text style={styles.callButtonText}>Call</Text>
+										</TouchableOpacity>
+									</View>
+								))
+							) : (
+								<Text style={styles.emptyMessage}>
+									Great job! You're up to date with all your contacts. 🎉
+								</Text>
+							)}
 						</View>
-					</View>
-				</View>
-			</View>
-		</ScrollView>
+					</>
+				)}
+
+				{selectedContact && (
+					<CallOptions
+						show={showCallOptions}
+						contact={selectedContact}
+						onClose={() => {
+							setShowCallOptions(false);
+							setSelectedContact(null);
+						}}
+					/>
+				)}
+			</ScrollView>
+		</View>
 	);
-}
+};
+
+export default StatsScreen;

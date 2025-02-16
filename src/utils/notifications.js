@@ -117,27 +117,60 @@ class NotificationService {
 	}
 
 	async scheduleCallFollowUp(contact, time) {
+		const followUpId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
+
 		const notificationContent = {
 			title: 'Call Follow Up',
 			body: `How did your call with ${contact.first_name} go?`,
 			data: {
-				type: 'FOLLOW_UP',
+				type: REMINDER_TYPES.FOLLOW_UP,
 				contactId: contact.id,
+				followUpId: followUpId,
 				contactName: `${contact.first_name} ${contact.last_name}`,
 				callData: contact.callData,
+				startTime: contact.callData.startTime,
 			},
+			categoryIdentifier: 'FOLLOW_UP',
 		};
 
-		// For immediate notifications - time is now or in the past
-		if (time <= new Date()) {
-			return await Notifications.presentNotificationAsync(notificationContent);
-		}
+		let localNotificationId;
 
-		// For future notifications
-		return await Notifications.scheduleNotificationAsync({
-			content: notificationContent,
-			trigger: time,
-		});
+		try {
+			// Schedule or present the notification
+			if (time <= new Date()) {
+				localNotificationId = await Notifications.presentNotificationAsync(notificationContent);
+			} else {
+				localNotificationId = await Notifications.scheduleNotificationAsync({
+					content: notificationContent,
+					trigger: {
+						date: time,
+					},
+				});
+			}
+
+			// Store in AsyncStorage
+			let stored = await AsyncStorage.getItem('follow_up_notifications');
+			let notificationsList = stored ? JSON.parse(stored) : [];
+
+			notificationsList.push({
+				id: followUpId,
+				localNotificationId,
+				scheduledTime: new Date().toISOString(),
+				contactName: `${contact.first_name} ${contact.last_name}`,
+				data: notificationContent.data,
+			});
+
+			await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(notificationsList));
+
+			// Update badge count properly
+			const currentBadge = await Notifications.getBadgeCountAsync();
+			await Notifications.setBadgeCountAsync(currentBadge + 1);
+
+			return localNotificationId;
+		} catch (error) {
+			console.error('Error scheduling call follow-up:', error);
+			throw error;
+		}
 	}
 
 	async cancelNotification(localNotificationId) {
@@ -182,8 +215,7 @@ class NotificationService {
 				await this.initialize();
 			}
 			const reminders = await scheduledCallService.getActiveReminders();
-			// Only return scheduled reminders, not follow-ups
-			return reminders.filter((reminder) => reminder.type === REMINDER_TYPES.SCHEDULED);
+			return reminders;
 		} catch (error) {
 			console.error('Error getting active reminders:', error);
 			return [];

@@ -10,9 +10,10 @@ export const REMINDER_TYPES = {
 
 export const REMINDER_STATUS = {
 	PENDING: 'pending',
-	COMPLETED: 'completed',
+	SENT: 'sent',
 	SNOOZED: 'snoozed',
 	SKIPPED: 'skipped',
+	COMPLETED: 'completed',
 };
 
 // Notification trigger validation
@@ -24,6 +25,18 @@ export const NOTIFICATION_VALIDATION = {
 		if (trigger?.seconds) return new Date(Date.now() + trigger.seconds * 1000);
 		throw new Error('Invalid notification trigger format');
 	},
+};
+
+// Display names for reminder types
+export const FREQUENCY_DISPLAY_MAP = {
+	weekly: 'Weekly',
+	biweekly: 'Bi-Weekly',
+	monthly: 'Monthly',
+	bimonthly: 'Bi-Monthly',
+	quarterly: 'Quarterly',
+	yearly: 'Yearly',
+	daily: 'Daily',
+	custom: 'Custom',
 };
 
 // iOS specific configurations
@@ -94,7 +107,6 @@ export const IOS_CONFIGS = {
 export const NOTIFICATION_CONFIGS = {
 	FOLLOW_UP: {
 		DELAY: 0, // immediate for now
-		TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours until auto-cleanup
 		CLEANUP: {
 			TRIGGERS: ['notes_added', 'dismissed', 'timeout'],
 			ACTIONS: {

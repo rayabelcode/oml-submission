@@ -63,8 +63,6 @@ const DatePickerModal = ({ visible, onClose, selectedDate, onDateSelect, minimum
 					activeOpacity={1}
 					onPress={(e) => e.stopPropagation()}
 				>
-					<Text style={styles.modalHeader}>Custom Contact Date</Text>
-
 					<Calendar
 						current={formatDate(selectedDate || today)}
 						minDate={minimumDate ? formatDate(minimumDate) : undefined}

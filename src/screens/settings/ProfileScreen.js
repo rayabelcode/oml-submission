@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
-import { useTheme } from '../../context/ThemeContext'; // Import ThemeContext
+import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ImagePickerComponent from '../../components/general/ImagePicker';
 import { useAuth } from '../../context/AuthContext';
@@ -177,7 +177,7 @@ const ProfileScreen = ({ navigation }) => {
 				>
 					<View style={styles.formSection}>
 						<View style={styles.inputGroup}>
-							<Text style={styles.label}>First Name</Text>
+							<Text style={styles.inputLabel}>First Name</Text>
 							<TextInput
 								style={[
 									styles.input,
@@ -204,7 +204,7 @@ const ProfileScreen = ({ navigation }) => {
 						</View>
 
 						<View style={styles.inputGroup}>
-							<Text style={styles.label}>Last Name</Text>
+							<Text style={styles.inputLabel}>Last Name</Text>
 							<TextInput
 								ref={lastNameInputRef}
 								style={[

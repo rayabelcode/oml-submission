@@ -23,14 +23,18 @@
                                     <constraint firstAttribute="width" secondItem="ZnL-tE-sc0" secondAttribute="height" multiplier="415:896" id="bWf-wW-hyf"/>
                                 </constraints>
                             </imageView>
+                            <imageView id="EXPO-SplashScreen" userLabel="SplashScreenLogo" image="SplashScreenLogo" contentMode="scaleAspectFit" clipsSubviews="true" userInteractionEnabled="false" translatesAutoresizingMaskIntoConstraints="false">
+                                <rect key="frame" x="0" y="0" width="414" height="736"/>
+                            </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Rmq-lb-GrQ"/>
                         <constraints>
-                            <constraint firstItem="ZnL-tE-sc0" firstAttribute="centerX" secondItem="EXPO-ContainerView" secondAttribute="centerX" id="1Tw-HJ-kkZ"/>
-                            <constraint firstItem="ZnL-tE-sc0" firstAttribute="centerY" secondItem="EXPO-ContainerView" secondAttribute="centerY" id="6cb-nG-xii"/>
-                            <constraint firstItem="ZnL-tE-sc0" firstAttribute="centerX" secondItem="EXPO-ContainerView" secondAttribute="centerX" id="K39-oa-a1W"/>
-                            <constraint firstItem="ZnL-tE-sc0" firstAttribute="centerY" secondItem="EXPO-ContainerView" secondAttribute="centerY" id="Uw0-ex-YCX"/>
+                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="top" secondItem="EXPO-ContainerView" secondAttribute="top" id="83fcb9b545b870ba44c24f0feeb116490c499c52"/>
+                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="leading" secondItem="EXPO-ContainerView" secondAttribute="leading" id="61d16215e44b98e39d0a2c74fdbfaaa22601b12c"/>
+                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="trailing" secondItem="EXPO-ContainerView" secondAttribute="trailing" id="f934da460e9ab5acae3ad9987d5b676a108796c1"/>
+                            <constraint firstItem="EXPO-SplashScreen" firstAttribute="bottom" secondItem="EXPO-ContainerView" secondAttribute="bottom" id="d6a0be88096b36fb132659aa90203d39139deda9"/>
                         </constraints>
+                        <color key="backgroundColor" name="SplashScreenBackground"/>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="EXPO-PLACEHOLDER-1" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -40,5 +44,9 @@
     </scenes>
     <resources>
         <image name="SplashScreenBackground" width="414" height="896"/>
+        <image name="SplashScreenLogo" width="414" height="736"/>
+        <namedColor name="SplashScreenBackground">
+            <color alpha="1.000" blue="0.00000000000000" green="0.00000000000000" red="0.00000000000000" customColorSpace="sRGB" colorSpace="custom"/>
+        </namedColor>
     </resources>
 </document>

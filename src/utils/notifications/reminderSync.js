@@ -164,6 +164,20 @@ class ReminderSync {
 
 	async scheduleLocalNotification(reminder) {
 		try {
+			// Get notification settings
+			const cloudNotificationsEnabled = await AsyncStorage.getItem('cloudNotificationsEnabled');
+
+			// For SCHEDULED or CUSTOM_DATE types, check if notifications are disabled
+			if (
+				cloudNotificationsEnabled === 'false' &&
+				(reminder.type === 'SCHEDULED' || reminder.type === 'CUSTOM_DATE')
+			) {
+				// Cancel existing local notification (doesn't affect the Firebase, only local)
+				await this.cancelLocalNotification(reminder.id);
+				return null;
+			}
+
+			// Cancel any existing notification before scheduling new one
 			await this.cancelLocalNotification(reminder.id);
 
 			let userTimezone;
@@ -203,7 +217,6 @@ class ReminderSync {
 							originalTime: scheduledTime.toISOString(),
 						},
 					},
-					// Use Date object directly for the trigger to avoid timezone issues
 					trigger: {
 						type: 'date',
 						date: localDateTime.toJSDate(),

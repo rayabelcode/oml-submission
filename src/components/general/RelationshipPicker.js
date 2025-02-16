@@ -37,8 +37,16 @@ const RelationshipPicker = ({ value, onChange, showLabel = true, style = {} }) =
 				}}
 				tintColor={colors.primary}
 				backgroundColor={colors.background.primary}
-				fontStyle={{ color: colors.text.primary }}
-				activeFontStyle={{ color: colors.background.primary }}
+				fontStyle={{
+					color: colors.text.primary,
+					fontWeight: '700',
+					fontSize: 16,
+				}}
+				activeFontStyle={{
+					color: colors.text.primary,
+					fontWeight: '700',
+					fontSize: 16,
+				}}
 				style={{
 					height: 45,
 					marginBottom: spacing.xl,

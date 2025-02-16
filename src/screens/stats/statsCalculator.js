@@ -1,89 +1,117 @@
-import { fetchUpcomingContacts } from '../../utils/firestore';
+import { fetchUpcomingContacts, fetchContacts } from '../../utils/firestore';
+import { RELATIONSHIP_TYPES } from '../../../constants/relationships';
 
 export const calculateStats = async (userId) => {
-    try {
-			const now = new Date();
-			const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-			const allContacts = await fetchUpcomingContacts(userId);
+	try {
+		if (!userId) {
+			console.error('No userId provided to calculateStats');
+			return getDefaultStats();
+		}
 
-			// Get time ranges for calculations
-			const thirtyDaysAgo = new Date(now - 30 * 86400000);
-			const ninetyDaysAgo = new Date(now - 90 * 86400000);
+		const now = new Date();
 
-			// Calculate streak
-			let streak = 0;
-			const today = new Date().setHours(0, 0, 0, 0);
-			let checkDate = today;
-			let hasContact = true;
+		// Get all contacts
+		const allContactsData = await fetchContacts(userId);
+		const allContacts = [...allContactsData.scheduledContacts, ...allContactsData.unscheduledContacts].filter(
+			(contact) => contact !== null && !contact.archived
+		);
 
-			while (hasContact) {
-				const dateContacts = allContacts.some((contact) =>
-					contact.contact_history?.some((h) => new Date(h.date).setHours(0, 0, 0, 0) === checkDate)
-				);
-				if (dateContacts) {
-					streak++;
-					checkDate -= 86400000;
-				} else {
-					hasContact = false;
-				}
-			}
+		// Get contacts with scheduling info
+		const upcomingContacts = await fetchUpcomingContacts(userId);
 
-			// Process contact data
-			const contactStats = allContacts.map((contact) => ({
-				name: `${contact.first_name} ${contact.last_name}`,
-				thirtyDayCount: contact.contact_history?.filter((h) => new Date(h.date) >= thirtyDaysAgo).length || 0,
-				ninetyDayCount: contact.contact_history?.filter((h) => new Date(h.date) >= ninetyDaysAgo).length || 0,
-				lastContact: contact.contact_history?.[0]?.date || null,
-				relationship: contact.relationship_type,
-				preferredFrequency: contact.preferred_frequency || 30,
-			}));
+		// Calculate distribution by relationship type
+		const distribution = Object.keys(RELATIONSHIP_TYPES).map((type) => {
+			const typeCount = allContacts.filter((contact) => {
+				const directType = contact?.relationship_type;
+				const schedulingType = contact?.scheduling?.relationship_type;
+				return directType === type || schedulingType === type;
+			}).length;
 
-			// Monthly contact count
-			const monthlyCount = allContacts.reduce((count, contact) => {
-				return count + (contact.contact_history?.filter((h) => new Date(h.date) >= monthStart).length || 0);
-			}, 0);
-
-			// Calculate most active day
-			const dayStats = allContacts.reduce((acc, contact) => {
-				contact.contact_history?.forEach((h) => {
-					const day = new Date(h.date).getDay();
-					acc[day] = (acc[day] || 0) + 1;
-				});
-				return acc;
-			}, {});
-
-            return {
-                basic: {
-                    monthlyContacts: monthlyCount,
-                    currentStreak: streak,
-                    totalActive: allContacts.length,
-                    averageContactsPerWeek: Math.round(monthlyCount / 4),
-                },
-                detailed: {
-                    frequentContacts: contactStats
-                        .filter((c) => c.thirtyDayCount > 0)
-                        .sort((a, b) => b.thirtyDayCount - a.thirtyDayCount)
-                        .slice(0, 5),
-                    needsAttention: contactStats
-                        .filter((c) => {
-                            if (!c.lastContact) return true;
-                            const daysSinceLastContact = Math.floor((now - new Date(c.lastContact)) / 86400000);
-                            return daysSinceLastContact > c.preferredFrequency;
-                        })
-                        .sort((a, b) => {
-                            if (!a.lastContact) return -1;
-                            if (!b.lastContact) return 1;
-                            return new Date(b.lastContact) - new Date(a.lastContact);
-                        })
-                        .slice(0, 5),
-                    mostActiveDay: Number(Object.entries(dayStats).sort(([, a], [, b]) => b - a)[0]?.[0] || 0),
-                },
-                trends: {
-                    ninetyDayTrend: contactStats.reduce((sum, contact) => sum + contact.ninetyDayCount, 0) / 3,
-                },            
+			return {
+				type,
+				count: typeCount,
+				percentage: allContacts.length ? Math.round((typeCount / allContacts.length) * 100) : 0,
+				color: RELATIONSHIP_TYPES[type].color,
+				icon: RELATIONSHIP_TYPES[type].icon,
 			};
-		} catch (error) {
-        console.error('Error calculating stats:', error);
-        throw error;
-    }
+		});
+
+		// Calculate contacts needing attention
+		const getThresholdDays = (frequency) => {
+			switch (frequency) {
+				case 'daily':
+					return 2;
+				case 'weekly':
+					return 9;
+				case 'biweekly':
+					return 17;
+				case 'monthly':
+					return 35;
+				case 'quarterly':
+					return 95;
+				case 'yearly':
+					return 370;
+				default:
+					return 30;
+			}
+		};
+
+		const needsAttention = upcomingContacts
+			.filter((contact) => {
+				if (!contact) return false;
+				const lastContact = contact?.contact_history?.[0]?.date;
+				const frequency = contact?.scheduling?.frequency;
+
+				if (!lastContact) return true;
+
+				const daysSinceContact = Math.floor((now - new Date(lastContact)) / (1000 * 60 * 60 * 24));
+				return daysSinceContact > getThresholdDays(frequency);
+			})
+			.map((contact) => ({
+				id: contact.id,
+				name: `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim(),
+				phone: contact.phone,
+				daysOverdue: contact?.contact_history?.[0]?.date
+					? Math.floor((now - new Date(contact.contact_history[0].date)) / (1000 * 60 * 60 * 24))
+					: Infinity,
+				isOverdue: true,
+				lastContact: contact?.contact_history?.[0]?.date,
+				frequency: contact?.scheduling?.frequency,
+			}))
+			.sort((a, b) => b.daysOverdue - a.daysOverdue)
+			.slice(0, 3);
+
+		return {
+			basic: {
+				totalActive: allContacts.length, // Total non-archived contacts
+				unscheduled: allContacts.filter((contact) => !contact.next_contact).length, // Contacts without next call date
+			},
+			detailed: {
+				needsAttention,
+				mostActiveDay: 0,
+			},
+			distribution,
+			trends: {
+				ninetyDayTrend: 0,
+			},
+		};
+	} catch (error) {
+		console.error('Error calculating stats:', error);
+		return getDefaultStats();
+	}
 };
+
+const getDefaultStats = () => ({
+	basic: {
+		totalActive: 0,
+		unscheduled: 0,
+	},
+	detailed: {
+		needsAttention: [],
+		mostActiveDay: 0,
+	},
+	distribution: [],
+	trends: {
+		ninetyDayTrend: 0,
+	},
+});

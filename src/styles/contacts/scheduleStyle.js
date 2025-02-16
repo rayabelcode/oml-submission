@@ -19,6 +19,7 @@ export const useScheduleStyles = () => {
 			flexWrap: 'wrap',
 			justifyContent: 'space-between',
 			gap: spacing.sm,
+			marginBottom: spacing.xs,
 		},
 		frequencyButton: {
 			width: '31%',
@@ -35,13 +36,14 @@ export const useScheduleStyles = () => {
 			borderColor: colors.primary,
 		},
 		frequencyText: {
-			fontSize: 14,
+			fontSize: 15,
 			color: colors.text.primary,
 			textAlign: 'center',
+			fontWeight: '500',
 		},
 		frequencyTextActive: {
 			color: colors.background.primary,
-			fontWeight: '500',
+			fontWeight: '700',
 		},
 		buttonContent: {
 			flexDirection: 'row',
@@ -86,6 +88,14 @@ export const useScheduleStyles = () => {
 			borderWidth: 1,
 			borderColor: colors.lightWarning,
 		},
+		sectionSeparator: {
+			height: 3,
+			backgroundColor: colors.border,
+			marginTop: spacing.xs,
+			marginBottom: spacing.xl,
+			marginHorizontal: spacing.lg,
+			opacity: 0.5,
+		},
 		// Advanced Settings
 		advancedSettingsButton: {
 			flexDirection: 'row',
@@ -97,17 +107,18 @@ export const useScheduleStyles = () => {
 		advancedSettingsText: {
 			color: colors.text.secondary,
 			marginLeft: spacing.xs,
-			fontSize: 14,
+			fontSize: 16,
+			fontWeight: '500',
 		},
 		// Priority Section
 		priorityContainer: {
 			marginBottom: spacing.lg,
 		},
 		sectionTitle: {
-			fontSize: 16,
-			fontWeight: '600',
+			fontSize: 18,
+			fontWeight: '700',
 			color: colors.text.primary,
-			marginBottom: spacing.md,
+			marginBottom: spacing.lg,
 			textAlign: 'center',
 		},
 		priorityButtons: {
@@ -130,13 +141,14 @@ export const useScheduleStyles = () => {
 			borderColor: colors.primary,
 		},
 		priorityText: {
-			fontSize: 14,
+			fontSize: 15,
 			color: colors.text.primary,
 			textAlign: 'center',
+			fontWeight: '600',
 		},
 		priorityTextActive: {
 			color: colors.background.primary,
-			fontWeight: '500',
+			fontWeight: '800',
 		},
 		// Preferred Days
 		daysContainer: {
@@ -164,10 +176,11 @@ export const useScheduleStyles = () => {
 		dayText: {
 			fontSize: 13,
 			color: colors.text.primary,
+			fontWeight: '600',
 		},
 		dayTextActive: {
 			color: colors.background.primary,
-			fontWeight: '500',
+			fontWeight: '800',
 		},
 		// Active Hours
 		hoursContainer: {
@@ -194,7 +207,7 @@ export const useScheduleStyles = () => {
 		},
 		// Next Contact Display
 		dateSection: {
-			marginBottom: spacing.md,
+			marginBottom: spacing.xs,
 			minHeight: 105,
 			justifyContent: 'center',
 		},
@@ -207,8 +220,9 @@ export const useScheduleStyles = () => {
 		},
 		scheduledDateLabel: {
 			fontSize: 14,
+			fontWeight: '600',
 			color: colors.text.secondary,
-			marginBottom: 4,
+			marginBottom: spacing.xs,
 			textAlign: 'center',
 		},
 		scheduledDateValue: {

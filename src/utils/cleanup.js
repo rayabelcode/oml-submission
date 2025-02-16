@@ -37,21 +37,27 @@ class CleanupService {
 
 	async shouldCleanupReminder(reminder, now) {
 		try {
+			// Handle null/undefined reminders
 			if (!reminder) return true;
 
 			if (reminder.type === REMINDER_TYPES.FOLLOW_UP) {
-				if (reminder.notes_added) return true;
-
-				const reminderTime = reminder.scheduledTime?.toDate();
-				if (!reminderTime) return true;
-
-				return now - reminderTime >= NOTIFICATION_CONFIGS.FOLLOW_UP.TIMEOUT;
+				// Only clean up if notes were added or explicitly completed
+				return reminder.notes_added || reminder.status === 'completed';
 			}
 
 			if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
+				// For scheduled reminders, missing scheduledTime is an error state
+				// that should be cleaned up
+				if (!reminder.scheduledTime) return true;
+
 				if (reminder.status === 'pending') {
-					const scheduledTime = reminder.scheduledTime?.toDate();
-					if (!scheduledTime || now < scheduledTime) return false;
+					try {
+						const scheduledTime = reminder.scheduledTime?.toDate();
+						if (!scheduledTime || now < scheduledTime) return false;
+					} catch (error) {
+						// If we can't parse the scheduledTime, clean it up
+						return true;
+					}
 				}
 				return ['completed', 'skipped', 'expired'].includes(reminder.status);
 			}

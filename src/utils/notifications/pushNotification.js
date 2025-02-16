@@ -134,17 +134,18 @@ const sendPushNotification = async (userIds, notification, attempt = 0) => {
 
 export const scheduleLocalNotificationWithPush = async (userId, content, scheduledTime) => {
 	try {
-		// Make sure we have a Date object
-		const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
+		// Check cloud notifications preference
+		const cloudNotificationsEnabled = await AsyncStorage.getItem('cloudNotificationsEnabled');
 
-		// Schedule local notification using Date object directly
+		// Schedule local notification
+		const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
 		const localNotificationId = await Notifications.scheduleNotificationAsync({
 			content,
 			trigger: triggerTime,
 		});
 
-		// Only send push for future notifications
-		if (triggerTime > new Date()) {
+		// Only send push notification if cloud notifications are enabled
+		if (cloudNotificationsEnabled === 'true' && triggerTime > new Date()) {
 			await sendPushNotification([userId], {
 				title: content.title,
 				body: content.body,

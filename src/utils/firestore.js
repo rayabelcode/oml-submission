@@ -592,6 +592,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					scheduledTime: scheduledTimestamp,
 					status: REMINDER_STATUS.PENDING,
 					type: REMINDER_TYPES.SCHEDULED,
+					frequency: updateData.scheduling.frequency,
 					snoozed: false,
 					needs_attention: false,
 					completed: false,
@@ -628,6 +629,7 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					scheduledTime: customTimestamp,
 					status: REMINDER_STATUS.PENDING,
 					type: REMINDER_TYPES.CUSTOM_DATE,
+					frequency: null,
 					snoozed: false,
 					needs_attention: false,
 					completed: false,
@@ -643,10 +645,32 @@ export async function updateContactScheduling(contactId, schedulingData) {
 
 		await batch.commit();
 
+		// Get the fresh contact data after the update
 		const updatedContactDoc = await getDoc(contactRef);
-		const updatedContact = updatedContactDoc.data();
+		const updatedContact = { ...updatedContactDoc.data(), id: contactId };
 
-		return { ...updatedContact, id: contactId };
+		// Update the cache immediately after successful database update
+		try {
+			const userId = auth.currentUser.uid;
+			const cachedContacts = await cacheManager.getCachedUpcomingContacts(userId);
+			if (cachedContacts) {
+				// Replace the old contact with the updated one in the cache
+				const updatedCache = cachedContacts
+					.map((c) => (c.id === contactId ? updatedContact : c))
+					.sort((a, b) => {
+						const dateA = a.next_contact ? new Date(a.next_contact) : new Date(0);
+						const dateB = b.next_contact ? new Date(b.next_contact) : new Date(0);
+						return dateA - dateB;
+					});
+
+				await cacheManager.saveUpcomingContacts(userId, updatedCache);
+			}
+		} catch (cacheError) {
+			console.error('Error updating cache:', cacheError);
+			// Return the updated contact even if cache fails
+		}
+
+		return updatedContact;
 	} catch (error) {
 		console.error('Error in updateContactScheduling:', error);
 		throw error;
@@ -713,6 +737,7 @@ export const addReminder = async (reminderData) => {
 			scheduledTime: scheduledTimestamp,
 			status: reminderData.status || REMINDER_STATUS.PENDING,
 			type: reminderData.type || REMINDER_TYPES.SCHEDULED,
+			frequency: reminderData.frequency,
 			snoozed: false,
 			needs_attention: reminderData.type === REMINDER_TYPES.FOLLOW_UP,
 			completed: false,
@@ -940,8 +965,12 @@ export const completeFollowUp = async (reminderId, notes) => {
 
 		const batch = writeBatch(db);
 
-		// Delete the reminder when dismiss is selected
-		batch.delete(reminderRef);
+		// Update reminder to 'completed'
+		batch.update(reminderRef, {
+			status: REMINDER_STATUS.COMPLETED,
+			completion_time: serverTimestamp(),
+			updated_at: serverTimestamp(),
+		});
 
 		// If there are notes, add them to contact history
 		if (notes && reminderData.contact_id) {

@@ -1,12 +1,25 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { spacing, layout } from '../../context/ThemeContext';
 
 export const useStyles = (colors) => {
 	return StyleSheet.create({
+		safeArea: {
+			flex: 1,
+			backgroundColor: colors.background.primary,
+		},
+		container: {
+			flex: 1,
+			backgroundColor: colors.background.primary,
+			paddingTop: Platform.OS === 'ios' ? 50 : 20,
+		},
 		statsContainer: {
 			flex: 1,
-			padding: spacing.md,
 			backgroundColor: colors.background.primary,
+		},
+		contentContainer: {
+			paddingHorizontal: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.xl * 2,
 		},
 		section: {
 			marginBottom: spacing.xl,
@@ -15,11 +28,19 @@ export const useStyles = (colors) => {
 			padding: spacing.md,
 		},
 		sectionTitle: {
-			fontSize: 18,
+			fontSize: 19,
 			fontWeight: 'bold',
-			marginBottom: spacing.md,
+			marginTop: spacing.xs,
+			marginBottom: spacing.lg,
 			color: colors.text.primary,
 			textAlign: 'center',
+		},
+		subsectionTitle: {
+			fontSize: 16,
+			fontWeight: '600',
+			marginTop: spacing.md,
+			marginBottom: spacing.sm,
+			color: colors.text.secondary,
 		},
 		statsGrid: {
 			flexDirection: 'row',
@@ -36,8 +57,10 @@ export const useStyles = (colors) => {
 		},
 		statTitle: {
 			fontSize: 14,
+			fontWeight: '800',
 			marginTop: spacing.xs,
-			color: colors.text.secondary,
+			color: colors.text.primary,
+			opacity: 0.75,
 		},
 		statValue: {
 			fontSize: 24,
@@ -45,36 +68,12 @@ export const useStyles = (colors) => {
 			marginTop: spacing.xs,
 			color: colors.text.primary,
 		},
-		relationshipRow: {
-			flexDirection: 'row',
-			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		relationshipType: {
-			fontSize: 16,
-			color: colors.text.primary,
-		},
-		relationshipCount: {
-			fontSize: 16,
-			fontWeight: 'bold',
-			color: colors.primary,
-		},
-		contactRow: {
-			flexDirection: 'row',
-			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		contactName: {
-			fontSize: 16,
-			color: colors.text.primary,
-		},
-		lastContact: {
-			fontSize: 14,
+		statSubtitle: {
+			fontSize: 12,
 			color: colors.text.secondary,
+			fontWeight: '500',
+			marginTop: spacing.xs,
+			textAlign: 'center',
 		},
 		message: {
 			fontSize: 16,
@@ -82,32 +81,134 @@ export const useStyles = (colors) => {
 			textAlign: 'center',
 			paddingVertical: spacing.md,
 		},
-		frequencyRow: {
+		distributionGrid: {
+			flexDirection: 'row',
+			flexWrap: 'wrap',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.sm,
+		},
+		distributionItem: {
+			width: '48%',
+			padding: spacing.md,
+			marginBottom: spacing.md,
+			borderRadius: layout.borderRadius.sm,
+			backgroundColor: colors.background.tertiary,
+			alignItems: 'center',
+		},
+		distributionHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: spacing.xs,
+			gap: spacing.xs,
+		},
+		distributionCount: {
+			fontSize: 24,
+			fontWeight: 'bold',
+			marginTop: spacing.xs,
+			color: colors.text.primary,
+		},
+		distributionLabel: {
+			fontSize: 16,
+			fontWeight: '800',
+			color: colors.text.primary,
+			opacity: 0.75,
+		},
+		distributionPercentage: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.secondary,
+			marginTop: spacing.xs,
+			marginLeft: spacing.xs,
+		},
+		attentionItem: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
+			alignItems: 'center',
+			paddingVertical: spacing.md,
 		},
-		frequencyCount: {
+		attentionInfo: {
+			flex: 1,
+		},
+		contactName: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginLeft: spacing.md,
+		},
+		overdueDays: {
 			fontSize: 14,
-			color: colors.primary,
 			fontWeight: '500',
 		},
-		insightRow: {
+		snoozed: {
+			fontSize: 12,
+			color: colors.warning,
+			marginTop: spacing.xs,
+		},
+		callButton: {
 			flexDirection: 'row',
-			alignItems: 'flex-start',
+			alignItems: 'center',
+			backgroundColor: colors.primary,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			marginLeft: spacing.md,
+		},
+		callButtonText: {
+			color: colors.white,
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '700',
+		},
+		sectionDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginTop: -spacing.md,
+			marginBottom: spacing.md,
+		},
+		emptyMessage: {
+			textAlign: 'center',
+			color: colors.text.secondary,
+			fontSize: 16,
+			fontStyle: 'italic',
+			paddingVertical: spacing.md,
+		},		
+		insightItem: {
+			flexDirection: 'row',
+			alignItems: 'center',
 			paddingVertical: spacing.md,
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
 		},
-		insightText: {
+		insightLabel: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			marginLeft: spacing.md,
+		},
+		insightValue: {
 			fontSize: 16,
 			color: colors.text.primary,
+			fontWeight: '600',
+			marginLeft: spacing.sm,
 		},
-		insightContent: {
+		densityChart: {
+			flexDirection: 'row',
+			alignItems: 'flex-end',
+			height: 100,
+			marginTop: spacing.md,
+		},
+		densityBarContainer: {
 			flex: 1,
-			marginLeft: spacing.md,
+			alignItems: 'center',
+		},
+		densityBar: {
+			width: 4,
+			borderRadius: 2,
+		},
+		densityDate: {
+			fontSize: 10,
+			color: colors.text.secondary,
+			marginTop: spacing.xs,
 		},
 		retryButton: {
 			backgroundColor: colors.primary,
@@ -120,30 +221,6 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '500',
 			textAlign: 'center',
-		},
-		lastContactInfo: {
-			flexDirection: 'column',
-			alignItems: 'flex-end',
-		},
-		lastContactDate: {
-			fontSize: 14,
-			color: colors.text.primary,
-			marginBottom: 4,
-		},
-		lastContactDays: {
-			fontSize: 12,
-			color: colors.danger,
-		},
-		trendValue: {
-			fontSize: 22,
-			color: colors.primary,
-			fontWeight: 'bold',
-			marginTop: spacing.xs,
-		},
-		trendLabel: {
-			fontSize: 14,
-			marginTop: spacing.xs,
-			color: colors.text.secondary,
 		},
 	});
 };

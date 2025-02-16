@@ -1,6 +1,7 @@
 import { Platform, Linking, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationService } from './notifications';
+import { callNotesService } from './callNotes';
 
 const ACTIVE_CALL_KEY = '@CallHandler:activeCall';
 
@@ -32,26 +33,34 @@ class CallHandler {
 				return false;
 			}
 
+			const callStartTime = new Date();
 			const callData = {
 				contact,
-				startTime: new Date().toISOString(),
+				startTime: callStartTime.toISOString(),
 				type: callType,
 			};
 
 			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
-			await this.notificationService.initialize();
 
-			const notificationTime = new Date(Date.now() + 5000);
-			const notificationId = await this.notificationService.scheduleCallFollowUp(
-				{
-					...contact,
-					callData: {
-						type: callType,
-						startTime: callData.startTime,
+			// Check if local notifications are enabled before scheduling
+			const localNotificationsEnabled = await AsyncStorage.getItem('localNotificationsEnabled');
+
+			if (localNotificationsEnabled === 'true') {
+				// Initialize both services
+				await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
+
+				const followUpTime = new Date(Date.now() + 5000);
+				const notificationId = await this.notificationService.scheduleCallFollowUp(
+					{
+						...contact,
+						callData: {
+							type: callType,
+							startTime: callStartTime.toISOString(),
+						},
 					},
-				},
-				notificationTime // Pass Date object directly
-			);
+					followUpTime
+				);
+			}
 
 			await Linking.openURL(urlScheme);
 			return true;

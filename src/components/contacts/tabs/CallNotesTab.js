@@ -19,11 +19,13 @@ import { addContactHistory, fetchContactHistory, updateContact } from '../../../
 import { generateTopicSuggestions } from '../../../utils/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
+import KeyboardDismiss from '../../../components/general/KeyboardDismiss';
 
 const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
 	const commonStyles = useCommonStyles();
 	const styles = useStyles();
+	const inputAccessoryViewID = 'notesInput';
 
 	const [callNotes, setCallNotes] = useState('');
 	const [callDate, setCallDate] = useState(new Date());
@@ -203,21 +205,15 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 					multiline
 					value={callNotes}
 					onChangeText={setCallNotes}
-					placeholder="Add call notes, and pick a date!"
+					placeholder="Add call notes..."
 					placeholderTextColor={colors.text.secondary}
+					inputAccessoryViewID={inputAccessoryViewID}
 				/>
 				<View style={styles.callNotesControls}>
-					<TouchableOpacity
-						style={styles.aiButton}
-						onPress={() => {
-							handleGetSuggestions();
-							setShowAISuggestions(true);
-						}}
-					>
-						<Icon name="bulb-outline" size={18} color="#FFFFFF" />
-						<Text style={styles.aiButtonText}>AI Topics</Text>
-					</TouchableOpacity>
 					<TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+						{callDate.toDateString() === new Date().toDateString() && (
+							<Icon name="calendar-outline" size={18} color={colors.text.primary} />
+						)}
 						<Text style={styles.dateButtonText}>
 							{callDate.toDateString() === new Date().toDateString()
 								? 'Today'
@@ -225,66 +221,85 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
-						style={styles.submitCallButton}
+						style={styles.addNoteButton}
 						onPress={() => handleAddCallNotes(callNotes, callDate)}
 					>
-						<Text style={commonStyles.primaryButtonText}>Submit</Text>
+						<Text style={styles.addNoteButtonText}>Add Note</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
 
-			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
-				<Text style={styles.sectionTitle}>Contact History</Text>
-				{history.length > 0 ? (
-					history.map((entry, index) => (
-						<View key={index} style={styles.historyEntry}>
-							<View style={styles.historyEntryHeader}>
-								<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
-								<View style={styles.historyActions}>
-									<TouchableOpacity
-										style={styles.historyActionButton}
-										onPress={() => {
-											if (editMode === index) {
-												handleEditHistory(index);
-											} else {
-												setEditMode(index);
-												setEditingText(entry.notes);
-											}
-										}}
-									>
-										<Icon
-											name={editMode === index ? 'checkmark-outline' : 'create'}
-											size={30}
-											color={colors.primary}
-										/>
-									</TouchableOpacity>
+			<View style={styles.sectionSeparator} />
 
-									<TouchableOpacity
-										style={[styles.historyActionButton, { marginLeft: spacing.md }]}
-										onPress={() => handleDeleteHistory(index)}
-									>
-										<Icon name="trash-outline" size={24} color={colors.danger} />
-									</TouchableOpacity>
+			<TouchableOpacity activeOpacity={1} style={styles.historySection}>
+				{/* History Header with AI Button */}
+				<View style={styles.historyHeader}>
+					<Text style={styles.historyTitle}>Contact History</Text>
+					<TouchableOpacity
+						style={styles.aiRecapButton}
+						onPress={() => {
+							handleGetSuggestions();
+							setShowAISuggestions(true);
+						}}
+					>
+						<Icon name="bulb-outline" size={16} color={colors.text.secondary} />
+						<Text style={styles.aiRecapText}>AI Recap</Text>
+					</TouchableOpacity>
+				</View>
+				{/* Notes History */}
+				<View style={styles.noteHistorySection}>
+					{history.length > 0 ? (
+						history.map((entry, index) => (
+							<View key={index} style={styles.historyEntry}>
+								<View style={styles.historyEntryHeader}>
+									<Text style={styles.historyDate}>{new Date(entry.date).toLocaleDateString()}</Text>
+									<View style={styles.historyActions}>
+										<TouchableOpacity
+											style={styles.historyActionButton}
+											onPress={() => {
+												if (editMode === index) {
+													handleEditHistory(index);
+												} else {
+													setEditMode(index);
+													setEditingText(entry.notes);
+												}
+											}}
+										>
+											<Icon
+												name={editMode === index ? 'checkmark-outline' : 'create-outline'}
+												size={24}
+												color={colors.text.secondary}
+											/>
+										</TouchableOpacity>
+										<TouchableOpacity
+											style={styles.historyActionButton}
+											onPress={() => handleDeleteHistory(index)}
+										>
+											<Icon name="trash-outline" size={24} color={colors.text.secondary} />
+										</TouchableOpacity>
+									</View>
 								</View>
+								{editMode === index ? (
+									<TextInput
+										style={[styles.historyNotesInput, { color: colors.text.primary }]}
+										value={editingText}
+										onChangeText={setEditingText}
+										multiline
+									/>
+								) : (
+									<Text style={styles.historyNotes}>{entry.notes}</Text>
+								)}
 							</View>
-							{editMode === index ? (
-								<TextInput
-									style={[styles.historyNotesInput, { color: colors.text.primary }]}
-									value={editingText}
-									onChangeText={setEditingText}
-									multiline
-								/>
-							) : (
-								<Text style={styles.historyNotes}>{entry.notes}</Text>
-							)}
-						</View>
-					))
-				) : (
-					<Text style={styles.emptyHistoryText}>
-						Add your contact history above to view your call history...
-					</Text>
-				)}
+						))
+					) : (
+						<Text style={styles.emptyHistoryText}>
+							Add call notes above, and your history will appear here!
+						</Text>
+					)}
+				</View>
 			</TouchableOpacity>
+
+			{Platform.OS === 'ios' && <KeyboardDismiss inputAccessoryViewID={inputAccessoryViewID} />}
 
 			<Modal
 				visible={showAISuggestions}
@@ -293,29 +308,28 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				onRequestClose={() => setShowAISuggestions(false)}
 			>
 				<View style={styles.aiModalContainer}>
-				<View style={styles.aiModalContent}>
-    <Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
-    <ScrollView style={styles.aiModalScrollContent}>
-        {loadingSuggestions ? (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
-                    Generating suggestions...
-                </Text>
-            </View>
-        ) : (
-            suggestions.map((suggestion, index) => (
-                <View key={index} style={styles.aiSuggestionCard}>
-                    <Text style={styles.aiSuggestionText}>{suggestion}</Text>
-                </View>
-            ))
-        )}
-    </ScrollView>
-    <TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-        <Icon name="close" size={24} color={colors.text.primary} />
-    </TouchableOpacity>
-</View>
-
+					<View style={styles.aiModalContent}>
+						<Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
+						<ScrollView style={styles.aiModalScrollContent}>
+							{loadingSuggestions ? (
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size="large" color={colors.primary} />
+									<Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
+										Generating suggestions...
+									</Text>
+								</View>
+							) : (
+								suggestions.map((suggestion, index) => (
+									<View key={index} style={styles.aiSuggestionCard}>
+										<Text style={styles.aiSuggestionText}>{suggestion}</Text>
+									</View>
+								))
+							)}
+						</ScrollView>
+						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
+							<Icon name="close" size={24} color={colors.text.primary} />
+						</TouchableOpacity>
+					</View>
 				</View>
 			</Modal>
 

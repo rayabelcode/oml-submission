@@ -1,59 +1,142 @@
-```markdown
-# OnMyList Function Tests
+# OnMyList Cloud Functions Overview
 
-This document outlines how to test our Firebase Cloud Functions locally, focusing on scheduling algorithms and notification system.
+## Core Functions
 
-## Setup
+### 1. Test Notification (scheduledNotification)
+**Purpose**: Daily test notification to verify system functionality
+**Flow**:
+1. Runs daily at 10:20 AM EST
+2. Targets specific test user
+3. Sends notification with user's tokens
+4. Handles invalid tokens cleanup
+5. Confirms notification delivery
 
-1. Start the emulators:
+**Key Features**:
+- Isolated test environment
+- Token validation
+- Error logging
+- Device registration cleanup
+
+### 2. Scheduled Reminders (processReminders)
+**Purpose**: Process and send regular scheduled reminders
+**Flow**:
+1. Runs every minute
+2. Checks for reminders due within next 5 minutes
+3. Filters for:
+   - Not notified
+   - Type "SCHEDULED"
+   - Status "pending"
+   - Not snoozed
+4. Sends notifications
+5. Creates next recurring reminder
+6. Updates contact scheduling data
+
+**Key Features**:
+- Recurring schedule maintenance
+- Contact history updates
+- Token validation
+- Batch processing
+
+### 3. Custom Date Reminders (processCustomReminders)
+**Purpose**: Process one-time custom date reminders
+**Flow**:
+1. Runs every minute
+2. Checks for reminders due within next 5 minutes
+3. Filters for:
+   - Not notified
+   - Type "CUSTOM_DATE"
+   - Status "pending"
+   - Not snoozed
+4. Sends notifications
+5. Clears custom scheduling data
+
+**Key Features**:
+- One-time reminder handling
+- Contact custom date cleanup
+- Token validation
+
+### 4. Snoozed Scheduled Reminders (processSnoozedScheduledReminders)
+**Purpose**: Process snoozed scheduled reminders and maintain recurring schedule
+**Flow**:
+1. Runs every minute
+2. Checks for reminders due within next 5 minutes
+3. Filters for:
+   - Type "SCHEDULED"
+   - Status "snoozed"
+   - Snoozed flag true
+4. Sends notifications
+5. Calculates next recurring reminder
+6. Updates contact scheduling
+7. Creates new reminder for next occurrence
+
+**Key Features**:
+- Maintains recurring schedule after snooze
+- Contact scheduling updates
+- Next reminder calculation
+- Pattern maintenance
+
+### 5. Snoozed Custom Reminders (processSnoozedCustomReminders)
+**Purpose**: Process snoozed custom date reminders
+**Flow**:
+1. Runs every minute
+2. Checks for reminders due within next 5 minutes
+3. Filters for:
+   - Type "CUSTOM_DATE"
+   - Status "snoozed"
+   - Snoozed flag true
+4. Sends notifications
+5. Clears custom scheduling data
+6. Updates contact history
+
+**Key Features**:
+- Custom date cleanup
+- Contact history updates
+- One-time reminder completion
+
+## Testing Infrastructure
+
+### Local Testing Setup
 ```bash
 firebase emulators:start --only functions,pubsub,firestore
 ```
 
-## Available Tests
+### Test Categories
+1. **Scheduling Logic**
+   - Base scheduling calculations
+   - Timezone handling
+   - DST transitions
+   - Conflict resolution
+   - Pattern recognition
 
-### 1. Scheduling Algorithm Tests
-Tests the core scheduling logic, including timezone handling, edge cases, and error scenarios.
-```bash
-node testSchedulingAlgorithm.js
-```
-Followed by:
-```bash
-curl -X POST http://127.0.0.1:5001/onmylist-app/us-central1/testScheduler
-```
+2. **Notification Processing**
+   - Token validation
+   - Message delivery
+   - Error handling
+   - Status updates
 
-This verifies:
-- Basic scheduling calculations
-- Timezone handling
-- Edge cases (DST, year boundaries, etc.)
-- Error handling
+3. **Data Updates**
+   - Contact scheduling
+   - Reminder creation
+   - History maintenance
+   - Batch processing
 
-### 2. Notification System Tests
-Tests the notification creation and processing workflow.
-```bash
-node testNotificationSystem.js
-```
+4. **Error Scenarios**
+   - Invalid tokens
+   - Missing data
+   - Timezone issues
+   - Network failures
 
-This verifies:
-- Reminder creation
-- Processing triggers
-- Status updates
+### Monitoring Points
+- Function execution time
+- Notification success rate
+- Token validity
+- Scheduling accuracy
+- Error rates
+- Pattern recognition success
 
-## Common Issues
+### Potential Errors
+- Check logs to see if Firestore indexes need to be built when deploying new functions
 
-1. If emulator fails to start:
-   - Make sure no other instances are running
-   - Clear port 5001 if needed: `lsof -i :5001` then `kill -9 PID`
-
-## File Structure
-
-- `testSchedulingAlgorithm.js`: Tests core scheduling logic
-- `testNotificationSystem.js`: Tests notification workflow
-- `index.js`: Main functions file
-
-## Notes
-
-- Tests use the emulator to avoid affecting production data
-- Stop emulators when done (Ctrl+C)
-- Notification delivery testing should be done in production
-```
+### Links
+- Firebase Console: https://console.firebase.google.com/u/0/project/onmylist-app/firestore/databases/
+- Cloud Function Logs: https://console.cloud.google.com/logs/

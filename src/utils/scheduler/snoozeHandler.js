@@ -13,6 +13,7 @@ import {
 	getUserPreferences,
 	getActiveReminders,
 	getContactById,
+	getReminder,
 } from '../firestore';
 import { schedulingHistory } from './schedulingHistory';
 
@@ -126,10 +127,10 @@ export class SnoozeHandler {
 				throw new Error('Failed to initialize scheduling service');
 			}
 
-			// Always use standard timing for "later today"
 			const hour = currentTime.hour;
 			let minMinutes, maxMinutes;
 
+			// Keep existing time calculation logic
 			if (hour >= 0 && hour < 4) {
 				minMinutes = 20;
 				maxMinutes = 40;
@@ -154,13 +155,7 @@ export class SnoozeHandler {
 				id: contactId,
 			});
 
-			await updateContactScheduling(contactId, {
-				custom_next_date: availableTime,
-				last_snooze_type: 'later_today',
-				snooze_count: { increment: 1 },
-				status: REMINDER_STATUS.SNOOZED,
-			});
-
+			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -171,6 +166,13 @@ export class SnoozeHandler {
 				});
 			}
 
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'later_today',
+				snooze_count: increment(1),
+			});
+
+			// Track for analytics
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -178,6 +180,7 @@ export class SnoozeHandler {
 				'later_today'
 			);
 
+			// Schedule new local notification
 			if (availableTime) {
 				const contact = await getContactById(contactId);
 				const reminderData = {
@@ -206,10 +209,8 @@ export class SnoozeHandler {
 		try {
 			if (!this.schedulingService) await this.initialize();
 
-			// Get optimal time based on patterns
 			const optimalTime = await this.findOptimalTime(contactId, currentTime, 'tomorrow');
 
-			// If we have an optimal time, use it with tomorrow's date
 			let proposedTime;
 			if (optimalTime) {
 				proposedTime = optimalTime.plus({ days: 1 }).toJSDate();
@@ -221,13 +222,7 @@ export class SnoozeHandler {
 				id: contactId,
 			});
 
-			await updateContactScheduling(contactId, {
-				custom_next_date: availableTime,
-				last_snooze_type: 'tomorrow',
-				snooze_count: { increment: 1 },
-				status: REMINDER_STATUS.SNOOZED,
-			});
-
+			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -237,6 +232,12 @@ export class SnoozeHandler {
 					snooze_count: increment(1),
 				});
 			}
+
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'tomorrow',
+				snooze_count: increment(1),
+			});
 
 			await schedulingHistory.trackSnooze(
 				contactId,
@@ -279,7 +280,6 @@ export class SnoozeHandler {
 				throw new Error('Failed to initialize scheduling service');
 			}
 
-			// Validate contact ID
 			if (!contactId) {
 				throw new Error('Contact ID is required');
 			}
@@ -295,14 +295,7 @@ export class SnoozeHandler {
 				throw new Error('No available time slot found');
 			}
 
-			// Update contact scheduling
-			await updateContactScheduling(contactId, {
-				custom_next_date: availableTime,
-				last_snooze_type: 'next_week',
-				snooze_count: { increment: 1 },
-				status: REMINDER_STATUS.SNOOZED,
-			});
-
+			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -313,7 +306,12 @@ export class SnoozeHandler {
 				});
 			}
 
-			// Track the snooze
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SNOOZED,
+				last_snooze_type: 'next_week',
+				snooze_count: increment(1),
+			});
+
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -321,7 +319,6 @@ export class SnoozeHandler {
 				'next_week'
 			);
 
-			// Schedule the notification
 			if (availableTime) {
 				const contact = await getContactById(contactId);
 				if (!contact) {
@@ -349,12 +346,6 @@ export class SnoozeHandler {
 
 	async handleSkip(contactId, currentTime = DateTime.now(), reminderId = null) {
 		try {
-			await updateContactScheduling(contactId, {
-				custom_next_date: null,
-				last_snooze_type: 'skip',
-				status: REMINDER_STATUS.SKIPPED,
-			});
-
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					status: REMINDER_STATUS.SKIPPED,
@@ -362,6 +353,12 @@ export class SnoozeHandler {
 					snoozed: false,
 				});
 			}
+
+			await updateContactScheduling(contactId, {
+				status: REMINDER_STATUS.SKIPPED,
+				last_snooze_type: 'skip',
+				custom_next_date: null,
+			});
 
 			await schedulingHistory.trackSkip(contactId, currentTime);
 			return true;
@@ -399,6 +396,67 @@ export class SnoozeHandler {
 				return this.handleSkip(contactId, currentTime, reminderId);
 			default:
 				throw new Error('Unsupported snooze option');
+		}
+	}
+
+	// Snooze options based on reminder frequency
+	async getAvailableSnoozeOptions(reminderId) {
+		// Default options that will always be available
+		const allOptions = [
+			{
+				id: 'later_today',
+				icon: 'time-outline',
+				text: 'Later Today',
+			},
+			{
+				id: 'tomorrow',
+				icon: 'calendar-outline',
+				text: 'Tomorrow',
+			},
+			{
+				id: 'next_week',
+				icon: 'calendar-outline',
+				text: 'Next Week',
+			},
+			{
+				id: 'skip',
+				icon: 'close-circle-outline',
+				text: 'Skip This Call',
+			},
+		];
+
+		try {
+			const reminder = await getReminder(reminderId);
+			if (!reminder) {
+				console.warn('Reminder not found, returning all options');
+				return allOptions;
+			}
+
+			const frequency = reminder?.frequency;
+			const snoozeCount = reminder?.snooze_count || 0;
+
+			if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
+				return allOptions.filter((opt) => opt.id === 'skip');
+			}
+
+			switch (frequency) {
+				case 'daily':
+					return snoozeCount > 0
+						? allOptions.filter((opt) => opt.id === 'skip')
+						: allOptions.filter((opt) => opt.id === 'later_today' || opt.id === 'skip');
+
+				case 'weekly':
+					return allOptions.filter(
+						(opt) => opt.id === 'later_today' || opt.id === 'tomorrow' || opt.id === 'skip'
+					);
+
+				default:
+					return allOptions;
+			}
+		} catch (error) {
+			console.error('Error getting snooze options:', error);
+			// Return all options if there's an error, rather than an empty array
+			return allOptions;
 		}
 	}
 
