@@ -511,7 +511,9 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					pattern_adjusted: false,
 					confidence: null,
 				};
-				updateData.next_contact = updateData.scheduling.custom_next_date || null;
+				updateData.next_contact = updateData.scheduling.custom_next_date
+					? new Date(updateData.scheduling.custom_next_date).toISOString()
+					: null;
 			} else {
 				// Handle setting new frequency
 				const userPrefs = await getUserPreferences(contact.user_id);
@@ -540,9 +542,10 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					}),
 					recurring_next_date: reminderSchedule.recurring_next_date,
 				};
-
 				if (reminderSchedule.status !== 'SLOTS_FILLED') {
-					updateData.next_contact = reminderSchedule.date;
+					updateData.next_contact = reminderSchedule.date
+						? new Date(reminderSchedule.date).toISOString()
+						: null;
 				}
 			}
 		}
@@ -557,11 +560,14 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			const custom = new Date(updateData.scheduling.custom_next_date);
 			updateData.next_contact =
 				recurring < custom
-					? updateData.scheduling.recurring_next_date
-					: updateData.scheduling.custom_next_date;
+					? new Date(updateData.scheduling.recurring_next_date).toISOString()
+					: new Date(updateData.scheduling.custom_next_date).toISOString();
 		} else {
-			updateData.next_contact =
-				updateData.scheduling.custom_next_date || updateData.scheduling.recurring_next_date || null;
+			updateData.next_contact = updateData.scheduling.custom_next_date
+				? new Date(updateData.scheduling.custom_next_date).toISOString()
+				: updateData.scheduling.recurring_next_date
+				? new Date(updateData.scheduling.recurring_next_date).toISOString()
+				: null;
 		}
 
 		batch.update(contactRef, updateData);
@@ -1042,11 +1048,12 @@ export const completeScheduledReminder = async (reminderId, contactId) => {
 			});
 		});
 
-		// Update contact's last_contacted
+		// Update contact's last_contacted and clear next_contact
 		const contactRef = doc(db, 'contacts', contactId);
 		batch.update(contactRef, {
 			last_contacted: serverTimestamp(),
 			last_updated: serverTimestamp(),
+			next_contact: null,
 		});
 
 		await batch.commit();
