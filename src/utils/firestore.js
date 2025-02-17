@@ -525,7 +525,21 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					Intl.DateTimeFormat().resolvedOptions().timeZone
 				);
 
-				const lastContactDate = contact.last_contacted?.toDate() || new Date();
+				let lastContactDate;
+				if (contact.last_contacted) {
+					if (contact.last_contacted instanceof Timestamp) {
+						lastContactDate = contact.last_contacted.toDate();
+					} else if (typeof contact.last_contacted === 'string') {
+						lastContactDate = new Date(contact.last_contacted);
+					} else if (contact.last_contacted.toDate) {
+						lastContactDate = contact.last_contacted.toDate();
+					}
+				}
+				if (!lastContactDate || isNaN(lastContactDate?.getTime())) {
+					lastContactDate = new Date();
+				}
+
+				console.log('Processed last contact date:', lastContactDate);
 
 				const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 					{ ...contact, id: contactId },
@@ -1053,7 +1067,6 @@ export const completeScheduledReminder = async (reminderId, contactId) => {
 		batch.update(contactRef, {
 			last_contacted: serverTimestamp(),
 			last_updated: serverTimestamp(),
-			next_contact: null,
 		});
 
 		await batch.commit();
