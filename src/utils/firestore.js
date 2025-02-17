@@ -1041,28 +1041,15 @@ export const completeScheduledReminder = async (reminderId, contactId) => {
 
 		const completedReminder = reminderDoc.data();
 
-		// Get all older SCHEDULED reminders for this contact
-		const olderRemindersQuery = query(
-			collection(db, 'reminders'),
-			where('contact_id', '==', contactId),
-			where('type', 'in', ['SCHEDULED', 'CUSTOM_DATE']),
-			where('status', 'in', ['pending', 'sent', 'snoozed']),
-			where('scheduledTime', '<=', completedReminder.scheduledTime)
-		);
-
-		const olderReminders = await getDocs(olderRemindersQuery);
-
-		// Update all older reminders and the current one
-		olderReminders.forEach((doc) => {
-			batch.update(doc.ref, {
-				status: 'completed',
-				completion_time: serverTimestamp(),
-				updated_at: serverTimestamp(),
-				completed_by: auth.currentUser.uid,
-			});
+		// Only mark selected reminder as completed
+		batch.update(reminderRef, {
+			status: 'completed',
+			completion_time: serverTimestamp(),
+			updated_at: serverTimestamp(),
+			completed_by: auth.currentUser.uid,
 		});
 
-		// Update contact's last_contacted and clear next_contact
+		// Update the contact's timestamps
 		const contactRef = doc(db, 'contacts', contactId);
 		batch.update(contactRef, {
 			last_contacted: serverTimestamp(),
@@ -1070,7 +1057,6 @@ export const completeScheduledReminder = async (reminderId, contactId) => {
 		});
 
 		await batch.commit();
-
 		return true;
 	} catch (error) {
 		console.error('Error completing scheduled reminder:', error);
