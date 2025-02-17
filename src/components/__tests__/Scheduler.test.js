@@ -1551,3 +1551,49 @@ describe('SchedulingService', () => {
 		});
 	});
 });
+
+describe('Date Standardization', () => {
+	let schedulingService;
+
+	beforeEach(() => {
+		schedulingService = new SchedulingService(mockUserPreferences, [], 'America/New_York');
+	});
+
+	it('handles Firestore Timestamp', () => {
+		const timestamp = {
+			toDate: () => new Date('2024-01-01T12:00:00Z'),
+			_seconds: 1704110400,
+			_nanoseconds: 0,
+		};
+		const result = schedulingService.standardizeDate(timestamp);
+		expect(result).toBe('2024-01-01T12:00:00.000Z');
+	});
+
+	it('handles JavaScript Date', () => {
+		const date = new Date('2024-01-01T12:00:00Z');
+		const result = schedulingService.standardizeDate(date);
+		expect(result).toBe('2024-01-01T12:00:00.000Z');
+	});
+
+	it('handles ISO string', () => {
+		const dateString = '2024-01-01T12:00:00.000Z';
+		const result = schedulingService.standardizeDate(dateString);
+		expect(result).toBe('2024-01-01T12:00:00.000Z');
+	});
+
+	it('handles null/undefined values', () => {
+		expect(schedulingService.standardizeDate(null)).toBeNull();
+		expect(schedulingService.standardizeDate(undefined)).toBeNull();
+	});
+
+	it('handles invalid date strings', () => {
+		const invalidDate = 'not-a-date';
+		expect(schedulingService.standardizeDate(invalidDate)).toBeNull();
+	});
+
+	it('maintains timezone information', () => {
+		const date = new Date('2024-01-01T12:00:00-05:00'); // EST
+		const result = schedulingService.standardizeDate(date);
+		expect(result).toBe('2024-01-01T17:00:00.000Z'); // Should be converted to UTC
+	});
+});

@@ -539,8 +539,6 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					lastContactDate = new Date();
 				}
 
-				console.log('Processed last contact date:', lastContactDate);
-
 				const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 					{ ...contact, id: contactId },
 					lastContactDate,
