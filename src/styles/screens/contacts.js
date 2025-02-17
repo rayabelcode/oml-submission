@@ -8,7 +8,6 @@ const useStyles = () => {
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
-			paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight,
 		},
 		mainContainer: {
 			flex: 1,
@@ -1067,7 +1066,10 @@ const useStyles = () => {
 		},
 		// Contact Header
 		header: {
-			padding: spacing.md,
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.md,
+			paddingLeft: spacing.lg,
+			paddingRight: spacing.sm,
 			alignItems: 'center',
 			borderBottomWidth: 1,
 			borderBottomColor: colors.border,
