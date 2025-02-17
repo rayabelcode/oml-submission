@@ -67,25 +67,34 @@ export class SchedulingService {
     this.globalExcludedTimes = userPreferences?.global_excluded_times || [];
   }
 
-  standardizeDate(dateValue) {
-    if (!dateValue) return null;
-    
-    try {
-        if (dateValue instanceof Timestamp) {
-            return dateValue.toDate().toISOString();
-        }
-        if (dateValue instanceof Date) {
-            return dateValue.toISOString();
-        }
-        if (typeof dateValue === 'string') {
-            return new Date(dateValue).toISOString();
-        }
-        return null;
-    } catch (error) {
-        console.error('Error standardizing date:', error);
-        return null;
-    }
-}
+	standardizeDate(dateValue) {
+		if (!dateValue) return null;
+
+		try {
+			// Handle Firestore Timestamp
+			if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+				return dateValue.toDate().toISOString();
+			}
+
+			// Handle JavaScript Date
+			if (Object.prototype.toString.call(dateValue) === '[object Date]') {
+				return dateValue.toISOString();
+			}
+
+			// Handle ISO string
+			if (typeof dateValue === 'string') {
+				const date = new Date(dateValue);
+				if (!isNaN(date.getTime())) {
+					return date.toISOString();
+				}
+			}
+
+			return null;
+		} catch (error) {
+			console.error('Error standardizing date:', error);
+			return null;
+		}
+	}
 
   // Helper method for Timestamp
   createTimestamp(date) {

@@ -2,6 +2,8 @@ import { jest } from '@jest/globals';
 import { SchedulingService } from '../../utils/scheduler/scheduler';
 import { DateTime } from 'luxon';
 import { updateContactScheduling, getContactReminders } from '../../utils/firestore';
+import { Timestamp } from 'firebase/firestore';
+
 const RECURRENCE_METADATA = {
 	MIN_CONFIDENCE: 0.5,
 	MAX_AGE_DAYS: 30,
@@ -9,19 +11,16 @@ const RECURRENCE_METADATA = {
 
 jest.mock('firebase/firestore', () => ({
 	Timestamp: {
-		fromDate: (date) => ({
+		fromDate: jest.fn((date) => ({
 			toDate: () => date,
-			_seconds: Math.floor(date.getTime() / 1000),
-			_nanoseconds: (date.getTime() % 1000) * 1000000,
-		}),
-		now: () => {
-			const now = new Date();
-			return {
-				toDate: () => now,
-				_seconds: Math.floor(now.getTime() / 1000),
-				_nanoseconds: (now.getTime() % 1000) * 1000000,
-			};
-		},
+			seconds: Math.floor(date.getTime() / 1000),
+			nanoseconds: (date.getTime() % 1000) * 1000000,
+		})),
+		now: jest.fn(() => ({
+			toDate: () => new Date(),
+			seconds: Math.floor(Date.now() / 1000),
+			nanoseconds: 0,
+		})),
 	},
 	initializeFirestore: jest.fn(),
 	persistentLocalCache: jest.fn(() => ({})),
@@ -1560,11 +1559,8 @@ describe('Date Standardization', () => {
 	});
 
 	it('handles Firestore Timestamp', () => {
-		const timestamp = {
-			toDate: () => new Date('2024-01-01T12:00:00Z'),
-			_seconds: 1704110400,
-			_nanoseconds: 0,
-		};
+		const date = new Date('2024-01-01T12:00:00Z');
+		const timestamp = Timestamp.fromDate(date);
 		const result = schedulingService.standardizeDate(timestamp);
 		expect(result).toBe('2024-01-01T12:00:00.000Z');
 	});
