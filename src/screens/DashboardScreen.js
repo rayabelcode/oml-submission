@@ -12,6 +12,7 @@ import {
 	fetchUpcomingContacts,
 	subscribeToContacts,
 	completeScheduledReminder,
+	subscribeToReminders,
 	updateReminder,
 } from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
@@ -144,7 +145,7 @@ export default function DashboardScreen({ navigation, route }) {
 				loadReminders();
 
 				// Set up real-time listener
-				const unsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
+				const contactsUnsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
 					const upcomingContacts = await fetchUpcomingContacts(user.uid);
 					if (upcomingContacts) {
 						setContacts(
@@ -157,9 +158,17 @@ export default function DashboardScreen({ navigation, route }) {
 					}
 				});
 
+				// New reminders subscription
+				const remindersUnsubscribe = subscribeToReminders(user.uid, 'sent', () => {
+					loadReminders();
+				});
+
 				return () => {
-					if (unsubscribe) {
-						unsubscribe();
+					if (contactsUnsubscribe) {
+						contactsUnsubscribe();
+					}
+					if (remindersUnsubscribe) {
+						remindersUnsubscribe();
 					}
 				};
 			}
@@ -245,13 +254,17 @@ export default function DashboardScreen({ navigation, route }) {
 			// Process SCHEDULED and CUSTOM_DATE reminders
 			const groupedScheduled = groupByContact(
 				scheduledReminders.filter(
-					(r) => new Date(r.scheduledTime) <= now.toJSDate() && r.status !== 'completed'
+					(r) =>
+						(new Date(r.scheduledTime) <= now.toJSDate() || r.status === 'sent') && r.status !== 'completed'
 				)
 			);
 			const newestScheduled = getNewestPerContact(groupedScheduled);
 
 			const groupedCustom = groupByContact(
-				customReminders.filter((r) => new Date(r.scheduledTime) <= now.toJSDate() && r.status !== 'completed')
+				customReminders.filter(
+					(r) =>
+						(new Date(r.scheduledTime) <= now.toJSDate() || r.status === 'sent') && r.status !== 'completed'
+				)
 			);
 			const newestCustom = getNewestPerContact(groupedCustom);
 
