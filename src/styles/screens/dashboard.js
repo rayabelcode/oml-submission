@@ -146,6 +146,21 @@ const useStyles = () => {
 			fontSize: 14,
 			color: colors.text.secondary,
 		},
+		emptyStateContainer: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.md,
+			backgroundColor: colors.background.secondary,
+			marginHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.md,
+		},
+		congratsMessage: {
+			fontSize: 16,
+			color: colors.secondary,
+			textAlign: 'center',
+			marginTop: spacing.md,
+			fontWeight: '600',
+		},
 		cardName: {
 			fontSize: 16,
 			fontWeight: '500',

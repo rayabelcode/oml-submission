@@ -577,7 +577,7 @@ export default function DashboardScreen({ navigation, route }) {
 			<StatusBar style="auto" />
 			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
 				{/* Needs Attention Section */}
-				{remindersState.data.length > 0 && (
+				{remindersState.data.length > 0 ? (
 					<View style={styles.needsAttentionSection}>
 						<View style={styles.groupHeader}>
 							<Text style={styles.groupTitle}>Reminders</Text>
@@ -588,6 +588,16 @@ export default function DashboardScreen({ navigation, route }) {
 							loading={remindersState.loading}
 							onSnooze={handleSnooze}
 						/>
+					</View>
+				) : (
+					<View style={styles.needsAttentionSection}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Reminders</Text>
+						</View>
+						<View style={styles.emptyStateContainer}>
+							<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
+							<Text style={styles.congratsMessage}>You're all caught up!</Text>
+						</View>
 					</View>
 				)}
 
