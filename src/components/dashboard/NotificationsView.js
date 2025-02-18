@@ -96,8 +96,8 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					style={[
 						styles.notesContainer,
 						{
-							borderLeftWidth: 2,
-							borderRightWidth: 2,
+							borderLeftWidth: 4,
+							borderRightWidth: 4,
 							borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
 						},
 					]}
@@ -138,7 +138,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					styles.cardActions,
 					{
 						borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
-						borderWidth: 2,
+						borderWidth: 4,
 						borderBottomLeftRadius: layout.borderRadius.md,
 						borderBottomRightRadius: layout.borderRadius.md,
 						flexDirection: 'row',
@@ -156,7 +156,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									flex: 1,
 									justifyContent: 'center',
 									alignItems: 'center',
-									borderRightWidth: 2,
+									borderRightWidth: 3,
 									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
 								},
 							]}
@@ -196,7 +196,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									flex: 1,
 									justifyContent: 'center',
 									alignItems: 'center',
-									borderRightWidth: 2,
+									borderRightWidth: 3,
 									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
 								},
 							]}
