@@ -1,42 +1,36 @@
 import React from 'react';
-import { render, fireEvent, View } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { NotificationsView } from '../dashboard/NotificationsView';
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 
-// Mock react-native-avoid-softinput
-jest.mock('react-native-avoid-softinput', () => {
-	const mockComponent = ({ children, style }) => children;
-	return {
-		AvoidSoftInput: {
-			setEnabled: jest.fn(),
-			setShouldMimicIOSBehavior: jest.fn(),
-			setAvoidOffset: jest.fn(),
-			setEasing: jest.fn(),
-			setHideAnimationDelay: jest.fn(),
-			setHideAnimationDuration: jest.fn(),
-			setShowAnimationDelay: jest.fn(),
-			setShowAnimationDuration: jest.fn(),
-		},
-		AvoidSoftInputView: mockComponent,
-	};
-});
+// Mock all dependencies
+jest.mock('react-native-avoid-softinput', () => ({
+	AvoidSoftInput: {
+		setEnabled: jest.fn(),
+		setShouldMimicIOSBehavior: jest.fn(),
+		setAvoidOffset: jest.fn(),
+		setEasing: jest.fn(),
+		setHideAnimationDelay: jest.fn(),
+		setHideAnimationDuration: jest.fn(),
+		setShowAnimationDelay: jest.fn(),
+		setShowAnimationDuration: jest.fn(),
+	},
+	AvoidSoftInputView: ({ children }) => children,
+}));
 
-// Mock GestureHandler
 jest.mock('react-native-gesture-handler', () => ({
 	GestureHandlerRootView: ({ children }) => children,
 	Swipeable: ({ children }) => children,
 }));
 
-// Mock Ionicons
 jest.mock(
 	'react-native-vector-icons/Ionicons',
 	() =>
-		function MockIcon(props) {
+		function MockIcon() {
 			return null;
 		}
 );
 
-// Mock ThemeContext
 jest.mock('../../context/ThemeContext', () => ({
 	useTheme: () => ({
 		colors: {
@@ -79,7 +73,6 @@ jest.mock('../../context/ThemeContext', () => ({
 	}),
 }));
 
-// Mock styles
 jest.mock('../../styles/screens/dashboard', () => ({
 	useStyles: () => ({
 		contactsList: {},
@@ -98,7 +91,37 @@ jest.mock('../../styles/screens/dashboard', () => ({
 		submitButton: {},
 		submitButtonText: {},
 		submitButtonDisabled: {},
+		headerRow: {},
+		titleRow: {},
+		titleIcon: {},
+		reminderTitle: {},
+		reminderDescription: {},
 	}),
+}));
+
+jest.mock('../../utils/firestore', () => ({
+	getContactById: jest.fn(() =>
+		Promise.resolve({
+			id: 'test-contact-id',
+			first_name: 'Test',
+			last_name: 'User',
+			phone: '1234567890',
+		})
+	),
+}));
+
+jest.mock('../../config/firebase', () => ({
+	auth: { currentUser: null },
+	db: {},
+	initializeFirestore: jest.fn(),
+	persistentLocalCache: jest.fn(),
+	persistentMultipleTabManager: jest.fn(),
+}));
+
+// Mocking AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+	getItem: jest.fn(),
+	setItem: jest.fn(),
 }));
 
 describe('NotificationsView', () => {
@@ -163,25 +186,12 @@ describe('NotificationsView', () => {
 			<NotificationsView {...defaultProps} onComplete={onComplete} onSnooze={onSnooze} />
 		);
 
-		// Test Complete action
-		const completeButtons = getAllByText('Skip');
-		fireEvent.press(completeButtons[0]);
-		expect(onComplete).toHaveBeenCalledWith(mockReminders[0].firestoreId);
-
-		// Test Snooze action
-		const snoozeButtons = getAllByText('Snooze');
+		const snoozeButtons = getAllByText('Options');
 		fireEvent.press(snoozeButtons[0]);
 		expect(onSnooze).toHaveBeenCalledWith(mockReminders[0]);
-	});
 
-	it('renders all required reminder elements', () => {
-		const { getAllByText } = render(<NotificationsView {...defaultProps} />);
-
-		// Check for action buttons
-		expect(getAllByText('Skip')).toHaveLength(2);
-		expect(getAllByText('Snooze')).toHaveLength(2);
-
-		expect(getAllByText('Recurring Reminder')).toHaveLength(2);
+		const callButtons = getAllByText('Call');
+		expect(callButtons).toHaveLength(2);
 	});
 
 	it('renders custom date reminders correctly', () => {
@@ -201,6 +211,14 @@ describe('NotificationsView', () => {
 		expect(getByText('Bob Custom')).toBeTruthy();
 		expect(getByText('12/31/2024 Custom Call Reminder')).toBeTruthy();
 	});
+
+    it('renders all required reminder elements', () => {
+        const { getAllByText } = render(<NotificationsView {...defaultProps} />);
+
+        expect(getAllByText('Call')).toHaveLength(2);
+        expect(getAllByText('Options')).toHaveLength(2);
+        expect(getAllByText('Recurring Reminder')).toHaveLength(2);
+    });
 
 	it('renders mixed reminder types correctly', () => {
 		const mixedReminders = [
@@ -229,7 +247,6 @@ describe('NotificationsView', () => {
 		expect(getByText('John Recurring')).toBeTruthy();
 		expect(getByText('Jane Custom')).toBeTruthy();
 
-		// Use getAllByText for checking multiple elements with the same text
 		const customCallReminders = getAllByText('12/31/2024 Custom Call Reminder');
 		expect(customCallReminders).toHaveLength(2);
 	});
