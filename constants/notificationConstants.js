@@ -194,7 +194,7 @@ export const SNOOZE_OPTIONS = [
 	},
 	{
 		id: 'next_week',
-		icon: 'calendar-outline',
+		icon: 'calendar-clear-outline',
 		text: 'Next Week',
 		days: 7,
 	},

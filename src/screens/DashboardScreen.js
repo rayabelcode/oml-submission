@@ -712,6 +712,7 @@ export default function DashboardScreen({ navigation, route }) {
 				loading={snoozeLoading}
 				error={snoozeError}
 				options={snoozeOptions}
+				title="Snooze Options"
 			/>
 		</View>
 	);
