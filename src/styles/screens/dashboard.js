@@ -67,7 +67,7 @@ const useStyles = () => {
 			backgroundColor: colors.background.tertiary,
 		},
 		card: {
-			marginBottom: spacing.sm,
+			marginBottom: spacing.lg,
 			marginHorizontal: spacing.sm,
 			borderRadius: layout.borderRadius.md,
 			overflow: 'hidden',
@@ -94,9 +94,9 @@ const useStyles = () => {
 			backgroundColor: 'transparent',
 		},
 		actionText: {
-			marginLeft: spacing.xs,
-			fontSize: 14,
-			fontWeight: '500',
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		actionButtonSeparator: {
 			width: 1,
@@ -117,6 +117,7 @@ const useStyles = () => {
 			color: colors.text.primary,
 			marginBottom: spacing.xs,
 			textAlign: 'center',
+			fontWeight: '600',
 		},
 		cardTop: {
 			padding: spacing.md,
@@ -219,7 +220,7 @@ const useStyles = () => {
 		},
 		notificationsContainer: {
 			flex: 1,
-			padding: spacing.md,
+			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.primary,
 		},
 		headerRow: {
@@ -352,9 +353,7 @@ const useStyles = () => {
 			fontWeight: 'bold',
 		},
 		section: {
-			padding: spacing.sm,
 			paddingHorizontal: spacing.xs,
-			marginTop: 0,
 		},
 		sectionHeader: {
 			fontSize: 16,
@@ -368,12 +367,11 @@ const useStyles = () => {
 		groupHeader: {
 			flexDirection: 'row',
 			justifyContent: 'center',
-			paddingTop: spacing.xs,
-			paddingBottom: spacing.sm,
-			marginBottom: spacing.xs,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.lg,
 		},
 		groupTitle: {
-			fontSize: 19,
+			fontSize: 20,
 			fontWeight: '700',
 			color: colors.text.primary,
 			textAlign: 'center',
@@ -384,7 +382,7 @@ const useStyles = () => {
 		needsAttentionSection: {
 			backgroundColor: colors.background.primary,
 			marginBottom: spacing.sm,
-			paddingTop: spacing.lg,
+			paddingTop: spacing.md,
 		},
 		upcomingSection: {
 			flex: 1,

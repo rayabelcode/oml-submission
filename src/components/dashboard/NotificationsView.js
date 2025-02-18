@@ -163,7 +163,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							onPress={handleExpand}
 						>
 							<Icon
-								name={isExpanded ? 'create-outline' : 'add-circle-outline'}
+								name={isExpanded ? 'arrow-undo-outline' : 'add-circle-outline'}
 								size={24}
 								color={colors.primary}
 							/>
@@ -215,8 +215,8 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 								setShowCallOptions(true);
 							}}
 						>
-							<Icon name="call-outline" size={24} color={colors.primary} />
-							<Text style={[styles.actionText, { color: colors.primary }]}>Call</Text>
+							<Icon name="call-outline" size={24} color={colors.success} />
+							<Text style={[styles.actionText, { color: colors.success }]}>Call</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
