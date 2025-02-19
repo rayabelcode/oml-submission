@@ -78,18 +78,20 @@ class SchedulingHistoryService {
 		}
 	}
 
-	async trackSkip(reminderId, scheduledTime) {
+	async trackSkip(contactId, currentTime) {
 		try {
 			if (!this.patternData) await this.loadPatternData();
 
+			// Convert currentTime to Luxon DateTime if it isn't already
+			const skipTime = DateTime.isDateTime(currentTime) ? currentTime : DateTime.fromJSDate(currentTime);
+
 			const skipData = {
-				reminderId,
-				scheduledTime: scheduledTime.toISO(),
-				timestamp: new Date().toISO(),
+				contactId,
+				skipTime: skipTime.toISO(),
+				timestamp: DateTime.now().toISO(),
 			};
 
 			this.patternData.skipPatterns.push(skipData);
-			await this.updateTimeSlotScore(scheduledTime, -PATTERN_WEIGHTS.SKIP_PATTERNS);
 			await this.savePatternData();
 		} catch (error) {
 			console.error('Error tracking skip:', error);

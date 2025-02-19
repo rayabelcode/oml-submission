@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import {
+	Text,
+	View,
+	ScrollView,
+	TouchableOpacity,
+	RefreshControl,
+	Alert,
+	KeyboardAvoidingView,
+	Platform,
+} from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
 import { useTheme } from '../context/ThemeContext';
@@ -8,7 +17,13 @@ import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchUpcomingContacts, subscribeToContacts } from '../utils/firestore';
+import {
+	fetchUpcomingContacts,
+	subscribeToContacts,
+	completeScheduledReminder,
+	subscribeToReminders,
+	updateReminder,
+} from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
 import { notificationService } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
@@ -23,14 +38,85 @@ import {
 	query,
 	where,
 	getDocs,
+	orderBy,
 } from 'firebase/firestore';
 import { REMINDER_TYPES } from '../../constants/notificationConstants';
-import { db } from '../config/firebase';
+import { db, auth } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
 import { DateTime } from 'luxon';
 import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
+
+// Helper functions for reminders
+const getScheduledReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const scheduledQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'SCHEDULED'),
+		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(scheduledQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const getCustomReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const customQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'CUSTOM_DATE'),
+		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(customQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const getFollowUpReminders = async (userId) => {
+	const remindersRef = collection(db, 'reminders');
+	const followUpQuery = query(
+		remindersRef,
+		where('user_id', '==', userId),
+		where('type', '==', 'FOLLOW_UP'),
+		where('status', 'in', ['pending', 'sent']),
+		orderBy('scheduledTime', 'desc')
+	);
+	const snapshot = await getDocs(followUpQuery);
+	return snapshot.docs.map((doc) => ({
+		firestoreId: doc.id,
+		...doc.data(),
+		scheduledTime: doc.data().scheduledTime?.toDate(),
+	}));
+};
+
+const groupByContact = (reminders) => {
+	return reminders.reduce((acc, reminder) => {
+		if (!acc[reminder.contact_id]) {
+			acc[reminder.contact_id] = [];
+		}
+		acc[reminder.contact_id].push(reminder);
+		return acc;
+	}, {});
+};
+
+const getNewestPerContact = (groupedReminders) => {
+	return Object.values(groupedReminders).map((group) =>
+		group.reduce((newest, current) =>
+			new Date(current.scheduledTime) > new Date(newest.scheduledTime) ? current : newest
+		)
+	);
+};
 
 export default function DashboardScreen({ navigation, route }) {
 	const { user } = useAuth();
@@ -68,7 +154,7 @@ export default function DashboardScreen({ navigation, route }) {
 				loadReminders();
 
 				// Set up real-time listener
-				const unsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
+				const contactsUnsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
 					const upcomingContacts = await fetchUpcomingContacts(user.uid);
 					if (upcomingContacts) {
 						setContacts(
@@ -81,9 +167,17 @@ export default function DashboardScreen({ navigation, route }) {
 					}
 				});
 
+				// New reminders subscription
+				const remindersUnsubscribe = subscribeToReminders(user.uid, 'sent', () => {
+					loadReminders();
+				});
+
 				return () => {
-					if (unsubscribe) {
-						unsubscribe();
+					if (contactsUnsubscribe) {
+						contactsUnsubscribe();
+					}
+					if (remindersUnsubscribe) {
+						remindersUnsubscribe();
 					}
 				};
 			}
@@ -93,23 +187,17 @@ export default function DashboardScreen({ navigation, route }) {
 	// Function to show reminders
 	const loadReminders = async () => {
 		try {
-			// Get Firestore reminders that are either pending or sent
-			const remindersRef = collection(db, 'reminders');
-			const remindersQuery = query(
-				remindersRef,
-				where('user_id', '==', user.uid),
-				where('status', 'in', ['pending', 'sent'])
-			);
-			const remindersSnapshot = await getDocs(remindersQuery);
-			const allReminders = remindersSnapshot.docs.map((doc) => ({
-				firestoreId: doc.id,
-				...doc.data(),
-				scheduledTime: doc.data().scheduledTime?.toDate(), // Convert Firestore timestamp to Date
-			}));
+			// Get cloud reminders
+			const [scheduledReminders, customReminders, followUpReminders] = await Promise.all([
+				getScheduledReminders(user.uid),
+				getCustomReminders(user.uid),
+				getFollowUpReminders(user.uid),
+			]);
 
-			// Only get scheduled (not yet delivered) notifications
+			// Get local notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
 
+			// Process local follow-up notifications
 			const processReminder = (notification) => {
 				const content = notification.content || notification.request?.content;
 				const data = content?.data || {};
@@ -140,43 +228,20 @@ export default function DashboardScreen({ navigation, route }) {
 					contact_id: data.contactId,
 					contactName: data.contactName || 'Unknown Contact',
 					status: 'pending',
+					data: data,
 				};
 			};
 
-			// Process scheduled follow-up notifications only
-			const followUpReminders = scheduledNotifications
+			// Get follow-up reminders from local notifications
+			const followUpFromNotifications = scheduledNotifications
 				.filter((notification) => notification.content?.data?.type === 'FOLLOW_UP')
 				.map(processReminder);
 
-			const now = DateTime.now();
-
-			// Filter Firestore reminders to include sent reminders and due pending reminders
-			const filteredFirestoreReminders = allReminders.filter((reminder) => {
-				// Always include sent reminders
-				if (reminder.status === 'sent') return true;
-
-				// Skip daily reminders
-				if (reminder.frequency === 'daily') return false;
-
-				try {
-					// For pending reminders, check if they're due
-					if (reminder.status === 'pending') {
-						const reminderTime = reminder.scheduledTime;
-						if (!reminderTime) return false;
-						return reminderTime <= now.toJSDate();
-					}
-					return false;
-				} catch (error) {
-					console.warn('Error processing reminder date:', error, reminder);
-					return false;
-				}
-			});
-
-			// Load stored follow-up reminders from AsyncStorage
+			// Get stored follow-up notifications
 			const storedFollowUp = await AsyncStorage.getItem('follow_up_notifications');
 			const localFollowUpReminders = storedFollowUp ? JSON.parse(storedFollowUp) : [];
 
-			// Transform stored reminders to match our format
+			// Process stored follow-ups
 			const processedFollowUps = localFollowUpReminders.map((local) => ({
 				type: 'FOLLOW_UP',
 				firestoreId: local.id,
@@ -186,12 +251,36 @@ export default function DashboardScreen({ navigation, route }) {
 				status: 'pending',
 			}));
 
-			// Merge and sort reminders
-			const sortedReminders = [
-				...filteredFirestoreReminders,
-				...followUpReminders,
-				...processedFollowUps,
-			].sort((a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime));
+			// Process each type according to rules
+			const now = DateTime.now();
+			const sevenDaysAgo = now.minus({ days: 7 }).toJSDate();
+
+			// Combine all follow-ups from different sources
+			const allFollowUps = [...followUpReminders, ...followUpFromNotifications, ...processedFollowUps].filter(
+				(r) => new Date(r.scheduledTime) >= sevenDaysAgo
+			);
+
+			// Process SCHEDULED and CUSTOM_DATE reminders
+			const groupedScheduled = groupByContact(
+				scheduledReminders.filter(
+					(r) =>
+						(new Date(r.scheduledTime) <= now.toJSDate() || r.status === 'sent') && r.status !== 'completed'
+				)
+			);
+			const newestScheduled = getNewestPerContact(groupedScheduled);
+
+			const groupedCustom = groupByContact(
+				customReminders.filter(
+					(r) =>
+						(new Date(r.scheduledTime) <= now.toJSDate() || r.status === 'sent') && r.status !== 'completed'
+				)
+			);
+			const newestCustom = getNewestPerContact(groupedCustom);
+
+			// Combine and sort all reminders
+			const sortedReminders = [...allFollowUps, ...newestScheduled, ...newestCustom].sort(
+				(a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime)
+			);
 
 			setRemindersState({
 				data: sortedReminders,
@@ -206,6 +295,83 @@ export default function DashboardScreen({ navigation, route }) {
 				error: 'Failed to load reminders',
 			});
 			Alert.alert('Error', 'Failed to load reminders');
+		}
+	};
+
+	// Function to handle reminder completion
+	const handleReminderComplete = async (reminderId, notes = '') => {
+		try {
+			const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
+			if (!reminder) {
+				console.error('Reminder not found:', reminderId);
+				return;
+			}
+
+			// Handle Firestore updates first
+			switch (reminder.type) {
+				case 'SCHEDULED':
+				case 'CUSTOM_DATE':
+					await completeScheduledReminder(reminderId, reminder.contact_id);
+					break;
+				case 'FOLLOW_UP':
+					await handleFollowUpComplete(reminderId, notes);
+					return;
+				default:
+					console.error('Unknown reminder type:', reminder.type);
+					return;
+			}
+
+			// Handle notification cleanup for SCHEDULED and CUSTOM_DATE
+			try {
+				// Cancel any scheduled notifications
+				try {
+					await Notifications.cancelScheduledNotificationAsync(reminderId);
+				} catch (error) {
+					console.log('No scheduled notification found for:', reminderId);
+				}
+
+				// Dismiss any presented notifications
+				try {
+					const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
+					const matchingNotification = presentedNotifications.find(
+						(n) => n.request.identifier === reminderId || n.request.content.data?.firestoreId === reminderId
+					);
+					if (matchingNotification) {
+						await Notifications.dismissNotificationAsync(matchingNotification.request.identifier);
+					}
+				} catch (error) {
+					console.log('Error dismissing presented notification:', error);
+				}
+
+				// Clean up notification coordinator mapping
+				const mapping = notificationCoordinator.notificationMap.get(reminderId);
+				if (mapping) {
+					if (mapping.localId && mapping.localId !== reminderId) {
+						try {
+							await Notifications.cancelScheduledNotificationAsync(mapping.localId);
+						} catch (error) {
+							console.log('Error canceling mapped notification:', error);
+						}
+					}
+					notificationCoordinator.notificationMap.delete(reminderId);
+					await notificationCoordinator.saveNotificationMap();
+				}
+
+				// Update badge count
+				await notificationCoordinator.decrementBadge();
+			} catch (notificationError) {
+				console.error('Error cleaning up notifications:', notificationError);
+				// Don't throw here - we still want to update UI even if notification cleanup fails
+			}
+
+			// Update UI
+			setRemindersState((prev) => ({
+				...prev,
+				data: prev.data.filter((r) => r.firestoreId !== reminderId),
+			}));
+		} catch (error) {
+			console.error('Error completing reminder:', error);
+			Alert.alert('Error', 'Failed to complete reminder');
 		}
 	};
 
@@ -416,136 +582,149 @@ export default function DashboardScreen({ navigation, route }) {
 	}
 
 	return (
-		<View style={commonStyles.container}>
-			<StatusBar style="auto" />
-			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-				{/* Needs Attention Section */}
-				{remindersState.data.length > 0 && (
-					<View style={styles.needsAttentionSection}>
-						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Reminders</Text>
+		<KeyboardAvoidingView
+			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+			style={{ flex: 1, backgroundColor: colors.background.primary }}
+			keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+		>
+			<View style={[commonStyles.container, { backgroundColor: 'transparent' }]}>
+				<StatusBar style="auto" />
+				<ScrollView
+					style={{ flex: 1 }}
+					refreshControl={<RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />}
+					keyboardShouldPersistTaps="always"
+					keyboardDismissMode="none"
+				>
+					{/* Needs Attention Section */}
+					{remindersState.data.length > 0 ? (
+						<View style={styles.needsAttentionSection}>
+							<View style={styles.groupHeader}>
+								<Text style={styles.groupTitle}>Reminders</Text>
+							</View>
+							<NotificationsView
+								reminders={remindersState.data}
+								onComplete={handleReminderComplete}
+								loading={remindersState.loading}
+								onSnooze={handleSnooze}
+							/>
 						</View>
-						<NotificationsView
-							reminders={remindersState.data}
-							onComplete={handleFollowUpComplete}
-							loading={remindersState.loading}
-							onSnooze={handleSnooze}
-						/>
-					</View>
-				)}
-
-				{/* Upcoming Calls Section */}
-				<View style={styles.section}>
-					<View style={styles.groupHeader}>
-						<Text style={styles.groupTitle}>Upcoming Calls</Text>
-					</View>
-					{loading ? (
-						<Text style={commonStyles.message}>Loading contacts...</Text>
-					) : contacts.length === 0 ? (
-						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						<View style={styles.upcomingGrid}>
-							{contacts
-								.filter((contact) => contact.next_contact)
-								.map((contact) => {
-									let formattedDate = null;
-									try {
-										if (contact.next_contact) {
-											// Handle Firestore Timestamp
-											if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
-												formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
-											}
-											// Handle Firestore Timestamp toDate method
-											else if (contact.next_contact.toDate) {
-												formattedDate = contact.next_contact.toDate().toISOString();
-											}
-											// Handle string dates
-											else if (typeof contact.next_contact === 'string') {
-												formattedDate = contact.next_contact;
-											}
-											// Handle Date objects
-											else if (contact.next_contact instanceof Date) {
-												formattedDate = contact.next_contact.toISOString();
-											}
-											// Handle unexpected formats
-											else {
-												console.warn(
-													'Unhandled next_contact format:',
-													typeof contact.next_contact,
-													contact.next_contact
-												);
-											}
-										}
-									} catch (error) {
-										console.warn('Error formatting date for contact:', contact.id, error);
-										return null;
-									}
-
-									if (!formattedDate) {
-										console.warn('Could not format date for contact:', contact.id, contact.next_contact);
-										return null;
-									}
-
-									return (
-										<TouchableOpacity
-											key={contact.id}
-											style={styles.upcomingContactCard}
-											onPress={() =>
-												navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
-											}
-										>
-											<Text
-												style={styles.upcomingContactName}
-												numberOfLines={1}
-												adjustsFontSizeToFit={true}
-												minimumFontScale={0.8}
-											>
-												{contact.first_name} {contact.last_name}
-											</Text>
-
-											<View style={styles.contactRow}>
-												<View style={styles.avatarContainer}>
-													{contact.photo_url ? (
-														<ExpoImage
-															source={{ uri: contact.photo_url }}
-															style={styles.avatar}
-															cachePolicy="memory-disk"
-															transition={200}
-														/>
-													) : (
-														<Icon name="person-outline" size={24} color={colors.primary} />
-													)}
-												</View>
-												<Text style={styles.upcomingContactDate}>
-													{new Date(formattedDate)
-														.toLocaleDateString('en-US', {
-															month: 'numeric',
-															day: 'numeric',
-															year: 'numeric',
-														})
-														.replace(/\//g, '/')}
-												</Text>
-											</View>
-										</TouchableOpacity>
-									);
-								})
-								.filter(Boolean)}
+						<View style={styles.needsAttentionSection}>
+							<View style={styles.groupHeader}>
+								<Text style={styles.groupTitle}>Reminders</Text>
+							</View>
+							<View style={styles.emptyStateContainer}>
+								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
+								<Text style={styles.congratsMessage}>You're all caught up!</Text>
+							</View>
 						</View>
 					)}
-				</View>
-			</ScrollView>
 
-			<ActionModal
-				show={showSnoozeOptions}
-				onClose={() => {
-					setShowSnoozeOptions(false);
-					setSelectedReminder(null);
-					setSnoozeError(null);
-				}}
-				loading={snoozeLoading}
-				error={snoozeError}
-				options={snoozeOptions}
-			/>
-		</View>
+					{/* Upcoming Calls Section */}
+					<View style={styles.section}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Upcoming Calls</Text>
+						</View>
+						{loading ? (
+							<Text style={commonStyles.message}>Loading contacts...</Text>
+						) : contacts.length === 0 ? (
+							<Text style={commonStyles.message}>No upcoming contacts</Text>
+						) : (
+							<View style={styles.upcomingGrid}>
+								{contacts
+									.filter((contact) => contact.next_contact)
+									.map((contact) => {
+										let formattedDate = null;
+										try {
+											if (contact.next_contact) {
+												if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
+													formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
+												} else if (contact.next_contact.toDate) {
+													formattedDate = contact.next_contact.toDate().toISOString();
+												} else if (typeof contact.next_contact === 'string') {
+													formattedDate = contact.next_contact;
+												} else if (contact.next_contact instanceof Date) {
+													formattedDate = contact.next_contact.toISOString();
+												} else {
+													console.warn(
+														'Unhandled next_contact format:',
+														typeof contact.next_contact,
+														contact.next_contact
+													);
+												}
+											}
+										} catch (error) {
+											console.warn('Error formatting date for contact:', contact.id, error);
+											return null;
+										}
+
+										if (!formattedDate) {
+											console.warn('Could not format date for contact:', contact.id, contact.next_contact);
+											return null;
+										}
+
+										return (
+											<TouchableOpacity
+												key={contact.id}
+												style={styles.upcomingContactCard}
+												onPress={() =>
+													navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
+												}
+											>
+												<Text
+													style={styles.upcomingContactName}
+													numberOfLines={1}
+													adjustsFontSizeToFit={true}
+													minimumFontScale={0.8}
+												>
+													{contact.first_name} {contact.last_name}
+												</Text>
+
+												<View style={styles.contactRow}>
+													<View style={styles.avatarContainer}>
+														{contact.photo_url ? (
+															<ExpoImage
+																source={{ uri: contact.photo_url }}
+																style={styles.avatar}
+																cachePolicy="memory-disk"
+																transition={200}
+															/>
+														) : (
+															<Icon name="person-outline" size={24} color={colors.primary} />
+														)}
+													</View>
+													<Text style={styles.upcomingContactDate}>
+														{new Date(formattedDate)
+															.toLocaleDateString('en-US', {
+																month: 'numeric',
+																day: 'numeric',
+																year: 'numeric',
+															})
+															.replace(/\//g, '/')}
+													</Text>
+												</View>
+											</TouchableOpacity>
+										);
+									})
+									.filter(Boolean)}
+							</View>
+						)}
+					</View>
+				</ScrollView>
+
+				<ActionModal
+					show={showSnoozeOptions}
+					onClose={() => {
+						setShowSnoozeOptions(false);
+						setSelectedReminder(null);
+						setSnoozeError(null);
+					}}
+					loading={snoozeLoading}
+					error={snoozeError}
+					options={snoozeOptions}
+					title="Snooze Options"
+				/>
+			</View>
+		</KeyboardAvoidingView>
 	);
 }

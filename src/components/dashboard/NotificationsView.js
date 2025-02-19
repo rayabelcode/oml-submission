@@ -4,13 +4,16 @@ import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { REMINDER_TYPES, FREQUENCY_DISPLAY_MAP } from '../../../constants/notificationConstants';
-import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
+import CallOptions from '../../components/general/CallOptions';
+import { getContactById } from '../../utils/firestore';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
 	const { colors, theme, layout, spacing } = useTheme();
 	const [hasText, setHasText] = useState(false);
 	const noteInputRef = useRef('');
+	const [showCallOptions, setShowCallOptions] = useState(false);
+	const [selectedContact, setSelectedContact] = useState(null);
 
 	const date = reminder.scheduledTime ? new Date(reminder.scheduledTime) : new Date();
 	const formattedDate = date.toLocaleDateString('en-US', {
@@ -92,8 +95,8 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					style={[
 						styles.notesContainer,
 						{
-							borderLeftWidth: 2,
-							borderRightWidth: 2,
+							borderLeftWidth: 4,
+							borderRightWidth: 4,
 							borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
 						},
 					]}
@@ -134,7 +137,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					styles.cardActions,
 					{
 						borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
-						borderWidth: 2,
+						borderWidth: 4,
 						borderBottomLeftRadius: layout.borderRadius.md,
 						borderBottomRightRadius: layout.borderRadius.md,
 						flexDirection: 'row',
@@ -152,14 +155,20 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									flex: 1,
 									justifyContent: 'center',
 									alignItems: 'center',
-									borderRightWidth: 2,
+									borderRightWidth: 3,
 									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
 								},
 							]}
-							onPress={() => onComplete(reminder.firestoreId)}
+							onPress={handleExpand}
 						>
-							<Icon name="close-circle-outline" size={24} color={colors.danger} />
-							<Text style={[styles.actionText, { color: colors.danger }]}>Remove</Text>
+							<Icon
+								name={isExpanded ? 'arrow-undo-outline' : 'add-circle-outline'}
+								size={24}
+								color={colors.primary}
+							/>
+							<Text style={[styles.actionText, { color: colors.primary }]}>
+								{isExpanded ? 'Cancel' : 'Notes'}
+							</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
@@ -171,12 +180,10 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									alignItems: 'center',
 								},
 							]}
-							onPress={handleExpand}
+							onPress={() => onComplete(reminder.firestoreId)}
 						>
-							<Icon name="create-outline" size={24} color={colors.primary} />
-							<Text style={[styles.actionText, { color: colors.primary }]}>
-								{isExpanded ? 'Cancel' : 'Add Notes'}
-							</Text>
+							<Icon name="close-circle-outline" size={24} color={colors.danger} />
+							<Text style={[styles.actionText, { color: colors.danger }]}>Skip</Text>
 						</TouchableOpacity>
 					</>
 				) : (
@@ -188,14 +195,27 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									flex: 1,
 									justifyContent: 'center',
 									alignItems: 'center',
-									borderRightWidth: 2,
+									borderRightWidth: 3,
 									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
 								},
 							]}
-							onPress={() => onComplete(reminder.firestoreId)}
+							onPress={async () => {
+								const contact = await getContactById(reminder.contact_id);
+								if (!contact) {
+									console.warn('Could not fetch contact details');
+									return;
+								}
+								setSelectedContact({
+									...contact,
+									first_name: contact.first_name,
+									last_name: contact.last_name,
+									phone: contact.phone,
+								});
+								setShowCallOptions(true);
+							}}
 						>
-							<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
-							<Text style={[styles.actionText, { color: colors.success }]}>Skip</Text>
+							<Icon name="call-outline" size={24} color={colors.success} />
+							<Text style={[styles.actionText, { color: colors.success }]}>Call</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
@@ -210,65 +230,60 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							onPress={() => onSnooze(reminder)}
 						>
 							<Icon name="time-outline" size={24} color={colors.warning} />
-							<Text style={[styles.actionText, { color: colors.warning }]}>Snooze</Text>
+							<Text style={[styles.actionText, { color: colors.warning }]}>Options</Text>
 						</TouchableOpacity>
 					</>
 				)}
 			</View>
+			{selectedContact && (
+				<CallOptions
+					show={showCallOptions}
+					contact={selectedContact}
+					onClose={() => {
+						setShowCallOptions(false);
+						setSelectedContact(null);
+					}}
+					reminder={reminder}
+					onComplete={onComplete}
+				/>
+			)}
 		</View>
 	);
 });
 
 export function NotificationsView({ reminders, onComplete, loading, onRefresh, refreshing, onSnooze }) {
-    const styles = useStyles();
-    const { colors } = useTheme();
-    const [expandedId, setExpandedId] = useState(null);
+	const styles = useStyles();
+	const { colors } = useTheme();
+	const [expandedId, setExpandedId] = useState(null);
 
-    useEffect(() => {
-        AvoidSoftInput.setEnabled(true);
-        return () => {
-            AvoidSoftInput.setEnabled(false);
-        };
-    }, []);
+	const handleSubmitNotes = useCallback((reminderId, notes) => onComplete(reminderId, notes), [onComplete]);
 
-    const handleSubmitNotes = useCallback(
-        (reminderId, notes) => {
-            onComplete(reminderId, notes);
-        },
-        [onComplete]
-    );
-
-    return (
-        <View style={{ flex: 1 }}>
-            <AvoidSoftInputView style={{ flex: 1 }}>
-                <ScrollView
-                    style={styles.notificationsContainer}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-                    }
-                    keyboardShouldPersistTaps="always"
-                >
-                    {loading ? (
-                        <Text style={styles.message}>Loading notifications...</Text>
-                    ) : reminders.length === 0 ? (
-                        <Text style={styles.message}>No notifications</Text>
-                    ) : (
-                        reminders.map((reminder) => (
-                            <ReminderCard
-                                key={reminder.firestoreId}
-                                reminder={reminder}
-                                onComplete={onComplete}
-                                onSnooze={onSnooze}
-                                expandedId={expandedId}
-                                setExpandedId={setExpandedId}
-                                onSubmitNotes={handleSubmitNotes}
-                            />
-                        ))
-                    )}
-                </ScrollView>
-            </AvoidSoftInputView>
-        </View>
-    );
+	return (
+		<ScrollView
+			style={[styles.notificationsContainer, { backgroundColor: 'transparent' }]}
+			refreshControl={
+				<RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+			}
+			keyboardShouldPersistTaps="always"
+			keyboardDismissMode="none"
+		>
+			{loading ? (
+				<Text style={styles.message}>Loading notifications...</Text>
+			) : reminders.length === 0 ? (
+				<Text style={styles.message}>No notifications</Text>
+			) : (
+				reminders.map((reminder) => (
+					<ReminderCard
+						key={reminder.firestoreId}
+						reminder={reminder}
+						onComplete={onComplete}
+						onSnooze={onSnooze}
+						expandedId={expandedId}
+						setExpandedId={setExpandedId}
+						onSubmitNotes={handleSubmitNotes}
+					/>
+				))
+			)}
+		</ScrollView>
+	);
 }
-
-

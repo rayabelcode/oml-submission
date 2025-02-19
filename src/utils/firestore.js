@@ -26,12 +26,30 @@ import { REMINDER_TYPES, REMINDER_STATUS } from '../../constants/notificationCon
 import { SchedulingService } from './scheduler/scheduler';
 
 // Store active subscriptions
-const activeSubscriptions = new Map();
+let activeSubscriptions = new Map();
 
 // Helper function to clean up subscriptions
 export const cleanupSubscriptions = () => {
-	activeSubscriptions.forEach((unsubscribe) => unsubscribe());
-	activeSubscriptions.clear();
+	try {
+		if (!activeSubscriptions) {
+			activeSubscriptions = new Map();
+			return;
+		}
+
+		activeSubscriptions.forEach((unsubscribe, key) => {
+			if (typeof unsubscribe === 'function') {
+				try {
+					unsubscribe();
+				} catch (error) {
+					console.log(`Error unsubscribing from ${key}:`, error);
+				}
+			}
+		});
+		activeSubscriptions.clear();
+	} catch (error) {
+		console.error('Error in cleanupSubscriptions:', error);
+		activeSubscriptions = new Map();
+	}
 };
 
 // User functions
@@ -511,7 +529,9 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					pattern_adjusted: false,
 					confidence: null,
 				};
-				updateData.next_contact = updateData.scheduling.custom_next_date || null;
+				updateData.next_contact = updateData.scheduling.custom_next_date
+					? new Date(updateData.scheduling.custom_next_date).toISOString()
+					: null;
 			} else {
 				// Handle setting new frequency
 				const userPrefs = await getUserPreferences(contact.user_id);
@@ -523,7 +543,19 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					Intl.DateTimeFormat().resolvedOptions().timeZone
 				);
 
-				const lastContactDate = contact.last_contacted?.toDate() || new Date();
+				let lastContactDate;
+				if (contact.last_contacted) {
+					if (contact.last_contacted instanceof Timestamp) {
+						lastContactDate = contact.last_contacted.toDate();
+					} else if (typeof contact.last_contacted === 'string') {
+						lastContactDate = new Date(contact.last_contacted);
+					} else if (contact.last_contacted.toDate) {
+						lastContactDate = contact.last_contacted.toDate();
+					}
+				}
+				if (!lastContactDate || isNaN(lastContactDate?.getTime())) {
+					lastContactDate = new Date();
+				}
 
 				const reminderSchedule = await schedulingService.scheduleRecurringReminder(
 					{ ...contact, id: contactId },
@@ -540,9 +572,10 @@ export async function updateContactScheduling(contactId, schedulingData) {
 					}),
 					recurring_next_date: reminderSchedule.recurring_next_date,
 				};
-
 				if (reminderSchedule.status !== 'SLOTS_FILLED') {
-					updateData.next_contact = reminderSchedule.date;
+					updateData.next_contact = reminderSchedule.date
+						? new Date(reminderSchedule.date).toISOString()
+						: null;
 				}
 			}
 		}
@@ -557,11 +590,14 @@ export async function updateContactScheduling(contactId, schedulingData) {
 			const custom = new Date(updateData.scheduling.custom_next_date);
 			updateData.next_contact =
 				recurring < custom
-					? updateData.scheduling.recurring_next_date
-					: updateData.scheduling.custom_next_date;
+					? new Date(updateData.scheduling.recurring_next_date).toISOString()
+					: new Date(updateData.scheduling.custom_next_date).toISOString();
 		} else {
-			updateData.next_contact =
-				updateData.scheduling.custom_next_date || updateData.scheduling.recurring_next_date || null;
+			updateData.next_contact = updateData.scheduling.custom_next_date
+				? new Date(updateData.scheduling.custom_next_date).toISOString()
+				: updateData.scheduling.recurring_next_date
+				? new Date(updateData.scheduling.recurring_next_date).toISOString()
+				: null;
 		}
 
 		batch.update(contactRef, updateData);
@@ -946,33 +982,34 @@ export const getFollowUpReminders = async (userId) => {
 	}
 };
 
-export const completeFollowUp = async (reminderId, notes) => {
+// Complete Follow-up
+export const completeFollowUp = async (reminderId, notes = '') => {
 	try {
 		const reminderRef = doc(db, 'reminders', reminderId);
 		const reminderDoc = await getDoc(reminderRef);
 
 		if (!reminderDoc.exists()) {
-			console.error('[Firestore] Reminder not found:', reminderId);
 			throw new Error('Reminder not found');
 		}
 
 		const reminderData = reminderDoc.data();
 
 		if (reminderData.user_id !== auth.currentUser?.uid) {
-			console.error('[Firestore] Permission denied for user:', auth.currentUser?.uid);
-			throw new Error('User does not have permission to modify this reminder');
+			throw new Error('Permission denied');
 		}
 
 		const batch = writeBatch(db);
 
-		// Update reminder to 'completed'
+		// Update reminder status
 		batch.update(reminderRef, {
-			status: REMINDER_STATUS.COMPLETED,
+			status: 'completed',
 			completion_time: serverTimestamp(),
 			updated_at: serverTimestamp(),
+			completed_by: auth.currentUser.uid,
+			notes: notes || null,
 		});
 
-		// If there are notes, add them to contact history
+		// Add to contact history if notes provided
 		if (notes && reminderData.contact_id) {
 			const contactRef = doc(db, 'contacts', reminderData.contact_id);
 			const contactDoc = await getDoc(contactRef);
@@ -991,14 +1028,54 @@ export const completeFollowUp = async (reminderId, notes) => {
 				batch.update(contactRef, {
 					contact_history: [newHistoryEntry, ...history],
 					last_updated: serverTimestamp(),
+					last_contacted: serverTimestamp(),
 				});
 			}
 		}
 
 		await batch.commit();
+
 		return true;
 	} catch (error) {
-		console.error('[Firestore] Error completing follow-up:', error);
+		console.error('Error completing follow-up:', error);
+		throw error;
+	}
+};
+
+// Complete Scheduled Reminder
+export const completeScheduledReminder = async (reminderId, contactId) => {
+	try {
+		const batch = writeBatch(db);
+
+		// Get the reminder being completed
+		const reminderRef = doc(db, 'reminders', reminderId);
+		const reminderDoc = await getDoc(reminderRef);
+
+		if (!reminderDoc.exists()) {
+			throw new Error('Reminder not found');
+		}
+
+		const completedReminder = reminderDoc.data();
+
+		// Only mark selected reminder as completed
+		batch.update(reminderRef, {
+			status: 'completed',
+			completion_time: serverTimestamp(),
+			updated_at: serverTimestamp(),
+			completed_by: auth.currentUser.uid,
+		});
+
+		// Update the contact's timestamps
+		const contactRef = doc(db, 'contacts', contactId);
+		batch.update(contactRef, {
+			last_contacted: serverTimestamp(),
+			last_updated: serverTimestamp(),
+		});
+
+		await batch.commit();
+		return true;
+	} catch (error) {
+		console.error('Error completing scheduled reminder:', error);
 		throw error;
 	}
 };

@@ -415,7 +415,7 @@ export class SnoozeHandler {
 			},
 			{
 				id: 'next_week',
-				icon: 'calendar-outline',
+				icon: 'calendar-clear-outline',
 				text: 'Next Week',
 			},
 			{

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet, Modal, Text, ActivityIndicator } fr
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const ActionModal = ({ show, onClose, options, loading, error }) => {
+const ActionModal = ({ show, onClose, options, loading, error, title }) => {
     const { colors, spacing, layout } = useTheme();
 
     const styles = StyleSheet.create({
@@ -14,32 +14,52 @@ const ActionModal = ({ show, onClose, options, loading, error }) => {
             alignItems: 'center',
         },
         modalContent: {
-            width: '80%',
+            width: '85%',
+            maxWidth: 340,
             borderRadius: layout.borderRadius.lg,
-            padding: spacing.md,
             backgroundColor: colors.background.secondary,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
+            overflow: 'hidden',
+        },
+        modalHeader: {
+            padding: spacing.lg,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            alignItems: 'center',
+        },
+        headerText: {
+            fontSize: 19,
+            fontWeight: '600',
+            color: colors.text.primary,
+            opacity: 0.75,
         },
         option: {
-            padding: spacing.md,
+            paddingVertical: spacing.xl,
+            paddingHorizontal: spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+        },
+        optionContent: {
+            width: '70%',
+            flexDirection: 'row',
             alignItems: 'center',
         },
         iconContainer: {
-            marginBottom: spacing.sm,
+            width: 40,
+            alignItems: 'center',
+            marginRight: spacing.md,
         },
         optionText: {
-            fontSize: 16,
-            fontWeight: '500',
-            color: colors.text.primary,
-        },
-        divider: {
-            height: 1,
-            width: '100%',
-            backgroundColor: colors.border,
+            fontSize: 20,
+            fontWeight: '600',
+            flex: 1,
         },
         loadingContainer: {
             padding: spacing.xl,
@@ -79,6 +99,11 @@ const ActionModal = ({ show, onClose, options, loading, error }) => {
         <Modal visible={show} transparent={true} animationType="fade" onRequestClose={onClose}>
             <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={loading ? null : onClose}>
                 <View style={styles.modalContent}>
+                    {title && (
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.headerText}>{title}</Text>
+                        </View>
+                    )}
                     {loading ? (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color={colors.primary} />
@@ -94,30 +119,42 @@ const ActionModal = ({ show, onClose, options, loading, error }) => {
                         </View>
                     ) : (
                         options.map((option, index) => (
-                            <React.Fragment key={option.id}>
-                                <TouchableOpacity
-                                    style={styles.option}
-                                    onPress={option.onPress}
-                                    disabled={option.disabled}
-                                >
+                            <TouchableOpacity
+                                key={option.id}
+                                style={[styles.option, index === options.length - 1 && { borderBottomWidth: 0 }]}
+                                onPress={option.onPress}
+                                disabled={option.disabled}
+                            >
+                                <View style={styles.optionContent}>
                                     <View style={styles.iconContainer}>
                                         <Icon
                                             name={option.icon}
-                                            size={40}
-                                            color={option.disabled ? colors.text.disabled : colors.primary}
+                                            size={32}
+                                            color={
+                                                option.disabled
+                                                    ? colors.text.disabled
+                                                    : option.id === 'skip'
+                                                    ? colors.danger
+                                                    : colors.primary
+                                            }
                                         />
                                     </View>
                                     <Text
                                         style={[
                                             styles.optionText,
-                                            { color: option.disabled ? colors.text.disabled : colors.text.primary },
+                                            {
+                                                color: option.disabled
+                                                    ? colors.text.disabled
+                                                    : option.id === 'skip'
+                                                    ? colors.danger
+                                                    : colors.text.primary,
+                                            },
                                         ]}
                                     >
                                         {option.text}
                                     </Text>
-                                </TouchableOpacity>
-                                {index < options.length - 1 && <View style={styles.divider} />}
-                            </React.Fragment>
+                                </View>
+                            </TouchableOpacity>
                         ))
                     )}
                 </View>

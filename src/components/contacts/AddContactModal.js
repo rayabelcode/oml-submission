@@ -6,18 +6,18 @@ const AddContactModal = ({ show, onClose, onImport, onNew }) => {
 		{
 			id: 'import',
 			icon: 'people-outline',
-			text: 'Import from Contacts',
+			text: 'Import Existing',
 			onPress: onImport,
 		},
 		{
 			id: 'new',
-			icon: 'add-outline',
-			text: 'Create New Contact',
+			icon: 'add-circle-outline',
+			text: 'Create New',
 			onPress: onNew,
 		},
 	];
 
-	return <ActionModal show={show} onClose={onClose} options={options} />;
+	return <ActionModal show={show} onClose={onClose} options={options} title="Add Contact" />;
 };
 
 export default AddContactModal;

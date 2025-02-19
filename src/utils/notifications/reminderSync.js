@@ -38,10 +38,7 @@ class ReminderSync {
 				});
 			}
 
-			if (!auth.currentUser) {
-				console.error('No authenticated user');
-				return;
-			}
+			if (!auth.currentUser) return;
 
 			// Get all current local notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();

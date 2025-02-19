@@ -67,7 +67,7 @@ const useStyles = () => {
 			backgroundColor: colors.background.tertiary,
 		},
 		card: {
-			marginBottom: spacing.sm,
+			marginBottom: spacing.lg,
 			marginHorizontal: spacing.sm,
 			borderRadius: layout.borderRadius.md,
 			overflow: 'hidden',
@@ -77,8 +77,8 @@ const useStyles = () => {
 			padding: spacing.md,
 			alignItems: 'center',
 			backgroundColor: 'transparent',
-			borderLeftWidth: 2,
-			borderRightWidth: 2,
+			borderLeftWidth: 4,
+			borderRightWidth: 4,
 		},
 		cardActions: {
 			flexDirection: 'row',
@@ -94,9 +94,9 @@ const useStyles = () => {
 			backgroundColor: 'transparent',
 		},
 		actionText: {
-			marginLeft: spacing.xs,
-			fontSize: 14,
-			fontWeight: '500',
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		actionButtonSeparator: {
 			width: 1,
@@ -117,6 +117,7 @@ const useStyles = () => {
 			color: colors.text.primary,
 			marginBottom: spacing.xs,
 			textAlign: 'center',
+			fontWeight: '600',
 		},
 		cardTop: {
 			padding: spacing.md,
@@ -145,6 +146,21 @@ const useStyles = () => {
 		reminderDescription: {
 			fontSize: 14,
 			color: colors.text.secondary,
+		},
+		emptyStateContainer: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.md,
+			backgroundColor: colors.background.secondary,
+			marginHorizontal: spacing.md,
+			borderRadius: layout.borderRadius.md,
+		},
+		congratsMessage: {
+			fontSize: 16,
+			color: colors.secondary,
+			textAlign: 'center',
+			marginTop: spacing.md,
+			fontWeight: '600',
 		},
 		cardName: {
 			fontSize: 16,
@@ -204,7 +220,7 @@ const useStyles = () => {
 		},
 		notificationsContainer: {
 			flex: 1,
-			padding: spacing.md,
+			paddingHorizontal: spacing.md,
 			backgroundColor: colors.background.primary,
 		},
 		headerRow: {
@@ -248,7 +264,7 @@ const useStyles = () => {
 			backgroundColor: colors.background.secondary,
 			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
-			marginBottom: spacing.sm,
+			marginBottom: spacing.md,
 			marginHorizontal: spacing.xs,
 			width: '47%',
 			alignItems: 'center',
@@ -337,9 +353,8 @@ const useStyles = () => {
 			fontWeight: 'bold',
 		},
 		section: {
-			padding: spacing.sm,
 			paddingHorizontal: spacing.xs,
-			marginTop: 0,
+			marginBottom: spacing.xl,
 		},
 		sectionHeader: {
 			fontSize: 16,
@@ -353,12 +368,11 @@ const useStyles = () => {
 		groupHeader: {
 			flexDirection: 'row',
 			justifyContent: 'center',
-			paddingTop: spacing.xs,
-			paddingBottom: spacing.sm,
-			marginBottom: spacing.xs,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.lg,
 		},
 		groupTitle: {
-			fontSize: 19,
+			fontSize: 20,
 			fontWeight: '700',
 			color: colors.text.primary,
 			textAlign: 'center',
@@ -369,7 +383,7 @@ const useStyles = () => {
 		needsAttentionSection: {
 			backgroundColor: colors.background.primary,
 			marginBottom: spacing.sm,
-			paddingTop: spacing.lg,
+			paddingTop: spacing.md,
 		},
 		upcomingSection: {
 			flex: 1,

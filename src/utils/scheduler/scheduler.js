@@ -74,15 +74,24 @@ export class SchedulingService {
 		if (!dateValue) return null;
 
 		try {
-			if (dateValue instanceof Timestamp) {
+			// Handle Firestore Timestamp
+			if (dateValue.toDate && typeof dateValue.toDate === 'function') {
 				return dateValue.toDate().toISOString();
 			}
-			if (dateValue instanceof Date) {
+
+			// Handle JavaScript Date
+			if (Object.prototype.toString.call(dateValue) === '[object Date]') {
 				return dateValue.toISOString();
 			}
+
+			// Handle ISO string
 			if (typeof dateValue === 'string') {
-				return new Date(dateValue).toISOString();
+				const date = new Date(dateValue);
+				if (!isNaN(date.getTime())) {
+					return date.toISOString();
+				}
 			}
+
 			return null;
 		} catch (error) {
 			console.error('Error standardizing date:', error);
