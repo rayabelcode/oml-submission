@@ -264,7 +264,7 @@ const useStyles = () => {
 			backgroundColor: colors.background.secondary,
 			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
-			marginBottom: spacing.sm,
+			marginBottom: spacing.md,
 			marginHorizontal: spacing.xs,
 			width: '47%',
 			alignItems: 'center',
@@ -354,6 +354,7 @@ const useStyles = () => {
 		},
 		section: {
 			paddingHorizontal: spacing.xs,
+			marginBottom: spacing.xl,
 		},
 		sectionHeader: {
 			fontSize: 16,

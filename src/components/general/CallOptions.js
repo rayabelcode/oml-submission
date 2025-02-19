@@ -3,13 +3,28 @@ import Constants from 'expo-constants';
 import ActionModal from './ActionModal';
 import { callHandler } from '../../utils/callHandler';
 
-const CallOptions = ({ show, contact, onClose }) => {
+const CallOptions = ({ show, contact, onClose, reminder, onComplete }) => {
 	const handleCall = async (callType) => {
 		if (Constants.appOwnership === 'expo') {
 			onClose();
 			return;
 		}
-		await callHandler.handleCallAction(contact, callType, onClose);
+
+		try {
+			// Initiate a call
+			const success = await callHandler.initiateCall(contact, callType);
+
+			// If call was successful and there is NotificationsView reminder to complete
+			if (success && reminder && (reminder.type === 'SCHEDULED' || reminder.type === 'CUSTOM_DATE')) {
+				await onComplete(reminder.firestoreId);
+			}
+
+			// Close the modal
+			onClose();
+		} catch (error) {
+			console.error('Error handling call:', error);
+			onClose();
+		}
 	};
 
 	const options = [
