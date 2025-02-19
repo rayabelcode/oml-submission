@@ -118,6 +118,9 @@ const PrivacyScreen = ({ navigation }) => {
 						style: 'destructive',
 						onPress: async () => {
 							try {
+								// First cleanup subscriptions
+								cleanupSubscriptions();
+
 								const appleCredential = await AppleAuthentication.signInAsync({
 									requestedScopes: [
 										AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -133,10 +136,9 @@ const PrivacyScreen = ({ navigation }) => {
 
 								await reauthenticateWithCredential(user, credential);
 
-								// Continue with deletion
+								// Then delete data and account
 								await deleteUserAccount(user.uid);
 								await user.delete();
-								await cleanupSubscriptions();
 								await signOut();
 							} catch (error) {
 								console.error('Error during verification:', error);
@@ -146,12 +148,11 @@ const PrivacyScreen = ({ navigation }) => {
 					},
 				]);
 			} else {
-				// Delete Firestore data
+				// First cleanup subscriptions
+				cleanupSubscriptions();
+				// Then delete data and account
 				await deleteUserAccount(user.uid);
-				// Delete Firebase Auth account
 				await user.delete();
-				// Clean up and sign out
-				await cleanupSubscriptions();
 				await signOut();
 			}
 		} catch (error) {
