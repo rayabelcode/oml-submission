@@ -255,49 +255,33 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 	const { colors } = useTheme();
 	const [expandedId, setExpandedId] = useState(null);
 
-	useEffect(() => {
-		AvoidSoftInput.setEnabled(true);
-		return () => {
-			AvoidSoftInput.setEnabled(false);
-		};
-	}, []);
-
-	const handleSubmitNotes = useCallback(
-		(reminderId, notes) => {
-			onComplete(reminderId, notes);
-		},
-		[onComplete]
-	);
+	const handleSubmitNotes = useCallback((reminderId, notes) => onComplete(reminderId, notes), [onComplete]);
 
 	return (
-		<View style={{ flex: 1 }}>
-			<AvoidSoftInputView style={{ flex: 1 }}>
-				<ScrollView
-					style={styles.notificationsContainer}
-					refreshControl={
-						<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-					}
-					keyboardShouldPersistTaps="always"
-				>
-					{loading ? (
-						<Text style={styles.message}>Loading notifications...</Text>
-					) : reminders.length === 0 ? (
-						<Text style={styles.message}>No notifications</Text>
-					) : (
-						reminders.map((reminder) => (
-							<ReminderCard
-								key={reminder.firestoreId}
-								reminder={reminder}
-								onComplete={onComplete}
-								onSnooze={onSnooze}
-								expandedId={expandedId}
-								setExpandedId={setExpandedId}
-								onSubmitNotes={handleSubmitNotes}
-							/>
-						))
-					)}
-				</ScrollView>
-			</AvoidSoftInputView>
-		</View>
+		<ScrollView
+			style={[styles.notificationsContainer, { backgroundColor: 'transparent' }]}
+			refreshControl={
+				<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+			}
+			keyboardShouldPersistTaps="handled"
+		>
+			{loading ? (
+				<Text style={styles.message}>Loading notifications...</Text>
+			) : reminders.length === 0 ? (
+				<Text style={styles.message}>No notifications</Text>
+			) : (
+				reminders.map((reminder) => (
+					<ReminderCard
+						key={reminder.firestoreId}
+						reminder={reminder}
+						onComplete={onComplete}
+						onSnooze={onSnooze}
+						expandedId={expandedId}
+						setExpandedId={setExpandedId}
+						onSubmitNotes={handleSubmitNotes}
+					/>
+				))
+			)}
+		</ScrollView>
 	);
 }

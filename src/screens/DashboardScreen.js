@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import {
+	Text,
+	View,
+	ScrollView,
+	TouchableOpacity,
+	RefreshControl,
+	Alert,
+	KeyboardAvoidingView,
+	Platform,
+} from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
 import { useTheme } from '../context/ThemeContext';
@@ -573,147 +582,148 @@ export default function DashboardScreen({ navigation, route }) {
 	}
 
 	return (
-		<View style={commonStyles.container}>
-			<StatusBar style="auto" />
-			<ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-				{/* Needs Attention Section */}
-				{remindersState.data.length > 0 ? (
-					<View style={styles.needsAttentionSection}>
-						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Reminders</Text>
+		<KeyboardAvoidingView
+			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+			style={{ flex: 1, backgroundColor: colors.background.primary }}
+			keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+		>
+			<View style={[commonStyles.container, { backgroundColor: 'transparent' }]}>
+				<StatusBar style="auto" />
+				<ScrollView
+					style={{ flex: 1 }}
+					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+					keyboardShouldPersistTaps="handled"
+				>
+					{/* Needs Attention Section */}
+					{remindersState.data.length > 0 ? (
+						<View style={styles.needsAttentionSection}>
+							<View style={styles.groupHeader}>
+								<Text style={styles.groupTitle}>Reminders</Text>
+							</View>
+							<NotificationsView
+								reminders={remindersState.data}
+								onComplete={handleReminderComplete}
+								loading={remindersState.loading}
+								onSnooze={handleSnooze}
+							/>
 						</View>
-						<NotificationsView
-							reminders={remindersState.data}
-							onComplete={handleReminderComplete}
-							loading={remindersState.loading}
-							onSnooze={handleSnooze}
-						/>
-					</View>
-				) : (
-					<View style={styles.needsAttentionSection}>
-						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Reminders</Text>
-						</View>
-						<View style={styles.emptyStateContainer}>
-							<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
-							<Text style={styles.congratsMessage}>You're all caught up!</Text>
-						</View>
-					</View>
-				)}
-
-				{/* Upcoming Calls Section */}
-				<View style={styles.section}>
-					<View style={styles.groupHeader}>
-						<Text style={styles.groupTitle}>Upcoming Calls</Text>
-					</View>
-					{loading ? (
-						<Text style={commonStyles.message}>Loading contacts...</Text>
-					) : contacts.length === 0 ? (
-						<Text style={commonStyles.message}>No upcoming contacts</Text>
 					) : (
-						<View style={styles.upcomingGrid}>
-							{contacts
-								.filter((contact) => contact.next_contact)
-								.map((contact) => {
-									let formattedDate = null;
-									try {
-										if (contact.next_contact) {
-											// Handle Firestore Timestamp
-											if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
-												formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
-											}
-											// Handle Firestore Timestamp toDate method
-											else if (contact.next_contact.toDate) {
-												formattedDate = contact.next_contact.toDate().toISOString();
-											}
-											// Handle string dates
-											else if (typeof contact.next_contact === 'string') {
-												formattedDate = contact.next_contact;
-											}
-											// Handle Date objects
-											else if (contact.next_contact instanceof Date) {
-												formattedDate = contact.next_contact.toISOString();
-											}
-											// Handle unexpected formats
-											else {
-												console.warn(
-													'Unhandled next_contact format:',
-													typeof contact.next_contact,
-													contact.next_contact
-												);
-											}
-										}
-									} catch (error) {
-										console.warn('Error formatting date for contact:', contact.id, error);
-										return null;
-									}
-
-									if (!formattedDate) {
-										console.warn('Could not format date for contact:', contact.id, contact.next_contact);
-										return null;
-									}
-
-									return (
-										<TouchableOpacity
-											key={contact.id}
-											style={styles.upcomingContactCard}
-											onPress={() =>
-												navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
-											}
-										>
-											<Text
-												style={styles.upcomingContactName}
-												numberOfLines={1}
-												adjustsFontSizeToFit={true}
-												minimumFontScale={0.8}
-											>
-												{contact.first_name} {contact.last_name}
-											</Text>
-
-											<View style={styles.contactRow}>
-												<View style={styles.avatarContainer}>
-													{contact.photo_url ? (
-														<ExpoImage
-															source={{ uri: contact.photo_url }}
-															style={styles.avatar}
-															cachePolicy="memory-disk"
-															transition={200}
-														/>
-													) : (
-														<Icon name="person-outline" size={24} color={colors.primary} />
-													)}
-												</View>
-												<Text style={styles.upcomingContactDate}>
-													{new Date(formattedDate)
-														.toLocaleDateString('en-US', {
-															month: 'numeric',
-															day: 'numeric',
-															year: 'numeric',
-														})
-														.replace(/\//g, '/')}
-												</Text>
-											</View>
-										</TouchableOpacity>
-									);
-								})
-								.filter(Boolean)}
+						<View style={styles.needsAttentionSection}>
+							<View style={styles.groupHeader}>
+								<Text style={styles.groupTitle}>Reminders</Text>
+							</View>
+							<View style={styles.emptyStateContainer}>
+								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
+								<Text style={styles.congratsMessage}>You're all caught up!</Text>
+							</View>
 						</View>
 					)}
-				</View>
-			</ScrollView>
 
-			<ActionModal
-				show={showSnoozeOptions}
-				onClose={() => {
-					setShowSnoozeOptions(false);
-					setSelectedReminder(null);
-					setSnoozeError(null);
-				}}
-				loading={snoozeLoading}
-				error={snoozeError}
-				options={snoozeOptions}
-				title="Snooze Options"
-			/>
-		</View>
+					{/* Upcoming Calls Section */}
+					<View style={styles.section}>
+						<View style={styles.groupHeader}>
+							<Text style={styles.groupTitle}>Upcoming Calls</Text>
+						</View>
+						{loading ? (
+							<Text style={commonStyles.message}>Loading contacts...</Text>
+						) : contacts.length === 0 ? (
+							<Text style={commonStyles.message}>No upcoming contacts</Text>
+						) : (
+							<View style={styles.upcomingGrid}>
+								{contacts
+									.filter((contact) => contact.next_contact)
+									.map((contact) => {
+										let formattedDate = null;
+										try {
+											if (contact.next_contact) {
+												if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
+													formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
+												} else if (contact.next_contact.toDate) {
+													formattedDate = contact.next_contact.toDate().toISOString();
+												} else if (typeof contact.next_contact === 'string') {
+													formattedDate = contact.next_contact;
+												} else if (contact.next_contact instanceof Date) {
+													formattedDate = contact.next_contact.toISOString();
+												} else {
+													console.warn(
+														'Unhandled next_contact format:',
+														typeof contact.next_contact,
+														contact.next_contact
+													);
+												}
+											}
+										} catch (error) {
+											console.warn('Error formatting date for contact:', contact.id, error);
+											return null;
+										}
+
+										if (!formattedDate) {
+											console.warn('Could not format date for contact:', contact.id, contact.next_contact);
+											return null;
+										}
+
+										return (
+											<TouchableOpacity
+												key={contact.id}
+												style={styles.upcomingContactCard}
+												onPress={() =>
+													navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
+												}
+											>
+												<Text
+													style={styles.upcomingContactName}
+													numberOfLines={1}
+													adjustsFontSizeToFit={true}
+													minimumFontScale={0.8}
+												>
+													{contact.first_name} {contact.last_name}
+												</Text>
+
+												<View style={styles.contactRow}>
+													<View style={styles.avatarContainer}>
+														{contact.photo_url ? (
+															<ExpoImage
+																source={{ uri: contact.photo_url }}
+																style={styles.avatar}
+																cachePolicy="memory-disk"
+																transition={200}
+															/>
+														) : (
+															<Icon name="person-outline" size={24} color={colors.primary} />
+														)}
+													</View>
+													<Text style={styles.upcomingContactDate}>
+														{new Date(formattedDate)
+															.toLocaleDateString('en-US', {
+																month: 'numeric',
+																day: 'numeric',
+																year: 'numeric',
+															})
+															.replace(/\//g, '/')}
+													</Text>
+												</View>
+											</TouchableOpacity>
+										);
+									})
+									.filter(Boolean)}
+							</View>
+						)}
+					</View>
+				</ScrollView>
+
+				<ActionModal
+					show={showSnoozeOptions}
+					onClose={() => {
+						setShowSnoozeOptions(false);
+						setSelectedReminder(null);
+						setSnoozeError(null);
+					}}
+					loading={snoozeLoading}
+					error={snoozeError}
+					options={snoozeOptions}
+					title="Snooze Options"
+				/>
+			</View>
+		</KeyboardAvoidingView>
 	);
 }
