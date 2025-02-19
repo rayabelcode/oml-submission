@@ -151,14 +151,15 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.md,
 			paddingHorizontal: 50,
 			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.md,
+			marginTop: spacing.xs,
 			marginBottom: spacing.sm,
+			minWidth: 200,
 			alignSelf: 'center',
 		},
 		loginButtonText: {
 			color: colors.text.primary,
 			textAlign: 'center',
-			fontSize: 16,
+			fontSize: 18,
 			fontWeight: '700',
 		},
 		logoutButton: {
@@ -250,8 +251,8 @@ const createStyles = (colors) =>
 		},
 		logoContainer: {
 			alignItems: 'center',
-			marginBottom: spacing.lg,
-			marginTop: spacing.xl,
+			marginBottom: spacing.md,
+			marginTop: spacing.lg,
 		},
 		logo: {
 			width: 250,
@@ -271,7 +272,7 @@ const createStyles = (colors) =>
 		},
 		mascotContainer: {
 			alignItems: 'center',
-			marginBottom: spacing.lg,
+			marginBottom: spacing.sm,
 		},
 		mascot: {
 			width: 120,
@@ -325,7 +326,7 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.md,
 			paddingHorizontal: spacing.xl,
 			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.md,
+			marginTop: spacing.xs,
 			borderWidth: 1,
 			borderColor: colors.border,
 			alignSelf: 'center',
@@ -351,13 +352,13 @@ const createStyles = (colors) =>
 			paddingHorizontal: spacing.md,
 		},
 		forgotPasswordButton: {
-			alignSelf: 'flex-end',
-			marginBottom: spacing.md,
-			marginTop: -spacing.sm,
+			marginTop: spacing.sm,
+			alignSelf: 'center',
 		},
 		forgotPasswordText: {
 			color: colors.primary,
-			fontSize: 14,
+			fontSize: 16,
+			fontWeight: '600',
 		},
 		// Profile Page
 		headerContainer: {
@@ -471,6 +472,27 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 			paddingRight: spacing.md,
 			textAlign: 'center',
+		},
+		segmentedControlContainer: {
+			paddingHorizontal: spacing.xl,
+			marginBottom: spacing.md,
+		},
+		segmentedControl: {
+			height: 50,
+		},
+		segmentedControlText: {
+			fontSize: 20,
+			color: colors.text.primary,
+		},
+		segmentedControlActiveText: {
+			fontSize: 20,
+			color: colors.text.primary,
+		},
+		forgotPasswordContainer: {
+			height: 40,
+			justifyContent: 'center',
+			marginBottom: 0,
+			marginTop: -8,
 		},
 		// SchedulingScreen
 		settingsHeader: {
