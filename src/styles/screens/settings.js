@@ -6,7 +6,7 @@ const createStyles = (colors) =>
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
-			paddingTop: Platform.OS === 'ios' ? 50 : 0,
+			paddingTop: Platform.OS === 'ios' ? 150 : 0,
 		},
 		settingsList: {
 			flex: 1,
@@ -148,15 +148,18 @@ const createStyles = (colors) =>
 		},
 		loginButton: {
 			backgroundColor: colors.primary,
-			padding: spacing.md,
+			paddingVertical: spacing.md,
+			paddingHorizontal: 50,
 			borderRadius: layout.borderRadius.md,
 			marginTop: spacing.md,
+			marginBottom: spacing.sm,
+			alignSelf: 'center',
 		},
 		loginButtonText: {
-			color: colors.background.primary,
+			color: colors.text.primary,
 			textAlign: 'center',
 			fontSize: 16,
-			fontWeight: '500',
+			fontWeight: '700',
 		},
 		logoutButton: {
 			flexDirection: 'row',
@@ -277,15 +280,16 @@ const createStyles = (colors) =>
 		},
 		welcomeText: {
 			fontSize: 24,
-			fontWeight: 'bold',
+			fontWeight: '800',
 			color: colors.text.primary,
 			marginBottom: spacing.sm,
 			textAlign: 'center',
 		},
 		subtitleText: {
-			fontSize: 16,
+			fontSize: 18,
+			fontWeight: '700',
 			color: colors.text.secondary,
-			marginBottom: spacing.xl,
+			marginBottom: spacing.sm,
 			textAlign: 'center',
 		},
 		card: {
@@ -318,17 +322,19 @@ const createStyles = (colors) =>
 			alignItems: 'center',
 			justifyContent: 'center',
 			backgroundColor: colors.background.primary,
-			padding: spacing.md,
+			paddingVertical: spacing.md,
+			paddingHorizontal: spacing.xl,
 			borderRadius: layout.borderRadius.md,
 			marginTop: spacing.md,
 			borderWidth: 1,
 			borderColor: colors.border,
+			alignSelf: 'center',
 		},
 		socialButtonText: {
 			color: colors.text.primary,
 			marginLeft: spacing.sm,
-			fontSize: 16,
-			fontWeight: '500',
+			fontSize: 18,
+			fontWeight: '600',
 		},
 		dividerContainer: {
 			flexDirection: 'row',
@@ -440,10 +446,10 @@ const createStyles = (colors) =>
 		},
 		saveButtonDisabled: {
 			backgroundColor: colors.primary,
-			opacity: 0.5, // Only apply opacity to the background
+			opacity: 0.5,
 		},
 		saveButtonTextDisabled: {
-			opacity: 1, // Force full opacity for text
+			opacity: 1,
 		},
 		authInputContainer: {
 			flexDirection: 'row',
@@ -460,7 +466,8 @@ const createStyles = (colors) =>
 		authInput: {
 			flex: 1,
 			height: '100%',
-			fontSize: 16,
+			fontSize: 17,
+			fontWeight: '600',
 			color: colors.text.primary,
 			paddingRight: spacing.md,
 			textAlign: 'center',

@@ -138,7 +138,7 @@ const AuthSection = ({
 							</View>
 
 							<TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
-								<Icon name="logo-apple" size={20} color={colors.text.primary} />
+								<Icon name="logo-apple" size={22} color={colors.text.primary} />
 								<Text style={styles.socialButtonText}>Continue with Apple</Text>
 							</TouchableOpacity>
 
