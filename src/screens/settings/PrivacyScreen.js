@@ -6,7 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { exportUserData, deleteUserAccount } from '../../utils/firestore';
+import { exportUserData, deleteUserAccount, cleanupSubscriptions } from '../../utils/firestore';
+import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 const PrivacyScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -52,6 +53,9 @@ const PrivacyScreen = ({ navigation }) => {
 	};
 
 	const handleDelete = () => {
+		// Check if user is signed in with Apple
+		const isAppleUser = user.providerData[0]?.providerId === 'apple.com';
+
 		Alert.alert(
 			'Delete Account',
 			'Are you sure you want to delete your account? This action cannot be undone and will delete all your contacts and data.',
@@ -60,19 +64,69 @@ const PrivacyScreen = ({ navigation }) => {
 				{
 					text: 'Delete',
 					style: 'destructive',
-					onPress: async () => {
-						try {
-							await deleteUserAccount(user.uid);
-							await user.delete();
-							await signOut();
-						} catch (error) {
-							console.error('Error deleting account:', error);
-							Alert.alert('Error', 'Failed to delete account');
+					onPress: () => {
+						if (isAppleUser) {
+							// Direct deletion for Apple users
+							handleAccountDeletion();
+						} else {
+							// Password verification for email users
+							Alert.prompt(
+								'Enter Password',
+								'Please enter your password to confirm deletion',
+								[
+									{ text: 'Cancel', style: 'cancel' },
+									{
+										text: 'Delete',
+										style: 'destructive',
+										onPress: async (password) => {
+											if (!password) {
+												Alert.alert('Error', 'Password is required');
+												return;
+											}
+
+											try {
+												const credential = EmailAuthProvider.credential(user.email, password);
+												await reauthenticateWithCredential(user, credential);
+												await handleAccountDeletion();
+											} catch (error) {
+												console.error('Error deleting account:', error);
+												Alert.alert(
+													'Error',
+													error.code === 'auth/wrong-password'
+														? 'Incorrect password'
+														: 'Failed to delete account'
+												);
+											}
+										},
+									},
+								],
+								'secure-text'
+							);
 						}
 					},
 				},
 			]
 		);
+	};
+
+	// Function for account deletion
+	const handleAccountDeletion = async () => {
+		try {
+			// 1. Delete Firestore data
+			await deleteUserAccount(user.uid);
+
+			// 2. Delete Firebase Auth account
+			await user.delete();
+
+			// 3. Clean up subscriptions
+			await cleanupSubscriptions();
+
+			// 4. Simply sign out - this will trigger TabNavigator's conditional rendering
+			await signOut();
+		} catch (error) {
+			console.error('Error deleting account:', error);
+			Alert.alert('Error', 'Failed to delete account. Please try signing out and back in, then try again.');
+		}
 	};
 
 	return (

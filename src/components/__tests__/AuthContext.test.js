@@ -9,6 +9,10 @@ jest.mock('firebase/auth', () => ({
 	signOut: jest.fn(),
 	sendPasswordResetEmail: jest.fn(),
 	signInWithCredential: jest.fn(),
+	EmailAuthProvider: {
+		credential: jest.fn().mockReturnValue({ token: 'mock-credential' }),
+	},
+	reauthenticateWithCredential: jest.fn(),
 	OAuthProvider: jest.fn(() => ({
 		addScope: jest.fn(),
 		setCustomParameters: jest.fn(),
@@ -274,5 +278,79 @@ describe('AuthContext', () => {
 
 			expect(response.error).toBeTruthy();
 		});
+	});
+});
+
+describe('Account Deletion', () => {
+	const mockUser = {
+		email: 'test@example.com',
+		uid: 'mock-user-id',
+		delete: jest.fn(),
+		providerData: [{ providerId: 'password' }],
+	};
+
+	beforeEach(() => {
+		mockUser.delete.mockClear();
+		onAuthStateChanged.mockImplementation((auth, callback) => {
+			callback(mockUser);
+			return () => {};
+		});
+	});
+
+	it('successfully deletes email/password account', async () => {
+		mockUser.delete.mockResolvedValue();
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await mockUser.delete();
+		});
+
+		expect(mockUser.delete).toHaveBeenCalled();
+	});
+
+	it('successfully deletes Apple account', async () => {
+		const mockAppleUser = {
+			...mockUser,
+			providerData: [{ providerId: 'apple.com' }],
+			delete: jest.fn().mockResolvedValue(),
+		};
+
+		onAuthStateChanged.mockImplementation((auth, callback) => {
+			callback(mockAppleUser);
+			return () => {};
+		});
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await mockAppleUser.delete();
+		});
+
+		expect(mockAppleUser.delete).toHaveBeenCalled();
+	});
+
+	it('handles deletion error', async () => {
+		mockUser.delete.mockRejectedValue(new Error('Deletion failed'));
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		let error;
+		await act(async () => {
+			try {
+				await mockUser.delete();
+			} catch (e) {
+				error = e;
+			}
+		});
+
+		expect(error).toBeTruthy();
+		expect(error.message).toBe('Deletion failed');
 	});
 });
