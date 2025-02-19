@@ -6,8 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { exportUserData, deleteUserAccount, cleanupSubscriptions } from '../../utils/firestore';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { EmailAuthProvider, OAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 const PrivacyScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -53,9 +54,6 @@ const PrivacyScreen = ({ navigation }) => {
 	};
 
 	const handleDelete = () => {
-		// Check if user is signed in with Apple
-		const isAppleUser = user.providerData[0]?.providerId === 'apple.com';
-
 		Alert.alert(
 			'Delete Account',
 			'Are you sure you want to delete your account? This action cannot be undone and will delete all your contacts and data.',
@@ -65,7 +63,7 @@ const PrivacyScreen = ({ navigation }) => {
 					text: 'Delete',
 					style: 'destructive',
 					onPress: () => {
-						if (isAppleUser) {
+						if (user.providerData[0]?.providerId === 'apple.com') {
 							// Direct deletion for Apple users
 							handleAccountDeletion();
 						} else {
@@ -112,17 +110,50 @@ const PrivacyScreen = ({ navigation }) => {
 	// Function for account deletion
 	const handleAccountDeletion = async () => {
 		try {
-			// 1. Delete Firestore data
-			await deleteUserAccount(user.uid);
+			if (user.providerData[0]?.providerId === 'apple.com') {
+				Alert.alert('Verify Identity', 'Please verify your Apple ID to continue with account deletion.', [
+					{ text: 'Cancel', style: 'cancel' },
+					{
+						text: 'Continue',
+						style: 'destructive',
+						onPress: async () => {
+							try {
+								const appleCredential = await AppleAuthentication.signInAsync({
+									requestedScopes: [
+										AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+										AppleAuthentication.AppleAuthenticationScope.EMAIL,
+									],
+								});
 
-			// 2. Delete Firebase Auth account
-			await user.delete();
+								const provider = new OAuthProvider('apple.com');
+								const credential = provider.credential({
+									idToken: appleCredential.identityToken,
+									rawNonce: appleCredential.nonce,
+								});
 
-			// 3. Clean up subscriptions
-			await cleanupSubscriptions();
+								await reauthenticateWithCredential(user, credential);
 
-			// 4. Simply sign out - this will trigger TabNavigator's conditional rendering
-			await signOut();
+								// Continue with deletion
+								await deleteUserAccount(user.uid);
+								await user.delete();
+								await cleanupSubscriptions();
+								await signOut();
+							} catch (error) {
+								console.error('Error during verification:', error);
+								Alert.alert('Error', 'Failed to verify identity. Please try again.');
+							}
+						},
+					},
+				]);
+			} else {
+				// Delete Firestore data
+				await deleteUserAccount(user.uid);
+				// Delete Firebase Auth account
+				await user.delete();
+				// Clean up and sign out
+				await cleanupSubscriptions();
+				await signOut();
+			}
 		} catch (error) {
 			console.error('Error deleting account:', error);
 			Alert.alert('Error', 'Failed to delete account. Please try signing out and back in, then try again.');
