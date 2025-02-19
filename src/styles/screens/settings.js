@@ -328,6 +328,7 @@ const createStyles = (colors) =>
 			paddingHorizontal: spacing.xl,
 			borderRadius: layout.borderRadius.md,
 			marginTop: spacing.xs,
+			marginBottom: spacing.xs,
 			borderWidth: 1,
 			borderColor: colors.border,
 			alignSelf: 'center',
