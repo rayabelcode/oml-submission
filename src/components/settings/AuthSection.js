@@ -50,10 +50,10 @@ const AuthSection = ({
 	};
 
 	return (
-		<SafeAreaView style={styles.safeArea}>
+		<SafeAreaView style={styles.authContainer}>
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
 				<ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-					<View style={styles.authContainer}>
+					<View style={{ flex: 1 }}>
 						<View style={styles.logoContainer}>
 							<Image source={logoSource} style={styles.logo} resizeMode="contain" />
 						</View>

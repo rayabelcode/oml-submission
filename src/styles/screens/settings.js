@@ -6,7 +6,7 @@ const createStyles = (colors) =>
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
-			paddingTop: Platform.OS === 'ios' ? 150 : 0,
+			paddingTop: Platform.OS === 'ios' ? 50 : 0,
 		},
 		settingsList: {
 			flex: 1,
@@ -258,6 +258,7 @@ const createStyles = (colors) =>
 			width: 250,
 			height: 36,
 			marginBottom: spacing.xs,
+			marginTop: spacing.lg,
 		},
 		authContainer: {
 			flex: 1,
