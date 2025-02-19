@@ -247,8 +247,8 @@ export default function SettingsScreen({ navigation }) {
 			return;
 		}
 
-		if (!isLogin && password.length < 6) {
-			Alert.alert('Error', 'Password must be at least 6 characters');
+		if (!isLogin && password.length < 8) {
+			Alert.alert('Error', 'Password must be at least 8 characters');
 			return;
 		}
 

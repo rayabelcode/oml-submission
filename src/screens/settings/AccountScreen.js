@@ -122,7 +122,7 @@ const AccountScreen = ({ navigation }) => {
 			}
 
 			if (newPassword.length < 6) {
-				Alert.alert('Error', 'New password must be at least 6 characters');
+				Alert.alert('Error', 'New password must be at least 8 characters');
 				return;
 			}
 

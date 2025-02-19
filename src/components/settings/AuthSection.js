@@ -78,13 +78,7 @@ const AuthSection = ({
 									style={{ marginRight: 8 }}
 								/>
 								<TextInput
-									style={[
-										styles.authInput,
-										isAppleUser() && {
-											backgroundColor: colors.background.secondary,
-											color: colors.text.secondary,
-										},
-									]}
+									style={styles.authInput}
 									placeholder="Email"
 									value={email}
 									onChangeText={setEmail}
@@ -96,6 +90,10 @@ const AuthSection = ({
 									onSubmitEditing={() => passwordInputRef.current?.focus()}
 									blurOnSubmit={false}
 									editable={!isAppleUser()}
+									textContentType="emailAddress"
+									autoComplete="email"
+									spellCheck={false}
+									clearButtonMode="while-editing"
 								/>
 							</View>
 
@@ -112,6 +110,11 @@ const AuthSection = ({
 									placeholderTextColor={colors.text.secondary}
 									returnKeyType="done"
 									onSubmitEditing={handleAuth}
+									textContentType="newPassword"
+									autoComplete="new-password"
+									passwordRules="minlength: 8;"
+									autoCorrect={false}
+									spellCheck={false}
 								/>
 							</View>
 
