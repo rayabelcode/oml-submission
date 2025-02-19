@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
 import { useAuth } from '../../context/AuthContext';
+import { useLogo } from '../../hooks/useLogo';
 
 const AuthSection = ({
 	isLogin,
@@ -34,10 +35,7 @@ const AuthSection = ({
 	const passwordInputRef = useRef(null);
 	const { isAppleUser } = useAuth();
 
-	const logoSource =
-		theme === 'dark'
-			? require('../../../assets/images/oml-nosloth-logo-dark.png')
-			: require('../../../assets/images/oml-nosloth-logo-light.png');
+	const logoSource = useLogo();
 
 	const handleAppleSignIn = async () => {
 		try {
