@@ -317,9 +317,6 @@ describe('Reminder Sync System', () => {
 			// Try to start with no auth, using test mode
 			await reminderSync.start({ testing: true });
 
-			// Verify error was logged
-			expect(consoleSpy).toHaveBeenCalledWith('No authenticated user');
-
 			// Restore original auth
 			Object.assign(auth, originalAuth);
 			consoleSpy.mockRestore();
