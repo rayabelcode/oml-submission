@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useStyles } from '../styles/screens/contacts';
 import { useCommonStyles } from '../styles/common';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, spacing } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -233,7 +233,7 @@ const ContactCard = ({
 // Main Component
 export default function ContactsScreen({ navigation }) {
 	const { user } = useAuth();
-	const { colors, theme } = useTheme();
+	const { colors, theme, layout } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
 	const [showProfilePhotos, setShowProfilePhotos] = useState(true);
@@ -620,6 +620,32 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const renderContacts = () => {
+		// If there are no contacts - show welcome message
+		if (!contacts.scheduledContacts.length && !contacts.unscheduledContacts.length) {
+			return (
+				<View style={styles.welcomeContainer}>
+					<Image
+						source={require('../../assets/images/sloth.png')}
+						style={styles.welcomeImage}
+						resizeMode="contain"
+					/>
+
+					<Text style={styles.welcomeTitle}>Welcome to OnMyList</Text>
+
+					<Text style={styles.welcomeSubheading}>Keep your circle tight and never miss a catch-up!</Text>
+
+					<Text style={styles.welcomeText}>
+						Import your contacts, tag them, and let OnMyList keep you connected stress-free.
+					</Text>
+
+					<TouchableOpacity style={styles.welcomeButton} onPress={() => setShowAddModal(true)}>
+						<Icon name="add-circle" size={24} color={colors.text.primary} />
+						<Text style={styles.welcomeButtonText}>Add Your First Contact</Text>
+					</TouchableOpacity>
+				</View>
+			);
+		}
+
 		const organizedContacts = organizeContacts(searchQuery ? filteredContacts : contacts);
 
 		if (groupBy === 'none') {
