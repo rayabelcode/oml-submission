@@ -260,7 +260,11 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 		<ScrollView
 			style={[styles.notificationsContainer, { backgroundColor: 'transparent' }]}
 			refreshControl={
-				<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+				<RefreshControl
+					refreshing={!!refreshing}
+					onRefresh={onRefresh}
+					tintColor={colors.primary}
+				/>
 			}
 			keyboardShouldPersistTaps="always"
 			keyboardDismissMode="none"

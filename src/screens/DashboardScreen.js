@@ -591,7 +591,7 @@ export default function DashboardScreen({ navigation, route }) {
 				<StatusBar style="auto" />
 				<ScrollView
 					style={{ flex: 1 }}
-					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+					refreshControl={<RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />}
 					keyboardShouldPersistTaps="always"
 					keyboardDismissMode="none"
 				>
