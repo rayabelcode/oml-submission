@@ -150,7 +150,7 @@ const createStyles = (colors) =>
 			backgroundColor: colors.primary,
 			paddingVertical: spacing.md,
 			paddingHorizontal: 50,
-			borderRadius: layout.borderRadius.md,
+			borderRadius: layout.borderRadius.lg,
 			marginTop: spacing.xs,
 			marginBottom: spacing.sm,
 			minWidth: 200,

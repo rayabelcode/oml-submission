@@ -76,7 +76,7 @@ const AuthSection = ({
 								}}
 								style={styles.segmentedControl}
 								backgroundColor={colors.background.primary}
-								tintColor={colors.primary}
+								tintColor={colors.lightHighlight}
 								fontStyle={styles.segmentedControlText}
 								activeFontStyle={styles.segmentedControlActiveText}
 							/>
