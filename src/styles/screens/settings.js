@@ -352,6 +352,8 @@ const createStyles = (colors) =>
 		dividerText: {
 			color: colors.text.secondary,
 			paddingHorizontal: spacing.md,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		forgotPasswordButton: {
 			marginTop: spacing.sm,
@@ -594,6 +596,14 @@ const createStyles = (colors) =>
 			fontSize: 24,
 			fontWeight: '600',
 			color: colors.primary,
+		},
+		// Apple User helper text
+		helperText: {
+			fontSize: 16,
+			fontWeight: '600',
+			lineHeight: 22,
+			color: colors.text.secondary,
+			paddingHorizontal: spacing.xl,
 		},
 	});
 

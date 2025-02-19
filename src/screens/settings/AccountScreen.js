@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Alert, Linking } from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import {
 	updatePassword,
 	verifyBeforeUpdateEmail,
 } from 'firebase/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 const AccountScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -26,13 +27,30 @@ const AccountScreen = ({ navigation }) => {
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [usernameChanged, setUsernameChanged] = useState(false);
 	const [emailChanged, setEmailChanged] = useState(false);
+	// State to track if user is signed in with Apple
+	const [isAppleUser, setIsAppleUser] = useState(false);
 
-	// Fetch the username from Firestore when the screen is focused
+	// Open Apple ID settings
+	const openAppleSettings = () => {
+		Linking.openURL('App-Prefs:APPLE_ACCOUNT').catch(() => {
+			Alert.alert(
+				'Unable to Open Settings',
+				'To manage your Apple ID:\n1. Open Settings\n2. Tap your name at the top\n3. Select "Password & Security"'
+			);
+		});
+	};
+
+	// Load user profile and check auth provider
+	useEffect(() => {
+		setIsAppleUser(user?.providerData[0]?.providerId === 'apple.com');
+		loadUserProfile();
+	}, []);
+
 	const loadUserProfile = async () => {
 		try {
 			const profile = await getUserProfile(user.uid);
 			if (profile?.username) {
-				setUsername(profile.username); // Display the username from Firestore
+				setUsername(profile.username);
 			} else {
 				console.warn('No username found in Firestore.');
 			}
@@ -42,7 +60,6 @@ const AccountScreen = ({ navigation }) => {
 		}
 	};
 
-	// Trigger `loadUserProfile` when the screen is focused
 	useEffect(() => {
 		const unsubscribe = navigation.addListener('focus', loadUserProfile);
 		return unsubscribe;
@@ -57,24 +74,20 @@ const AccountScreen = ({ navigation }) => {
 
 			const lowercaseUsername = username.trim().toLowerCase();
 
-			// Check if the username is the same as the current one
 			const profile = await getUserProfile(user.uid);
 			if (profile?.username === lowercaseUsername) {
 				Alert.alert('No Changes', 'The username is already up to date.');
 				return;
 			}
 
-			// Check if the username already exists
 			const usernameExists = await checkUsernameExists(lowercaseUsername, user.uid);
 			if (usernameExists) {
 				Alert.alert('Error', 'This username is already taken.');
 				return;
 			}
 
-			// Update the username in Firestore
 			await updateUserProfile(user.uid, { username: lowercaseUsername });
 
-			// Reflect the change immediately in the UI
 			setUsername(lowercaseUsername);
 			setUsernameChanged(false);
 
@@ -86,6 +99,12 @@ const AccountScreen = ({ navigation }) => {
 	};
 
 	const handleChangeEmail = async () => {
+		// Prevent email changes for Apple users
+		if (isAppleUser) {
+			Alert.alert('Apple Sign In', 'Email management is handled through your Apple ID settings.');
+			return;
+		}
+
 		try {
 			if (!emailCurrentPassword) {
 				Alert.alert('Error', 'Please enter your current password');
@@ -110,6 +129,12 @@ const AccountScreen = ({ navigation }) => {
 	};
 
 	const handleChangePassword = async () => {
+		// Prevent password changes for Apple users
+		if (isAppleUser) {
+			Alert.alert('Apple Sign In', 'Password management is handled through your Apple ID settings.');
+			return;
+		}
+
 		try {
 			if (!passwordCurrentPassword || !newPassword || !confirmPassword) {
 				Alert.alert('Error', 'Please fill in all password fields');
@@ -183,34 +208,49 @@ const AccountScreen = ({ navigation }) => {
 				{/* Email Section */}
 				<View style={styles.card}>
 					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>Email</Text>
-					<TextInput
-						style={[styles.input, styles.inputText]}
-						value={email}
-						onChangeText={(text) => {
-							setEmail(text);
-							setEmailChanged(true);
-						}}
-						placeholder="Enter new email"
-						placeholderTextColor={colors.text.secondary}
-						keyboardType="email-address"
-						autoCorrect={false}
-						autoCapitalize="none"
-					/>
-					<TextInput
-						style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-						value={emailCurrentPassword}
-						onChangeText={setEmailCurrentPassword}
-						placeholder="Enter current password"
-						placeholderTextColor={colors.text.secondary}
-						secureTextEntry
-					/>
-					<TouchableOpacity
-						style={[styles.saveButton, (!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled]}
-						onPress={handleChangeEmail}
-						disabled={!emailChanged || !emailCurrentPassword}
-					>
-						<Text style={styles.saveButtonText}>Update Email</Text>
-					</TouchableOpacity>
+					<Text style={[styles.input, styles.inputText]}>{email}</Text>
+					{!isAppleUser && (
+						<>
+							<TextInput
+								style={[styles.input, styles.inputText]}
+								value={email}
+								onChangeText={(text) => {
+									setEmail(text);
+									setEmailChanged(true);
+								}}
+								placeholder="Enter new email"
+								placeholderTextColor={colors.text.secondary}
+								keyboardType="email-address"
+								autoCorrect={false}
+								autoCapitalize="none"
+							/>
+							<TextInput
+								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
+								value={emailCurrentPassword}
+								onChangeText={setEmailCurrentPassword}
+								placeholder="Enter current password"
+								placeholderTextColor={colors.text.secondary}
+								secureTextEntry
+							/>
+							<TouchableOpacity
+								style={[
+									styles.saveButton,
+									(!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled,
+								]}
+								onPress={handleChangeEmail}
+								disabled={!emailChanged || !emailCurrentPassword}
+							>
+								<Text style={styles.saveButtonText}>Update Email</Text>
+							</TouchableOpacity>
+						</>
+					)}
+					{isAppleUser && (
+						<TouchableOpacity onPress={openAppleSettings}>
+							<Text style={[styles.helperText, { textAlign: 'center', marginTop: spacing.sm }]}>
+								Email is managed through Apple ID settings
+							</Text>
+						</TouchableOpacity>
+					)}
 				</View>
 
 				{/* Password Section */}
@@ -218,40 +258,51 @@ const AccountScreen = ({ navigation }) => {
 					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>
 						Change Password
 					</Text>
-					<TextInput
-						style={[styles.input, styles.inputText]}
-						value={passwordCurrentPassword}
-						onChangeText={setPasswordCurrentPassword}
-						placeholder="Current password"
-						placeholderTextColor={colors.text.secondary}
-						secureTextEntry
-					/>
-					<TextInput
-						style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-						value={newPassword}
-						onChangeText={setNewPassword}
-						placeholder="New password"
-						placeholderTextColor={colors.text.secondary}
-						secureTextEntry
-					/>
-					<TextInput
-						style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-						value={confirmPassword}
-						onChangeText={setConfirmPassword}
-						placeholder="Confirm new password"
-						placeholderTextColor={colors.text.secondary}
-						secureTextEntry
-					/>
-					<TouchableOpacity
-						style={[
-							styles.saveButton,
-							(!passwordCurrentPassword || !newPassword || !confirmPassword) && styles.saveButtonDisabled,
-						]}
-						onPress={handleChangePassword}
-						disabled={!passwordCurrentPassword || !newPassword || !confirmPassword}
-					>
-						<Text style={styles.saveButtonText}>Update Password</Text>
-					</TouchableOpacity>
+					{!isAppleUser && (
+						<>
+							<TextInput
+								style={[styles.input, styles.inputText]}
+								value={passwordCurrentPassword}
+								onChangeText={setPasswordCurrentPassword}
+								placeholder="Current password"
+								placeholderTextColor={colors.text.secondary}
+								secureTextEntry
+							/>
+							<TextInput
+								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
+								value={newPassword}
+								onChangeText={setNewPassword}
+								placeholder="New password"
+								placeholderTextColor={colors.text.secondary}
+								secureTextEntry
+							/>
+							<TextInput
+								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
+								value={confirmPassword}
+								onChangeText={setConfirmPassword}
+								placeholder="Confirm new password"
+								placeholderTextColor={colors.text.secondary}
+								secureTextEntry
+							/>
+							<TouchableOpacity
+								style={[
+									styles.saveButton,
+									(!passwordCurrentPassword || !newPassword || !confirmPassword) && styles.saveButtonDisabled,
+								]}
+								onPress={handleChangePassword}
+								disabled={!passwordCurrentPassword || !newPassword || !confirmPassword}
+							>
+								<Text style={styles.saveButtonText}>Update Password</Text>
+							</TouchableOpacity>
+						</>
+					)}
+					{isAppleUser && (
+						<TouchableOpacity onPress={openAppleSettings}>
+							<Text style={[styles.helperText, { textAlign: 'center', marginTop: spacing.sm }]}>
+								Password is managed through Apple ID settings
+							</Text>
+						</TouchableOpacity>
+					)}
 				</View>
 			</ScrollView>
 		</View>
