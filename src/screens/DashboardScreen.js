@@ -592,7 +592,8 @@ export default function DashboardScreen({ navigation, route }) {
 				<ScrollView
 					style={{ flex: 1 }}
 					refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-					keyboardShouldPersistTaps="handled"
+					keyboardShouldPersistTaps="always"
+					keyboardDismissMode="none"
 				>
 					{/* Needs Attention Section */}
 					{remindersState.data.length > 0 ? (

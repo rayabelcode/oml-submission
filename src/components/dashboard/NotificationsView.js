@@ -4,7 +4,6 @@ import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { REMINDER_TYPES, FREQUENCY_DISPLAY_MAP } from '../../../constants/notificationConstants';
-import { AvoidSoftInput, AvoidSoftInputView } from 'react-native-avoid-softinput';
 import CallOptions from '../../components/general/CallOptions';
 import { getContactById } from '../../utils/firestore';
 
@@ -263,7 +262,8 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 			refreshControl={
 				<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
 			}
-			keyboardShouldPersistTaps="handled"
+			keyboardShouldPersistTaps="always"
+			keyboardDismissMode="none"
 		>
 			{loading ? (
 				<Text style={styles.message}>Loading notifications...</Text>
