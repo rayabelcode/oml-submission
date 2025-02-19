@@ -26,12 +26,30 @@ import { REMINDER_TYPES, REMINDER_STATUS } from '../../constants/notificationCon
 import { SchedulingService } from './scheduler/scheduler';
 
 // Store active subscriptions
-const activeSubscriptions = new Map();
+let activeSubscriptions = new Map();
 
 // Helper function to clean up subscriptions
 export const cleanupSubscriptions = () => {
-	activeSubscriptions.forEach((unsubscribe) => unsubscribe());
-	activeSubscriptions.clear();
+	try {
+		if (!activeSubscriptions) {
+			activeSubscriptions = new Map();
+			return;
+		}
+
+		activeSubscriptions.forEach((unsubscribe, key) => {
+			if (typeof unsubscribe === 'function') {
+				try {
+					unsubscribe();
+				} catch (error) {
+					console.log(`Error unsubscribing from ${key}:`, error);
+				}
+			}
+		});
+		activeSubscriptions.clear();
+	} catch (error) {
+		console.error('Error in cleanupSubscriptions:', error);
+		activeSubscriptions = new Map();
+	}
 };
 
 // User functions
