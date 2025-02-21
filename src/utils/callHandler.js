@@ -22,44 +22,57 @@ class CallHandler {
 				case 'facetime-audio':
 					urlScheme = `facetime-audio://${contact.phone}`;
 					break;
+				case 'sms':
+					urlScheme = Platform.select({
+						ios: `sms:${contact.phone}`,
+						android: `sms:${contact.phone}?body=`,
+					});
+					break;
 				default:
 					urlScheme = `tel:${contact.phone}`;
 			}
 
 			const canOpen = await Linking.canOpenURL(urlScheme);
 			if (!canOpen) {
-				const error = new Error(`Cannot make ${callType} call. Please check if the app is installed.`);
+				const error = new Error(
+					`Cannot ${
+						callType === 'sms' ? 'send message' : 'make ' + callType + ' call'
+					}. Please check if the app is installed.`
+				);
 				Alert.alert('Call Error', error.message);
 				return false;
 			}
 
-			const callStartTime = new Date();
-			const callData = {
-				contact,
-				startTime: callStartTime.toISOString(),
-				type: callType,
-			};
+			// Only create call data and notifications for calls, not texts
+			if (callType !== 'sms') {
+				const callStartTime = new Date();
+				const callData = {
+					contact,
+					startTime: callStartTime.toISOString(),
+					type: callType,
+				};
 
-			await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
+				await AsyncStorage.setItem(ACTIVE_CALL_KEY, JSON.stringify(callData));
 
-			// Check if local notifications are enabled before scheduling
-			const localNotificationsEnabled = await AsyncStorage.getItem('localNotificationsEnabled');
+				// Check if local notifications are enabled before scheduling
+				const localNotificationsEnabled = await AsyncStorage.getItem('localNotificationsEnabled');
 
-			if (localNotificationsEnabled === 'true') {
-				// Initialize both services
-				await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
+				if (localNotificationsEnabled === 'true') {
+					// Initialize both services
+					await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
 
-				const followUpTime = new Date(Date.now() + 5000);
-				const notificationId = await this.notificationService.scheduleCallFollowUp(
-					{
-						...contact,
-						callData: {
-							type: callType,
-							startTime: callStartTime.toISOString(),
+					const followUpTime = new Date(Date.now() + 5000);
+					const notificationId = await this.notificationService.scheduleCallFollowUp(
+						{
+							...contact,
+							callData: {
+								type: callType,
+								startTime: callStartTime.toISOString(),
+							},
 						},
-					},
-					followUpTime
-				);
+						followUpTime
+					);
+				}
 			}
 
 			await Linking.openURL(urlScheme);

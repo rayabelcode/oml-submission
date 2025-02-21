@@ -31,18 +31,26 @@ const CallOptions = ({ show, contact, onClose, reminder, onComplete }) => {
 		{
 			id: 'phone',
 			icon: 'call-outline',
-			text: `Call ${contact.first_name}`,
+			text: 'Call',
 			onPress: () => handleCall('phone'),
 		},
 		{
 			id: 'facetime',
 			icon: 'videocam-outline',
-			text: `FaceTime ${contact.first_name}`,
+			text: 'FaceTime',
 			onPress: () => handleCall('facetime-video'),
+		},
+		{
+			id: 'text',
+			icon: 'chatbox-ellipses-outline',
+			text: 'Text',
+			onPress: () => handleCall('sms'),
 		},
 	];
 
-	return <ActionModal show={show} onClose={onClose} options={options} />;
+	const title = `Contact ${contact.first_name}`;
+
+	return <ActionModal show={show} onClose={onClose} options={options} title={title} />;
 };
 
 export default CallOptions;
