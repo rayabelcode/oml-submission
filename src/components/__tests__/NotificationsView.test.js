@@ -190,8 +190,8 @@ describe('NotificationsView', () => {
 		fireEvent.press(snoozeButtons[0]);
 		expect(onSnooze).toHaveBeenCalledWith(mockReminders[0]);
 
-		const callButtons = getAllByText('Call');
-		expect(callButtons).toHaveLength(2);
+		const contactButtons = getAllByText('Contact');
+		expect(contactButtons).toHaveLength(2);
 	});
 
 	it('renders custom date reminders correctly', () => {
@@ -212,13 +212,13 @@ describe('NotificationsView', () => {
 		expect(getByText('12/31/2024 Custom Call Reminder')).toBeTruthy();
 	});
 
-    it('renders all required reminder elements', () => {
-        const { getAllByText } = render(<NotificationsView {...defaultProps} />);
+	it('renders all required reminder elements', () => {
+		const { getAllByText } = render(<NotificationsView {...defaultProps} />);
 
-        expect(getAllByText('Call')).toHaveLength(2);
-        expect(getAllByText('Options')).toHaveLength(2);
-        expect(getAllByText('Recurring Reminder')).toHaveLength(2);
-    });
+		expect(getAllByText('Contact')).toHaveLength(2);
+		expect(getAllByText('Options')).toHaveLength(2);
+		expect(getAllByText('Recurring Reminder')).toHaveLength(2);
+	});
 
 	it('renders mixed reminder types correctly', () => {
 		const mixedReminders = [
