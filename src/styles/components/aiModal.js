@@ -1,4 +1,7 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { height: screenHeight } = Dimensions.get('window');
+const MODAL_HEIGHT = screenHeight * 0.7;
 
 export const createStyles = (colors, spacing, layout) =>
 	StyleSheet.create({
@@ -11,10 +14,13 @@ export const createStyles = (colors, spacing, layout) =>
 		modalContent: {
 			width: '85%',
 			maxWidth: 340,
+			height: MODAL_HEIGHT,
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
 			padding: spacing.lg,
-			maxHeight: '80%',
+		},
+		headerContainer: {
+			width: '100%',
 		},
 		modalTitle: {
 			fontSize: 22,
@@ -45,6 +51,13 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		activeTabText: {
 			color: colors.text.white,
+		},
+		contentContainer: {
+			flex: 1,
+			minHeight: MODAL_HEIGHT - 150,
+		},
+		scrollContent: {
+			flexGrow: 1,
 		},
 		tabContent: {
 			flex: 1,
@@ -81,8 +94,10 @@ export const createStyles = (colors, spacing, layout) =>
 			padding: spacing.xs,
 		},
 		loadingContainer: {
-			padding: spacing.lg,
+			flex: 1,
+			justifyContent: 'center',
 			alignItems: 'center',
+			padding: spacing.lg,
 		},
 		loadingText: {
 			marginTop: spacing.sm,
@@ -103,5 +118,18 @@ export const createStyles = (colors, spacing, layout) =>
 			color: colors.text.primary,
 			textAlign: 'center',
 			marginBottom: spacing.md,
+		},
+		birthdayAlert: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.background.secondary,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginBottom: spacing.md,
+		},
+		birthdayText: {
+			color: colors.text.primary,
+			marginLeft: spacing.sm,
+			flex: 1,
 		},
 	});

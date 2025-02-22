@@ -48,35 +48,40 @@ const AIModal = ({ show, onClose, contact, history }) => {
 		<Modal visible={show} transparent={true} animationType="fade" onRequestClose={onClose}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
-					<Text style={styles.modalTitle}>AI Suggestions</Text>
-
-					<View style={styles.tabSelector}>
-						{['Topics', 'Insights'].map((tab) => (
-							<TouchableOpacity
-								key={tab}
-								style={[styles.tab, activeTab === tab.toLowerCase() && styles.activeTab]}
-								onPress={() => setActiveTab(tab.toLowerCase())}
-							>
-								<Text style={[styles.tabText, activeTab === tab.toLowerCase() && styles.activeTabText]}>
-									{tab}
-								</Text>
-							</TouchableOpacity>
-						))}
+					{/* Fixed Height Header */}
+					<View style={styles.headerContainer}>
+						<Text style={styles.modalTitle}>AI Suggestions</Text>
+						<View style={styles.tabSelector}>
+							{['Topics', 'Insights'].map((tab) => (
+								<TouchableOpacity
+									key={tab}
+									style={[styles.tab, activeTab === tab.toLowerCase() && styles.activeTab]}
+									onPress={() => setActiveTab(tab.toLowerCase())}
+								>
+									<Text style={[styles.tabText, activeTab === tab.toLowerCase() && styles.activeTabText]}>
+										{tab}
+									</Text>
+								</TouchableOpacity>
+							))}
+						</View>
 					</View>
 
-					<ScrollView style={styles.scrollContent}>
-						{loading ? (
-							<View style={styles.loadingContainer}>
-								<ActivityIndicator size="large" color={colors.primary} />
-								<Text style={styles.loadingText}>Generating insights...</Text>
-							</View>
-						) : (
-							<>
-								{activeTab === 'topics' && <MainTab content={content} contact={contact} />}
-								{activeTab === 'insights' && <FlowTab flow={content?.conversationFlow} />}
-							</>
-						)}
-					</ScrollView>
+					{/* Content Section */}
+					<View style={styles.contentContainer}>
+						<ScrollView style={styles.scrollContent} contentContainerStyle={{ flexGrow: 1 }}>
+							{loading ? (
+								<View style={styles.loadingContainer}>
+									<ActivityIndicator size="large" color={colors.primary} />
+									<Text style={styles.loadingText}>Generating insights...</Text>
+								</View>
+							) : (
+								<>
+									{activeTab === 'topics' && <MainTab content={content} contact={contact} />}
+									{activeTab === 'insights' && <FlowTab flow={content?.conversationFlow} />}
+								</>
+							)}
+						</ScrollView>
+					</View>
 
 					<TouchableOpacity style={styles.closeButton} onPress={onClose}>
 						<Icon name="close" size={24} color={colors.text.primary} />
