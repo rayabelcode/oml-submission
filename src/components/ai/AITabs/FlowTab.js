@@ -9,7 +9,6 @@ const FlowTab = ({ flow, jokes }) => {
 
 	return (
 		<View style={styles.tabContent}>
-			<Text style={styles.sectionTitle}>Relationship Insights</Text>
 			{flow?.map((insight, index) => (
 				<View key={index} style={styles.flowStep}>
 					<View style={styles.stepNumber}>

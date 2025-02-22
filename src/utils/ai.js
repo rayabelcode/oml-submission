@@ -66,113 +66,111 @@ export const generateTopicSuggestions = async (contact, history) => {
 	}
 };
 
-// Generate comprehensive AI content
-export const generateAIContent = async (contact, history) => {
+const getRelationshipPattern = async (contact, history) => {
+	const response = await openai.chat.completions.create({
+		model: 'gpt-3.5-turbo',
+		messages: [
+			{
+				role: 'system',
+				content: 'Provide a brief, friendly observation about their relationship dynamic.',
+			},
+			{
+				role: 'user',
+				content: `What's notable about my connection with ${
+					contact.first_name
+				}? Keep it brief. Recent History: ${JSON.stringify(history.slice(-5))}`,
+			},
+		],
+		max_tokens: 50,
+		temperature: 0.7,
+	});
+	return response.choices[0]?.message?.content?.trim() || 'Unable to analyze pattern';
+};
+
+const getNextSteps = async (contact, history) => {
+	const response = await openai.chat.completions.create({
+		model: 'gpt-3.5-turbo',
+		messages: [
+			{
+				role: 'system',
+				content: 'Provide a brief, friendly suggestion to enhance their connection.',
+			},
+			{
+				role: 'user',
+				content: `Give a quick suggestion to strengthen my connection with ${
+					contact.first_name
+				}. Recent History: ${JSON.stringify(history.slice(-5))}`,
+			},
+		],
+		max_tokens: 50,
+		temperature: 0.7,
+	});
+	return response.choices[0]?.message?.content?.trim() || 'Continue building conversation history';
+};
+
+const getJoke = async (contact, history) => {
+	const response = await openai.chat.completions.create({
+		model: 'gpt-3.5-turbo',
+		messages: [
+			{
+				role: 'system',
+				content:
+					'You are a friendly dad-joke expert. Provide a short, clean, actually funny dad joke or pun.',
+			},
+			{
+				role: 'user',
+				content: `Share a funny dad joke that ${
+					contact.first_name
+				} might enjoy. Use their interests as inspiration but the joke doesn't need to directly reference them: ${JSON.stringify(
+					history.slice(-5)
+				)}`,
+			},
+		],
+		max_tokens: 100,
+		temperature: 0.9,
+	});
+	return response.choices[0]?.message?.content?.trim() || 'Unable to generate joke';
+};
+
+// Generate relationship insights based on contact and history
+export const generateRelationshipInsights = async (contact, history) => {
 	try {
-		const response = await openai.chat.completions.create({
-			model: 'gpt-3.5-turbo',
-			messages: [
+		const [pattern, nextSteps, joke] = await Promise.all([
+			getRelationshipPattern(contact, history),
+			getNextSteps(contact, history),
+			getJoke(contact, history),
+		]);
+
+		return {
+			conversationFlow: [
 				{
-					role: 'system',
-					content:
-						'You are an assistant helping maintain personal relationships. Generate specific conversation topics based on contact details and history. Include follow-up questions and consider the current date for timely suggestions.',
+					title: 'Relationship Pattern',
+					description: pattern,
 				},
 				{
-					role: 'user',
-					content: `I need conversation topics for my contact ${contact.first_name}.
-            
-Contact Information:
-Name: ${contact.first_name}
-Contact Notes: ${contact.notes || 'No additional notes'}
-${contact.birthday ? `Birthday coming up on: ${contact.birthday}` : ''}
-Current Date: ${new Date().toISOString().split('T')[0]}
-
-Recent History: ${JSON.stringify(history.slice(-5))}
-
-Based on this contact's information and conversation history, suggest 3-5 personalized topics and follow-up questions for our next conversation. Format as JSON:
-{
-    "suggestions": ["Detailed topic with context 1", "Follow-up question from last chat 2"],
-    "conversationFlow": [
-        {"title": "Pattern/Theme", "description": "Insight about recurring interests"},
-        {"title": "Connection Point", "description": "Opportunity to deepen relationship"}
-    ],
-    "jokes": ["A joke related to their interests or previous conversations"]
-}`,
+					title: 'Next Steps',
+					description: nextSteps,
 				},
 			],
-			max_tokens: 500,
-			temperature: 0.8,
-		});
-
-		const content = response.choices[0]?.message?.content || '';
-
-		// Try to clean and parse the JSON
-		const cleanedContent = content.trim().replace(/```json|```/g, '');
-
-		try {
-			return JSON.parse(cleanedContent);
-		} catch (parseError) {
-			console.error('JSON Parse error:', parseError);
-			return {
-				suggestions: ['Failed to parse AI response'],
-				conversationFlow: [{ title: 'Error', description: 'Could not generate conversation flow' }],
-				jokes: ['Technical difficulties with joke generation'],
-			};
-		}
+			jokes: [joke],
+		};
 	} catch (error) {
-		console.error('AI generation error:', error);
+		console.error('Error in generateRelationshipInsights:', error);
 		return {
-			suggestions: ['Unable to generate suggestions'],
-			conversationFlow: [{ title: 'Error', description: 'Could not connect to AI service' }],
-			jokes: ['Technical difficulties with joke generation'],
+			conversationFlow: [
+				{
+					title: 'Relationship Pattern',
+					description: 'Not enough history to analyze patterns',
+				},
+				{
+					title: 'Next Steps',
+					description: 'Continue building conversation history',
+				},
+			],
+			jokes: ['Need more conversations to generate relevant jokes'],
 		};
 	}
 };
-
-// Generate insights and personalized jokes
-export const generateInsights = async (contact, history) => {
-    try {
-        const response = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are a relationship analyst. Identify patterns and opportunities in friendships.',
-                },
-                {
-                    role: 'user',
-                    content: `Analyze the relationship with ${contact.first_name} based on:
-Recent History: ${JSON.stringify(history.slice(-5))}
-Notes: ${contact.notes || 'None'}
-
-Return response in this format:
-{
-    "patterns": [
-        {"title": "Pattern 1", "description": "Brief pattern description"},
-        {"title": "Pattern 2", "description": "Brief pattern description"}
-    ],
-    "opportunities": [
-        {"title": "Opportunity 1", "description": "Brief opportunity description"},
-        {"title": "Opportunity 2", "description": "Brief opportunity description"}
-    ]
-}`
-                },
-            ],
-            max_tokens: 500,
-            temperature: 0.7,
-        });
-
-        const content = response.choices[0]?.message?.content || '';
-        return JSON.parse(content);
-    } catch (error) {
-        console.error('Error generating insights:', error);
-        return {
-            patterns: [{ title: 'Error', description: 'Unable to analyze patterns' }],
-            opportunities: [{ title: 'Error', description: 'Unable to generate opportunities' }]
-        };
-    }
-};
-
 
 // Check for upcoming birthdays within 30 days
 export const checkUpcomingBirthday = (contact) => {

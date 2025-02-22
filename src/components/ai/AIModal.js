@@ -4,40 +4,41 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import MainTab from './AITabs/MainTab';
 import FlowTab from './AITabs/FlowTab';
-import { generateTopicSuggestions } from '../../utils/ai';
+import { generateTopicSuggestions, generateRelationshipInsights } from '../../utils/ai';
 import { createStyles } from '../../styles/components/aiModal';
 
-// Main AI modal with tab navigation
 const AIModal = ({ show, onClose, contact, history }) => {
 	const { colors } = useTheme();
 	const styles = createStyles(colors);
-	const [activeTab, setActiveTab] = useState('main');
+	const [activeTab, setActiveTab] = useState('topics');
 	const [loading, setLoading] = useState(true);
 	const [content, setContent] = useState(null);
 
-	// Load AI content on mount
 	useEffect(() => {
 		loadContent();
 	}, []);
 
-	// Fetch AI generated content
 	const loadContent = async () => {
 		setLoading(true);
 		const suggestions = await generateTopicSuggestions(contact, history);
 
-		// Create insights from the same data
-		const conversationFlow = [
-			{
-				title: 'Recent Topics',
-				description: 'Review previous conversations to identify common themes',
-			},
-			{
-				title: 'Future Plans',
-				description: 'Discuss upcoming events or activities mentioned',
-			},
-		];
+		const hasHistory = history && history.length > 0;
+		let conversationFlow;
+		let jokes;
 
-		const jokes = ["Here's a lighthearted moment from your last conversation..."];
+		if (hasHistory) {
+			const insights = await generateRelationshipInsights(contact, history);
+			conversationFlow = insights.conversationFlow;
+			jokes = insights.jokes || [];
+		} else {
+			conversationFlow = [
+				{
+					title: 'New Connection',
+					description: 'Not enough conversation history yet to analyze patterns',
+				},
+			];
+			jokes = [];
+		}
 
 		setContent({
 			suggestions,
@@ -51,10 +52,10 @@ const AIModal = ({ show, onClose, contact, history }) => {
 		<Modal visible={show} transparent={true} animationType="fade" onRequestClose={onClose}>
 			<View style={styles.modalContainer}>
 				<View style={styles.modalContent}>
-					<Text style={styles.modalTitle}>AI Conversation Topics</Text>
+					<Text style={styles.modalTitle}>AI Suggestions</Text>
 
 					<View style={styles.tabSelector}>
-						{['Main', 'Insights'].map((tab) => (
+						{['Topics', 'Insights'].map((tab) => (
 							<TouchableOpacity
 								key={tab}
 								style={[styles.tab, activeTab === tab.toLowerCase() && styles.activeTab]}
@@ -75,7 +76,7 @@ const AIModal = ({ show, onClose, contact, history }) => {
 							</View>
 						) : (
 							<>
-								{activeTab === 'main' && <MainTab content={content} contact={contact} />}
+								{activeTab === 'topics' && <MainTab content={content} contact={contact} />}
 								{activeTab === 'insights' && (
 									<FlowTab flow={content?.conversationFlow} jokes={content?.jokes} />
 								)}
