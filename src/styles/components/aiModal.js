@@ -21,6 +21,7 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		headerContainer: {
 			width: '100%',
+			position: 'relative',
 		},
 		modalTitle: {
 			fontSize: 22,
@@ -47,7 +48,8 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		tabText: {
 			color: colors.text.secondary,
-			fontWeight: '600',
+			fontWeight: '800',
+			fontSize: 16,
 		},
 		activeTabText: {
 			color: colors.text.white,
@@ -89,9 +91,11 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		closeButton: {
 			position: 'absolute',
-			top: spacing.md,
+			top: spacing.sm,
 			right: spacing.md,
-			padding: spacing.xs,
+			padding: spacing.md,
+			margin: -spacing.md,
+			zIndex: 1,
 		},
 		loadingContainer: {
 			flex: 1,
@@ -107,16 +111,17 @@ export const createStyles = (colors, spacing, layout) =>
 			color: colors.text.primary,
 		},
 		stepTitle: {
-			color: colors.text.primary,
+			color: colors.text.secondary,
 			fontWeight: '600',
-			fontSize: 18,
-			textAlign: 'center',
+			fontSize: 20,
+			textAlign: 'left',
 			marginTop: spacing.md,
 			marginBottom: spacing.xs,
 		},
 		stepDescription: {
 			color: colors.text.primary,
-			textAlign: 'center',
+			fontSize: 16,
+			textAlign: 'left',
 			marginBottom: spacing.md,
 		},
 		birthdayAlert: {

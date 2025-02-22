@@ -84,7 +84,7 @@ const AIModal = ({ show, onClose, contact, history }) => {
 					</View>
 
 					<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-						<Icon name="close" size={24} color={colors.text.primary} />
+						<Icon name="close-circle-outline" size={35} color={colors.warning} />
 					</TouchableOpacity>
 				</View>
 			</View>

@@ -14,7 +14,7 @@ const MainTab = ({ content, contact }) => {
 		<View style={styles.tabContent}>
 			{upcomingBirthday && (
 				<View style={styles.birthdayAlert}>
-					<Icon name="gift-outline" size={24} color={colors.primary} />
+					<Icon name="gift" size={24} color={colors.primary} />
 					<Text style={styles.birthdayText}>Birthday coming up on {upcomingBirthday}!</Text>
 				</View>
 			)}
