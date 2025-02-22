@@ -26,7 +26,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			backgroundColor: colors.background.secondary,
 			borderTopLeftRadius: layout.borderRadius.lg,
 			borderTopRightRadius: layout.borderRadius.lg,
-			paddingBottom: spacing.xl + 10,
+			paddingBottom: spacing.xl + 25,
 		},
 		handleContainer: {
 			alignItems: 'center',
@@ -69,12 +69,14 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			alignItems: 'center',
 			padding: spacing.md,
 			paddingHorizontal: spacing.lg,
+			marginLeft: spacing.xs,
 			backgroundColor: colors.background.secondary,
 		},
 		optionText: {
-			fontSize: 17,
+			fontSize: 20,
 			color: colors.text.secondary,
 			marginLeft: spacing.md,
+			fontWeight: '600',
 		},
 		selectedOption: {},
 		checkmark: {
