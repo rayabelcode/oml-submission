@@ -1737,7 +1737,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNCAsyncStorage (1.23.1):
+  - RNCAsyncStorage (2.1.1):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2516,7 +2516,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 90bb8dd83136fc05f54b8aaab40345affc93aeff
   ReactCommon: 8953b677c1d2ed01905f3cd5dced07ead9ec4c8e
   ReactNativeAvoidSoftinput: e75b62b96ac2d5ed6e0942e49f4bfba78a75e331
-  RNCAsyncStorage: 923af351d21a33b6c57ed32ac9c25317ddbb0dd4
+  RNCAsyncStorage: 849b77e6ab3eb838361a902b492993056924faab
   RNCPicker: 21ca53c5927e9a7ad03eb4712dc55395114ebcc8
   RNDateTimePicker: 0e650fd3b08dca6e3a3b901f377e9049df804fa0
   RNGestureHandler: 36aca36e4ef19f55dbf97239199d00fd58494e34

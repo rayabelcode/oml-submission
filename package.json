@@ -31,7 +31,7 @@
 		"@expo/config-plugins": "^9.0.15",
 		"@expo/metro-runtime": "~4.0.1",
 		"@expo/vector-icons": "^14.0.4",
-		"@react-native-async-storage/async-storage": "1.23.1",
+		"@react-native-async-storage/async-storage": "2.1.1",
 		"@react-native-community/datetimepicker": "^8.3.0",
 		"@react-native-community/netinfo": "^11.4.1",
 		"@react-native-picker/picker": "^2.11.0",
