@@ -154,7 +154,7 @@ export const useStyles = (colors) => {
 			marginLeft: spacing.md,
 		},
 		callButtonText: {
-			color: colors.white,
+			color: colors.text.white,
 			marginLeft: spacing.sm,
 			fontSize: 16,
 			fontWeight: '700',

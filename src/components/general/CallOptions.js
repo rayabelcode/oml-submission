@@ -2,8 +2,11 @@ import React from 'react';
 import Constants from 'expo-constants';
 import ActionModal from './ActionModal';
 import { callHandler } from '../../utils/callHandler';
+import { useTheme } from '../../context/ThemeContext';
 
 const CallOptions = ({ show, contact, onClose, reminder, onComplete }) => {
+	const { colors } = useTheme();
+
 	const handleCall = async (callType) => {
 		if (Constants.appOwnership === 'expo') {
 			onClose();
@@ -31,18 +34,32 @@ const CallOptions = ({ show, contact, onClose, reminder, onComplete }) => {
 		{
 			id: 'phone',
 			icon: 'call-outline',
-			text: `Call ${contact.first_name}`,
+			text: 'Call',
+			iconColor: colors.secondary,
+			textColor: colors.text.primary,
 			onPress: () => handleCall('phone'),
 		},
 		{
 			id: 'facetime',
 			icon: 'videocam-outline',
-			text: `FaceTime ${contact.first_name}`,
+			text: 'FaceTime',
+			iconColor: colors.secondary,
+			textColor: colors.text.primary,
 			onPress: () => handleCall('facetime-video'),
+		},
+		{
+			id: 'text',
+			icon: 'chatbox-ellipses-outline',
+			text: 'Text',
+			iconColor: colors.primary,
+			textColor: colors.text.primary,
+			onPress: () => handleCall('sms'),
 		},
 	];
 
-	return <ActionModal show={show} onClose={onClose} options={options} />;
+	const title = `Contact ${contact.first_name}`;
+
+	return <ActionModal show={show} onClose={onClose} options={options} title={title} />;
 };
 
 export default CallOptions;

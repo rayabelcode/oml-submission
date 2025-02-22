@@ -11,6 +11,7 @@ import {
 	SafeAreaView,
 	Animated,
 } from 'react-native';
+import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
@@ -49,10 +50,10 @@ const AuthSection = ({
 	};
 
 	return (
-		<SafeAreaView style={styles.safeArea}>
+		<SafeAreaView style={styles.authContainer}>
 			<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
 				<ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-					<View style={styles.authContainer}>
+					<View style={{ flex: 1 }}>
 						<View style={styles.logoContainer}>
 							<Image source={logoSource} style={styles.logo} resizeMode="contain" />
 						</View>
@@ -63,10 +64,22 @@ const AuthSection = ({
 								style={styles.mascot}
 								resizeMode="contain"
 							/>
-							<Text style={styles.welcomeText}>{isLogin ? 'Welcome Back!' : 'Keep your circle tight'}</Text>
-							<Text style={styles.subtitleText}>
-								{isLogin ? 'Sign in to manage your circle' : 'Create an account to get started'}
-							</Text>
+							<Text style={styles.welcomeText}>{isLogin ? 'Welcome Back' : 'Keep Your Circle Tight'}</Text>
+						</View>
+
+						<View style={styles.segmentedControlContainer}>
+							<SegmentedControl
+								values={['Sign In', 'Register']}
+								selectedIndex={isLogin ? 0 : 1}
+								onChange={(event) => {
+									setIsLogin(event.nativeEvent.selectedSegmentIndex === 0);
+								}}
+								style={styles.segmentedControl}
+								backgroundColor={colors.background.primary}
+								tintColor={colors.lightHighlight}
+								fontStyle={styles.segmentedControlText}
+								activeFontStyle={styles.segmentedControlActiveText}
+							/>
 						</View>
 
 						<View style={styles.card}>
@@ -78,13 +91,7 @@ const AuthSection = ({
 									style={{ marginRight: 8 }}
 								/>
 								<TextInput
-									style={[
-										styles.authInput,
-										isAppleUser() && {
-											backgroundColor: colors.background.secondary,
-											color: colors.text.secondary,
-										},
-									]}
+									style={styles.authInput}
 									placeholder="Email"
 									value={email}
 									onChangeText={setEmail}
@@ -96,6 +103,10 @@ const AuthSection = ({
 									onSubmitEditing={() => passwordInputRef.current?.focus()}
 									blurOnSubmit={false}
 									editable={!isAppleUser()}
+									textContentType="emailAddress"
+									autoComplete="email"
+									spellCheck={false}
+									clearButtonMode="while-editing"
 								/>
 							</View>
 
@@ -112,14 +123,13 @@ const AuthSection = ({
 									placeholderTextColor={colors.text.secondary}
 									returnKeyType="done"
 									onSubmitEditing={handleAuth}
+									textContentType={isLogin ? 'password' : 'newPassword'}
+									autoComplete={isLogin ? 'current-password' : 'new-password'}
+									passwordRules="minlength: 8;"
+									autoCorrect={false}
+									spellCheck={false}
 								/>
 							</View>
-
-							{isLogin && (
-								<TouchableOpacity style={styles.forgotPasswordButton} onPress={onForgotPassword}>
-									<Text style={styles.forgotPasswordText}>Forgot password?</Text>
-								</TouchableOpacity>
-							)}
 
 							<TouchableOpacity
 								style={[styles.loginButton, loading && { opacity: 0.7 }]}
@@ -127,9 +137,17 @@ const AuthSection = ({
 								disabled={loading}
 							>
 								<Text style={styles.loginButtonText}>
-									{loading ? 'Loading...' : isLogin ? 'Sign In' : 'Sign Up'}
+									{loading ? 'Loading...' : isLogin ? 'Sign In' : 'Register'}
 								</Text>
 							</TouchableOpacity>
+
+							<View style={styles.forgotPasswordContainer}>
+								{isLogin && (
+									<TouchableOpacity style={styles.forgotPasswordButton} onPress={onForgotPassword}>
+										<Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+									</TouchableOpacity>
+								)}
+							</View>
 
 							<View style={styles.dividerContainer}>
 								<View style={styles.dividerLine} />
@@ -140,12 +158,6 @@ const AuthSection = ({
 							<TouchableOpacity style={styles.socialButton} onPress={handleAppleSignIn}>
 								<Icon name="logo-apple" size={22} color={colors.text.primary} />
 								<Text style={styles.socialButtonText}>Continue with Apple</Text>
-							</TouchableOpacity>
-
-							<TouchableOpacity style={styles.switchButton} onPress={() => setIsLogin(!isLogin)}>
-								<Text style={styles.switchButtonText}>
-									{isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
-								</Text>
 							</TouchableOpacity>
 						</View>
 					</View>

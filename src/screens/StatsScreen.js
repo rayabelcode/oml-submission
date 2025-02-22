@@ -159,8 +159,8 @@ export const StatsScreen = () => {
 												setShowCallOptions(true);
 											}}
 										>
-											<Icon name="call" size={20} color={colors.white} />
-											<Text style={styles.callButtonText}>Call</Text>
+											<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
+											<Text style={styles.callButtonText}>Contact</Text>
 										</TouchableOpacity>
 									</View>
 								))

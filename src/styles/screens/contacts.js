@@ -1159,6 +1159,66 @@ const useStyles = () => {
 		relationshipIcon: {
 			marginTop: 4,
 		},
+		// Welcome Screen
+		welcomeContainer: {
+			flex: 1,
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.xl * 3,
+		},
+		welcomeImage: {
+			width: 120,
+			height: 120,
+			marginBottom: spacing.lg,
+		},
+		welcomeTitle: {
+			fontSize: 28,
+			fontWeight: '800',
+			color: colors.text.primary,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
+		},
+		welcomeSubheading: {
+			fontSize: 17,
+			color: colors.text.primary,
+			opacity: 0.75,
+			fontWeight: '800',
+			textAlign: 'center',
+			lineHeight: 22,
+			width: '100%',
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			backgroundColor: colors.background.tertiary,
+			marginBottom: spacing.md,
+		},
+		welcomeText: {
+			fontSize: 17,
+			color: colors.text.secondary,
+			textAlign: 'center',
+			fontWeight: '700',
+			lineHeight: 24,
+			maxWidth: '90%',
+			paddingHorizontal: spacing.lg,
+			marginTop: spacing.sm,
+			marginBottom: spacing.xs,
+		},
+		welcomeButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.primary,
+			paddingVertical: spacing.md,
+			paddingHorizontal: spacing.xl,
+			borderRadius: layout.borderRadius.md,
+			gap: spacing.sm,
+			marginTop: spacing.xl,
+			marginBottom: spacing.xl,
+		},
+		welcomeButtonText: {
+			color: colors.text.primary,
+			opacity: 0.9,
+			fontSize: 17,
+			fontWeight: '700',
+		},
 	});
 };
 

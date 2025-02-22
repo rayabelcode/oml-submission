@@ -40,9 +40,15 @@ export default function SettingsScreen({ navigation }) {
 	const [initialProfileLoaded, setInitialProfileLoaded] = useState(false);
 
 	useEffect(() => {
+		let unsubscribe;
+
 		if (!user) {
 			setInitialProfileLoaded(true);
-			return;
+			return () => {
+				if (unsubscribe) {
+					unsubscribe();
+				}
+			};
 		}
 
 		const loadInitialData = async () => {
@@ -63,6 +69,12 @@ export default function SettingsScreen({ navigation }) {
 		};
 
 		loadInitialData();
+
+		return () => {
+			if (unsubscribe) {
+				unsubscribe();
+			}
+		};
 	}, [user]);
 
 	const loadUserProfile = async () => {
@@ -163,7 +175,6 @@ export default function SettingsScreen({ navigation }) {
 			Alert.alert('Error', 'Failed to open email composer');
 		}
 	};
-	
 
 	const handleExportData = async (contactsOnly = false) => {
 		try {
@@ -247,8 +258,8 @@ export default function SettingsScreen({ navigation }) {
 			return;
 		}
 
-		if (!isLogin && password.length < 6) {
-			Alert.alert('Error', 'Password must be at least 6 characters');
+		if (!isLogin && password.length < 8) {
+			Alert.alert('Error', 'Password must be at least 8 characters');
 			return;
 		}
 

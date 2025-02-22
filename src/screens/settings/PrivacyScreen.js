@@ -6,7 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { exportUserData, deleteUserAccount } from '../../utils/firestore';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { exportUserData, deleteUserAccount, cleanupSubscriptions } from '../../utils/firestore';
+import { EmailAuthProvider, OAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 const PrivacyScreen = ({ navigation }) => {
 	const styles = useStyles();
@@ -60,19 +62,103 @@ const PrivacyScreen = ({ navigation }) => {
 				{
 					text: 'Delete',
 					style: 'destructive',
-					onPress: async () => {
-						try {
-							await deleteUserAccount(user.uid);
-							await user.delete();
-							await signOut();
-						} catch (error) {
-							console.error('Error deleting account:', error);
-							Alert.alert('Error', 'Failed to delete account');
+					onPress: () => {
+						if (user.providerData[0]?.providerId === 'apple.com') {
+							// Direct deletion for Apple users
+							handleAccountDeletion();
+						} else {
+							// Password verification for email users
+							Alert.prompt(
+								'Enter Password',
+								'Please enter your password to confirm deletion',
+								[
+									{ text: 'Cancel', style: 'cancel' },
+									{
+										text: 'Delete',
+										style: 'destructive',
+										onPress: async (password) => {
+											if (!password) {
+												Alert.alert('Error', 'Password is required');
+												return;
+											}
+
+											try {
+												const credential = EmailAuthProvider.credential(user.email, password);
+												await reauthenticateWithCredential(user, credential);
+												await handleAccountDeletion();
+											} catch (error) {
+												console.error('Error deleting account:', error);
+												Alert.alert(
+													'Error',
+													error.code === 'auth/wrong-password'
+														? 'Incorrect password'
+														: 'Failed to delete account'
+												);
+											}
+										},
+									},
+								],
+								'secure-text'
+							);
 						}
 					},
 				},
 			]
 		);
+	};
+
+	// Function for account deletion
+	const handleAccountDeletion = async () => {
+		try {
+			if (user.providerData[0]?.providerId === 'apple.com') {
+				Alert.alert('Verify Identity', 'Please verify your Apple ID to continue with account deletion.', [
+					{ text: 'Cancel', style: 'cancel' },
+					{
+						text: 'Continue',
+						style: 'destructive',
+						onPress: async () => {
+							try {
+								// First cleanup subscriptions
+								cleanupSubscriptions();
+
+								const appleCredential = await AppleAuthentication.signInAsync({
+									requestedScopes: [
+										AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+										AppleAuthentication.AppleAuthenticationScope.EMAIL,
+									],
+								});
+
+								const provider = new OAuthProvider('apple.com');
+								const credential = provider.credential({
+									idToken: appleCredential.identityToken,
+									rawNonce: appleCredential.nonce,
+								});
+
+								await reauthenticateWithCredential(user, credential);
+
+								// Then delete data and account
+								await deleteUserAccount(user.uid);
+								await user.delete();
+								await signOut();
+							} catch (error) {
+								console.error('Error during verification:', error);
+								Alert.alert('Error', 'Failed to verify identity. Please try again.');
+							}
+						},
+					},
+				]);
+			} else {
+				// First cleanup subscriptions
+				cleanupSubscriptions();
+				// Then delete data and account
+				await deleteUserAccount(user.uid);
+				await user.delete();
+				await signOut();
+			}
+		} catch (error) {
+			console.error('Error deleting account:', error);
+			Alert.alert('Error', 'Failed to delete account. Please try signing out and back in, then try again.');
+		}
 	};
 
 	return (

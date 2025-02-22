@@ -6,7 +6,7 @@ const createStyles = (colors) =>
 		container: {
 			flex: 1,
 			backgroundColor: colors.background.primary,
-			paddingTop: Platform.OS === 'ios' ? 150 : 0,
+			paddingTop: Platform.OS === 'ios' ? 50 : 0,
 		},
 		settingsList: {
 			flex: 1,
@@ -150,15 +150,16 @@ const createStyles = (colors) =>
 			backgroundColor: colors.primary,
 			paddingVertical: spacing.md,
 			paddingHorizontal: 50,
-			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.md,
+			borderRadius: layout.borderRadius.lg,
+			marginTop: spacing.xs,
 			marginBottom: spacing.sm,
+			minWidth: 200,
 			alignSelf: 'center',
 		},
 		loginButtonText: {
 			color: colors.text.primary,
 			textAlign: 'center',
-			fontSize: 16,
+			fontSize: 18,
 			fontWeight: '700',
 		},
 		logoutButton: {
@@ -250,13 +251,14 @@ const createStyles = (colors) =>
 		},
 		logoContainer: {
 			alignItems: 'center',
-			marginBottom: spacing.lg,
-			marginTop: spacing.xl,
+			marginBottom: spacing.md,
+			marginTop: spacing.lg,
 		},
 		logo: {
 			width: 250,
 			height: 36,
 			marginBottom: spacing.xs,
+			marginTop: spacing.lg,
 		},
 		authContainer: {
 			flex: 1,
@@ -271,7 +273,7 @@ const createStyles = (colors) =>
 		},
 		mascotContainer: {
 			alignItems: 'center',
-			marginBottom: spacing.lg,
+			marginBottom: spacing.sm,
 		},
 		mascot: {
 			width: 120,
@@ -325,7 +327,8 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.md,
 			paddingHorizontal: spacing.xl,
 			borderRadius: layout.borderRadius.md,
-			marginTop: spacing.md,
+			marginTop: spacing.xs,
+			marginBottom: spacing.xs,
 			borderWidth: 1,
 			borderColor: colors.border,
 			alignSelf: 'center',
@@ -349,15 +352,17 @@ const createStyles = (colors) =>
 		dividerText: {
 			color: colors.text.secondary,
 			paddingHorizontal: spacing.md,
+			fontSize: 16,
+			fontWeight: '700',
 		},
 		forgotPasswordButton: {
-			alignSelf: 'flex-end',
-			marginBottom: spacing.md,
-			marginTop: -spacing.sm,
+			marginTop: spacing.sm,
+			alignSelf: 'center',
 		},
 		forgotPasswordText: {
 			color: colors.primary,
-			fontSize: 14,
+			fontSize: 16,
+			fontWeight: '600',
 		},
 		// Profile Page
 		headerContainer: {
@@ -472,6 +477,27 @@ const createStyles = (colors) =>
 			paddingRight: spacing.md,
 			textAlign: 'center',
 		},
+		segmentedControlContainer: {
+			paddingHorizontal: spacing.xl,
+			marginBottom: spacing.md,
+		},
+		segmentedControl: {
+			height: 50,
+		},
+		segmentedControlText: {
+			fontSize: 20,
+			color: colors.text.primary,
+		},
+		segmentedControlActiveText: {
+			fontSize: 20,
+			color: colors.text.primary,
+		},
+		forgotPasswordContainer: {
+			height: 40,
+			justifyContent: 'center',
+			marginBottom: 0,
+			marginTop: -8,
+		},
 		// SchedulingScreen
 		settingsHeader: {
 			fontSize: 19,
@@ -570,6 +596,14 @@ const createStyles = (colors) =>
 			fontSize: 24,
 			fontWeight: '600',
 			color: colors.primary,
+		},
+		// Apple User helper text
+		helperText: {
+			fontSize: 16,
+			fontWeight: '600',
+			lineHeight: 22,
+			color: colors.text.secondary,
+			paddingHorizontal: spacing.xl,
 		},
 	});
 

@@ -214,8 +214,8 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 								setShowCallOptions(true);
 							}}
 						>
-							<Icon name="call-outline" size={24} color={colors.success} />
-							<Text style={[styles.actionText, { color: colors.success }]}>Call</Text>
+							<Icon name="chatbox-ellipses-outline" size={24} color={colors.success} />
+							<Text style={[styles.actionText, { color: colors.success }]}>Contact</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
