@@ -20,6 +20,7 @@ import { generateTopicSuggestions } from '../../../utils/ai';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KeyboardDismiss from '../../../components/general/KeyboardDismiss';
+import AIModal from '../../ai/AIModal';
 
 const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact }) => {
 	const { colors } = useTheme();
@@ -301,37 +302,14 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 
 			{Platform.OS === 'ios' && <KeyboardDismiss inputAccessoryViewID={inputAccessoryViewID} />}
 
-			<Modal
-				visible={showAISuggestions}
-				transparent={true}
-				animationType="fade"
-				onRequestClose={() => setShowAISuggestions(false)}
-			>
-				<View style={styles.aiModalContainer}>
-					<View style={styles.aiModalContent}>
-						<Text style={styles.aiModalTitle}>AI Conversation Topics</Text>
-						<ScrollView style={styles.aiModalScrollContent}>
-							{loadingSuggestions ? (
-								<View style={styles.loadingContainer}>
-									<ActivityIndicator size="large" color={colors.primary} />
-									<Text style={[styles.suggestionsText, { marginTop: spacing.md }]}>
-										Generating suggestions...
-									</Text>
-								</View>
-							) : (
-								suggestions.map((suggestion, index) => (
-									<View key={index} style={styles.aiSuggestionCard}>
-										<Text style={styles.aiSuggestionText}>{suggestion}</Text>
-									</View>
-								))
-							)}
-						</ScrollView>
-						<TouchableOpacity style={styles.closeButton} onPress={() => setShowAISuggestions(false)}>
-							<Icon name="close" size={24} color={colors.text.primary} />
-						</TouchableOpacity>
-					</View>
-				</View>
-			</Modal>
+			{showAISuggestions && (
+				<AIModal
+					show={showAISuggestions}
+					onClose={() => setShowAISuggestions(false)}
+					contact={contact}
+					history={history}
+				/>
+			)}
 
 			<DatePickerModal
 				visible={showDatePicker}

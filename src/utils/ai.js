@@ -63,3 +63,58 @@ Based on this specific contact's information and conversation history, suggest 3
 		return ['Unable to generate suggestions at this time.'];
 	}
 };
+
+// Generate comprehensive AI content
+export const generateAIContent = async (contact, history) => {
+	try {
+		const response = await openai.chat.completions.create({
+			model: 'gpt-3.5-turbo',
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are an assistant helping maintain personal relationships. Generate conversation topics, flow, and appropriate humor based on contact details and history.',
+				},
+				{
+					role: 'user',
+					content: `Generate a comprehensive conversation package for ${contact.first_name}.
+                    Recent History: ${JSON.stringify(history.slice(-5))}
+                    Contact Details: ${JSON.stringify(contact)}
+                    
+                    Format as JSON with:
+                    - suggestions: Array of conversation topics
+                    - conversationFlow: Array of {title, description} steps
+                    - jokes: Array of relevant jokes
+                    - keyMoments: Array of follow-up points from history`,
+				},
+			],
+			max_tokens: 500,
+			temperature: 0.7,
+		});
+
+		return JSON.parse(response.choices[0]?.message?.content || '{}');
+	} catch (error) {
+		console.error('AI generation error:', error);
+		return {
+			suggestions: ['Unable to generate suggestions'],
+			conversationFlow: [],
+			jokes: [],
+			keyMoments: [],
+		};
+	}
+};
+
+// Check for upcoming birthdays
+export const checkUpcomingBirthday = (contact) => {
+	if (!contact.birthday) return null;
+	const today = new Date();
+	const birthday = new Date(contact.birthday);
+	birthday.setFullYear(today.getFullYear());
+
+	if (birthday < today) {
+		birthday.setFullYear(today.getFullYear() + 1);
+	}
+
+	const daysUntilBirthday = Math.ceil((birthday - today) / (1000 * 60 * 60 * 24));
+	return daysUntilBirthday <= 30 ? birthday.toLocaleDateString() : null;
+};
