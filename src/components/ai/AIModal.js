@@ -4,14 +4,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useTheme } from '../../context/ThemeContext';
 import MainTab from './AITabs/MainTab';
 import FlowTab from './AITabs/FlowTab';
-import JokesTab from './AITabs/JokesTab';
-import { generateAIContent } from '../../utils/ai';
+import { generateTopicSuggestions } from '../../utils/ai';
 import { createStyles } from '../../styles/components/aiModal';
 
 // Main AI modal with tab navigation
 const AIModal = ({ show, onClose, contact, history }) => {
 	const { colors } = useTheme();
-    const styles = createStyles(colors);
+	const styles = createStyles(colors);
 	const [activeTab, setActiveTab] = useState('main');
 	const [loading, setLoading] = useState(true);
 	const [content, setContent] = useState(null);
@@ -24,8 +23,27 @@ const AIModal = ({ show, onClose, contact, history }) => {
 	// Fetch AI generated content
 	const loadContent = async () => {
 		setLoading(true);
-		const aiContent = await generateAIContent(contact, history);
-		setContent(aiContent);
+		const suggestions = await generateTopicSuggestions(contact, history);
+
+		// Create insights from the same data
+		const conversationFlow = [
+			{
+				title: 'Recent Topics',
+				description: 'Review previous conversations to identify common themes',
+			},
+			{
+				title: 'Future Plans',
+				description: 'Discuss upcoming events or activities mentioned',
+			},
+		];
+
+		const jokes = ["Here's a lighthearted moment from your last conversation..."];
+
+		setContent({
+			suggestions,
+			conversationFlow,
+			jokes,
+		});
 		setLoading(false);
 	};
 
@@ -36,7 +54,7 @@ const AIModal = ({ show, onClose, contact, history }) => {
 					<Text style={styles.modalTitle}>AI Conversation Topics</Text>
 
 					<View style={styles.tabSelector}>
-						{['Main', 'Flow', 'Jokes'].map((tab) => (
+						{['Main', 'Insights'].map((tab) => (
 							<TouchableOpacity
 								key={tab}
 								style={[styles.tab, activeTab === tab.toLowerCase() && styles.activeTab]}
@@ -49,20 +67,21 @@ const AIModal = ({ show, onClose, contact, history }) => {
 						))}
 					</View>
 
-                    <ScrollView style={styles.scrollContent}>
-                        {loading ? (
-                            <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color={colors.primary} />
-                                <Text style={styles.loadingText}>Generating insights...</Text>
-                            </View>
-                        ) : (
-                            <>
-                                {activeTab === 'main' && <MainTab content={content} contact={contact} />}
-                                {activeTab === 'flow' && <FlowTab flow={content?.conversationFlow} />}
-                                {activeTab === 'jokes' && <JokesTab jokes={content?.jokes} />}
-                            </>
-                        )}
-                    </ScrollView>
+					<ScrollView style={styles.scrollContent}>
+						{loading ? (
+							<View style={styles.loadingContainer}>
+								<ActivityIndicator size="large" color={colors.primary} />
+								<Text style={styles.loadingText}>Generating insights...</Text>
+							</View>
+						) : (
+							<>
+								{activeTab === 'main' && <MainTab content={content} contact={contact} />}
+								{activeTab === 'insights' && (
+									<FlowTab flow={content?.conversationFlow} jokes={content?.jokes} />
+								)}
+							</>
+						)}
+					</ScrollView>
 
 					<TouchableOpacity style={styles.closeButton} onPress={onClose}>
 						<Icon name="close" size={24} color={colors.text.primary} />

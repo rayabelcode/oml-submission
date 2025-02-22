@@ -6,6 +6,7 @@ const openai = new OpenAI({
 	dangerouslyAllowBrowser: true,
 });
 
+// Main tab conversation suggestions
 export const generateTopicSuggestions = async (contact, history) => {
 	try {
 		// Verify we have valid contact data
@@ -39,14 +40,15 @@ export const generateTopicSuggestions = async (contact, history) => {
 					role: 'user',
 					content: `I need conversation topics for my contact ${contactName}.
             
-Contact Information:
-Name: ${contactName}
-Contact Notes: ${contact.notes || 'No additional notes'}
-
-Recent Conversation History:
-${recentHistory}
-
-Based on this specific contact's information and conversation history, suggest 3-5 personalized topics for our next conversation.`,
+					Contact Information:
+					Name: ${contactName}
+					Contact Notes: ${contact.notes || 'No additional notes'}
+					${contact.birthday ? `Birthday: ${contact.birthday}` : ''}
+					
+					Recent Conversation History:
+					${recentHistory}
+					
+					Based on this specific contact's information and conversation history, suggest 3-5 personalized topics for our next conversation.`,
 				},
 			],
 			max_tokens: 150,
@@ -73,31 +75,33 @@ export const generateAIContent = async (contact, history) => {
 				{
 					role: 'system',
 					content:
-						'You are an assistant helping maintain personal relationships. Generate conversation topics, flow, and appropriate humor based on contact details and history. Return response in valid JSON format only.',
+						'You are an assistant helping maintain personal relationships. Generate specific conversation topics based on contact details and history. Include follow-up questions and consider the current date for timely suggestions.',
 				},
 				{
 					role: 'user',
-					content: `Generate a conversation package for ${
-						contact.first_name
-					} in the following JSON format only:
-					{
-						"suggestions": ["topic 1", "topic 2", "topic 3"],
-						"conversationFlow": [
-							{"title": "Step 1", "description": "Description 1"},
-							{"title": "Step 2", "description": "Description 2"}
-						],
-						"jokes": ["joke 1", "joke 2"],
-						"keyMoments": ["moment 1", "moment 2"]
-					}
-					
-					Use this contact info:
-					Recent History: ${JSON.stringify(history.slice(-5))}
-					Contact Details: ${JSON.stringify(contact)}
-					${contact.birthday ? `Note: Contact's birthday is coming up on ${contact.birthday}` : ''}`,
+					content: `I need conversation topics for my contact ${contact.first_name}.
+            
+Contact Information:
+Name: ${contact.first_name}
+Contact Notes: ${contact.notes || 'No additional notes'}
+${contact.birthday ? `Birthday coming up on: ${contact.birthday}` : ''}
+Current Date: ${new Date().toISOString().split('T')[0]}
+
+Recent History: ${JSON.stringify(history.slice(-5))}
+
+Based on this contact's information and conversation history, suggest 3-5 personalized topics and follow-up questions for our next conversation. Format as JSON:
+{
+    "suggestions": ["Detailed topic with context 1", "Follow-up question from last chat 2"],
+    "conversationFlow": [
+        {"title": "Pattern/Theme", "description": "Insight about recurring interests"},
+        {"title": "Connection Point", "description": "Opportunity to deepen relationship"}
+    ],
+    "jokes": ["A joke related to their interests or previous conversations"]
+}`,
 				},
 			],
 			max_tokens: 500,
-			temperature: 0.7,
+			temperature: 0.8,
 		});
 
 		const content = response.choices[0]?.message?.content || '';
@@ -113,7 +117,6 @@ export const generateAIContent = async (contact, history) => {
 				suggestions: ['Failed to parse AI response'],
 				conversationFlow: [{ title: 'Error', description: 'Could not generate conversation flow' }],
 				jokes: ['Technical difficulties with joke generation'],
-				keyMoments: ['Unable to process key moments'],
 			};
 		}
 	} catch (error) {
@@ -122,10 +125,54 @@ export const generateAIContent = async (contact, history) => {
 			suggestions: ['Unable to generate suggestions'],
 			conversationFlow: [{ title: 'Error', description: 'Could not connect to AI service' }],
 			jokes: ['Technical difficulties with joke generation'],
-			keyMoments: ['Unable to process key moments'],
 		};
 	}
 };
+
+// Generate insights and personalized jokes
+export const generateInsights = async (contact, history) => {
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a relationship analyst. Identify patterns and opportunities in friendships.',
+                },
+                {
+                    role: 'user',
+                    content: `Analyze the relationship with ${contact.first_name} based on:
+Recent History: ${JSON.stringify(history.slice(-5))}
+Notes: ${contact.notes || 'None'}
+
+Return response in this format:
+{
+    "patterns": [
+        {"title": "Pattern 1", "description": "Brief pattern description"},
+        {"title": "Pattern 2", "description": "Brief pattern description"}
+    ],
+    "opportunities": [
+        {"title": "Opportunity 1", "description": "Brief opportunity description"},
+        {"title": "Opportunity 2", "description": "Brief opportunity description"}
+    ]
+}`
+                },
+            ],
+            max_tokens: 500,
+            temperature: 0.7,
+        });
+
+        const content = response.choices[0]?.message?.content || '';
+        return JSON.parse(content);
+    } catch (error) {
+        console.error('Error generating insights:', error);
+        return {
+            patterns: [{ title: 'Error', description: 'Unable to analyze patterns' }],
+            opportunities: [{ title: 'Error', description: 'Unable to generate opportunities' }]
+        };
+    }
+};
+
 
 // Check for upcoming birthdays within 30 days
 export const checkUpcomingBirthday = (contact) => {
