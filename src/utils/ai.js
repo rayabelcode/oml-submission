@@ -108,37 +108,12 @@ const getNextSteps = async (contact, history) => {
 	return response.choices[0]?.message?.content?.trim() || 'Continue building conversation history';
 };
 
-const getJoke = async (contact, history) => {
-	const response = await openai.chat.completions.create({
-		model: 'gpt-3.5-turbo',
-		messages: [
-			{
-				role: 'system',
-				content:
-					'You are a friendly dad-joke expert. Provide a short, clean, actually funny dad joke or pun.',
-			},
-			{
-				role: 'user',
-				content: `Share a funny dad joke that ${
-					contact.first_name
-				} might enjoy. Use their interests as inspiration but the joke doesn't need to directly reference them: ${JSON.stringify(
-					history.slice(-5)
-				)}`,
-			},
-		],
-		max_tokens: 100,
-		temperature: 0.9,
-	});
-	return response.choices[0]?.message?.content?.trim() || 'Unable to generate joke';
-};
-
 // Generate relationship insights based on contact and history
 export const generateRelationshipInsights = async (contact, history) => {
 	try {
-		const [pattern, nextSteps, joke] = await Promise.all([
+		const [pattern, nextSteps] = await Promise.all([
 			getRelationshipPattern(contact, history),
 			getNextSteps(contact, history),
-			getJoke(contact, history),
 		]);
 
 		return {
@@ -152,7 +127,6 @@ export const generateRelationshipInsights = async (contact, history) => {
 					description: nextSteps,
 				},
 			],
-			jokes: [joke],
 		};
 	} catch (error) {
 		console.error('Error in generateRelationshipInsights:', error);
@@ -167,7 +141,6 @@ export const generateRelationshipInsights = async (contact, history) => {
 					description: 'Continue building conversation history',
 				},
 			],
-			jokes: ['Need more conversations to generate relevant jokes'],
 		};
 	}
 };

@@ -8,8 +8,8 @@ import { generateTopicSuggestions, generateRelationshipInsights } from '../../ut
 import { createStyles } from '../../styles/components/aiModal';
 
 const AIModal = ({ show, onClose, contact, history }) => {
-	const { colors } = useTheme();
-	const styles = createStyles(colors);
+	const { colors, spacing, layout } = useTheme();
+	const styles = createStyles(colors, spacing, layout);
 	const [activeTab, setActiveTab] = useState('topics');
 	const [loading, setLoading] = useState(true);
 	const [content, setContent] = useState(null);
@@ -24,12 +24,10 @@ const AIModal = ({ show, onClose, contact, history }) => {
 
 		const hasHistory = history && history.length > 0;
 		let conversationFlow;
-		let jokes;
 
 		if (hasHistory) {
 			const insights = await generateRelationshipInsights(contact, history);
 			conversationFlow = insights.conversationFlow;
-			jokes = insights.jokes || [];
 		} else {
 			conversationFlow = [
 				{
@@ -37,13 +35,11 @@ const AIModal = ({ show, onClose, contact, history }) => {
 					description: 'Not enough conversation history yet to analyze patterns',
 				},
 			];
-			jokes = [];
 		}
 
 		setContent({
 			suggestions,
 			conversationFlow,
-			jokes,
 		});
 		setLoading(false);
 	};
@@ -77,9 +73,7 @@ const AIModal = ({ show, onClose, contact, history }) => {
 						) : (
 							<>
 								{activeTab === 'topics' && <MainTab content={content} contact={contact} />}
-								{activeTab === 'insights' && (
-									<FlowTab flow={content?.conversationFlow} jokes={content?.jokes} />
-								)}
+								{activeTab === 'insights' && <FlowTab flow={content?.conversationFlow} />}
 							</>
 						)}
 					</ScrollView>

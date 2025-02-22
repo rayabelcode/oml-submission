@@ -1,40 +1,40 @@
 import { StyleSheet } from 'react-native';
 
-export const createStyles = (colors) =>
+export const createStyles = (colors, spacing, layout) =>
 	StyleSheet.create({
 		modalContainer: {
 			flex: 1,
 			justifyContent: 'center',
 			alignItems: 'center',
-			backgroundColor: 'rgba(0, 0, 0, 0.5)',
+			backgroundColor: colors.background.overlay,
 		},
 		modalContent: {
 			width: '85%',
 			maxWidth: 340,
 			backgroundColor: colors.background.primary,
-			borderRadius: 15,
-			padding: 20,
+			borderRadius: layout.borderRadius.lg,
+			padding: spacing.lg,
 			maxHeight: '80%',
 		},
 		modalTitle: {
 			fontSize: 22,
 			fontWeight: '700',
 			color: colors.text.primary,
-			marginBottom: 15,
+			marginBottom: spacing.md,
 			textAlign: 'center',
 		},
 		tabSelector: {
 			flexDirection: 'row',
-			marginBottom: 15,
-			borderRadius: 10,
+			marginBottom: spacing.md,
+			borderRadius: layout.borderRadius.md,
 			backgroundColor: colors.background.secondary,
-			padding: 4,
+			padding: spacing.xs,
 		},
 		tab: {
 			flex: 1,
-			paddingVertical: 8,
+			paddingVertical: spacing.sm,
 			alignItems: 'center',
-			borderRadius: 8,
+			borderRadius: layout.borderRadius.sm,
 		},
 		activeTab: {
 			backgroundColor: colors.primary,
@@ -50,81 +50,42 @@ export const createStyles = (colors) =>
 			flex: 1,
 		},
 		section: {
-			marginBottom: 15,
+			marginBottom: spacing.md,
 		},
 		sectionTitle: {
 			fontSize: 18,
 			fontWeight: '600',
 			color: colors.text.primary,
-			marginBottom: 10,
-		},
-		birthdayAlert: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: colors.background.highlight,
-			padding: 15,
-			borderRadius: 10,
-			marginBottom: 15,
-		},
-		birthdayText: {
-			marginLeft: 10,
-			color: colors.text.primary,
-			fontSize: 16,
-		},
-		momentCard: {
-			backgroundColor: colors.background.secondary,
-			padding: 15,
-			borderRadius: 10,
-			marginBottom: 8,
+			marginBottom: spacing.sm,
+			textAlign: 'center',
+			marginTop: spacing.md,
 		},
 		suggestionCard: {
 			backgroundColor: colors.background.secondary,
-			padding: 15,
-			borderRadius: 10,
-			marginBottom: 8,
+			padding: spacing.md,
+			borderRadius: layout.borderRadius.md,
+			marginBottom: spacing.sm,
 		},
 		flowStep: {
 			flexDirection: 'row',
 			alignItems: 'flex-start',
-			marginBottom: 12,
-		},
-		stepNumber: {
-			width: 28,
-			height: 28,
-			borderRadius: 14,
-			backgroundColor: colors.primary,
-			alignItems: 'center',
-			justifyContent: 'center',
-			marginRight: 10,
-		},
-		stepNumberText: {
-			color: colors.text.white,
-			fontWeight: '600',
+			marginBottom: spacing.sm,
 		},
 		stepContent: {
 			flex: 1,
 		},
-		jokeCard: {
-			backgroundColor: colors.background.secondary,
-			padding: 15,
-			borderRadius: 10,
-			marginBottom: 8,
-		},
 		closeButton: {
 			position: 'absolute',
-			top: 15,
-			right: 15,
-			padding: 5,
+			top: spacing.md,
+			right: spacing.md,
+			padding: spacing.xs,
 		},
 		loadingContainer: {
-			padding: 20,
+			padding: spacing.lg,
 			alignItems: 'center',
 		},
 		loadingText: {
-			marginTop: 10,
-			color: colors.text.primary,
-		},
-		momentText: {
+			marginTop: spacing.sm,
 			color: colors.text.primary,
 		},
 		suggestionText: {
@@ -133,12 +94,14 @@ export const createStyles = (colors) =>
 		stepTitle: {
 			color: colors.text.primary,
 			fontWeight: '600',
-			marginBottom: 4,
+			fontSize: 18,
+			textAlign: 'center',
+			marginTop: spacing.md,
+			marginBottom: spacing.xs,
 		},
 		stepDescription: {
-			color: colors.text.secondary,
-		},
-		jokeText: {
 			color: colors.text.primary,
+			textAlign: 'center',
+			marginBottom: spacing.md,
 		},
 	});

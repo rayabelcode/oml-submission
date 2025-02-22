@@ -6,8 +6,8 @@ import { useTheme } from '../../../context/ThemeContext';
 import { checkUpcomingBirthday } from '../../../utils/ai';
 
 const MainTab = ({ content, contact }) => {
-	const { colors } = useTheme();
-	const styles = createStyles(colors);
+	const { colors, spacing, layout } = useTheme();
+	const styles = createStyles(colors, spacing, layout);
 	const upcomingBirthday = checkUpcomingBirthday(contact);
 
 	return (
