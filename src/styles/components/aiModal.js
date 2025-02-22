@@ -21,13 +21,24 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		headerContainer: {
 			width: '100%',
-			position: 'relative',
+		},
+		headerRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			marginBottom: spacing.md,
+		},
+		headerLeft: {
+			width: 35, // Match the close button size
+		},
+		headerRight: {
+			padding: spacing.md,
+			margin: -spacing.md,
 		},
 		modalTitle: {
 			fontSize: 22,
 			fontWeight: '700',
 			color: colors.text.primary,
-			marginBottom: spacing.md,
 			textAlign: 'center',
 		},
 		tabSelector: {
@@ -109,6 +120,8 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		suggestionText: {
 			color: colors.text.primary,
+			fontSize: 16,
+			fontWeight: '500',
 		},
 		stepTitle: {
 			color: colors.text.secondary,
@@ -121,6 +134,7 @@ export const createStyles = (colors, spacing, layout) =>
 		stepDescription: {
 			color: colors.text.primary,
 			fontSize: 16,
+			fontWeight: '500',
 			textAlign: 'left',
 			marginBottom: spacing.md,
 		},
@@ -134,7 +148,9 @@ export const createStyles = (colors, spacing, layout) =>
 		},
 		birthdayText: {
 			color: colors.text.primary,
-			marginLeft: spacing.sm,
+			marginLeft: spacing.md,
+			fontSize: 16,
+			fontWeight: '800',
 			flex: 1,
 		},
 	});

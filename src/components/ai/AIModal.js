@@ -50,7 +50,13 @@ const AIModal = ({ show, onClose, contact, history }) => {
 				<View style={styles.modalContent}>
 					{/* Fixed Height Header */}
 					<View style={styles.headerContainer}>
-						<Text style={styles.modalTitle}>AI Suggestions</Text>
+						<View style={styles.headerRow}>
+							<View style={styles.headerLeft} />
+							<Text style={styles.modalTitle}>AI Suggestions</Text>
+							<TouchableOpacity style={styles.headerRight} onPress={onClose}>
+								<Icon name="close-circle-outline" size={35} color={colors.warning} />
+							</TouchableOpacity>
+						</View>
 						<View style={styles.tabSelector}>
 							{['Topics', 'Insights'].map((tab) => (
 								<TouchableOpacity
@@ -82,10 +88,6 @@ const AIModal = ({ show, onClose, contact, history }) => {
 							)}
 						</ScrollView>
 					</View>
-
-					<TouchableOpacity style={styles.closeButton} onPress={onClose}>
-						<Icon name="close-circle-outline" size={35} color={colors.warning} />
-					</TouchableOpacity>
 				</View>
 			</View>
 		</Modal>

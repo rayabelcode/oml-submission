@@ -243,7 +243,7 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 							setShowAISuggestions(true);
 						}}
 					>
-						<Icon name="bulb-outline" size={16} color={colors.text.secondary} />
+						<Icon name="bulb" size={16} color={colors.secondary} />
 						<Text style={styles.aiRecapText}>AI Recap</Text>
 					</TouchableOpacity>
 				</View>

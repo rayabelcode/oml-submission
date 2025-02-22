@@ -93,13 +93,14 @@ const getNextSteps = async (contact, history) => {
 		messages: [
 			{
 				role: 'system',
-				content: 'Provide a brief, friendly suggestion to enhance their connection.',
+				content:
+					'Provide suggestions using "you and [name]" format. Focus on action-oriented recommendations for strengthening the connection.',
 			},
 			{
 				role: 'user',
-				content: `Give a quick suggestion to strengthen my connection with ${
+				content: `Suggest a way for you and ${
 					contact.first_name
-				}. Recent History: ${JSON.stringify(history.slice(-5))}`,
+				} to strengthen your connection. Recent History: ${JSON.stringify(history.slice(-5))}`,
 			},
 		],
 		max_tokens: 50,
@@ -119,7 +120,7 @@ export const generateRelationshipInsights = async (contact, history) => {
 		return {
 			conversationFlow: [
 				{
-					title: 'Relationship Pattern',
+					title: 'Relationship Overview',
 					description: pattern,
 				},
 				{
@@ -133,7 +134,7 @@ export const generateRelationshipInsights = async (contact, history) => {
 		return {
 			conversationFlow: [
 				{
-					title: 'Relationship Pattern',
+					title: 'Relationship Overview',
 					description: 'Not enough history to analyze patterns',
 				},
 				{
@@ -151,8 +152,9 @@ export const checkUpcomingBirthday = (contact) => {
 
 	// Parse MM-DD format
 	const [month, day] = contact.birthday.split('-').map((num) => parseInt(num, 10));
+
 	const today = new Date();
-	const birthday = new Date(today.getFullYear(), month - 1, day); // month is 0-based
+	const birthday = new Date(today.getFullYear(), month - 1, day);
 
 	// If birthday has passed this year, look at next year's date
 	if (birthday < today) {
