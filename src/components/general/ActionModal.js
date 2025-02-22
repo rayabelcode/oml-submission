@@ -109,14 +109,18 @@ const ActionModal = ({
 			padding: spacing.lg,
 			flexDirection: 'row',
 			alignItems: 'center',
-			justifyContent: 'center',
 		},
 		iconContainer: {
-			marginRight: spacing.md,
+			position: 'absolute',
+			left: spacing.lg,
+			alignItems: 'center',
+			justifyContent: 'center',
 		},
 		buttonText: {
 			fontSize: 22,
 			fontWeight: '700',
+			flex: 1,
+			textAlign: 'center',
 		},
 		loadingContainer: {
 			padding: spacing.xl,
@@ -212,14 +216,15 @@ const ActionModal = ({
 											<Icon
 												name={option.icon}
 												size={28}
-												color={option.id === 'skip' ? colors.danger : colors.primary}
+												color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
 											/>
 										</View>
 										<Text
 											style={[
 												styles.buttonText,
 												{
-													color: option.id === 'skip' ? colors.danger : colors.text.primary,
+													color:
+														option.textColor || (option.id === 'skip' ? colors.danger : colors.text.primary),
 												},
 											]}
 										>

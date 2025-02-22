@@ -244,7 +244,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				</Text>
 
 				<TouchableOpacity style={styles.phoneButton} onPress={() => setShowCallOptions(!showCallOptions)}>
-					<Icon name="chatbox-ellipses" size={22} color={theme === 'light' ? '#FFFFFF' : '#000000'} />
+					<Icon name="chatbox-ellipses-outline" size={22} color={theme === 'light' ? '#FFFFFF' : '#000000'} />
 				</TouchableOpacity>
 				{showCallOptions && (
 					<CallOptions show={showCallOptions} contact={contact} onClose={() => setShowCallOptions(false)} />
