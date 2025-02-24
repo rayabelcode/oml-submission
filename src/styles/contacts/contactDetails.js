@@ -88,7 +88,7 @@ export const useContactDetailsStyles = () => {
 		},
 		segmentedWrapper: {
 			flexDirection: 'row',
-			backgroundColor: colors.background.secondary,
+			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg + 10,
 			borderWidth: 1,
 			borderColor: colors.border,
@@ -103,7 +103,7 @@ export const useContactDetailsStyles = () => {
 			gap: spacing.xs,
 		},
 		selectedSegment: {
-			backgroundColor: colors.background.secondary,
+			backgroundColor: colors.background.primary,
 		},
 		errorContainer: {
 			flex: 1,

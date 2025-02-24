@@ -25,7 +25,7 @@ export const generateTopicSuggestions = async (contact, history) => {
 			.join('\n');
 
 		if (!recentHistory) {
-			return ['Start your first conversation!'];
+			return ['Start your first conversation to see AI conversation notes!'];
 		}
 
 		const response = await openai.chat.completions.create({
