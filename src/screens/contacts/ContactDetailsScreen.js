@@ -163,77 +163,8 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 		}
 	};
 
-	const localStyles = StyleSheet.create({
-		container: {
-			flex: 1,
-		},
-		contentContainer: {
-			flex: 1,
-			marginBottom: 65,
-		},
-		segmentedControlContainer: {
-			position: 'absolute',
-			bottom: 0,
-			left: 0,
-			right: 0,
-			paddingHorizontal: 10,
-			paddingBottom: Platform.OS === 'ios' ? 34 : 24,
-			backgroundColor: 'transparent',
-		},
-		segmentedWrapper: {
-			flexDirection: 'row',
-			backgroundColor: currentTheme === 'dark' ? '#1C1C1E' : '#F2F2F7',
-			borderRadius: 12,
-			borderWidth: 1,
-			borderColor: colors.border,
-			height: 50,
-			overflow: 'hidden',
-		},
-		segment: {
-			flex: 1,
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'center',
-			paddingVertical: 8,
-			gap: 6,
-		},
-		selectedSegment: {
-			backgroundColor: currentTheme === 'dark' ? '#2C2C2E' : '#FFFFFF',
-		},
-		segmentText: {
-			fontSize: 13,
-			color: colors.text.secondary,
-			fontWeight: '500',
-		},
-		selectedText: {
-			color: colors.primary,
-			fontWeight: '600',
-		},
-		errorContainer: {
-			flex: 1,
-			justifyContent: 'center',
-			alignItems: 'center',
-			padding: 20,
-		},
-		errorText: {
-			color: colors.error,
-			marginBottom: 15,
-			textAlign: 'center',
-		},
-		retryButton: {
-			backgroundColor: colors.primary,
-			paddingHorizontal: 20,
-			paddingVertical: 10,
-			borderRadius: 8,
-		},
-		retryButtonText: {
-			color: '#FFFFFF',
-			fontWeight: '600',
-		},
-	});
-
 	return (
-		<View style={[styles.container, localStyles.container]}>
+		<View style={styles.container}>
 			<View style={styles.headerContainer}>
 				<TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back-outline" size={28} color={colors.text.primary} />
@@ -251,9 +182,9 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				)}
 			</View>
 
-			<View style={localStyles.contentContainer}>
+			<View style={styles.contentContainer}>
 				{isLoading ? (
-					<View style={localStyles.errorContainer}>
+					<View style={styles.errorContainer}>
 						<Text>Loading...</Text>
 					</View>
 				) : (
@@ -261,54 +192,46 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 				)}
 			</View>
 
-			<View style={localStyles.segmentedControlContainer}>
-				<View style={localStyles.segmentedWrapper}>
+			{/* Segmented Control for: Notes, Schedule, and Profile Tabs */}
+			<View style={styles.segmentedControlContainer}>
+				<View style={styles.segmentedWrapper}>
 					<TouchableOpacity
 						style={[
-							localStyles.segment,
-							selectedIndex === 0 && localStyles.selectedSegment,
+							styles.segment,
+							selectedIndex === 0 && styles.selectedSegment,
 							{ borderRightWidth: 1, borderRightColor: colors.border },
 						]}
 						onPress={() => setSelectedIndex(0)}
 					>
 						<Icon
 							name="document-text-outline"
-							size={20}
+							size={30}
 							color={selectedIndex === 0 ? colors.primary : colors.text.secondary}
 						/>
-						<Text style={[localStyles.segmentText, selectedIndex === 0 && localStyles.selectedText]}>
-							Notes
-						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
 						style={[
-							localStyles.segment,
-							selectedIndex === 1 && localStyles.selectedSegment,
+							styles.segment,
+							selectedIndex === 1 && styles.selectedSegment,
 							{ borderRightWidth: 1, borderRightColor: colors.border },
 						]}
 						onPress={() => setSelectedIndex(1)}
 					>
 						<Icon
 							name="calendar-outline"
-							size={20}
+							size={30}
 							color={selectedIndex === 1 ? colors.primary : colors.text.secondary}
 						/>
-						<Text style={[localStyles.segmentText, selectedIndex === 1 && localStyles.selectedText]}>
-							Schedule
-						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
-						style={[localStyles.segment, selectedIndex === 2 && localStyles.selectedSegment]}
+						style={[styles.segment, selectedIndex === 2 && styles.selectedSegment]}
 						onPress={() => setSelectedIndex(2)}
 					>
 						<Icon
 							name="person-outline"
-							size={20}
+							size={30}
 							color={selectedIndex === 2 ? colors.primary : colors.text.secondary}
 						/>
-						<Text style={[localStyles.segmentText, selectedIndex === 2 && localStyles.selectedText]}>
-							Profile
-						</Text>
 					</TouchableOpacity>
 				</View>
 			</View>
