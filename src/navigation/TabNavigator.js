@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useTheme } from '../context/ThemeContext';
+import { spacing, useTheme } from '../context/ThemeContext';
 import { Platform, StatusBar } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import React, { useEffect } from 'react';
@@ -40,20 +40,25 @@ export default function TabNavigator() {
 						Stats: focused ? 'stats-chart' : 'stats-chart-outline',
 						Settings: focused ? 'settings' : 'settings-outline',
 					}[route.name];
-					return <Icon name={iconNames} size={size} color={color} />;
+					return <Icon name={iconNames} size={size * 1.05} color={color} />; // Scale up icon size
 				},
 				tabBarStyle: {
 					backgroundColor: colors.background.primary,
 					borderTopColor: colors.border,
 					borderTopWidth: 1,
-					paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-					height: Platform.OS === 'ios' ? 85 : 60,
+					paddingTop: 2,
+					paddingBottom: Platform.OS === 'ios' ? 8 : 4,
+					height: Platform.OS === 'ios' ? 80 : 60,
 				},
 				tabBarActiveTintColor: colors.primary,
 				tabBarInactiveTintColor: colors.text.secondary,
 				headerShown: false,
 				tabBarLabelStyle: {
+					marginTop: spacing.xs,
 					color: colors.text.primary,
+					opacity: 0.9,
+					fontWeight: '600',
+					fontSize: Platform.OS === 'ios' ? 11 : 11, // Font size on iOS : Android
 				},
 			})}
 		>

@@ -206,7 +206,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						<Icon
 							name={selectedIndex === 0 ? 'document-text-outline' : 'document-text-outline'}
 							size={30}
-							color={selectedIndex === 0 ? colors.text.primary : colors.primary}
+							color={selectedIndex === 0 ? colors.secondary : colors.primary}
 						/>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -220,7 +220,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						<Icon
 							name={selectedIndex === 1 ? 'calendar-outline' : 'calendar-outline'}
 							size={30}
-							color={selectedIndex === 1 ? colors.text.primary : colors.primary}
+							color={selectedIndex === 1 ? colors.secondary : colors.primary}
 						/>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -230,7 +230,7 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						<Icon
 							name={selectedIndex === 2 ? 'person-outline' : 'person-outline'}
 							size={30}
-							color={selectedIndex === 2 ? colors.text.primary : colors.primary}
+							color={selectedIndex === 2 ? colors.secondary : colors.primary}
 						/>
 					</TouchableOpacity>
 				</View>
