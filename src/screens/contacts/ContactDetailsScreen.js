@@ -204,9 +204,9 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						onPress={() => setSelectedIndex(0)}
 					>
 						<Icon
-							name="document-text-outline"
+							name={selectedIndex === 0 ? 'document-text-outline' : 'document-text-outline'}
 							size={30}
-							color={selectedIndex === 0 ? colors.primary : colors.text.secondary}
+							color={selectedIndex === 0 ? colors.text.primary : colors.primary}
 						/>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -218,9 +218,9 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						onPress={() => setSelectedIndex(1)}
 					>
 						<Icon
-							name="calendar-outline"
+							name={selectedIndex === 1 ? 'calendar-outline' : 'calendar-outline'}
 							size={30}
-							color={selectedIndex === 1 ? colors.primary : colors.text.secondary}
+							color={selectedIndex === 1 ? colors.text.primary : colors.primary}
 						/>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -228,9 +228,9 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 						onPress={() => setSelectedIndex(2)}
 					>
 						<Icon
-							name="person-outline"
+							name={selectedIndex === 2 ? 'person-outline' : 'person-outline'}
 							size={30}
-							color={selectedIndex === 2 ? colors.primary : colors.text.secondary}
+							color={selectedIndex === 2 ? colors.text.primary : colors.primary}
 						/>
 					</TouchableOpacity>
 				</View>
