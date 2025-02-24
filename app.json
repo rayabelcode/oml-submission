@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OnMyList",
 		"slug": "OnMyList",
-		"version": "1.0.96",
+		"version": "1.0.97",
 		"runtimeVersion": {
 			"policy": "sdkVersion"
 		},
