@@ -339,18 +339,24 @@ const useStyles = () => {
 			marginBottom: spacing.md,
 			fontSize: 16,
 		},
+		submitButtonContainer: {
+			flexDirection: 'row',
+			justifyContent: 'center',
+		},
 		submitButton: {
 			backgroundColor: colors.primary,
-			padding: 10,
-			borderRadius: 8,
-			alignItems: 'center',
+			paddingHorizontal: spacing.xl,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.md,
+			alignSelf: 'center',
 		},
 		submitButtonDisabled: {
 			opacity: 0.5,
 		},
 		submitButtonText: {
-			color: '#fff',
-			fontWeight: 'bold',
+			color: colors.text.white,
+			fontSize: 18,
+			fontWeight: 700,
 		},
 		section: {
 			paddingHorizontal: spacing.xs,

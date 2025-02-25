@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+	View,
+	Text,
+	ScrollView,
+	RefreshControl,
+	TouchableOpacity,
+	TextInput,
+	Keyboard,
+	KeyboardAvoidingView,
+	Platform,
+} from 'react-native';
 import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -140,17 +150,19 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							autoFocus
 						/>
 					)}
-					<TouchableOpacity
-						style={[
-							styles.submitButton,
-							!hasText && styles.submitButtonDisabled,
-							{ backgroundColor: colors.primary },
-						]}
-						onPress={handleSubmitNotes}
-						disabled={!hasText}
-					>
-						<Text style={[styles.submitButtonText, { color: colors.background.primary }]}>Save Notes</Text>
-					</TouchableOpacity>
+					<View style={styles.submitButtonContainer}>
+						<TouchableOpacity
+							style={[
+								styles.submitButton,
+								!hasText && styles.submitButtonDisabled,
+								{ backgroundColor: colors.primary },
+							]}
+							onPress={handleSubmitNotes}
+							disabled={!hasText}
+						>
+							<Text style={[styles.submitButtonText]}>Save Notes</Text>
+						</TouchableOpacity>
+					</View>
 				</View>
 			)}
 
