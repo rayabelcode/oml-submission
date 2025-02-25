@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Keyboard } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { useStyles } from '../../styles/screens/dashboard';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -101,23 +101,45 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 						},
 					]}
 				>
-					<TextInput
-						style={[
-							styles.notesInput,
-							{
-								backgroundColor: colors.background.tertiary,
-								color: colors.text.primary,
-								borderColor: colors.border,
-								borderWidth: 1,
-							},
-						]}
-						multiline
-						placeholder="Enter your call notes here..."
-						placeholderTextColor={colors.text.secondary}
-						defaultValue=""
-						onChangeText={handleTextChange}
-						autoFocus
-					/>
+					{Platform.OS === 'ios' ? (
+						<KeyboardAvoidingView behavior="padding">
+							<TextInput
+								style={[
+									styles.notesInput,
+									{
+										backgroundColor: colors.background.tertiary,
+										color: colors.text.primary,
+										borderColor: colors.border,
+										borderWidth: 1,
+									},
+								]}
+								multiline
+								placeholder="Enter your call notes here..."
+								placeholderTextColor={colors.text.secondary}
+								defaultValue=""
+								onChangeText={handleTextChange}
+								autoFocus
+							/>
+						</KeyboardAvoidingView>
+					) : (
+						<TextInput
+							style={[
+								styles.notesInput,
+								{
+									backgroundColor: colors.background.tertiary,
+									color: colors.text.primary,
+									borderColor: colors.border,
+									borderWidth: 1,
+								},
+							]}
+							multiline
+							placeholder="Enter your call notes here..."
+							placeholderTextColor={colors.text.secondary}
+							defaultValue=""
+							onChangeText={handleTextChange}
+							autoFocus
+						/>
+					)}
 					<TouchableOpacity
 						style={[
 							styles.submitButton,
