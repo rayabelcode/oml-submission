@@ -61,20 +61,21 @@ const lightTheme = {
 		primary: '#000000', // Black
 		secondary: '#666666', // Dark Gray
 		subtleText: '#E5E5EA', // Light Gray
-		lightWarning: '#2e2b2a', // Dark Gray
+		lightWarning: '#0A0A0A', // Very Dark Gray
 		white: '#FFFFFF', //
 	},
 	buttons: {
-		activeIcon: '#4CD964', // Green
+		activeIcon: '#156525', // Green
 		inactiveIcon: '#007AFF', // Blue
 	},
 	primary: '#007AFF', // Blue
 	secondary: '#4CD964', // Green
-	danger: '#FF3B30', // Red
+	danger: '#EB0C00', // Red
 	warning: '#FF9500', // Orange
-	lightWarning: '#fa6b7e', // Light Red
+	action: '#8A20B1', // TBD
+	lightWarning: '#FA6B7E', // Light Red
 	lightHighlight: '#87EF66', // Light Green
-	success: '#34C759', // Green
+	success: '#1A652E', // Green
 	border: '#E5E5EA', // Light Gray
 	tabBar: {
 		background: '#E0E0E0', // Light Gray
@@ -101,7 +102,7 @@ const darkTheme = {
 		primary: '#FFFFFF', // White
 		secondary: '#8E8E93', // Light Gray
 		subtleText: '#1C1C1E', // Dark Gray
-		lightWarning: '#bab8b8', // Light Gray
+		lightWarning: '#BAB8B8', // Light Gray
 		white: '#FFFFFF', // White
 	},
 	buttons: {
@@ -112,6 +113,7 @@ const darkTheme = {
 	secondary: '#30D158', // Green
 	danger: '#FF453A', // Red
 	warning: '#FFD60A', // Orange
+	action: '#FFD60A', // TBD
 	lightWarning: '#75150D', // Light Red
 	lightHighlight: '#0A5A18', // Light Green
 	success: '#32D74B', // Green
@@ -152,6 +154,7 @@ const dimmedTheme = {
 	secondary: '#34D399', // Green
 	danger: '#EF4444', // Red
 	warning: '#F59E0B', // Orange
+	action: '#F59E0B', // TBD
 	lightWarning: '#92400E', // Light Red
 	lightHighlight: '#065F46', // Light Green
 	success: '#10B981', // Green

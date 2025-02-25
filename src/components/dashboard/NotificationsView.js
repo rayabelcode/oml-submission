@@ -217,7 +217,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							onPress={() => onComplete(reminder.firestoreId)}
 						>
 							<Icon name="close-circle-outline" size={24} color={colors.danger} />
-							<Text style={[styles.actionText, { color: colors.danger }]}>Skip</Text>
+							<Text style={[styles.actionText, { color: colors.danger }]}>Clear</Text>
 						</TouchableOpacity>
 					</>
 				) : (
@@ -263,8 +263,8 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 							]}
 							onPress={() => onSnooze(reminder)}
 						>
-							<Icon name="time-outline" size={24} color={colors.warning} />
-							<Text style={[styles.actionText, { color: colors.warning }]}>Options</Text>
+							<Icon name="time-outline" size={24} color={colors.action} />
+							<Text style={[styles.actionText, { color: colors.action }]}>Options</Text>
 						</TouchableOpacity>
 					</>
 				)}

@@ -402,8 +402,8 @@ const useStyles = () => {
 			opacity: 0.9,
 		},
 		addNoteButtonText: {
-			color: colors.text.primary,
-			fontSize: 16,
+			color: colors.text.white,
+			fontSize: 17,
 			fontWeight: '700',
 			letterSpacing: 0.4,
 		},

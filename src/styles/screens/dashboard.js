@@ -77,8 +77,8 @@ const useStyles = () => {
 			padding: spacing.md,
 			alignItems: 'center',
 			backgroundColor: 'transparent',
-			borderLeftWidth: 4,
-			borderRightWidth: 4,
+			borderLeftWidth: spacing.xs,
+			borderRightWidth: spacing.xs,
 		},
 		cardActions: {
 			flexDirection: 'row',
