@@ -26,7 +26,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			backgroundColor: colors.background.secondary,
 			borderTopLeftRadius: layout.borderRadius.lg,
 			borderTopRightRadius: layout.borderRadius.lg,
-			paddingBottom: spacing.xl + 25,
+			paddingBottom: spacing.xxxl,
 		},
 		handleContainer: {
 			alignItems: 'center',

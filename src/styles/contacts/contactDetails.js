@@ -89,7 +89,7 @@ export const useContactDetailsStyles = () => {
 		segmentedWrapper: {
 			flexDirection: 'row',
 			backgroundColor: colors.background.primary,
-			borderRadius: layout.borderRadius.lg + 10,
+			borderRadius: layout.borderRadius.xxl,
 			borderWidth: 1,
 			borderColor: colors.border,
 			height: 50,
