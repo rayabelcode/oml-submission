@@ -75,13 +75,15 @@ const createStyles = (colors) =>
 		},
 		// Form Components
 		formGroup: {
+			marginTop: spacing.xs,
 			marginBottom: spacing.md,
 		},
 		formLabel: {
-			fontSize: 14,
+			fontSize: 16,
 			fontWeight: '600',
 			color: colors.text.secondary,
-			marginBottom: spacing.xs,
+			marginBottom: spacing.sm,
+			marginLeft: spacing.sm,
 		},
 		formInput: {
 			backgroundColor: colors.background.primary,
@@ -90,8 +92,6 @@ const createStyles = (colors) =>
 			paddingVertical: spacing.sm,
 			fontSize: 16,
 			color: colors.text.primary,
-			borderWidth: 1,
-			borderColor: colors.border,
 		},
 		infoText: {
 			fontSize: 16,
@@ -157,8 +157,6 @@ const createStyles = (colors) =>
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
 			paddingVertical: spacing.md,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
 		},
 		headerBackButton: {
 			padding: spacing.xs,
@@ -260,7 +258,7 @@ const createStyles = (colors) =>
 			right: -5,
 			backgroundColor: colors.primary,
 			borderRadius: 12,
-			padding: 5,
+			padding: spacing.xs,
 		},
 		// Profile Image Styles
 		profileImageSection: {
@@ -592,8 +590,8 @@ const createStyles = (colors) =>
 			marginBottom: spacing.xs,
 		},
 		settingsExplanation: {
-			fontSize: 14,
-			fontWeight: '500',
+			fontSize: 15,
+			fontWeight: '600',
 			color: colors.text.secondary,
 			marginBottom: spacing.md,
 			textAlign: 'center',

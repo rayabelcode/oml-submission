@@ -182,7 +182,6 @@ const AccountScreen = ({ navigation }) => {
 				<View style={styles.settingsCard}>
 					<Text style={styles.cardTitleCenter}>Username</Text>
 					<View style={styles.formGroup}>
-						<Text style={styles.formLabel}>Your Username</Text>
 						<TextInput
 							style={styles.formInput}
 							value={username}
