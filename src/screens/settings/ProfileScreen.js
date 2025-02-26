@@ -146,7 +146,7 @@ const ProfileScreen = ({ navigation }) => {
 				automaticallyAdjustKeyboardInsets={true}
 			>
 				{/* Profile Photo Card */}
-				<View style={styles.settingsCard}>
+				<View style={[styles.settingsCard, styles.profilePhotoCard]}>
 					<Text style={styles.cardTitleCenter}>Profile Photo</Text>
 					<View style={styles.profileImageSection}>
 						<View style={styles.profileImageContainer}>

@@ -20,7 +20,7 @@ const AccountScreen = ({ navigation }) => {
 	const { colors, spacing } = useTheme();
 	const { user } = useAuth();
 	const [username, setUsername] = useState('');
-	const [email, setEmail] = useState(user?.email || '');
+	const [email, setEmail] = useState('');
 	const [emailCurrentPassword, setEmailCurrentPassword] = useState('');
 	const [passwordCurrentPassword, setPasswordCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
@@ -208,8 +208,7 @@ const AccountScreen = ({ navigation }) => {
 				<View style={styles.settingsCard}>
 					<Text style={styles.cardTitleCenter}>Email Address</Text>
 					<View style={styles.formGroup}>
-						<Text style={styles.formLabel}>Current Email</Text>
-						<Text style={styles.infoText}>{user?.email || 'No email set'}</Text>
+						<Text style={styles.formInputNoEdit}>{user?.email || 'No email set'}</Text>
 					</View>
 
 					{!isAppleUser ? (
@@ -271,7 +270,7 @@ const AccountScreen = ({ navigation }) => {
 									style={styles.formInput}
 									value={passwordCurrentPassword}
 									onChangeText={setPasswordCurrentPassword}
-									placeholder="Current password"
+									placeholder="Enter current password"
 									placeholderTextColor={colors.text.secondary}
 									secureTextEntry
 								/>
@@ -282,7 +281,7 @@ const AccountScreen = ({ navigation }) => {
 									style={styles.formInput}
 									value={newPassword}
 									onChangeText={setNewPassword}
-									placeholder="New password"
+									placeholder="Choose a strong password"
 									placeholderTextColor={colors.text.secondary}
 									secureTextEntry
 								/>
@@ -293,7 +292,7 @@ const AccountScreen = ({ navigation }) => {
 									style={styles.formInput}
 									value={confirmPassword}
 									onChangeText={setConfirmPassword}
-									placeholder="Confirm new password"
+									placeholder="Re-enter your new password"
 									placeholderTextColor={colors.text.secondary}
 									secureTextEntry
 								/>
