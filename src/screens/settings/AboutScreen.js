@@ -11,11 +11,12 @@ const AboutScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>About</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>About</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView style={styles.settingsList}>

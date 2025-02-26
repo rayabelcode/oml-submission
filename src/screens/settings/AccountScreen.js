@@ -168,7 +168,7 @@ const AccountScreen = ({ navigation }) => {
 				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
 				</TouchableOpacity>
-				<Text style={styles.headerTitle}>Account & Security</Text>
+				<Text style={styles.headerTitle}>Account & Password</Text>
 				<View style={styles.headerRightPlaceholder} />
 			</View>
 

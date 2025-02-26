@@ -156,7 +156,8 @@ const createStyles = (colors) =>
 			alignItems: 'center',
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.sm,
 		},
 		headerBackButton: {
 			padding: spacing.xs,
@@ -735,7 +736,8 @@ const createStyles = (colors) =>
 			alignItems: 'center',
 		},
 		infoBannerText: {
-			fontSize: 14,
+			fontSize: 15,
+			fontWeight: '600',
 			color: colors.text.secondary,
 			marginLeft: spacing.sm,
 			flex: 1,

@@ -39,7 +39,7 @@ const SettingsList = ({
 				<View>
 					{[
 						{ icon: 'person-outline', text: 'Profile', onPress: onProfilePress },
-						{ icon: 'lock-closed-outline', text: 'Account & Security', onPress: onAccountPress },
+						{ icon: 'lock-closed-outline', text: 'Account', onPress: onAccountPress },
 					].map((item, index, array) => (
 						<TouchableOpacity
 							key={item.text}
