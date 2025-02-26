@@ -12,7 +12,7 @@ import { EmailAuthProvider, OAuthProvider, reauthenticateWithCredential } from '
 
 const PrivacyScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing, layout } = useTheme();
+	const { colors } = useTheme();
 	const { user, signOut } = useAuth();
 
 	const handleExport = async (contactsOnly) => {
@@ -64,10 +64,8 @@ const PrivacyScreen = ({ navigation }) => {
 					style: 'destructive',
 					onPress: () => {
 						if (user.providerData[0]?.providerId === 'apple.com') {
-							// Direct deletion for Apple users
 							handleAccountDeletion();
 						} else {
-							// Password verification for email users
 							Alert.prompt(
 								'Enter Password',
 								'Please enter your password to confirm deletion',
@@ -107,7 +105,6 @@ const PrivacyScreen = ({ navigation }) => {
 		);
 	};
 
-	// Function for account deletion
 	const handleAccountDeletion = async () => {
 		try {
 			if (user.providerData[0]?.providerId === 'apple.com') {
@@ -118,7 +115,6 @@ const PrivacyScreen = ({ navigation }) => {
 						style: 'destructive',
 						onPress: async () => {
 							try {
-								// First cleanup subscriptions
 								cleanupSubscriptions();
 
 								const appleCredential = await AppleAuthentication.signInAsync({
@@ -136,7 +132,6 @@ const PrivacyScreen = ({ navigation }) => {
 
 								await reauthenticateWithCredential(user, credential);
 
-								// Then delete data and account
 								await deleteUserAccount(user.uid);
 								await user.delete();
 								await signOut();
@@ -148,9 +143,7 @@ const PrivacyScreen = ({ navigation }) => {
 					},
 				]);
 			} else {
-				// First cleanup subscriptions
 				cleanupSubscriptions();
-				// Then delete data and account
 				await deleteUserAccount(user.uid);
 				await user.delete();
 				await signOut();
@@ -163,78 +156,68 @@ const PrivacyScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			{/* Header */}
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			{/* Header with back button and title */}
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>Data | Privacy</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Privacy & Data</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView style={styles.settingsList}>
-				{/* Export Data Section */}
-				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.sectionTitle, { textAlign: 'center' }]}>Export Data</Text>
-					<Text style={[styles.sectionDescription, { textAlign: 'center' }]}>
-						Download your data for backup or transfer.
+				{/* Export Data Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitle}>Export Your Data</Text>
+					<Text style={styles.cardDescription}>
+						Download your data for backup or to use with other services.
 					</Text>
 
 					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(false)}>
 						<View style={styles.settingItemLeft}>
-							<Icon name="download-outline" size={24} color={colors.text.primary} />
-							<Text style={styles.settingText}>Export All Data</Text>
+							<Icon name="download-outline" size={24} color={colors.primary} />
+							<Text style={styles.settingText}>Export Complete Data</Text>
 						</View>
+						<Text style={styles.settingSubtext}>All contact details, history & notes</Text>
 					</TouchableOpacity>
 
 					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(true)}>
 						<View style={styles.settingItemLeft}>
-							<Icon name="people-outline" size={24} color={colors.text.secondary} />
-							<Text style={styles.settingText}>Export Contacts Only</Text>
+							<Icon name="people-outline" size={24} color={colors.primary} />
+							<Text style={styles.settingText}>Export Contact Info Only</Text>
 						</View>
+						<Text style={styles.settingSubtext}>Names and phone numbers</Text>
 					</TouchableOpacity>
 				</View>
 
-				{/* Delete Account Section */}
-				<View style={[styles.formSection, styles.card]}>
-					<Text style={[styles.sectionTitle, { textAlign: 'center', color: colors.danger }]}>
-						Delete Account
-					</Text>
-					<Text
-						style={[
-							styles.sectionDescription,
-							{ textAlign: 'center', marginBottom: spacing.lg, color: colors.text.secondary },
-						]}
+				{/* Privacy Policy Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitle}>Privacy Policy</Text>
+					<Text style={styles.cardDescription}>Review how we handle your data and your privacy rights.</Text>
+
+					<TouchableOpacity
+						style={styles.settingItem}
+						onPress={() => Linking.openURL('https://onmylist.pro/privacy')}
 					>
-						Warning: This action is irreversible and will delete all your data.
+						<View style={styles.settingItemLeft}>
+							<Icon name="shield-checkmark-outline" size={24} color={colors.primary} />
+							<Text style={styles.settingText}>View Privacy Policy</Text>
+						</View>
+						<Icon name="open-outline" size={20} color={colors.primary} />
+					</TouchableOpacity>
+				</View>
+
+				{/* Delete Account Card */}
+				<View style={styles.dangerSettingsCard}>
+					<Text style={styles.dangerCardTitle}>Danger Zone</Text>
+					<Text style={styles.dangerCardDescription}>
+						Permanently delete your account and all associated data. This action cannot be undone.
 					</Text>
 
-					{/* Delete Account Button */}
-					<View style={{ alignItems: 'center', marginVertical: spacing.md }}>
-						<TouchableOpacity
-							style={{
-								backgroundColor: colors.danger,
-								paddingVertical: spacing.sm,
-								paddingHorizontal: spacing.md,
-								borderRadius: layout.borderRadius.md,
-								flexDirection: 'row',
-								alignItems: 'center',
-								justifyContent: 'center',
-							}}
-							onPress={handleDelete}
-						>
-							<Icon name="trash-outline" size={24} color={colors.background.primary} />
-							<Text
-								style={{
-									color: colors.background.primary,
-									fontSize: 18,
-									fontWeight: '600',
-									marginLeft: spacing.sm,
-								}}
-							>
-								Delete Account
-							</Text>
-						</TouchableOpacity>
-					</View>
+					<TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
+						<Icon name="trash-outline" size={20} color={colors.background.primary} />
+						<Text style={styles.dangerButtonText}>Delete Account</Text>
+					</TouchableOpacity>
 				</View>
 			</ScrollView>
 		</View>

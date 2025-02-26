@@ -74,9 +74,10 @@ const ThemePickerModal = ({ visible, onClose }) => {
 		},
 		optionText: {
 			fontSize: 20,
-			color: colors.text.secondary,
+			color: colors.text.primary,
 			marginLeft: spacing.md,
 			fontWeight: '600',
+			opacity: 0.8,
 		},
 		selectedOption: {},
 		checkmark: {
@@ -101,7 +102,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 							<View style={{ width: 28 }} />
 							<Text style={styles.title}>Choose Theme</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close" size={28} color={colors.text.secondary} />
+								<Icon name="close" size={28} color={colors.action} />
 							</TouchableOpacity>
 						</View>
 					</View>

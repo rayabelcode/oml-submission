@@ -17,7 +17,7 @@ const SettingsList = ({
 	handleExportData,
 	handleDeleteAccount,
 }) => {
-	const { colors } = useTheme();
+	const { colors, spacing } = useTheme();
 	const styles = useStyles();
 	const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -34,46 +34,44 @@ const SettingsList = ({
 
 	return (
 		<ScrollView style={styles.settingsList}>
-			<View style={styles.settingSection}>
-				<Text style={styles.mainSettingTitle}>User Settings</Text>
+			{/* Personal Information Card */}
+			<View style={styles.settingsCard}>
+				<Text style={styles.cardTitle}>Personal</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={onProfilePress}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="person-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Profile</Text>
+						<Text style={styles.settingText}>Profile Information</Text>
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					</View>
 				</TouchableOpacity>
-				<TouchableOpacity style={styles.settingItem} onPress={onAccountPress}>
+
+				<TouchableOpacity style={styles.settingItemLast} onPress={onAccountPress}>
 					<View style={styles.settingItemLeft}>
-						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Account</Text>
+						<Icon name="at-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Account & Security</Text>
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					</View>
 				</TouchableOpacity>
 			</View>
 
-			<View style={styles.settingSection}>
-				<Text style={styles.mainSettingTitle}>Scheduler</Text>
-				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Scheduling')}>
-					<View style={styles.settingItemLeft}>
-						<Icon name="time-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Scheduling Settings</Text>
-					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
-				</TouchableOpacity>
-			</View>
-
-			<View style={styles.settingSection}>
-				<Text style={styles.mainSettingTitle}>App Settings</Text>
+			{/* Preferences Card */}
+			<View style={styles.settingsCard}>
+				<Text style={styles.cardTitle}>Preferences</Text>
 				<TouchableOpacity
 					style={styles.settingItem}
 					onPress={() => navigation.navigate('NotificationSettings')}
 				>
 					<View style={styles.settingItemLeft}>
 						<Icon name="notifications-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Notification Settings</Text>
+						<Text style={styles.settingText}>Notifications</Text>
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					</View>
 				</TouchableOpacity>
 
 				<TouchableOpacity style={styles.settingItem} onPress={() => setShowThemePicker(true)}>
@@ -81,43 +79,61 @@ const SettingsList = ({
 						<Icon name="moon-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Theme</Text>
 					</View>
-				</TouchableOpacity>
-			</View>
-
-			<View style={styles.settingSection}>
-				<Text style={styles.mainSettingTitle}>Data | Privacy</Text>
-				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('Privacy')}>
-					<View style={styles.settingItemLeft}>
-						<Icon name="lock-closed-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>Privacy and Export</Text>
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 					</View>
-					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+				</TouchableOpacity>
+
+				<TouchableOpacity style={styles.settingItemLast} onPress={() => navigation.navigate('Scheduling')}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="time-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Scheduling</Text>
+					</View>
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					</View>
 				</TouchableOpacity>
 			</View>
 
-			<View style={styles.settingSection}>
-				<Text style={styles.mainSettingTitle}>OnMyList</Text>
+			{/* Data & Privacy Card */}
+			<View style={styles.settingsCard}>
+				<Text style={styles.cardTitle}>Data & Privacy</Text>
+				<TouchableOpacity style={styles.settingItemLast} onPress={() => navigation.navigate('Privacy')}>
+					<View style={styles.settingItemLeft}>
+						<Icon name="shield-outline" size={20} color={colors.text.secondary} />
+						<Text style={styles.settingText}>Privacy & Data</Text>
+					</View>
+					<View style={styles.settingItemRight}>
+						<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+					</View>
+				</TouchableOpacity>
+			</View>
 
+			{/* About & Support Card */}
+			<View style={styles.settingsCard}>
+				<Text style={styles.cardTitle}>About & Support</Text>
 				<TouchableOpacity style={styles.settingItem} onPress={() => navigation.navigate('About')}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="information-circle-outline" size={20} color={colors.text.secondary} />
-						<Text style={styles.settingText}>About</Text>
+						<Text style={styles.settingText}>About OnMyList</Text>
 					</View>
 					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 
 				<TouchableOpacity style={styles.settingItem} onPress={handleShare}>
 					<View style={styles.settingItemLeft}>
-						<Icon name="share-outline" size={20} color={colors.text.secondary} />
+						<Icon name="share-social-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Tell a Friend</Text>
 					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 
-				<TouchableOpacity style={styles.settingItem} onPress={handleSupport}>
+				<TouchableOpacity style={styles.settingItemLast} onPress={handleSupport}>
 					<View style={styles.settingItemLeft}>
 						<Icon name="mail-outline" size={20} color={colors.text.secondary} />
 						<Text style={styles.settingText}>Support</Text>
 					</View>
+					<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
 				</TouchableOpacity>
 			</View>
 
