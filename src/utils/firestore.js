@@ -31,23 +31,29 @@ let activeSubscriptions = new Map();
 // Helper function to clean up subscriptions
 export const cleanupSubscriptions = () => {
 	try {
+		// Make sure activeSubscriptions exists
 		if (!activeSubscriptions) {
 			activeSubscriptions = new Map();
 			return;
 		}
 
+		// Unsubscribe from all listeners
 		activeSubscriptions.forEach((unsubscribe, key) => {
 			if (typeof unsubscribe === 'function') {
 				try {
 					unsubscribe();
+					activeSubscriptions.delete(key);
 				} catch (error) {
 					console.log(`Error unsubscribing from ${key}:`, error);
 				}
 			}
 		});
+
+		// Clear the map
 		activeSubscriptions.clear();
 	} catch (error) {
 		console.error('Error in cleanupSubscriptions:', error);
+		// Reset the map if there's an error
 		activeSubscriptions = new Map();
 	}
 };

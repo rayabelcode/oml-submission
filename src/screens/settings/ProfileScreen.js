@@ -37,8 +37,6 @@ const ProfileScreen = ({ navigation }) => {
 					style: 'destructive',
 					onPress: async () => {
 						try {
-							// Clean up subscriptions before signing out
-							cleanupSubscriptions();
 							const { error } = await signOut();
 							if (error) throw error;
 						} catch (error) {

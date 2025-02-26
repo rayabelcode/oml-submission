@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { createUserDocument } from '../utils/firestore';
+import { createUserDocument, cleanupSubscriptions } from '../utils/firestore';
 
 const AuthContext = createContext({});
 
@@ -79,10 +79,18 @@ export const AuthProvider = ({ children }) => {
 
 	const signOut = async () => {
 		try {
+			// Cleanup subscriptions
+			await Promise.resolve(cleanupSubscriptions());
+
+			// Wait for cleanup to complete
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Sign out
 			await firebaseSignOut(auth);
-			setUser(null); // Clear user state on sign out
+			setUser(null);
 			return { error: null };
 		} catch (error) {
+			console.error('Sign out error:', error);
 			return { error };
 		}
 	};
