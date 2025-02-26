@@ -160,11 +160,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={[styles.headerSettingsPages, { flexDirection: 'row', alignItems: 'center' }]}>
-				<TouchableOpacity style={[styles.settingItemLeft, { flex: 1 }]} onPress={() => navigation.goBack()}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>Relationship Types</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Relationship Types</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView style={styles.settingsList}>

@@ -220,7 +220,7 @@ const ProfileScreen = ({ navigation }) => {
 				<View style={styles.settingsCard}>
 					<Text style={styles.cardTitleCenter}>Session</Text>
 					<TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
-						<Icon name="log-out-outline" size={20} color={colors.background.primary} />
+						<Icon name="log-out-outline" size={24} color={colors.background.primary} />
 						<Text style={styles.dangerButtonText}>Log Out</Text>
 					</TouchableOpacity>
 				</View>
