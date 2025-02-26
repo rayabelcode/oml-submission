@@ -168,7 +168,7 @@ const PrivacyScreen = ({ navigation }) => {
 			<ScrollView style={styles.settingsList}>
 				{/* Export Data Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Export Your Data</Text>
+					<Text style={styles.cardTitleCenter}>Export Your Data</Text>
 					<Text style={styles.cardDescription}>
 						Download your data for backup or to use with other services.
 					</Text>
@@ -201,7 +201,7 @@ const PrivacyScreen = ({ navigation }) => {
 
 				{/* Privacy Policy Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Privacy Policy</Text>
+					<Text style={styles.cardTitleCenter}>Privacy Policy</Text>
 					<Text style={styles.cardDescription}>Review how we handle your data and your privacy rights.</Text>
 					<View>
 						{[

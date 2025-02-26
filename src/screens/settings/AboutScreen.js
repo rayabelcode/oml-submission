@@ -21,7 +21,7 @@ const AboutScreen = ({ navigation }) => {
 			<ScrollView style={styles.settingsList}>
 				<View style={[styles.formSection, styles.card]}>
 					<View style={[styles.settingSection, { borderBottomWidth: 0 }]}>
-						<Text style={styles.sectionTitle}>App Information</Text>
+						<Text style={styles.cardTitleCenter}>App Information</Text>
 						<View>
 							{[
 								{
@@ -66,7 +66,7 @@ const AboutScreen = ({ navigation }) => {
 
 				<View style={[styles.formSection, styles.card]}>
 					<View style={[styles.settingSection, { borderBottomWidth: 0 }]}>
-						<Text style={styles.sectionTitle}>Legal & Privacy</Text>
+						<Text style={styles.cardTitleCenter}>Legal & Privacy</Text>
 						<View>
 							{[
 								{

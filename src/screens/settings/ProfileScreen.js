@@ -147,7 +147,7 @@ const ProfileScreen = ({ navigation }) => {
 			>
 				{/* Profile Photo Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Profile Photo</Text>
+					<Text style={styles.cardTitleCenter}>Profile Photo</Text>
 					<View style={styles.profileImageSection}>
 						<View style={styles.profileImageContainer}>
 							{profilePhotoRef.current ? (
@@ -171,7 +171,7 @@ const ProfileScreen = ({ navigation }) => {
 
 				{/* Name Information Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Name Information</Text>
+					<Text style={styles.cardTitleCenter}>Name</Text>
 
 					<View style={styles.formGroup}>
 						<Text style={styles.formLabel}>First Name</Text>
@@ -218,7 +218,7 @@ const ProfileScreen = ({ navigation }) => {
 
 				{/* Logout Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Session</Text>
+					<Text style={styles.cardTitleCenter}>Session</Text>
 					<TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
 						<Icon name="log-out-outline" size={20} color={colors.background.primary} />
 						<Text style={styles.dangerButtonText}>Log Out</Text>

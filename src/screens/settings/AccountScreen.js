@@ -180,7 +180,7 @@ const AccountScreen = ({ navigation }) => {
 			>
 				{/* Username Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Username</Text>
+					<Text style={styles.cardTitleCenter}>Username</Text>
 					<View style={styles.formGroup}>
 						<Text style={styles.formLabel}>Your Username</Text>
 						<TextInput
@@ -207,7 +207,7 @@ const AccountScreen = ({ navigation }) => {
 
 				{/* Email Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Email Address</Text>
+					<Text style={styles.cardTitleCenter}>Email Address</Text>
 					<View style={styles.formGroup}>
 						<Text style={styles.formLabel}>Current Email</Text>
 						<Text style={styles.infoText}>{user?.email || 'No email set'}</Text>
@@ -262,7 +262,7 @@ const AccountScreen = ({ navigation }) => {
 
 				{/* Password Card */}
 				<View style={styles.settingsCard}>
-					<Text style={styles.cardTitle}>Password</Text>
+					<Text style={styles.cardTitleCenter}>Password</Text>
 
 					{!isAppleUser ? (
 						<>
