@@ -235,7 +235,7 @@ const PrivacyScreen = ({ navigation }) => {
 					</Text>
 
 					<TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
-						<Icon name="trash-outline" size={20} color={colors.background.primary} />
+						<Icon name="trash-outline" size={22} color={colors.background.primary} />
 						<Text style={styles.dangerButtonText}>Delete Account</Text>
 					</TouchableOpacity>
 				</View>

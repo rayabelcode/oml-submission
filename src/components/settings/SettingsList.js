@@ -103,7 +103,7 @@ const SettingsList = ({
 
 			{/* Data & Privacy Card */}
 			<View style={styles.settingsCard}>
-				<Text style={styles.cardTitle}>Data & Privacy</Text>
+				<Text style={styles.cardTitle}>Privacy | Data</Text>
 				<View>
 					{[
 						{
@@ -131,7 +131,7 @@ const SettingsList = ({
 
 			{/* About & Support Card */}
 			<View style={styles.settingsCard}>
-				<Text style={styles.cardTitle}>About & Support</Text>
+				<Text style={styles.cardTitle}>About</Text>
 				<View>
 					{[
 						{
