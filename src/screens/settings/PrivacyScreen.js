@@ -172,39 +172,59 @@ const PrivacyScreen = ({ navigation }) => {
 					<Text style={styles.cardDescription}>
 						Download your data for backup or to use with other services.
 					</Text>
-
-					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(false)}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="download-outline" size={24} color={colors.primary} />
-							<Text style={styles.settingText}>Export Complete Data</Text>
-						</View>
-						<Text style={styles.settingSubtext}>All contact details, history & notes</Text>
-					</TouchableOpacity>
-
-					<TouchableOpacity style={styles.settingItem} onPress={() => handleExport(true)}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="people-outline" size={24} color={colors.primary} />
-							<Text style={styles.settingText}>Export Contact Info Only</Text>
-						</View>
-						<Text style={styles.settingSubtext}>Names and phone numbers</Text>
-					</TouchableOpacity>
+					<View>
+						{[
+							{
+								icon: 'download-outline',
+								text: 'Export Complete Data',
+								onPress: () => handleExport(false),
+							},
+							{
+								icon: 'people-outline',
+								text: 'Export Contact Info Only',
+								onPress: () => handleExport(true),
+							},
+						].map((item, index, array) => (
+							<TouchableOpacity
+								key={item.text}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+								onPress={item.onPress}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.primary} />
+									<Text style={styles.settingText}>{item.text}</Text>
+								</View>
+							</TouchableOpacity>
+						))}
+					</View>
 				</View>
 
 				{/* Privacy Policy Card */}
 				<View style={styles.settingsCard}>
 					<Text style={styles.cardTitle}>Privacy Policy</Text>
 					<Text style={styles.cardDescription}>Review how we handle your data and your privacy rights.</Text>
-
-					<TouchableOpacity
-						style={styles.settingItem}
-						onPress={() => Linking.openURL('https://onmylist.pro/privacy')}
-					>
-						<View style={styles.settingItemLeft}>
-							<Icon name="shield-checkmark-outline" size={24} color={colors.primary} />
-							<Text style={styles.settingText}>View Privacy Policy</Text>
-						</View>
-						<Icon name="open-outline" size={20} color={colors.primary} />
-					</TouchableOpacity>
+					<View>
+						{[
+							{
+								icon: 'shield-checkmark-outline',
+								text: 'View Privacy Policy',
+								onPress: () => Linking.openURL('https://onmylist.pro/privacy'),
+								showExternalIcon: true,
+							},
+						].map((item, index, array) => (
+							<TouchableOpacity
+								key={item.text}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+								onPress={item.onPress}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.primary} />
+									<Text style={styles.settingText}>{item.text}</Text>
+								</View>
+								{item.showExternalIcon && <Icon name="open-outline" size={20} color={colors.primary} />}
+							</TouchableOpacity>
+						))}
+					</View>
 				</View>
 
 				{/* Delete Account Card */}

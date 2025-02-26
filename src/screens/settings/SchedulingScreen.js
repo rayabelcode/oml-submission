@@ -311,32 +311,38 @@ const SchedulingScreen = ({ navigation }) => {
 				<View style={[styles.formSection, styles.card]}>
 					<Text style={styles.settingsHeader}>Time Between Calls</Text>
 					<Text style={styles.settingsExplanation}>Minimum time between scheduled calls.</Text>
-
-					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('minimum')}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="time-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: spacing.sm }}>
-								<Text style={[styles.settingText, { fontSize: 18 }]}>Minimum Gap</Text>
-								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
-									{formatDuration(minGap)}
-								</Text>
-							</View>
-						</View>
-						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
-					</TouchableOpacity>
-
-					<TouchableOpacity style={styles.settingItem} onPress={() => showDurationPicker('optimal')}>
-						<View style={styles.settingItemLeft}>
-							<Icon name="timer-outline" size={24} color={colors.text.secondary} />
-							<View style={{ marginLeft: spacing.sm }}>
-								<Text style={[styles.settingText, { fontSize: 18 }]}>Optimal Gap</Text>
-								<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
-									{formatDuration(optimalGap)}
-								</Text>
-							</View>
-						</View>
-						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
-					</TouchableOpacity>
+					<View>
+						{[
+							{
+								icon: 'time-outline',
+								title: 'Minimum Gap',
+								subtitle: formatDuration(minGap),
+								onPress: () => showDurationPicker('minimum'),
+							},
+							{
+								icon: 'timer-outline',
+								title: 'Optimal Gap',
+								subtitle: formatDuration(optimalGap),
+								onPress: () => showDurationPicker('optimal'),
+							},
+						].map((item, index, array) => (
+							<TouchableOpacity
+								key={item.title}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+								onPress={item.onPress}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.text.secondary} />
+									<View style={{ marginLeft: spacing.sm }}>
+										<Text style={[styles.settingText, { fontSize: 18 }]}>{item.title}</Text>
+										<Text style={[styles.settingText, { fontSize: 14, color: colors.text.secondary }]}>
+											{item.subtitle}
+										</Text>
+									</View>
+								</View>
+							</TouchableOpacity>
+						))}
+					</View>
 				</View>
 
 				{/* Global Excluded Times Section */}
@@ -345,21 +351,32 @@ const SchedulingScreen = ({ navigation }) => {
 					<Text style={styles.settingsExplanation}>
 						Set your sleeping hours so calls are not scheduled during this time.
 					</Text>
-
-					<TouchableOpacity
-						style={styles.settingItem}
-						onPress={() => setExpandedSection(expandedSection === 'globalExcluded' ? null : 'globalExcluded')}
-					>
-						<View style={styles.settingItemLeft}>
-							<Icon name="moon-outline" size={24} color={colors.text.secondary} />
-							<Text style={[styles.settingText, { fontSize: 18 }]}>Pick Your Times</Text>
-						</View>
-						<Icon
-							name={expandedSection === 'globalExcluded' ? 'chevron-up' : 'chevron-down'}
-							size={24}
-							color={colors.text.secondary}
-						/>
-					</TouchableOpacity>
+					<View>
+						{[
+							{
+								icon: 'moon-outline',
+								title: 'Pick Your Times',
+								onPress: () =>
+									setExpandedSection(expandedSection === 'globalExcluded' ? null : 'globalExcluded'),
+							},
+						].map((item, index, array) => (
+							<TouchableOpacity
+								key={item.title}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+								onPress={item.onPress}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.text.secondary} />
+									<Text style={[styles.settingText, { fontSize: 18 }]}>{item.title}</Text>
+								</View>
+								<Icon
+									name={expandedSection === 'globalExcluded' ? 'chevron-up' : 'chevron-down'}
+									size={24}
+									color={colors.text.secondary}
+								/>
+							</TouchableOpacity>
+						))}
+					</View>
 
 					{expandedSection === 'globalExcluded' &&
 						globalExcludedTimes.map((time, index) => (
@@ -390,17 +407,27 @@ const SchedulingScreen = ({ navigation }) => {
 				<View style={[styles.formSection, styles.card]}>
 					<Text style={styles.settingsHeader}>Relationship Settings</Text>
 					<Text style={styles.settingsExplanation}>Set preferences by relationship type.</Text>
-
-					<TouchableOpacity
-						style={styles.settingItem}
-						onPress={() => navigation.navigate('RelationshipTypeSettings')}
-					>
-						<View style={styles.settingItemLeft}>
-							<Icon name="people-outline" size={24} color={colors.text.secondary} />
-							<Text style={[styles.settingText, { fontSize: 18 }]}>Manage Relationship Types</Text>
-						</View>
-						<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
-					</TouchableOpacity>
+					<View>
+						{[
+							{
+								icon: 'people-outline',
+								title: 'Manage Relationship Types',
+								onPress: () => navigation.navigate('RelationshipTypeSettings'),
+							},
+						].map((item, index, array) => (
+							<TouchableOpacity
+								key={item.title}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+								onPress={item.onPress}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.text.secondary} />
+									<Text style={[styles.settingText, { fontSize: 18 }]}>{item.title}</Text>
+								</View>
+								<Icon name="chevron-forward-outline" size={24} color={colors.text.secondary} />
+							</TouchableOpacity>
+						))}
+					</View>
 				</View>
 			</ScrollView>
 

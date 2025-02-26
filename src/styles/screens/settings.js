@@ -174,15 +174,6 @@ const createStyles = (colors) =>
 			flexDirection: 'row',
 			alignItems: 'center',
 		},
-		// Last item styles - for items without borders
-		settingItemLast: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'space-between',
-			paddingTop: spacing.md,
-			paddingBottom: spacing.sm,
-			borderBottomWidth: 0,
-		},
 		settingText: {
 			fontSize: 18,
 			fontWeight: '600',

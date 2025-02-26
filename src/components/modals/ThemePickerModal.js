@@ -27,6 +27,8 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			borderTopLeftRadius: layout.borderRadius.lg,
 			borderTopRightRadius: layout.borderRadius.lg,
 			paddingBottom: spacing.xxxl,
+			borderTopWidth: 2,
+			borderTopColor: colors.background.primary,
 		},
 		handleContainer: {
 			alignItems: 'center',
@@ -82,7 +84,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 		selectedOption: {},
 		checkmark: {
 			marginLeft: 'auto',
-			color: colors.secondary,
+			color: colors.buttons.activeIcon,
 		},
 		themeIcon: {
 			width: 24,
@@ -116,7 +118,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 								<Icon name={option.icon} size={20} color={colors.text.secondary} />
 							</View>
 							<Text style={styles.optionText}>{option.label}</Text>
-							{theme === option.value && <Icon name="checkmark" size={24} style={styles.checkmark} />}
+							{theme === option.value && <Icon name="checkmark" size={26} style={styles.checkmark} />}
 						</TouchableOpacity>
 					))}
 				</TouchableOpacity>
