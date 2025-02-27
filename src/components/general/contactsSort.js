@@ -83,7 +83,7 @@ const ContactsSortMenu = ({
 						<View style={styles.header}>
 							<Text style={styles.title}>Display Options</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close-circle-outline" size={35} color={colors.warning} />
+								<Icon name="close" size={35} color={colors.warning} />
 							</TouchableOpacity>
 						</View>
 
