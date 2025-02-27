@@ -18,7 +18,7 @@ const StatBox = ({ icon, title, value, subtitle, colors, styles }) => (
 	</View>
 );
 
-export const StatsScreen = () => {
+export const StatsScreen = ({ navigation }) => {
 	const { colors } = useTheme();
 	const styles = useStyles(colors);
 	const { user } = useAuth();
@@ -70,6 +70,14 @@ export const StatsScreen = () => {
 
 	return (
 		<View style={styles.container}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+					<Icon name="chevron-back" size={24} color={colors.text.primary} />
+				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Stats</Text>
+				<View style={styles.headerRightPlaceholder} />
+			</View>
+
 			<ScrollView
 				style={styles.statsContainer}
 				contentContainerStyle={styles.contentContainer}

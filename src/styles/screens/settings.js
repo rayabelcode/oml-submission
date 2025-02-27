@@ -166,7 +166,7 @@ const createStyles = (colors) =>
 		disabledButton: {
 			opacity: 0.5,
 		},
-		// Header Styles
+		// Header Styles (should match the header styles in stats.js)
 		screenHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -184,7 +184,7 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 		},
 		headerRightPlaceholder: {
-			width: 40,
+			width: spacing.xxl,
 		},
 		// Setting Item Styles
 		settingItem: {

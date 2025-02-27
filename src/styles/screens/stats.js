@@ -178,5 +178,25 @@ export const useStyles = (colors) => {
 			fontWeight: '500',
 			textAlign: 'center',
 		},
+		// Header Styles (should match the header styles in settings.js)
+		screenHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.sm,
+		},
+		headerBackButton: {
+			padding: spacing.xs,
+		},
+		headerTitle: {
+			fontSize: 20,
+			fontWeight: '600',
+			color: colors.text.primary,
+		},
+		headerRightPlaceholder: {
+			width: spacing.xxl,
+		},
 	});
 };
