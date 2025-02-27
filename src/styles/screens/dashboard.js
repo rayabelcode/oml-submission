@@ -181,7 +181,8 @@ const useStyles = () => {
 			fontWeight: 700,
 		},
 		section: {
-			paddingHorizontal: spacing.xs,
+			marginTop: spacing.md,
+			paddingHorizontal: spacing.md,
 			marginBottom: spacing.xl,
 		},
 		groupHeader: {
@@ -195,6 +196,7 @@ const useStyles = () => {
 			fontWeight: '700',
 			color: colors.text.primary,
 			textAlign: 'center',
+			opacity: 0.9,
 		},
 		content: {
 			flex: 1,
@@ -202,7 +204,6 @@ const useStyles = () => {
 		needsAttentionSection: {
 			backgroundColor: colors.background.primary,
 			marginBottom: spacing.sm,
-			paddingTop: spacing.md,
 		},
 		// Suggested Calls
 		attentionItem: {

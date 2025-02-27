@@ -90,8 +90,9 @@ export default function ScheduleScreen({ navigation }) {
 				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
 			>
 				<View style={styles.section}>
-					<View style={styles.groupHeader}>
-						<Text style={styles.groupTitle}>Upcoming Calls</Text>
+					<View style={commonStyles.pageHeader}>
+						<Icon name="calendar-clear-outline" size={22} style={commonStyles.pageHeaderIcon} />
+						<Text style={commonStyles.pageHeaderTitle}>Upcoming Calls</Text>
 					</View>
 					{loading ? (
 						<Text style={commonStyles.message}>Loading contacts...</Text>

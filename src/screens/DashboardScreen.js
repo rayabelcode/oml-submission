@@ -619,30 +619,27 @@ export default function DashboardScreen({ navigation, route }) {
 					keyboardShouldPersistTaps="always"
 					keyboardDismissMode="none"
 				>
-					{/* Needs Attention Section */}
-					{remindersState.data.length > 0 ? (
-						<View style={styles.needsAttentionSection}>
-							<View style={styles.groupHeader}>
-								<Text style={styles.groupTitle}>Reminders</Text>
-							</View>
+					{/* Reminders Section */}
+					<View style={styles.needsAttentionSection}>
+						<View style={commonStyles.pageHeader}>
+							<Icon name="grid-outline" size={22} style={commonStyles.pageHeaderIcon} />
+							<Text style={commonStyles.pageHeaderTitle}>Reminders</Text>
+						</View>
+
+						{remindersState.data.length > 0 ? (
 							<NotificationsView
 								reminders={remindersState.data}
 								onComplete={handleReminderComplete}
 								loading={remindersState.loading}
 								onSnooze={handleSnooze}
 							/>
-						</View>
-					) : (
-						<View style={styles.needsAttentionSection}>
-							<View style={styles.groupHeader}>
-								<Text style={styles.groupTitle}>Reminders</Text>
-							</View>
+						) : (
 							<View style={styles.emptyStateContainer}>
 								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
 								<Text style={styles.congratsMessage}>You're all caught up!</Text>
 							</View>
-						</View>
-					)}
+						)}
+					</View>
 
 					{/* Suggested Calls Section */}
 					<View style={styles.section}>
