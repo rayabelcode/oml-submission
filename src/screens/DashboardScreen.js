@@ -670,7 +670,7 @@ export default function DashboardScreen({ navigation, route }) {
 										]}
 									>
 										<View style={styles.attentionInfo}>
-											<Text style={styles.contactName}>{contact.name}</Text>
+											<Text style={styles.suggestedContactName}>{contact.name}</Text>
 										</View>
 										<TouchableOpacity
 											style={styles.callButton}
