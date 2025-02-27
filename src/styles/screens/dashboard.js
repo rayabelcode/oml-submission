@@ -14,10 +14,6 @@ const useStyles = () => {
 			flex: 1,
 			padding: spacing.md,
 		},
-		statsContainer: {
-			flex: 1,
-			padding: spacing.md,
-		},
 		header: {
 			padding: spacing.sm,
 			alignItems: 'center',
@@ -310,18 +306,6 @@ const useStyles = () => {
 		upcomingContactInfo: {
 			marginLeft: spacing.sm,
 		},
-		// Notification swiping
-		swipeActionContainer: {
-			justifyContent: 'center',
-			alignItems: 'center',
-			width: 100,
-			height: '100%',
-		},
-		swipeActionText: {
-			color: colors.background.primary,
-			fontWeight: '600',
-			fontSize: 16,
-		},
 		// Call notes on reminders
 		cardTitle: {
 			fontSize: 20,
@@ -393,6 +377,51 @@ const useStyles = () => {
 		},
 		upcomingSection: {
 			flex: 1,
+		},
+		// Suggested Calls
+		attentionItem: {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+			alignItems: 'center',
+			paddingVertical: spacing.md,
+		},
+		attentionInfo: {
+			flex: 1,
+		},
+		contactName: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginLeft: spacing.md,
+		},
+		callButton: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.primary,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			marginLeft: spacing.md,
+		},
+		callButtonText: {
+			color: colors.text.white,
+			marginLeft: spacing.sm,
+			fontSize: 16,
+			fontWeight: '700',
+		},
+		sectionDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginTop: -spacing.md,
+			marginBottom: spacing.md,
+		},
+		emptyMessage: {
+			textAlign: 'center',
+			color: colors.text.secondary,
+			fontSize: 16,
+			fontStyle: 'italic',
+			paddingVertical: spacing.md,
 		},
 	});
 };
