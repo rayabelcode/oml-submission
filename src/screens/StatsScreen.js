@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { calculateStats } from './stats/statsCalculator';
 import { RELATIONSHIP_TYPES } from '../../constants/relationships';
 import Icon from 'react-native-vector-icons/Ionicons';
-import CallOptions from '../components/general/CallOptions';
 import { cacheManager } from '../utils/cache';
 import { useStyles } from '../styles/screens/stats';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,8 +26,6 @@ export const StatsScreen = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [refreshing, setRefreshing] = useState(false);
-	const [showCallOptions, setShowCallOptions] = useState(false);
-	const [selectedContact, setSelectedContact] = useState(null);
 
 	const loadStats = async (showLoading = false) => {
 		if (!user) return;
@@ -127,61 +124,7 @@ export const StatsScreen = () => {
 								))}
 							</View>
 						</View>
-
-						<View style={styles.section}>
-							<Text style={styles.sectionTitle}>Suggested Calls</Text>
-							<Text style={styles.sectionDescription}>Based on your call frequency</Text>
-							{stats?.detailed?.needsAttention?.length > 0 ? (
-								stats.detailed.needsAttention.map((contact, index, array) => (
-									<View
-										key={contact.id}
-										style={[
-											styles.attentionItem,
-											index !== array.length - 1 && {
-												borderBottomWidth: 1,
-												borderBottomColor: colors.border,
-											},
-										]}
-									>
-										<View style={styles.attentionInfo}>
-											<Text style={styles.contactName}>{contact.name}</Text>
-										</View>
-										<TouchableOpacity
-											style={styles.callButton}
-											onPress={() => {
-												const formattedContact = {
-													...contact,
-													first_name: contact.name.split(' ')[0],
-													last_name: contact.name.split(' ').slice(1).join(' '),
-													phone: contact.phone,
-												};
-												setSelectedContact(formattedContact);
-												setShowCallOptions(true);
-											}}
-										>
-											<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
-											<Text style={styles.callButtonText}>Contact</Text>
-										</TouchableOpacity>
-									</View>
-								))
-							) : (
-								<Text style={styles.emptyMessage}>
-									Great job! You're up to date with all your contacts. 🎉
-								</Text>
-							)}
-						</View>
 					</>
-				)}
-
-				{selectedContact && (
-					<CallOptions
-						show={showCallOptions}
-						contact={selectedContact}
-						onClose={() => {
-							setShowCallOptions(false);
-							setSelectedContact(null);
-						}}
-					/>
 				)}
 			</ScrollView>
 		</View>
