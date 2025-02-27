@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { useStyles } from '../styles/screens/settings';
-import { useTheme } from '../context/ThemeContext'; // Dark mode
+import { spacing, useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../context/AuthContext';
 import ImagePickerComponent from '../components/general/ImagePicker';
@@ -383,17 +383,17 @@ export default function SettingsScreen({ navigation }) {
 		<View style={styles.container}>
 			<StatusBar style="auto" />
 
-			{/* Static Header */}
+			{/* Static Header (Avatar and User Info) */}
 			<ProfileSection
 				userProfile={userProfile}
 				user={user}
 				handleProfilePhotoUpload={handleProfilePhotoUpload}
 			/>
 
-			{/* Scrollable Content */}
+			{/* Main content area where the settings list is displayed */}
 			<ScrollView
 				style={{ flex: 1 }}
-				contentContainerStyle={{ paddingBottom: 20 }}
+				contentContainerStyle={{ paddingTop: spacing.lg, paddingBottom: spacing.sm }}
 				showsVerticalScrollIndicator={false}
 			>
 				<SettingsList
