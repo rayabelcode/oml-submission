@@ -14,9 +14,10 @@ export const useContactDetailsStyles = () => {
 			alignItems: 'center',
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.md,
 			backgroundColor: colors.background.primary,
-			borderBottomWidth: 1,
+			borderBottomWidth: .5,
 			borderBottomColor: colors.border,
 		},
 		headerButton: {

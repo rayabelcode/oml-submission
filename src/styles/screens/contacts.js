@@ -658,7 +658,8 @@ const useStyles = () => {
 			marginBottom: 0,
 		},
 		photoContainer: {
-			width: 100,
+			marginTop: spacing.md,
+			width: 110,
 			alignItems: 'center',
 		},
 		contactInfo: {
