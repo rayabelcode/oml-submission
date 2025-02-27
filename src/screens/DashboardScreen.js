@@ -47,6 +47,8 @@ import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snooz
 import { DateTime } from 'luxon';
 import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
+import { calculateStats } from './stats/statsCalculator';
+import CallOptions from '../components/general/CallOptions';
 
 // Helper functions for reminders
 const getScheduledReminders = async (userId) => {
@@ -131,6 +133,9 @@ export default function DashboardScreen({ navigation, route }) {
 	const [snoozeLoading, setSnoozeLoading] = useState(false);
 	const [snoozeError, setSnoozeError] = useState(null);
 	const [selectedReminder, setSelectedReminder] = useState(null);
+	const [stats, setStats] = useState(null);
+	const [showCallOptions, setShowCallOptions] = useState(false);
+	const [selectedContact, setSelectedContact] = useState(null);
 	const [remindersState, setRemindersState] = useState({
 		data: [],
 		loading: true,
@@ -152,6 +157,7 @@ export default function DashboardScreen({ navigation, route }) {
 			if (user) {
 				loadContacts();
 				loadReminders();
+				loadStats();
 
 				// Set up real-time listener
 				const contactsUnsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
@@ -561,6 +567,24 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	}
 
+	const loadStats = async () => {
+		if (!user) return;
+		try {
+			// Try to load from cache first
+			const cachedStats = await cacheManager.getCachedStats(user.uid);
+			if (cachedStats) {
+				setStats(cachedStats);
+			}
+
+			// Fetch fresh stats
+			const calculatedStats = await calculateStats(user.uid);
+			setStats(calculatedStats);
+			await cacheManager.saveStats(user.uid, calculatedStats);
+		} catch (error) {
+			console.error('Error loading stats:', error);
+		}
+	};
+
 	const onRefresh = React.useCallback(async () => {
 		setRefreshing(true);
 		try {
@@ -620,102 +644,52 @@ export default function DashboardScreen({ navigation, route }) {
 						</View>
 					)}
 
-					{/* Upcoming Calls Section */}
+					{/* Suggested Calls Section */}
 					<View style={styles.section}>
 						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Upcoming Calls</Text>
+							<Text style={styles.groupTitle}>Suggested Calls</Text>
 						</View>
-						{loading ? (
-							<Text style={commonStyles.message}>Loading contacts...</Text>
-						) : contacts.length === 0 ? (
-							<Text style={commonStyles.message}>No upcoming contacts</Text>
+						{!stats?.detailed?.needsAttention ? (
+							<Text style={commonStyles.message}>Loading suggestions...</Text>
+						) : stats.detailed.needsAttention.length === 0 ? (
+							<View style={styles.emptyStateContainer}>
+								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
+								<Text style={styles.congratsMessage}>You're up to date with all your contacts!</Text>
+							</View>
 						) : (
-							<View style={styles.upcomingGrid}>
-								{contacts
-									.filter((contact) => contact.next_contact)
-									.sort((a, b) => {
-										const dateA = new Date(
-											a.next_contact?.seconds ? a.next_contact.seconds * 1000 : a.next_contact
-										);
-										const dateB = new Date(
-											b.next_contact?.seconds ? b.next_contact.seconds * 1000 : b.next_contact
-										);
-										return dateA - dateB;
-									})
-									.map((contact) => {
-										let formattedDate = null;
-										try {
-											if (contact.next_contact) {
-												if (contact.next_contact instanceof Object && contact.next_contact.seconds) {
-													formattedDate = new Date(contact.next_contact.seconds * 1000).toISOString();
-												} else if (contact.next_contact.toDate) {
-													formattedDate = contact.next_contact.toDate().toISOString();
-												} else if (typeof contact.next_contact === 'string') {
-													formattedDate = contact.next_contact;
-												} else if (contact.next_contact instanceof Date) {
-													formattedDate = contact.next_contact.toISOString();
-												} else {
-													console.warn(
-														'Unhandled next_contact format:',
-														typeof contact.next_contact,
-														contact.next_contact
-													);
-												}
-											}
-										} catch (error) {
-											console.warn('Error formatting date for contact:', contact.id, error);
-											return null;
-										}
-
-										if (!formattedDate) {
-											console.warn('Could not format date for contact:', contact.id, contact.next_contact);
-											return null;
-										}
-
-										return (
-											<TouchableOpacity
-												key={contact.id}
-												style={styles.upcomingContactCard}
-												onPress={() =>
-													navigation.navigate('ContactDetails', { contact, initialTab: 'Schedule' })
-												}
-											>
-												<Text
-													style={styles.upcomingContactName}
-													numberOfLines={1}
-													adjustsFontSizeToFit={true}
-													minimumFontScale={0.8}
-												>
-													{contact.first_name} {contact.last_name}
-												</Text>
-
-												<View style={styles.contactRow}>
-													<View style={styles.avatarContainer}>
-														{contact.photo_url ? (
-															<ExpoImage
-																source={{ uri: contact.photo_url }}
-																style={styles.avatar}
-																cachePolicy="memory-disk"
-																transition={200}
-															/>
-														) : (
-															<Icon name="person-outline" size={24} color={colors.primary} />
-														)}
-													</View>
-													<Text style={styles.upcomingContactDate}>
-														{new Date(formattedDate)
-															.toLocaleDateString('en-US', {
-																month: 'numeric',
-																day: 'numeric',
-																year: 'numeric',
-															})
-															.replace(/\//g, '/')}
-													</Text>
-												</View>
-											</TouchableOpacity>
-										);
-									})
-									.filter(Boolean)}
+							<View>
+								{stats.detailed.needsAttention.map((contact, index, array) => (
+									<View
+										key={contact.id}
+										style={[
+											styles.attentionItem,
+											index !== array.length - 1 && {
+												borderBottomWidth: 1,
+												borderBottomColor: colors.border,
+											},
+										]}
+									>
+										<View style={styles.attentionInfo}>
+											<Text style={styles.contactName}>{contact.name}</Text>
+										</View>
+										<TouchableOpacity
+											style={styles.callButton}
+											onPress={() => {
+												const formattedContact = {
+													...contact,
+													first_name: contact.name.split(' ')[0],
+													last_name: contact.name.split(' ').slice(1).join(' '),
+													phone: contact.phone,
+												};
+												setSelectedContact(formattedContact);
+												setShowCallOptions(true);
+											}}
+										>
+											<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
+											<Text style={styles.callButtonText}>Contact</Text>
+										</TouchableOpacity>
+									</View>
+								))}
 							</View>
 						)}
 					</View>
@@ -734,6 +708,16 @@ export default function DashboardScreen({ navigation, route }) {
 					title="Snooze Options"
 				/>
 			</View>
+			{selectedContact && (
+    <CallOptions
+        show={showCallOptions}
+        contact={selectedContact}
+        onClose={() => {
+            setShowCallOptions(false);
+            setSelectedContact(null);
+        }}
+    />
+)}
 		</KeyboardAvoidingView>
 	);
 }

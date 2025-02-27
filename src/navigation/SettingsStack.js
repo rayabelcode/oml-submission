@@ -8,6 +8,7 @@ import AboutScreen from '../screens/settings/AboutScreen';
 import SchedulingScreen from '../screens/settings/SchedulingScreen';
 import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import RelationshipTypeSettings from '../screens/settings/RelationshipTypeSettings';
+import StatsScreen from '../screens/StatsScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -32,6 +33,7 @@ const SettingsStack = () => {
 			<Stack.Screen name="Scheduling" component={SchedulingScreen} />
 			<Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
 			<Stack.Screen name="RelationshipTypeSettings" component={RelationshipTypeSettings} />
+			<Stack.Screen name="Stats" component={StatsScreen} />
 		</Stack.Navigator>
 	);
 };
