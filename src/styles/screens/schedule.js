@@ -11,7 +11,7 @@ const useStyles = () => {
 			paddingTop: Platform.OS === 'ios' ? 50 : 0,
 		},
 		section: {
-			paddingHorizontal: spacing.md,
+			paddingHorizontal: spacing.lg,
 			marginBottom: spacing.xl,
 			flex: 1,
 		},
@@ -19,17 +19,18 @@ const useStyles = () => {
 			flex: 1,
 		},
 		contactGroup: {
-			marginBottom: spacing.xl,
+			marginBottom: spacing.sm,
 		},
 		groupHeader: {
-			paddingVertical: spacing.sm,
-			borderBottomWidth: 1,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.xs,
+			borderBottomWidth: .5,
 			borderBottomColor: colors.border,
 			marginBottom: spacing.md,
 		},
 		groupTitle: {
 			fontSize: 22,
-			fontWeight: '600',
+			fontWeight: '700',
 			color: colors.text.primary,
 		},
 		contactList: {
@@ -46,7 +47,7 @@ const useStyles = () => {
 		contactCardHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
-			marginBottom: spacing.sm,
+			marginBottom: spacing.xxs,
 		},
 		avatarContainer: {
 			marginRight: spacing.md,
@@ -69,20 +70,21 @@ const useStyles = () => {
 		},
 		contactName: {
 			fontSize: 18,
-			fontWeight: '600',
+			fontWeight: '700',
 			color: colors.text.primary,
 			marginBottom: spacing.xxs,
 		},
 		reminderType: {
-			fontSize: 14,
-			color: colors.primary,
-			opacity: 0.8,
+			fontSize: 15,
+			fontWeight: '700',
+			color: colors.text.secondary,
+			opacity: 0.9,
 		},
 		contactCardFooter: {
 			flexDirection: 'row',
 			justifyContent: 'flex-end',
 			alignItems: 'center',
-			marginTop: spacing.xs,
+			marginTop: spacing.xxs,
 		},
 		dateContainer: {
 			flexDirection: 'row',
@@ -93,12 +95,13 @@ const useStyles = () => {
 			borderRadius: layout.borderRadius.md,
 		},
 		dateIcon: {
-			marginRight: spacing.xs,
+			marginRight: spacing.sm,
 		},
 		contactDate: {
 			fontSize: 14,
-			fontWeight: '500',
+			fontWeight: '600',
 			color: colors.text.primary,
+			opacity: 0.9,
 		},
 		// Empty state styling
 		emptyStateContainer: {

@@ -48,7 +48,7 @@ const ContactCard = React.memo(
 				</View>
 				<View style={styles.contactCardFooter}>
 					<View style={styles.dateContainer}>
-						<Icon name="calendar-outline" size={16} color={colors.primary} style={styles.dateIcon} />
+						<Icon name="calendar-clear-outline" size={16} color={colors.primary} style={styles.dateIcon} />
 						<Text style={styles.contactDate}>{getFormattedDate(contact.next_contact)}</Text>
 					</View>
 				</View>
@@ -265,12 +265,13 @@ export default function ScheduleScreen({ navigation }) {
 	const getCallTypeLabel = useCallback((contact) => {
 		// For custom dates
 		if (contact?.scheduling?.custom_next_date) {
-			return 'Custom Call Date';
+			return 'Custom Date';
 		}
 
 		// For recurring frequencies
 		if (contact?.scheduling?.frequency) {
-			return FREQUENCY_DISPLAY_MAP[contact.scheduling.frequency] || 'Scheduled Call';
+			const frequencyLabel = FREQUENCY_DISPLAY_MAP[contact.scheduling.frequency] || 'Scheduled';
+			return `${frequencyLabel} Schedule`;
 		}
 
 		return 'Check-in';
@@ -282,7 +283,7 @@ export default function ScheduleScreen({ navigation }) {
 			today: { title: 'Today', contacts: [] },
 			tomorrow: { title: 'Tomorrow', contacts: [] },
 			thisWeek: { title: 'This Week', contacts: [] },
-			thisMonth: { title: 'This Month', contacts: [] },
+			thisMonth: { title: 'Upcoming Month', contacts: [] },
 			future: { title: 'Future', contacts: [] },
 		};
 
@@ -412,7 +413,7 @@ export default function ScheduleScreen({ navigation }) {
 								getFormattedDate={getFormattedDate}
 							/>
 							<ContactGroup
-								title="This Month"
+								title="Upcoming Month"
 								contacts={contactGroups.thisMonth.contacts}
 								navigation={navigation}
 								styles={styles}
