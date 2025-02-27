@@ -11,73 +11,135 @@ const useStyles = () => {
 			paddingTop: Platform.OS === 'ios' ? 50 : 0,
 		},
 		section: {
-			paddingHorizontal: spacing.xs,
+			paddingHorizontal: spacing.md,
+			marginBottom: spacing.xl,
+			flex: 1,
+		},
+		groupsContainer: {
+			flex: 1,
+		},
+		contactGroup: {
 			marginBottom: spacing.xl,
 		},
 		groupHeader: {
-			flexDirection: 'row',
-			justifyContent: 'center',
-			paddingTop: spacing.md,
-			paddingBottom: spacing.lg,
+			paddingVertical: spacing.sm,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+			marginBottom: spacing.md,
 		},
 		groupTitle: {
-			fontSize: 20,
-			fontWeight: '700',
+			fontSize: 22,
+			fontWeight: '600',
 			color: colors.text.primary,
-			textAlign: 'center',
 		},
-		avatarContainer: {
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-			backgroundColor: colors.background.tertiary,
-			justifyContent: 'center',
-			alignItems: 'center',
+		contactList: {
+			flex: 1,
 		},
-		avatar: {
-			width: 40,
-			height: 40,
-			borderRadius: 20,
-		},
-		contactRow: {
-			flexDirection: 'column',
-			alignItems: 'center',
-			justifyContent: 'center',
-			width: '100%',
-		},
-		upcomingGrid: {
-			flexDirection: 'row',
-			flexWrap: 'wrap',
-			justifyContent: 'space-between',
-			paddingHorizontal: spacing.sm,
-		},
-		upcomingContactCard: {
+		contactCard: {
 			backgroundColor: colors.background.secondary,
-			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.md,
-			marginHorizontal: spacing.xs,
-			width: '47%',
-			alignItems: 'center',
-			justifyContent: 'center',
+			padding: spacing.md,
+			borderWidth: 1,
+			borderColor: colors.border,
 		},
-		upcomingContactName: {
-			fontSize: 16,
+		contactCardHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: spacing.sm,
+		},
+		avatarContainer: {
+			marginRight: spacing.md,
+		},
+		avatar: {
+			width: 60,
+			height: 60,
+			borderRadius: 30,
+		},
+		defaultAvatar: {
+			width: 60,
+			height: 60,
+			borderRadius: 30,
+			backgroundColor: colors.primary,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		contactInfo: {
+			flex: 1,
+		},
+		contactName: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: spacing.xxs,
+		},
+		reminderType: {
+			fontSize: 14,
+			color: colors.primary,
+			opacity: 0.8,
+		},
+		contactCardFooter: {
+			flexDirection: 'row',
+			justifyContent: 'flex-end',
+			alignItems: 'center',
+			marginTop: spacing.xs,
+		},
+		dateContainer: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.background.tertiary,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.xs,
+			borderRadius: layout.borderRadius.md,
+		},
+		dateIcon: {
+			marginRight: spacing.xs,
+		},
+		contactDate: {
+			fontSize: 14,
+			fontWeight: '500',
+			color: colors.text.primary,
+		},
+		// Empty state styling
+		emptyStateContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+			paddingHorizontal: spacing.xl,
+			paddingVertical: spacing.xxl,
+		},
+		emptyStateIcon: {
+			marginBottom: spacing.lg,
+			opacity: 0.6,
+		},
+		emptyStateTitle: {
+			fontSize: 20,
 			fontWeight: '600',
 			color: colors.text.primary,
 			marginBottom: spacing.md,
 			textAlign: 'center',
-			width: '100%',
-			flexShrink: 1,
-			flexWrap: 'wrap',
-			paddingHorizontal: spacing.xs,
 		},
-		upcomingContactDate: {
+		emptyStateMessage: {
 			fontSize: 16,
-			fontWeight: '600',
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginBottom: spacing.xl,
+			lineHeight: 22,
+		},
+		emptyStateButton: {
+			minWidth: 150,
+		},
+		// Loading state styling
+		loadingContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+			paddingVertical: spacing.xxl,
+		},
+		loadingText: {
+			fontSize: 16,
 			color: colors.text.secondary,
 			marginTop: spacing.md,
-			textAlign: 'center',
 		},
 	});
 };
