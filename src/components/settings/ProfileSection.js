@@ -39,8 +39,8 @@ const ProfileSection = ({ userProfile, user }) => {
 							<Icon name="person-circle-outline" size={60} color={colors.text.secondary} />
 						)}
 					</View>
-					<Text style={[styles.profileName, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
-						{displayName}
+					<Text style={styles.profileName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+					{displayName}
 					</Text>
 					{userProfile?.phone && (
 						<FormattedPhoneNumber phoneNumber={userProfile.phone} style={styles.profileDetail} />
