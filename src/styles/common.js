@@ -19,7 +19,7 @@ export const useCommonStyles = () => {
 			padding: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.sm,
-			borderWidth: 1,
+			borderWidth: 0,
 			borderColor: colors.border,
 		},
 		modalContainer: {

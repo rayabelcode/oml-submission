@@ -646,52 +646,55 @@ export default function DashboardScreen({ navigation, route }) {
 
 					{/* Suggested Calls Section */}
 					<View style={styles.section}>
-						<View style={styles.groupHeader}>
-							<Text style={styles.groupTitle}>Suggested Calls</Text>
-						</View>
-						{!stats?.detailed?.needsAttention ? (
-							<Text style={commonStyles.message}>Loading suggestions...</Text>
-						) : stats.detailed.needsAttention.length === 0 ? (
-							<View style={styles.emptyStateContainer}>
-								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
-								<Text style={styles.congratsMessage}>You're up to date with all your contacts!</Text>
+						<View style={commonStyles.card}>
+							<View style={styles.groupHeader}>
+								<Text style={styles.groupTitle}>Suggested Calls</Text>
 							</View>
-						) : (
-							<View>
-								{stats.detailed.needsAttention.map((contact, index, array) => (
-									<View
-										key={contact.id}
-										style={[
-											styles.attentionItem,
-											index !== array.length - 1 && {
-												borderBottomWidth: 1,
-												borderBottomColor: colors.border,
-											},
-										]}
-									>
-										<View style={styles.attentionInfo}>
-											<Text style={styles.suggestedContactName}>{contact.name}</Text>
-										</View>
-										<TouchableOpacity
-											style={styles.callButton}
-											onPress={() => {
-												const formattedContact = {
-													...contact,
-													first_name: contact.name.split(' ')[0],
-													last_name: contact.name.split(' ').slice(1).join(' '),
-													phone: contact.phone,
-												};
-												setSelectedContact(formattedContact);
-												setShowCallOptions(true);
-											}}
+
+							{!stats?.detailed?.needsAttention ? (
+								<Text style={commonStyles.message}>Loading suggestions...</Text>
+							) : stats.detailed.needsAttention.length === 0 ? (
+								<View style={styles.emptyStateContainer}>
+									<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
+									<Text style={styles.congratsMessage}>You're up to date with all your contacts!</Text>
+								</View>
+							) : (
+								<View>
+									{stats.detailed.needsAttention.map((contact, index, array) => (
+										<View
+											key={contact.id}
+											style={[
+												styles.attentionItem,
+												index !== array.length - 1 && {
+													borderBottomWidth: 1,
+													borderBottomColor: colors.border,
+												},
+											]}
 										>
-											<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
-											<Text style={styles.callButtonText}>Contact</Text>
-										</TouchableOpacity>
-									</View>
-								))}
-							</View>
-						)}
+											<View style={styles.attentionInfo}>
+												<Text style={styles.contactName}>{contact.name}</Text>
+											</View>
+											<TouchableOpacity
+												style={styles.callButton}
+												onPress={() => {
+													const formattedContact = {
+														...contact,
+														first_name: contact.name.split(' ')[0],
+														last_name: contact.name.split(' ').slice(1).join(' '),
+														phone: contact.phone,
+													};
+													setSelectedContact(formattedContact);
+													setShowCallOptions(true);
+												}}
+											>
+												<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
+												<Text style={styles.callButtonText}>Contact</Text>
+											</TouchableOpacity>
+										</View>
+									))}
+								</View>
+							)}
+						</View>
 					</View>
 				</ScrollView>
 
@@ -709,15 +712,15 @@ export default function DashboardScreen({ navigation, route }) {
 				/>
 			</View>
 			{selectedContact && (
-    <CallOptions
-        show={showCallOptions}
-        contact={selectedContact}
-        onClose={() => {
-            setShowCallOptions(false);
-            setSelectedContact(null);
-        }}
-    />
-)}
+				<CallOptions
+					show={showCallOptions}
+					contact={selectedContact}
+					onClose={() => {
+						setShowCallOptions(false);
+						setSelectedContact(null);
+					}}
+				/>
+			)}
 		</KeyboardAvoidingView>
 	);
 }

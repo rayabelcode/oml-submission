@@ -187,8 +187,8 @@ const useStyles = () => {
 		groupHeader: {
 			flexDirection: 'row',
 			justifyContent: 'center',
-			paddingTop: spacing.md,
-			paddingBottom: spacing.lg,
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.sm,
 		},
 		groupTitle: {
 			fontSize: 20,
@@ -219,6 +219,7 @@ const useStyles = () => {
 			fontWeight: '700',
 			color: colors.text.primary,
 			marginBottom: spacing.xs,
+			opacity: 0.8,
 		},
 		suggestedContactName: {
 			fontSize: 18,
