@@ -15,7 +15,7 @@ const useStyles = () => {
 		},
 		scrollContent: {
 			flexGrow: 1,
-			paddingBottom: 20,
+			paddingBottom: spacing.lg,
 			pointerEvents: 'box-none',
 		},
 		content: {
@@ -28,12 +28,12 @@ const useStyles = () => {
 		grid: {
 			flexDirection: 'row',
 			flexWrap: 'wrap',
-			paddingHorizontal: 0,
+			paddingHorizontal: 'none',
 			justifyContent: 'flex-start',
 		},
 		logo: {
 			width: '50%',
-			height: 15,
+			height: 20,
 		},
 		buttonContainer: {
 			flexDirection: 'row',
@@ -41,79 +41,6 @@ const useStyles = () => {
 			alignItems: 'center',
 			padding: spacing.md,
 			gap: spacing.sm,
-		},
-		importButton: {
-			flex: 1,
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: colors.primary,
-			paddingVertical: 12,
-			paddingHorizontal: spacing.md,
-			borderRadius: layout.borderRadius.md,
-			justifyContent: 'center',
-			gap: 8,
-		},
-		importButtonText: {
-			color: colors.background.primary,
-			marginLeft: spacing.sm,
-			fontSize: 16,
-			fontWeight: '600',
-		},
-		newButton: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: colors.background.primary,
-			paddingVertical: 11,
-			paddingHorizontal: 14,
-			borderRadius: layout.borderRadius.md,
-			justifyContent: 'center',
-			borderWidth: 1.1,
-			borderColor: colors.primary,
-		},
-		newButtonText: {
-			color: colors.primary,
-			marginLeft: 5,
-			fontSize: 16,
-			fontWeight: '500',
-		},
-		// Tabs
-		tabBar: {
-			flexDirection: 'row',
-			backgroundColor: colors.background.primary,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		tabIndicator: {
-			backgroundColor: colors.primary,
-			height: 2,
-		},
-		tabLabel: {
-			fontWeight: 'bold',
-			fontSize: 12,
-			textTransform: 'uppercase',
-			paddingVertical: spacing.sm,
-		},
-		tabItem: {
-			flex: 1,
-			alignItems: 'center',
-			paddingVertical: spacing.md,
-		},
-		activeTab: {
-			borderBottomWidth: 2,
-			borderBottomColor: colors.primary,
-		},
-		tabLabel: {
-			fontSize: 12,
-			marginTop: spacing.xs,
-			color: colors.text.secondary,
-		},
-		activeTabLabel: {
-			color: colors.primary,
-		},
-		tabContent: {
-			flex: 1,
-			padding: spacing.sm,
-			width: '100%',
 		},
 		card: {
 			width: '31%',
@@ -149,13 +76,13 @@ const useStyles = () => {
 		nameContainer: {
 			width: '100%',
 			alignItems: 'center',
-			paddingHorizontal: 2,
+			paddingHorizontal: spacing.xxs,
 		},
 		firstName: {
-			fontSize: 15,
+			fontSize: 16,
 			fontWeight: '700',
 			textAlign: 'center',
-			marginTop: 4,
+			marginTop: spacing.xxs,
 			color: colors.text.primary,
 			flexShrink: 1,
 			flexWrap: 'wrap',
@@ -166,7 +93,7 @@ const useStyles = () => {
 			fontWeight: '600',
 			textAlign: 'center',
 			color: colors.text.primary,
-			opacity: 0.6,
+			opacity: 0.7,
 			marginTop: 2,
 			flexShrink: 1,
 			flexWrap: 'wrap',
@@ -188,14 +115,6 @@ const useStyles = () => {
 			height: 6,
 			borderRadius: 3,
 			backgroundColor: colors.secondary,
-		},
-		actionsContainer: {
-			position: 'absolute',
-			top: 0,
-			left: 0,
-			right: 0,
-			bottom: 0,
-			zIndex: 5,
 		},
 		cardActions: {
 			position: 'absolute',
@@ -402,8 +321,8 @@ const useStyles = () => {
 			opacity: 0.9,
 		},
 		addNoteButtonText: {
-			color: colors.text.primary,
-			fontSize: 16,
+			color: colors.text.white,
+			fontSize: 17,
 			fontWeight: '700',
 			letterSpacing: 0.4,
 		},
@@ -446,15 +365,15 @@ const useStyles = () => {
 			paddingVertical: spacing.sm,
 			paddingHorizontal: spacing.md,
 			borderRadius: layout.borderRadius.md,
-			borderWidth: 1,
+			borderWidth: 2,
 			borderColor: colors.border,
-			opacity: 0.9,
 		},
 		aiRecapText: {
-			color: colors.text.secondary,
-			marginLeft: spacing.xs,
-			fontSize: 14,
+			color: colors.text.primary,
+			marginLeft: spacing.sm,
+			fontSize: 16,
 			fontWeight: '700',
+			opacity: 0.85,
 		},
 		historyEntry: {
 			marginTop: spacing.md,
@@ -739,7 +658,8 @@ const useStyles = () => {
 			marginBottom: 0,
 		},
 		photoContainer: {
-			width: 100,
+			marginTop: spacing.md,
+			width: 110,
 			alignItems: 'center',
 		},
 		contactInfo: {
@@ -870,104 +790,12 @@ const useStyles = () => {
 		viewFields: {
 			flex: 1,
 		},
-		aiButton: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: colors.primary,
-			paddingVertical: spacing.sm,
-			paddingHorizontal: spacing.sm,
-			borderRadius: layout.borderRadius.sm,
-			justifyContent: 'center',
-			width: 125,
-			marginRight: spacing.sm,
-		},
-		aiButtonText: {
-			color: colors.background.primary,
-			fontSize: 15,
-			fontWeight: '600',
-			marginLeft: spacing.xs,
-		},
 		modalTitleContainer: {
 			flexDirection: 'row',
 			alignItems: 'center',
 			gap: spacing.sm,
 		},
-		aiSubtitle: {
-			fontSize: 16,
-			fontStyle: 'italic',
-			color: colors.text.primary,
-			textAlign: 'center',
-			backgroundColor:
-				colors.background.primary === '#FFFFFF'
-					? '#F0F7FF' // Light mode
-					: '#2A2A2A', // Dark mode
-			padding: spacing.md,
-			width: '100%',
-		},
-		aiModalContainer: {
-			position: 'absolute',
-			top: 0,
-			left: 0,
-			right: 0,
-			bottom: 0,
-			backgroundColor: 'rgba(0,0,0,1)',
-			justifyContent: 'center',
-			alignItems: 'center',
-			width: '100%',
-			height: '100%',
-			zIndex: 9999,
-		},
-		aiModalContent: {
-			backgroundColor: colors.background.primary,
-			borderRadius: layout.borderRadius.lg,
-			padding: 0,
-			width: Platform.OS === 'web' ? '50%' : '85%',
-			maxHeight: '80%',
-			paddingTop: spacing.md,
-		},
-		aiSuggestionCard: {
-			backgroundColor: colors.background.secondary,
-			borderRadius: layout.borderRadius.md,
-			padding: spacing.md,
-			marginBottom: spacing.sm,
-		},
-		aiSuggestionText: {
-			fontSize: 16,
-			color: colors.text.primary,
-			lineHeight: 22,
-		},
-		aiModalTitle: {
-			fontSize: 18,
-			fontWeight: '600',
-			color: colors.text.primary,
-			textAlign: 'center',
-			marginBottom: spacing.md,
-		},
-		aiModalScrollContent: {
-			paddingHorizontal: spacing.md,
-			paddingBottom: spacing.md,
-			flexGrow: 1,
-		},
 		// Scheduling
-		frequencyPicker: {
-			flexDirection: 'row',
-			flexWrap: 'wrap',
-			gap: 10,
-			marginTop: 10,
-			marginBottom: spacing.md,
-		},
-		frequencyOption: {
-			paddingVertical: 8,
-			paddingHorizontal: 16,
-			borderRadius: 20,
-			backgroundColor: colors.background.secondary,
-			borderWidth: 1,
-			borderColor: colors.border,
-		},
-		frequencyOptionSelected: {
-			backgroundColor: colors.primary,
-			borderColor: colors.primary,
-		},
 		frequencyText: {
 			color: colors.text.primary,
 			fontSize: 14,
@@ -1071,7 +899,7 @@ const useStyles = () => {
 			paddingLeft: spacing.lg,
 			paddingRight: spacing.sm,
 			alignItems: 'center',
-			borderBottomWidth: 1,
+			borderBottomWidth: 0.5,
 			borderBottomColor: colors.border,
 		},
 		leftHeader: {
@@ -1155,9 +983,6 @@ const useStyles = () => {
 			fontWeight: '700',
 			color: colors.text.primary,
 			marginLeft: spacing.xs,
-		},
-		relationshipIcon: {
-			marginTop: 4,
 		},
 		// Welcome Screen
 		welcomeContainer: {

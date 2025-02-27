@@ -633,6 +633,15 @@ export default function DashboardScreen({ navigation, route }) {
 							<View style={styles.upcomingGrid}>
 								{contacts
 									.filter((contact) => contact.next_contact)
+									.sort((a, b) => {
+										const dateA = new Date(
+											a.next_contact?.seconds ? a.next_contact.seconds * 1000 : a.next_contact
+										);
+										const dateB = new Date(
+											b.next_contact?.seconds ? b.next_contact.seconds * 1000 : b.next_contact
+										);
+										return dateA - dateB;
+									})
 									.map((contact) => {
 										let formattedDate = null;
 										try {

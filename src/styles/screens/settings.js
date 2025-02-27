@@ -11,13 +11,212 @@ const createStyles = (colors) =>
 		settingsList: {
 			flex: 1,
 		},
-		mainSettingTitle: {
-			fontSize: 19,
+		// Card-based Design Components
+		settingsCard: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+			paddingHorizontal: spacing.md,
+			paddingBottom: spacing.sm,
+			paddingTop: spacing.md,
+			marginHorizontal: spacing.md,
+			marginBottom: spacing.lg,
+			marginTop: spacing.md,
+			shadowColor: '#000',
+			shadowOffset: { width: 0, height: 1 },
+			shadowOpacity: 0.05,
+			shadowRadius: 2,
+			elevation: 2,
+		},
+		dangerSettingsCard: {
+			backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.md,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.md,
+			marginHorizontal: spacing.md,
+			marginBottom: spacing.xl,
+			marginTop: spacing.md,
+			borderLeftWidth: 3,
+			borderLeftColor: colors.danger,
+		},
+		cardTitle: {
+			fontSize: 18,
 			fontWeight: '700',
 			color: colors.text.primary,
-			opacity: 0.6,
+			marginTop: spacing.xxs,
+			marginBottom: spacing.md,
+			opacity: 0.7,
+		},
+		cardTitleCenter: {
+			fontSize: 18,
+			fontWeight: '700',
+			textAlign: 'center',
+			color: colors.text.primary,
+			marginBottom: spacing.md,
+			opacity: 0.8,
+		},
+		dangerCardTitle: {
+			fontSize: 18,
+			fontWeight: '700',
+			textAlign: 'center',
+			color: colors.danger,
 			marginBottom: spacing.sm,
 		},
+		cardDescription: {
+			fontSize: 15,
+			fontWeight: '600',
+			textAlign: 'center',
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+		},
+		dangerCardDescription: {
+			fontSize: 15,
+			fontWeight: '600',
+			textAlign: 'center',
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+		},
+		// Form Components
+		formGroup: {
+			marginTop: spacing.xs,
+			marginBottom: spacing.md,
+		},
+		formLabel: {
+			fontSize: 17,
+			fontWeight: '700',
+			textAlign: 'center',
+			color: colors.text.secondary,
+			marginBottom: spacing.md,
+			marginLeft: spacing.sm,
+		},
+		formInput: {
+			fontSize: 18,
+			textAlign: 'center',
+			fontWeight: '600',
+			backgroundColor: colors.background.primary,
+			borderRadius: layout.borderRadius.lg,
+			paddingHorizontal: spacing.md,
+			paddingVertical: spacing.md,
+			color: colors.text.primary,
+		},
+		formInputNoEdit: {
+			fontSize: 20,
+			color: colors.text.primary,
+			paddingBottom: spacing.sm,
+			textAlign: 'center',
+			fontWeight: '700',
+			backgroundColor: 'transparent',
+		},
+		infoText: {
+			fontSize: 18,
+			textAlign: 'center',
+			fontWeight: '600',
+			color: colors.text.primary,
+			backgroundColor: colors.background.primary,
+			padding: spacing.sm,
+			borderRadius: layout.borderRadius.sm,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		// Button Styles
+		primaryButton: {
+			backgroundColor: colors.primary,
+			borderRadius: layout.borderRadius.md,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.xl,
+			alignSelf: 'center',
+			marginTop: spacing.xs,
+			marginBottom: spacing.md,
+		},		
+		primaryButtonText: {
+			color: colors.text.white,
+			fontWeight: '700',
+			fontSize: 17,
+		},
+		secondaryButton: {
+			backgroundColor: colors.background.primary,
+			borderRadius: layout.borderRadius.md,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.md,
+			alignItems: 'center',
+			marginTop: spacing.xs,
+			borderWidth: 1,
+			borderColor: colors.border,
+		},
+		secondaryButtonText: {
+			color: colors.text.secondary,
+			fontWeight: '600',
+			fontSize: 16,
+		},
+		dangerButton: {
+			backgroundColor: colors.danger,
+			borderRadius: layout.borderRadius.md,
+			paddingVertical: spacing.sm,
+			paddingHorizontal: spacing.xl,
+			alignSelf: 'center',
+			marginTop: spacing.xs,
+			marginBottom: spacing.md,
+			flexDirection: 'row',
+		},
+		dangerButtonText: {
+			color: colors.background.primary,
+			fontWeight: '700',
+			fontSize: 17,
+			marginLeft: spacing.xs,
+		},
+		disabledButton: {
+			opacity: 0.5,
+		},
+		// Header Styles
+		screenHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.sm,
+		},
+		headerBackButton: {
+			padding: spacing.xs,
+		},
+		headerTitle: {
+			fontSize: 20,
+			fontWeight: '600',
+			color: colors.text.primary,
+		},
+		headerRightPlaceholder: {
+			width: 40,
+		},
+		// Setting Item Styles
+		settingItem: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingVertical: spacing.lg,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
+		},
+		settingItemLeft: {
+			flexDirection: 'row',
+			alignItems: 'center',
+		},
+		settingItemRight: {
+			flexDirection: 'row',
+			alignItems: 'center',
+		},
+		settingText: {
+			fontSize: 18,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginLeft: spacing.md,
+		},
+		settingSubtext: {
+			fontSize: 12,
+			color: colors.text.secondary,
+			marginRight: spacing.xs,
+			maxWidth: 150,
+			textAlign: 'right',
+		},
+		// Profile Section Styles
 		profileBackground: {
 			backgroundColor: colors.background.secondary,
 			marginTop: -50,
@@ -76,12 +275,43 @@ const createStyles = (colors) =>
 			right: -5,
 			backgroundColor: colors.primary,
 			borderRadius: 12,
-			padding: 5,
+			padding: spacing.xs,
 		},
-		settingSection: {
-			padding: spacing.md,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
+		// Profile Image Styles
+		profilePhotoCard: {
+			alignSelf: 'center',
+			paddingHorizontal: spacing.xl,
+			borderRadius: layout.borderRadius.xxl,
+		},
+		profileImageSection: {
+			alignItems: 'center',
+			paddingTop: spacing.xs,
+			paddingBottom: spacing.md,
+		},
+		profileImageContainer: {
+			position: 'relative',
+		},
+		profileImage: {
+			width: 120,
+			height: 120,
+			borderRadius: 60,
+			backgroundColor: colors.background.tertiary,
+		},
+		editImageButton: {
+			position: 'absolute',
+			right: 0,
+			bottom: 0,
+			backgroundColor: colors.primary,
+			padding: spacing.sm,
+			borderRadius: 20,
+			borderWidth: 3,
+			borderColor: colors.background.secondary,
+		},
+		defaultAvatarContainer: {
+			width: 120,
+			height: 120,
+			justifyContent: 'center',
+			alignItems: 'center',
 		},
 		sectionTitle: {
 			fontSize: 20,
@@ -90,34 +320,10 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 			opacity: 0.9,
 		},
-		settingItem: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'space-between',
-			paddingVertical: spacing.sm,
-		},
-		settingItemLeft: {
-			flexDirection: 'row',
-			alignItems: 'center',
-		},
-		settingText: {
-			marginLeft: spacing.md,
-			fontSize: 18,
-			fontWeight: '500',
-			color: colors.text.primary,
-		},
-		loginContainer: {
-			flex: 1,
+		settingSection: {
 			padding: spacing.md,
-			justifyContent: 'center',
-			backgroundColor: colors.background.primary,
-		},
-		loginTitle: {
-			fontSize: 24,
-			fontWeight: 'bold',
-			marginBottom: 30,
-			textAlign: 'center',
-			color: colors.text.primary,
+			borderBottomWidth: 1,
+			borderBottomColor: colors.border,
 		},
 		inputContainer: {
 			flexDirection: 'row',
@@ -138,14 +344,6 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 			textAlign: 'center',
 		},
-		inputLabel: {
-			fontSize: 16,
-			fontWeight: '700',
-			textAlign: 'center',
-			color: colors.text.primary,
-			opacity: 0.7,
-			marginBottom: spacing.sm,
-		},
 		loginButton: {
 			backgroundColor: colors.primary,
 			paddingVertical: spacing.md,
@@ -161,39 +359,6 @@ const createStyles = (colors) =>
 			textAlign: 'center',
 			fontSize: 18,
 			fontWeight: '700',
-		},
-		logoutButton: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			justifyContent: 'center',
-			paddingHorizontal: spacing.lg,
-			paddingVertical: spacing.sm,
-			margin: spacing.xl,
-			backgroundColor: colors.background.primary,
-			borderRadius: layout.borderRadius.md,
-			borderWidth: 1,
-			borderColor: colors.danger,
-			alignSelf: 'center',
-		},
-		logoutText: {
-			color: colors.danger,
-			marginLeft: spacing.sm,
-			fontSize: 16,
-			fontWeight: '600',
-		},
-		logoutContainer: {
-			padding: spacing.xs,
-			marginTop: spacing.xs,
-			marginBottom: spacing.xs,
-		},
-		switchButton: {
-			marginTop: spacing.md,
-			padding: spacing.sm,
-		},
-		switchButtonText: {
-			color: colors.primary,
-			textAlign: 'center',
-			fontSize: 14,
 		},
 		modalContainer: {
 			flex: 1,
@@ -216,24 +381,6 @@ const createStyles = (colors) =>
 			fontSize: 20,
 			fontWeight: 'bold',
 			color: colors.text.primary,
-		},
-		privacyOption: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			paddingVertical: spacing.md,
-			borderBottomWidth: 1,
-			borderBottomColor: colors.border,
-		},
-		privacyOptionText: {
-			marginLeft: spacing.md,
-			fontSize: 16,
-			color: colors.primary,
-		},
-		deleteOption: {
-			borderBottomWidth: 0,
-		},
-		deleteText: {
-			color: colors.danger,
 		},
 		loadingOverlay: {
 			position: 'absolute',
@@ -306,13 +453,11 @@ const createStyles = (colors) =>
 			shadowRadius: 4,
 			elevation: 2,
 		},
-		// Section Descriptions
 		sectionDescription: {
 			fontSize: 16,
 			color: colors.text.secondary,
 			marginBottom: spacing.md,
 		},
-		// Highlighted actionable items
 		settingHighlighted: {
 			backgroundColor: colors.primary,
 			padding: spacing.md,
@@ -364,7 +509,6 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			fontWeight: '600',
 		},
-		// Profile Page
 		headerContainer: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -384,33 +528,6 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 			marginLeft: spacing.sm,
 		},
-		profileImageSection: {
-			alignItems: 'center',
-			paddingVertical: spacing.xl,
-		},
-		profileImageContainer: {
-			position: 'relative',
-		},
-		profileImage: {
-			width: 120,
-			height: 120,
-			borderRadius: 60,
-			backgroundColor: colors.background.secondary,
-		},
-		editImageButton: {
-			position: 'absolute',
-			right: 0,
-			bottom: 0,
-			backgroundColor: colors.primary,
-			padding: spacing.sm,
-			borderRadius: 20,
-			borderWidth: 3,
-			borderColor: colors.background.primary,
-		},
-		formSection: {
-			paddingVertical: spacing.lg,
-			padding: spacing.md,
-		},
 		inputGroup: {
 			marginBottom: spacing.md,
 		},
@@ -420,21 +537,10 @@ const createStyles = (colors) =>
 			marginBottom: spacing.xs,
 			textAlign: 'center',
 		},
-		input: {
-			backgroundColor: colors.background.secondary,
-			borderRadius: 8,
-			padding: spacing.md,
-		},
 		inputText: {
 			fontSize: 16,
 			color: colors.text.primary,
 			textAlign: 'center',
-		},
-		defaultAvatarContainer: {
-			width: 120,
-			height: 120,
-			justifyContent: 'center',
-			alignItems: 'center',
 		},
 		saveButton: {
 			backgroundColor: colors.primary,
@@ -498,7 +604,6 @@ const createStyles = (colors) =>
 			marginBottom: 0,
 			marginTop: -8,
 		},
-		// SchedulingScreen
 		settingsHeader: {
 			fontSize: 19,
 			fontWeight: '700',
@@ -508,14 +613,13 @@ const createStyles = (colors) =>
 			marginBottom: spacing.xs,
 		},
 		settingsExplanation: {
-			fontSize: 14,
-			fontWeight: '500',
+			fontSize: 15,
+			fontWeight: '600',
 			color: colors.text.secondary,
 			marginBottom: spacing.md,
 			textAlign: 'center',
 			marginTop: spacing.xs,
 		},
-		// Headers for each page under settings
 		headerSettingsPages: {
 			paddingLeft: spacing.xs,
 			paddingRight: spacing.xs,
@@ -526,7 +630,6 @@ const createStyles = (colors) =>
 			paddingBlockEnd: spacing.xs,
 			marginTop: 0,
 		},
-		// Scheduling
 		settingRow: {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
@@ -541,7 +644,6 @@ const createStyles = (colors) =>
 			justifyContent: 'center',
 			alignItems: 'center',
 		},
-		// RelationshipTypeSettings.js
 		relationshipIntroContainer: {
 			backgroundColor: colors.background.secondary,
 			padding: spacing.md,
@@ -577,7 +679,6 @@ const createStyles = (colors) =>
 			fontSize: 16,
 			fontWeight: '700',
 		},
-		// Header for NotificationsSettingsScreen
 		sectionHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -597,13 +698,71 @@ const createStyles = (colors) =>
 			fontWeight: '600',
 			color: colors.primary,
 		},
-		// Apple User helper text
 		helperText: {
 			fontSize: 16,
 			fontWeight: '600',
 			lineHeight: 22,
 			color: colors.text.secondary,
 			paddingHorizontal: spacing.xl,
+		},
+		// Crd-based design
+		optionCardContainer: {
+			marginBottom: spacing.md,
+		},
+		optionCard: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			backgroundColor: colors.background.tertiary,
+			borderRadius: layout.borderRadius.md,
+			padding: spacing.md,
+			marginVertical: spacing.xs,
+		},
+		optionCardActive: {
+			borderWidth: 2,
+			borderColor: colors.primary,
+		},
+		optionIcon: {
+			width: 32,
+			height: 32,
+			alignItems: 'center',
+			justifyContent: 'center',
+			marginRight: spacing.md,
+		},
+		optionTextContainer: {
+			flex: 1,
+		},
+		optionTitle: {
+			fontSize: 16,
+			fontWeight: '600',
+			color: colors.text.primary,
+			marginBottom: 2,
+		},
+		optionDescription: {
+			fontSize: 14,
+			color: colors.text.secondary,
+		},
+		// Separator styles
+		separator: {
+			height: 1,
+			backgroundColor: colors.border,
+			marginVertical: spacing.sm,
+		},
+		// Info banner styles
+		infoBanner: {
+			backgroundColor: colors.background.tertiary,
+			borderRadius: layout.borderRadius.md,
+			padding: spacing.md,
+			marginVertical: spacing.md,
+			marginHorizontal: spacing.md,
+			flexDirection: 'row',
+			alignItems: 'center',
+		},
+		infoBannerText: {
+			fontSize: 15,
+			fontWeight: '600',
+			color: colors.text.secondary,
+			marginLeft: spacing.sm,
+			flex: 1,
 		},
 	});
 

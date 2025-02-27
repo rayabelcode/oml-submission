@@ -26,7 +26,9 @@ const ThemePickerModal = ({ visible, onClose }) => {
 			backgroundColor: colors.background.secondary,
 			borderTopLeftRadius: layout.borderRadius.lg,
 			borderTopRightRadius: layout.borderRadius.lg,
-			paddingBottom: spacing.xl + 25,
+			paddingBottom: spacing.xxxl,
+			borderTopWidth: 2,
+			borderTopColor: colors.background.primary,
 		},
 		handleContainer: {
 			alignItems: 'center',
@@ -74,14 +76,15 @@ const ThemePickerModal = ({ visible, onClose }) => {
 		},
 		optionText: {
 			fontSize: 20,
-			color: colors.text.secondary,
+			color: colors.text.primary,
 			marginLeft: spacing.md,
 			fontWeight: '600',
+			opacity: 0.8,
 		},
 		selectedOption: {},
 		checkmark: {
 			marginLeft: 'auto',
-			color: colors.secondary,
+			color: colors.buttons.activeIcon,
 		},
 		themeIcon: {
 			width: 24,
@@ -101,7 +104,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 							<View style={{ width: 28 }} />
 							<Text style={styles.title}>Choose Theme</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close" size={28} color={colors.text.secondary} />
+								<Icon name="close" size={28} color={colors.action} />
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -115,7 +118,7 @@ const ThemePickerModal = ({ visible, onClose }) => {
 								<Icon name={option.icon} size={20} color={colors.text.secondary} />
 							</View>
 							<Text style={styles.optionText}>{option.label}</Text>
-							{theme === option.value && <Icon name="checkmark" size={24} style={styles.checkmark} />}
+							{theme === option.value && <Icon name="checkmark" size={26} style={styles.checkmark} />}
 						</TouchableOpacity>
 					))}
 				</TouchableOpacity>

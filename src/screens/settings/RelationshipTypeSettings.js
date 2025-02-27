@@ -160,11 +160,12 @@ const RelationshipTypeSettings = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={[styles.headerSettingsPages, { flexDirection: 'row', alignItems: 'center' }]}>
-				<TouchableOpacity style={[styles.settingItemLeft, { flex: 1 }]} onPress={() => navigation.goBack()}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>Relationship Types</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Relationship Types</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView style={styles.settingsList}>
@@ -174,39 +175,48 @@ const RelationshipTypeSettings = ({ navigation }) => {
 					</Text>
 				</View>
 
-				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }]) => (
+				{Object.entries(RELATIONSHIP_TYPES).map(([type, { label, icon, color }], typeIndex, typeArray) => (
 					<View key={type} style={[styles.formSection, styles.card]}>
-						<TouchableOpacity
-							activeOpacity={1}
-							style={[styles.settingItem, { paddingVertical: spacing.md }]}
-							onPress={() => setExpandedType(expandedType === type ? null : type)}
-						>
-							<View style={styles.settingItemLeft}>
-								<Icon name={icon} size={24} color={color} />
-								<Text style={[styles.settingText, { fontSize: 18 }]}>{label}</Text>
-							</View>
-							<Icon
-								name={expandedType === type ? 'chevron-up' : 'chevron-down'}
-								size={24}
-								color={colors.text.secondary}
-							/>
-						</TouchableOpacity>
+						<View>
+							{[{ type, label, icon, color }].map((item, index, array) => (
+								<TouchableOpacity
+									key={item.type}
+									activeOpacity={1}
+									style={[
+										styles.settingItem,
+										{ paddingVertical: spacing.md },
+										index === array.length - 1 && { borderBottomWidth: 0 },
+									]}
+									onPress={() => setExpandedType(expandedType === item.type ? null : item.type)}
+								>
+									<View style={styles.settingItemLeft}>
+										<Icon name={item.icon} size={24} color={item.color} />
+										<Text style={[styles.settingText, { fontSize: 18 }]}>{item.label}</Text>
+									</View>
+									<Icon
+										name={expandedType === item.type ? 'chevron-up' : 'chevron-down'}
+										size={24}
+										color={colors.text.secondary}
+									/>
+								</TouchableOpacity>
+							))}
 
-						{expandedType === type && (
-							<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
-								<TimeRangeSelector
-									startTime={relationshipSettings[type]?.active_hours?.start}
-									endTime={relationshipSettings[type]?.active_hours?.end}
-									onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
-									onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
-									label="Active Hours"
-								/>
-								<DaySelector
-									selectedDays={relationshipSettings[type]?.preferred_days || []}
-									onDayPress={(day) => toggleDaySelection(type, day)}
-								/>
-							</View>
-						)}
+							{expandedType === type && (
+								<View style={{ marginTop: spacing.md, paddingHorizontal: spacing.md }}>
+									<TimeRangeSelector
+										startTime={relationshipSettings[type]?.active_hours?.start}
+										endTime={relationshipSettings[type]?.active_hours?.end}
+										onStartTimePress={() => showTimePicker(type, 'activeHoursStart')}
+										onEndTimePress={() => showTimePicker(type, 'activeHoursEnd')}
+										label="Active Hours"
+									/>
+									<DaySelector
+										selectedDays={relationshipSettings[type]?.preferred_days || []}
+										onDayPress={(day) => toggleDaySelection(type, day)}
+									/>
+								</View>
+							)}
+						</View>
 					</View>
 				))}
 

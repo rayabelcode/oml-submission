@@ -42,7 +42,7 @@ const ContactsSortMenu = ({
 		},
 		sectionTitle: {
 			fontSize: 16,
-			fontWeight: '600',
+			fontWeight: '700',
 			color: colors.text.primary,
 			opacity: 0.8,
 			marginBottom: spacing.sm,
@@ -61,8 +61,8 @@ const ContactsSortMenu = ({
 			height: 40,
 		},
 		title: {
-			fontSize: 18,
-			fontWeight: '600',
+			fontSize: 20,
+			fontWeight: '700',
 			color: colors.text.primary,
 		},
 		closeButton: {
@@ -83,7 +83,7 @@ const ContactsSortMenu = ({
 						<View style={styles.header}>
 							<Text style={styles.title}>Display Options</Text>
 							<TouchableOpacity onPress={onClose} style={styles.closeButton}>
-								<Icon name="close-circle-outline" size={35} color={colors.warning} />
+								<Icon name="close" size={35} color={colors.warning} />
 							</TouchableOpacity>
 						</View>
 
@@ -97,12 +97,12 @@ const ContactsSortMenu = ({
 								}}
 								style={styles.segmentedControl}
 								fontStyle={{
-									fontSize: 15,
+									fontSize: 18,
 									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
-									fontSize: 15,
+									fontSize: 18,
 									fontWeight: '800',
 									color: colors.text.primary,
 								}}
@@ -168,12 +168,12 @@ const ContactsSortMenu = ({
 								}}
 								style={styles.segmentedControl}
 								fontStyle={{
-									fontSize: 15,
+									fontSize: 18,
 									fontWeight: '800',
 									color: colors.text.primary,
 								}}
 								activeFontStyle={{
-									fontSize: 15,
+									fontSize: 18,
 									fontWeight: '800',
 									color: colors.text.primary,
 								}}

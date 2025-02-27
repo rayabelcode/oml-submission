@@ -20,17 +20,15 @@ const AccountScreen = ({ navigation }) => {
 	const { colors, spacing } = useTheme();
 	const { user } = useAuth();
 	const [username, setUsername] = useState('');
-	const [email, setEmail] = useState(user?.email || '');
+	const [email, setEmail] = useState('');
 	const [emailCurrentPassword, setEmailCurrentPassword] = useState('');
 	const [passwordCurrentPassword, setPasswordCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
 	const [usernameChanged, setUsernameChanged] = useState(false);
 	const [emailChanged, setEmailChanged] = useState(false);
-	// State to track if user is signed in with Apple
 	const [isAppleUser, setIsAppleUser] = useState(false);
 
-	// Open Apple ID settings
 	const openAppleSettings = () => {
 		Linking.openURL('App-Prefs:APPLE_ACCOUNT').catch(() => {
 			Alert.alert(
@@ -40,7 +38,6 @@ const AccountScreen = ({ navigation }) => {
 		});
 	};
 
-	// Load user profile and check auth provider
 	useEffect(() => {
 		setIsAppleUser(user?.providerData[0]?.providerId === 'apple.com');
 		loadUserProfile();
@@ -99,7 +96,6 @@ const AccountScreen = ({ navigation }) => {
 	};
 
 	const handleChangeEmail = async () => {
-		// Prevent email changes for Apple users
 		if (isAppleUser) {
 			Alert.alert('Apple Sign In', 'Email management is handled through your Apple ID settings.');
 			return;
@@ -129,7 +125,6 @@ const AccountScreen = ({ navigation }) => {
 	};
 
 	const handleChangePassword = async () => {
-		// Prevent password changes for Apple users
 		if (isAppleUser) {
 			Alert.alert('Apple Sign In', 'Password management is handled through your Apple ID settings.');
 			return;
@@ -168,11 +163,13 @@ const AccountScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			{/* Header with back button and title */}
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={styles.profileName}>Account</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Account & Password</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView
@@ -181,126 +178,139 @@ const AccountScreen = ({ navigation }) => {
 				keyboardDismissMode="interactive"
 				automaticallyAdjustKeyboardInsets={true}
 			>
-				{/* Username Section */}
-				<View style={styles.card}>
-					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>Username</Text>
-					<TextInput
-						style={[styles.input, styles.inputText]}
-						value={username}
-						onChangeText={(text) => {
-							setUsername(text);
-							setUsernameChanged(true);
-						}}
-						placeholder="Enter username"
-						placeholderTextColor={colors.text.secondary}
-						autoCorrect={false}
-						autoCapitalize="none"
-					/>
+				{/* Username Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Username</Text>
+					<View style={styles.formGroup}>
+						<TextInput
+							style={styles.formInput}
+							value={username}
+							onChangeText={(text) => {
+								setUsername(text);
+								setUsernameChanged(true);
+							}}
+							placeholder="Enter username"
+							placeholderTextColor={colors.text.secondary}
+							autoCorrect={false}
+							autoCapitalize="none"
+						/>
+					</View>
 					<TouchableOpacity
-						style={[styles.saveButton, !usernameChanged && styles.saveButtonDisabled]}
+						style={[styles.primaryButton, !usernameChanged && styles.disabledButton]}
 						onPress={handleUpdateUsername}
 						disabled={!usernameChanged}
 					>
-						<Text style={styles.saveButtonText}>Update Username</Text>
+						<Text style={styles.primaryButtonText}>Update Username</Text>
 					</TouchableOpacity>
 				</View>
 
-				{/* Email Section */}
-				<View style={styles.card}>
-					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>Email</Text>
-					<Text style={[styles.input, styles.inputText]}>{email}</Text>
-					{!isAppleUser && (
+				{/* Email Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Email Address</Text>
+					<View style={styles.formGroup}>
+						<Text style={styles.formInputNoEdit}>{user?.email || 'No email set'}</Text>
+					</View>
+
+					{!isAppleUser ? (
 						<>
-							<TextInput
-								style={[styles.input, styles.inputText]}
-								value={email}
-								onChangeText={(text) => {
-									setEmail(text);
-									setEmailChanged(true);
-								}}
-								placeholder="Enter new email"
-								placeholderTextColor={colors.text.secondary}
-								keyboardType="email-address"
-								autoCorrect={false}
-								autoCapitalize="none"
-							/>
-							<TextInput
-								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-								value={emailCurrentPassword}
-								onChangeText={setEmailCurrentPassword}
-								placeholder="Enter current password"
-								placeholderTextColor={colors.text.secondary}
-								secureTextEntry
-							/>
+							<View style={styles.formGroup}>
+								<Text style={styles.formLabel}>New Email</Text>
+								<TextInput
+									style={styles.formInput}
+									value={email}
+									onChangeText={(text) => {
+										setEmail(text);
+										setEmailChanged(true);
+									}}
+									placeholder="Enter new email"
+									placeholderTextColor={colors.text.secondary}
+									keyboardType="email-address"
+									autoCorrect={false}
+									autoCapitalize="none"
+								/>
+							</View>
+							<View style={styles.formGroup}>
+								<Text style={styles.formLabel}>Current Password</Text>
+								<TextInput
+									style={styles.formInput}
+									value={emailCurrentPassword}
+									onChangeText={setEmailCurrentPassword}
+									placeholder="Enter current password"
+									placeholderTextColor={colors.text.secondary}
+									secureTextEntry
+								/>
+							</View>
 							<TouchableOpacity
 								style={[
-									styles.saveButton,
-									(!emailChanged || !emailCurrentPassword) && styles.saveButtonDisabled,
+									styles.primaryButton,
+									(!emailChanged || !emailCurrentPassword) && styles.disabledButton,
 								]}
 								onPress={handleChangeEmail}
 								disabled={!emailChanged || !emailCurrentPassword}
 							>
-								<Text style={styles.saveButtonText}>Update Email</Text>
+								<Text style={styles.primaryButtonText}>Update Email</Text>
 							</TouchableOpacity>
 						</>
-					)}
-					{isAppleUser && (
-						<TouchableOpacity onPress={openAppleSettings}>
-							<Text style={[styles.helperText, { textAlign: 'center', marginTop: spacing.sm }]}>
-								Email is managed through Apple ID settings
-							</Text>
+					) : (
+						<TouchableOpacity style={styles.secondaryButton} onPress={openAppleSettings}>
+							<Text style={styles.secondaryButtonText}>Email is managed through Apple ID settings</Text>
 						</TouchableOpacity>
 					)}
 				</View>
 
-				{/* Password Section */}
-				<View style={styles.card}>
-					<Text style={[styles.sectionTitle, { color: colors.primary, textAlign: 'center' }]}>
-						Change Password
-					</Text>
-					{!isAppleUser && (
+				{/* Password Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Password</Text>
+
+					{!isAppleUser ? (
 						<>
-							<TextInput
-								style={[styles.input, styles.inputText]}
-								value={passwordCurrentPassword}
-								onChangeText={setPasswordCurrentPassword}
-								placeholder="Current password"
-								placeholderTextColor={colors.text.secondary}
-								secureTextEntry
-							/>
-							<TextInput
-								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-								value={newPassword}
-								onChangeText={setNewPassword}
-								placeholder="New password"
-								placeholderTextColor={colors.text.secondary}
-								secureTextEntry
-							/>
-							<TextInput
-								style={[styles.input, styles.inputText, { marginTop: spacing.sm }]}
-								value={confirmPassword}
-								onChangeText={setConfirmPassword}
-								placeholder="Confirm new password"
-								placeholderTextColor={colors.text.secondary}
-								secureTextEntry
-							/>
+							<View style={styles.formGroup}>
+								<Text style={styles.formLabel}>Current Password</Text>
+								<TextInput
+									style={styles.formInput}
+									value={passwordCurrentPassword}
+									onChangeText={setPasswordCurrentPassword}
+									placeholder="Enter current password"
+									placeholderTextColor={colors.text.secondary}
+									secureTextEntry
+								/>
+							</View>
+							<View style={styles.formGroup}>
+								<Text style={styles.formLabel}>New Password</Text>
+								<TextInput
+									style={styles.formInput}
+									value={newPassword}
+									onChangeText={setNewPassword}
+									placeholder="Choose a strong password"
+									placeholderTextColor={colors.text.secondary}
+									secureTextEntry
+								/>
+							</View>
+							<View style={styles.formGroup}>
+								<Text style={styles.formLabel}>Confirm New Password</Text>
+								<TextInput
+									style={styles.formInput}
+									value={confirmPassword}
+									onChangeText={setConfirmPassword}
+									placeholder="Re-enter your new password"
+									placeholderTextColor={colors.text.secondary}
+									secureTextEntry
+								/>
+							</View>
 							<TouchableOpacity
 								style={[
-									styles.saveButton,
-									(!passwordCurrentPassword || !newPassword || !confirmPassword) && styles.saveButtonDisabled,
+									styles.primaryButton,
+									(!passwordCurrentPassword || !newPassword || !confirmPassword) && styles.disabledButton,
 								]}
 								onPress={handleChangePassword}
 								disabled={!passwordCurrentPassword || !newPassword || !confirmPassword}
 							>
-								<Text style={styles.saveButtonText}>Update Password</Text>
+								<Text style={styles.primaryButtonText}>Update Password</Text>
 							</TouchableOpacity>
 						</>
-					)}
-					{isAppleUser && (
-						<TouchableOpacity onPress={openAppleSettings}>
-							<Text style={[styles.helperText, { textAlign: 'center', marginTop: spacing.sm }]}>
-								Password is managed through Apple ID settings
-							</Text>
+					) : (
+						<TouchableOpacity style={styles.secondaryButton} onPress={openAppleSettings}>
+							<Text style={styles.secondaryButtonText}>Password is managed through Apple ID settings</Text>
 						</TouchableOpacity>
 					)}
 				</View>

@@ -15,7 +15,7 @@ import { cacheManager } from '../../utils/cache';
 
 const ProfileScreen = ({ navigation }) => {
 	const styles = useStyles();
-	const { colors, spacing, layout } = useTheme(); // Access colors, spacing, and layout from ThemeContext
+	const { colors, spacing, layout } = useTheme();
 	const { user, signOut } = useAuth();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
@@ -37,8 +37,6 @@ const ProfileScreen = ({ navigation }) => {
 					style: 'destructive',
 					onPress: async () => {
 						try {
-							// Clean up subscriptions before signing out
-							cleanupSubscriptions();
 							const { error } = await signOut();
 							if (error) throw error;
 						} catch (error) {
@@ -132,11 +130,13 @@ const ProfileScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			{/* Header with back button and title */}
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={styles.profileName}>Profile</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Profile Information</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView
@@ -145,109 +145,83 @@ const ProfileScreen = ({ navigation }) => {
 				keyboardDismissMode="interactive"
 				automaticallyAdjustKeyboardInsets={true}
 			>
-				<View style={styles.profileImageSection}>
-					<View style={styles.profileImageContainer}>
-						{profilePhotoRef.current ? (
-							<Image
-								source={{ uri: profilePhotoRef.current }}
-								style={styles.profileImage}
-								contentFit="cover"
-								cachePolicy="memory-disk"
-							/>
-						) : (
-							<View style={styles.defaultAvatarContainer}>
-								<Icon name="person-circle-outline" size={120} color={colors.text.secondary} />
-							</View>
-						)}
-						<TouchableOpacity style={styles.editImageButton} onPress={handleProfilePhotoUpload}>
-							<Icon name="camera-outline" size={20} color={colors.background.primary} />
-						</TouchableOpacity>
-					</View>
-				</View>
-
-				{/* Card Section for First Name, Last Name, and Save Changes */}
-				<View
-					style={{
-						backgroundColor: colors.background.secondary,
-						padding: spacing.md,
-						marginHorizontal: spacing.md,
-						marginBottom: spacing.lg,
-						borderRadius: layout.borderRadius.md,
-					}}
-				>
-					<View style={styles.formSection}>
-						<View style={styles.inputGroup}>
-							<Text style={styles.inputLabel}>First Name</Text>
-							<TextInput
-								style={[
-									styles.input,
-									styles.inputText,
-									{
-										borderWidth: 1,
-										borderColor: colors.border,
-										borderRadius: layout.borderRadius.sm,
-										padding: spacing.sm,
-									},
-								]}
-								value={firstName}
-								onChangeText={(text) => handleTextChange(text, 'firstName')}
-								placeholder="Enter first name"
-								placeholderTextColor={colors.text.secondary}
-								returnKeyType="next"
-								onSubmitEditing={() => {
-									lastNameInputRef.current.focus();
-								}}
-								blurOnSubmit={false}
-								autoCorrect={false}
-								autoCapitalize="none"
-							/>
-						</View>
-
-						<View style={styles.inputGroup}>
-							<Text style={styles.inputLabel}>Last Name</Text>
-							<TextInput
-								ref={lastNameInputRef}
-								style={[
-									styles.input,
-									styles.inputText,
-									{
-										borderWidth: 1,
-										borderColor: colors.border,
-										borderRadius: layout.borderRadius.sm,
-										padding: spacing.sm,
-									},
-								]}
-								value={lastName}
-								onChangeText={(text) => handleTextChange(text, 'lastName')}
-								placeholder="Enter last name"
-								placeholderTextColor={colors.text.secondary}
-								returnKeyType="done"
-								onSubmitEditing={handleSaveProfile}
-								autoCorrect={false}
-								autoCapitalize="none"
-							/>
-						</View>
-
-						<View style={{ alignItems: 'center' }}>
-							<TouchableOpacity
-								style={[
-									styles.saveButton,
-									!hasChanges && styles.saveButtonDisabled,
-									{ width: 'auto', minWidth: 200 },
-								]}
-								onPress={handleSaveProfile}
-								disabled={!hasChanges}
-							>
-								<Text style={styles.saveButtonText}>Save Changes</Text>
+				{/* Profile Photo Card */}
+				<View style={[styles.settingsCard, styles.profilePhotoCard]}>
+					<Text style={styles.cardTitleCenter}>Profile Photo</Text>
+					<View style={styles.profileImageSection}>
+						<View style={styles.profileImageContainer}>
+							{profilePhotoRef.current ? (
+								<Image
+									source={{ uri: profilePhotoRef.current }}
+									style={styles.profileImage}
+									contentFit="cover"
+									cachePolicy="memory-disk"
+								/>
+							) : (
+								<View style={styles.defaultAvatarContainer}>
+									<Icon name="person-circle-outline" size={120} color={colors.text.secondary} />
+								</View>
+							)}
+							<TouchableOpacity style={styles.editImageButton} onPress={handleProfilePhotoUpload}>
+								<Icon name="camera-outline" size={20} color={colors.background.primary} />
 							</TouchableOpacity>
 						</View>
 					</View>
 				</View>
 
-				<View style={styles.logoutContainer}>
-					<TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-						<Icon name="log-out-outline" size={24} color={colors.danger} />
-						<Text style={styles.logoutText}>Log Out</Text>
+				{/* Name Information Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Name</Text>
+
+					<View style={styles.formGroup}>
+						<Text style={styles.formLabel}>First Name</Text>
+						<TextInput
+							style={styles.formInput}
+							value={firstName}
+							onChangeText={(text) => handleTextChange(text, 'firstName')}
+							placeholder="Enter first name"
+							placeholderTextColor={colors.text.secondary}
+							returnKeyType="next"
+							onSubmitEditing={() => {
+								lastNameInputRef.current.focus();
+							}}
+							blurOnSubmit={false}
+							autoCorrect={false}
+							autoCapitalize="words"
+						/>
+					</View>
+
+					<View style={styles.formGroup}>
+						<Text style={styles.formLabel}>Last Name</Text>
+						<TextInput
+							ref={lastNameInputRef}
+							style={styles.formInput}
+							value={lastName}
+							onChangeText={(text) => handleTextChange(text, 'lastName')}
+							placeholder="Enter last name"
+							placeholderTextColor={colors.text.secondary}
+							returnKeyType="done"
+							onSubmitEditing={handleSaveProfile}
+							autoCorrect={false}
+							autoCapitalize="words"
+						/>
+					</View>
+
+					<TouchableOpacity
+						style={[styles.primaryButton, !hasChanges && styles.disabledButton]}
+						onPress={handleSaveProfile}
+						disabled={!hasChanges}
+					>
+						<Text style={styles.primaryButtonText}>Save Changes</Text>
+					</TouchableOpacity>
+				</View>
+
+				{/* Logout Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Session</Text>
+					<TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
+						<Icon name="log-out-outline" size={24} color={colors.background.primary} />
+						<Text style={styles.dangerButtonText}>Log Out</Text>
 					</TouchableOpacity>
 				</View>
 			</ScrollView>

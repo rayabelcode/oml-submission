@@ -2,7 +2,7 @@ import { StyleSheet, Platform } from 'react-native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
 
 export const useContactDetailsStyles = () => {
-	const { colors, theme } = useTheme();
+	const { colors, theme, effectiveTheme } = useTheme();
 
 	return StyleSheet.create({
 		container: {
@@ -14,11 +14,12 @@ export const useContactDetailsStyles = () => {
 			alignItems: 'center',
 			justifyContent: 'space-between',
 			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.md,
 			backgroundColor: colors.background.primary,
-			borderBottomWidth: 1,
+			borderBottomWidth: .5,
 			borderBottomColor: colors.border,
-		},		
+		},
 		headerButton: {
 			width: 44,
 			height: 44,
@@ -72,6 +73,59 @@ export const useContactDetailsStyles = () => {
 			alignItems: 'center',
 			justifyContent: 'center',
 			zIndex: 5,
+		},
+		contentContainer: {
+			flex: 1,
+			marginBottom: 65,
+		},
+		segmentedControlContainer: {
+			position: 'absolute',
+			bottom: 0,
+			left: 0,
+			right: 0,
+			paddingHorizontal: spacing.sm,
+			paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+			backgroundColor: 'transparent',
+		},
+		segmentedWrapper: {
+			flexDirection: 'row',
+			backgroundColor: colors.background.primary,
+			borderRadius: layout.borderRadius.xxl,
+			borderWidth: 1,
+			borderColor: colors.border,
+			height: 50,
+			overflow: 'hidden',
+		},
+		segment: {
+			flex: 1,
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			gap: spacing.xs,
+		},
+		selectedSegment: {
+			backgroundColor: colors.background.primary,
+		},
+		errorContainer: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+			padding: spacing.lg,
+		},
+		errorText: {
+			color: colors.danger,
+			marginBottom: spacing.md,
+			textAlign: 'center',
+		},
+		retryButton: {
+			backgroundColor: colors.primary,
+			paddingHorizontal: spacing.lg,
+			paddingVertical: spacing.sm,
+			borderRadius: layout.borderRadius.md,
+		},
+		retryButtonText: {
+			color: colors.text.white,
+			fontWeight: '600',
 		},
 	});
 };

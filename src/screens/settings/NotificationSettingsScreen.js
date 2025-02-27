@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, Switch, TouchableOpacity, Linking, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { spacing, layout, useTheme } from '../../context/ThemeContext';
 import { useStyles } from '../../styles/screens/settings';
@@ -53,75 +53,85 @@ export default function NotificationSettingsScreen() {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>Notifications</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>Notifications</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
-			<View style={styles.settingSection}>
-				<View style={styles.sectionHeader}>
-					<View style={styles.iconTitleContainer}>
-						<Icon name="calendar-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
-						<Text style={styles.notificationTitle}>Scheduled Reminders</Text>
-					</View>
-				</View>
-				<Text style={styles.sectionDescription}>
-					Manage your scheduled reminder notifications in your device settings.
-				</Text>
-				<TouchableOpacity
-					style={[
-						{
-							backgroundColor: colors.background.secondary,
+			<ScrollView>
+				{/* Scheduled Reminders Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Scheduled Reminders</Text>
+					<Text style={styles.cardDescription}>
+						Manage your scheduled reminder notifications in your device settings.
+					</Text>
+
+					<TouchableOpacity
+						style={{
+							backgroundColor: colors.background.primary,
 							borderRadius: layout.borderRadius.md,
+							paddingVertical: spacing.sm,
+							paddingHorizontal: spacing.lg,
+							alignSelf: 'center',
 							borderWidth: 1,
 							borderColor: colors.primary,
-							marginTop: spacing.md,
-							marginBottom: spacing.md,
-							padding: spacing.sm,
-							alignSelf: 'center',
-						},
-					]}
-					onPress={openNotificationSettings}
-				>
-					<Text
-						style={[
-							styles.settingText,
-							{
-								color: colors.primary,
-								marginLeft: 0,
-								paddingHorizontal: spacing.md,
-							},
-						]}
+							marginVertical: spacing.sm,
+						}}
+						onPress={openNotificationSettings}
 					>
-						Open System Settings
-					</Text>
-				</TouchableOpacity>
-			</View>
+						<Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
+							Open System Settings
+						</Text>
+					</TouchableOpacity>
+				</View>
 
-			<View style={styles.settingSection}>
-				<View style={styles.sectionHeader}>
-					<View style={styles.iconTitleContainer}>
-						<Icon name="call-outline" size={24} color={colors.primary} style={styles.sectionIcon} />
-						<Text style={styles.notificationTitle}>Call Follow-Ups</Text>
+				{/* Call Follow-Ups Card */}
+				<View style={styles.settingsCard}>
+					<Text style={styles.cardTitleCenter}>Call Follow-Ups</Text>
+					<Text style={styles.cardDescription}>
+						Get reminders after calls to update notes.
+					</Text>
+
+					<View>
+						{[
+							{
+								icon: 'call-outline',
+								text: 'Enable Follow-Ups',
+								component: (
+									<Switch
+										value={localNotifications}
+										onValueChange={handleLocalNotificationToggle}
+										trackColor={{ false: '#767577', true: '#81b0ff' }}
+										thumbColor={localNotifications ? colors.primary : '#f4f3f4'}
+									/>
+								),
+							},
+						].map((item, index, array) => (
+							<View
+								key={item.text}
+								style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+							>
+								<View style={styles.settingItemLeft}>
+									<Icon name={item.icon} size={24} color={colors.text.secondary} />
+									<Text style={styles.settingText}>{item.text}</Text>
+								</View>
+								{item.component}
+							</View>
+						))}
 					</View>
 				</View>
-				<Text style={styles.sectionDescription}>
-					Get helpful reminders after phone calls to update your notes and track recent conversations.
-				</Text>
-				<View style={styles.settingItem}>
-					<View style={styles.settingItemLeft}>
-						<Text style={styles.settingText}>Enable Follow-up Reminders</Text>
-					</View>
-					<Switch
-						value={localNotifications}
-						onValueChange={handleLocalNotificationToggle}
-						trackColor={{ false: '#767577', true: '#81b0ff' }}
-						thumbColor={localNotifications ? colors.primary : '#f4f3f4'}
-					/>
+
+				{/* Info Banner */}
+				<View style={styles.infoBanner}>
+					<Icon name="information-circle-outline" size={24} color={colors.primary} />
+					<Text style={styles.infoBannerText}>
+					Follow-Up reminders help you track conversations by prompting you to update notes after calls.
+					</Text>
 				</View>
-			</View>
+			</ScrollView>
 		</View>
 	);
 }

@@ -98,7 +98,6 @@ export const updateContactData = (contactData) => {
 	try {
 		const updates = { ...contactData };
 
-		// Remove raw updated_at if present
 		if ('updated_at' in updates) {
 			delete updates.updated_at;
 		}
@@ -112,7 +111,7 @@ export const updateContactData = (contactData) => {
 				};
 			}
 
-			// Ensure scheduling_status exists
+			// Standardize frequency
 			if (!updates.scheduling.scheduling_status) {
 				updates.scheduling.scheduling_status = {
 					wasRescheduled: false,
@@ -120,14 +119,32 @@ export const updateContactData = (contactData) => {
 				};
 			}
 
-			// Convert dates to ISO strings if they exist
+			// Handle recurring_next_date
 			if (updates.scheduling.recurring_next_date) {
-				updates.scheduling.recurring_next_date = new Date(
-					updates.scheduling.recurring_next_date
-				).toISOString();
+				if (typeof updates.scheduling.recurring_next_date === 'string') {
+					// Already in ISO format, leave as is
+				} else if (updates.scheduling.recurring_next_date.seconds) {
+					updates.scheduling.recurring_next_date = new Date(
+						updates.scheduling.recurring_next_date.seconds * 1000
+					).toISOString();
+				} else {
+					updates.scheduling.recurring_next_date = new Date(
+						updates.scheduling.recurring_next_date
+					).toISOString();
+				}
 			}
+
+			// Handle custom_next_date
 			if (updates.scheduling.custom_next_date) {
-				updates.scheduling.custom_next_date = new Date(updates.scheduling.custom_next_date).toISOString();
+				if (typeof updates.scheduling.custom_next_date === 'string') {
+					// Already in ISO format, leave as is
+				} else if (updates.scheduling.custom_next_date.seconds) {
+					updates.scheduling.custom_next_date = new Date(
+						updates.scheduling.custom_next_date.seconds * 1000
+					).toISOString();
+				} else {
+					updates.scheduling.custom_next_date = new Date(updates.scheduling.custom_next_date).toISOString();
+				}
 			}
 		}
 
@@ -142,9 +159,15 @@ export const updateContactData = (contactData) => {
 			updates.phone = standardizePhoneNumber(updates.phone);
 		}
 
-		// Standardize next_contact if present
+		// Handle next_contact
 		if (updates.next_contact) {
-			updates.next_contact = new Date(updates.next_contact).toISOString();
+			if (typeof updates.next_contact === 'string') {
+				// Already in ISO format, leave as is
+			} else if (updates.next_contact.seconds) {
+				updates.next_contact = new Date(updates.next_contact.seconds * 1000).toISOString();
+			} else {
+				updates.next_contact = new Date(updates.next_contact).toISOString();
+			}
 		}
 
 		// Always update last_updated

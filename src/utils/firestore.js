@@ -31,23 +31,29 @@ let activeSubscriptions = new Map();
 // Helper function to clean up subscriptions
 export const cleanupSubscriptions = () => {
 	try {
+		// Make sure activeSubscriptions exists
 		if (!activeSubscriptions) {
 			activeSubscriptions = new Map();
 			return;
 		}
 
+		// Unsubscribe from all listeners
 		activeSubscriptions.forEach((unsubscribe, key) => {
 			if (typeof unsubscribe === 'function') {
 				try {
 					unsubscribe();
+					activeSubscriptions.delete(key);
 				} catch (error) {
 					console.log(`Error unsubscribing from ${key}:`, error);
 				}
 			}
 		});
+
+		// Clear the map
 		activeSubscriptions.clear();
 	} catch (error) {
 		console.error('Error in cleanupSubscriptions:', error);
+		// Reset the map if there's an error
 		activeSubscriptions = new Map();
 	}
 };
@@ -1142,15 +1148,39 @@ export const subscribeToUserProfile = (userId, callback) => {
 
 export const getUserProfile = async (userId) => {
 	try {
-		const userDocRef = doc(db, 'users', userId);
-		// Fetch the latest data from the server, bypassing the cache
-		const userDoc = await getDoc(userDocRef);
-		if (userDoc.exists()) {
-			return userDoc.data();
-		} else {
-			console.error('User document not found in Firestore.');
+		// Validation check for userId
+		if (!userId) {
+			console.warn('getUserProfile called with no userId');
 			return null;
 		}
+
+		// Delay and retry logic
+		const maxRetries = 3;
+		const retryDelay = 1000; // 1 second
+
+		for (let attempt = 0; attempt < maxRetries; attempt++) {
+			try {
+				const userDocRef = doc(db, 'users', userId);
+				const userDoc = await getDoc(userDocRef);
+
+				if (userDoc.exists()) {
+					return userDoc.data();
+				} else if (attempt === maxRetries - 1) {
+					// Only log error on final attempt
+					console.error(`User document not found for ID: ${userId} after ${maxRetries} attempts`);
+					return null;
+				}
+			} catch (error) {
+				if (attempt === maxRetries - 1) {
+					throw error;
+				}
+			}
+
+			// Wait before retrying
+			await new Promise((resolve) => setTimeout(resolve, retryDelay));
+		}
+
+		return null;
 	} catch (error) {
 		console.error('Error fetching user profile:', error);
 		throw error;

@@ -200,11 +200,14 @@ describe('contactHelpers', () => {
 
 		it('converts dates to ISO strings', () => {
 			const testDate = new Date('2024-01-01T12:00:00Z');
+			const testTimestamp = { seconds: Math.floor(testDate.getTime() / 1000), nanoseconds: 0 };
+			const testIsoString = testDate.toISOString();
+
 			const updates = {
 				next_contact: testDate,
 				scheduling: {
-					recurring_next_date: testDate,
-					custom_next_date: testDate,
+					recurring_next_date: testTimestamp,
+					custom_next_date: testIsoString,
 				},
 			};
 
@@ -213,7 +216,7 @@ describe('contactHelpers', () => {
 
 			expect(result.next_contact).toBe(expectedISOString);
 			expect(result.scheduling.recurring_next_date).toBe(expectedISOString);
-			expect(result.scheduling.custom_next_date).toBe(expectedISOString);
+			expect(result.scheduling.custom_next_date).toBe(testIsoString); // Already ISO, should remain unchanged
 		});
 
 		it('removes updated_at from updates', () => {
@@ -230,6 +233,73 @@ describe('contactHelpers', () => {
 		it('handles error cases', () => {
 			expect(() => updateContactData(null)).toThrow('Failed to update contact data');
 			expect(() => updateContactData(undefined)).toThrow('Failed to update contact data');
+		});
+		it('handles date format conversion correctly', () => {
+			// Test 1: Handles already ISO-formatted strings
+			const isoStringUpdates = {
+				next_contact: '2024-01-01T12:00:00.000Z',
+				scheduling: {
+					recurring_next_date: '2024-01-02T12:00:00.000Z',
+					custom_next_date: '2024-01-03T12:00:00.000Z',
+				},
+			};
+
+			const isoResult = updateContactData(isoStringUpdates);
+			expect(isoResult.next_contact).toBe('2024-01-01T12:00:00.000Z');
+			expect(isoResult.scheduling.recurring_next_date).toBe('2024-01-02T12:00:00.000Z');
+			expect(isoResult.scheduling.custom_next_date).toBe('2024-01-03T12:00:00.000Z');
+
+			// Test 2: Handles JavaScript Date objects
+			const jsDateUpdates = {
+				next_contact: new Date('2024-01-01T12:00:00Z'),
+				scheduling: {
+					recurring_next_date: new Date('2024-01-02T12:00:00Z'),
+					custom_next_date: new Date('2024-01-03T12:00:00Z'),
+				},
+			};
+
+			const jsDateResult = updateContactData(jsDateUpdates);
+			expect(jsDateResult.next_contact).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(jsDateResult.scheduling.recurring_next_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(jsDateResult.scheduling.custom_next_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+
+			// Test 3: Handles Firestore timestamps
+			const firestoreTimestampUpdates = {
+				next_contact: { seconds: 1704110400, nanoseconds: 0 }, // 2024-01-01T12:00:00Z
+				scheduling: {
+					recurring_next_date: { seconds: 1704196800, nanoseconds: 0 }, // 2024-01-02T12:00:00Z
+					custom_next_date: { seconds: 1704283200, nanoseconds: 0 }, // 2024-01-03T12:00:00Z
+				},
+			};
+
+			const timestampResult = updateContactData(firestoreTimestampUpdates);
+			expect(timestampResult.next_contact).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(timestampResult.scheduling.recurring_next_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(timestampResult.scheduling.custom_next_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+		});
+
+		it('handles edge cases in date conversion', () => {
+			// Partially defined scheduling with only some date fields
+			const partialUpdates = {
+				scheduling: {
+					recurring_next_date: new Date('2024-01-01T12:00:00Z'),
+					// No custom_next_date
+				},
+			};
+
+			const partialResult = updateContactData(partialUpdates);
+			expect(partialResult.scheduling.recurring_next_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+			expect(partialResult.scheduling.custom_next_date).toBeUndefined();
+
+			// Empty scheduling object
+			const emptySchedulingUpdates = {
+				scheduling: {},
+			};
+
+			const emptyResult = updateContactData(emptySchedulingUpdates);
+			expect(emptyResult.scheduling).toEqual({
+				scheduling_status: { wasRescheduled: false, wasSnooze: false },
+			});
 		});
 	});
 });

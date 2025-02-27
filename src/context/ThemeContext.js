@@ -5,147 +5,169 @@ import { useColorScheme } from 'react-native';
 const ThemeContext = createContext();
 
 export const spacing = {
+	xxs: 2,
 	xs: 5,
 	sm: 10,
 	md: 15,
 	lg: 20,
 	xl: 30,
+	xxl: 40,
+	xxxl: 50,
 };
 
 export const layout = {
 	borderRadius: {
+		xs: 4,
 		sm: 8,
 		md: 10,
 		lg: 15,
+		xl: 20,
+		xxl: 25,
+		xxxl: 30,
 		circle: 50,
 	},
 };
 
 const tagColors = {
 	light: {
-		blue: '#E8F3FF',
-		green: '#E6F6ED',
-		purple: '#F3E8FF',
-		orange: '#FFF1E6',
-		pink: '#FCE8FF',
-		yellow: '#FFF9E6',
+		blue: '#E8F3FF', // Light Blue
+		green: '#E6F6ED', // Light Green
+		purple: '#F3E8FF', // Light Purple
+		orange: '#FFF1E6', // Light Orange
+		pink: '#FCE8FF', // Light Pink
+		yellow: '#FFF9E6', // Light Yellow
 	},
 	dark: {
-		blue: '#1A2733',
-		green: '#1A2B22',
-		purple: '#261A33',
-		orange: '#332B1A',
-		pink: '#331A2B',
-		yellow: '#332E1A',
+		blue: '#1A2733', // Dark Blue
+		green: '#1A2B22', // Dark Green
+		purple: '#261A33', // Dark Purple
+		orange: '#332B1A', // Dark Orange
+		pink: '#331A2B', // Dark Pink
+		yellow: '#332E1A', // Dark Yellow
 	},
 };
 
 const lightTheme = {
 	background: {
-		primary: '#FFFFFF',
-		secondary: '#F2F2F7',
-		tertiary: '#E5E5EA',
-		quaternary: '#F5F5F5',
-		overlay: 'rgba(0, 0, 0, 0.75)',
-		statusBar: 'transparent',
-		whiteText: '#1A1B1C'
+		primary: '#FFFFFF', // White
+		secondary: '#F2F2F7', // Light Gray
+		tertiary: '#E5E5EA', // Light Gray
+		quaternary: '#F5F5F5', // Light Gray
+		overlay: 'rgba(0, 0, 0, 0.75)', // Black with 75% opacity
+		statusBar: 'transparent', // Transparent
+		whiteText: '#1A1B1C', // Black
 	},
 	text: {
-		primary: '#000000',
-		secondary: '#666666',
-		subtleText: '#E5E5EA',
-		lightWarning: '#2e2b2a',
-		white: '#FFFFFF',
+		primary: '#000000', // Black
+		secondary: '#666666', // Dark Gray
+		subtleText: '#E5E5EA', // Light Gray
+		lightWarning: '#0A0A0A', // Very Dark Gray
+		white: '#FFFFFF', //
 	},
-	primary: '#007AFF',
-	secondary: '#4CD964',
-	danger: '#FF3B30',
-	warning: '#FF9500',
-	lightWarning: '#fa6b7e',
-	lightHighlight: '#87EF66',
-	success: '#34C759',
-	border: '#E5E5EA',
+	buttons: {
+		activeIcon: '#156525', // Green
+		inactiveIcon: '#007AFF', // Blue
+	},
+	primary: '#007AFF', // Blue
+	secondary: '#4CD964', // Green
+	danger: '#EB0C00', // Red
+	warning: '#FF9500', // Orange
+	action: '#8A20B1', // TBD
+	lightWarning: '#FA6B7E', // Light Red
+	lightHighlight: '#87EF66', // Light Green
+	success: '#1A652E', // Green
+	border: '#E5E5EA', // Light Gray
 	tabBar: {
-		background: '#E0E0E0',
+		background: '#E0E0E0', // Light Gray
 	},
 	reminderTypes: {
-		follow_up: '#E6F3FF',
-		scheduled: '#E6FFE6',
-		custom_date: '#F5E6FF',
+		follow_up: '#E6F3FF', // Light Blue
+		scheduled: '#E6FFE6', // Light Green
+		custom_date: '#F5E6FF', // Light Purple
 	},
-	tags: tagColors.light,
+	tags: tagColors.light, // Light theme tag colors
 };
 
 const darkTheme = {
 	background: {
-		primary: '#000000',
-		secondary: '#1C1C1E',
-		tertiary: '#2C2C2E',
-		quaternary: '#3A3A3C',
-		overlay: 'rgba(0, 0, 0, 0.9)',
-		statusBar: 'transparent',
-		whiteText: '#000000'
+		primary: '#000000', // Black
+		secondary: '#1C1C1E', // Dark Gray
+		tertiary: '#2C2C2E', //	Dark Gray
+		quaternary: '#3A3A3C', // Dark Gray
+		overlay: 'rgba(0, 0, 0, 0.9)', // Black with 90% opacity
+		statusBar: 'transparent', // Transparent
+		whiteText: '#000000', // Black
 	},
 	text: {
-		primary: '#FFFFFF',
-		secondary: '#8E8E93',
-		subtleText: '#1C1C1E',
-		lightWarning: '#bab8b8',
-		white: '#FFFFFF',
+		primary: '#FFFFFF', // White
+		secondary: '#8E8E93', // Light Gray
+		subtleText: '#1C1C1E', // Dark Gray
+		lightWarning: '#BAB8B8', // Light Gray
+		white: '#FFFFFF', // White
 	},
-	primary: '#0A84FF',
-	secondary: '#30D158',
-	danger: '#FF453A',
-	warning: '#FFD60A',
-	lightWarning: '#75150D',
-	lightHighlight: '#0A5A18',
-	success: '#32D74B',
-	border: '#3A3A3C',
+	buttons: {
+		activeIcon: '#30D158', // Green
+		inactiveIcon: '#0A84FF', // Blue
+	},
+	primary: '#0A84FF', // Blue
+	secondary: '#30D158', // Green
+	danger: '#FF453A', // Red
+	warning: '#FFD60A', // Orange
+	action: '#FFD60A', // TBD
+	lightWarning: '#75150D', // Light Red
+	lightHighlight: '#0A5A18', // Light Green
+	success: '#32D74B', // Green
+	border: '#3A3A3C', // Dark Gray
 	tabBar: {
-		background: '#2C2C2E',
+		background: '#2C2C2E', // Dark Gray
 	},
 	reminderTypes: {
-		follow_up: '#1C2733',
-		scheduled: '#1C291C',
-		custom_date: '#291C33',
+		follow_up: '#1C2733', // Light Blue
+		scheduled: '#1C291C', // Light Green
+		custom_date: '#291C33', //
 	},
-	tags: tagColors.dark,
+	tags: tagColors.dark, // Dark theme tag colors
 };
 
 const dimmedTheme = {
 	background: {
-		primary: '#1A1A1A',
-		secondary: '#2D2D2D',
-		tertiary: '#404040',
-		quaternary: '#4D4D4D',
-		overlay: 'rgba(0, 0, 0, 0.85)',
-		statusBar: 'transparent',
-		whiteText: '#000000',
+		primary: '#1A1A1A', // Dark Gray
+		secondary: '#2D2D2D', // Light Gray
+		tertiary: '#404040', // Dark Gray
+		quaternary: '#4D4D4D', // Dark Gray
+		overlay: 'rgba(0, 0, 0, 0.85)', // Black with 85% opacity
+		statusBar: 'transparent', // Transparent
+		whiteText: '#000000', // Black
 	},
 	text: {
-		primary: '#E0E0E0',
-		secondary: '#A0A0A0',
-		subtleText: '#2D2D2D',
-		lightWarning: '#D0D0D0',
-		white: '#FFFFFF',
+		primary: '#E0E0E0', // Light Gray
+		secondary: '#A0A0A0', // Light Gray
+		subtleText: '#2D2D2D', // Light Gray
+		lightWarning: '#D0D0D0', // Light Gray
+		white: '#FFFFFF', //	 White
 	},
-	primary: '#3B82F6',
-	secondary: '#34D399',
-	danger: '#EF4444',
-	warning: '#F59E0B',
-	lightWarning: '#92400E',
-	lightHighlight: '#065F46',
-	success: '#10B981',
-	border: '#404040',
+	buttons: {
+		activeIcon: '#34D399', // Green
+		inactiveIcon: '#3B82F6', // Blue
+	},
+	primary: '#3B82F6', // Blue
+	secondary: '#34D399', // Green
+	danger: '#EF4444', // Red
+	warning: '#F59E0B', // Orange
+	action: '#F59E0B', // TBD
+	lightWarning: '#92400E', // Light Red
+	lightHighlight: '#065F46', // Light Green
+	success: '#10B981', // Green
+	border: '#404040', // Dark Gray
 	tabBar: {
-		background: '#333333',
+		background: '#333333', // Dark Gray
 	},
 	reminderTypes: {
-		follow_up: '#1E3A8A',
-		scheduled: '#064E3B',
-		custom_date: '#3D1B40',
+		follow_up: '#1E3A8A', // Light Blue
+		scheduled: '#064E3B', // Light Green
+		custom_date: '#3D1B40', // Light Purple
 	},
-	tags: tagColors.dark,
+	tags: tagColors.dark, // Dark theme tag colors
 };
 
 export function ThemeProvider({ children }) {

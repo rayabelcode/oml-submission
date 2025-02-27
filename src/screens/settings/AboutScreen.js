@@ -11,47 +11,84 @@ const AboutScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.headerSettingsPages}>
-				<TouchableOpacity style={styles.settingItemLeft} onPress={() => navigation.goBack()}>
+			<View style={styles.screenHeader}>
+				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
 					<Icon name="chevron-back" size={24} color={colors.text.primary} />
-					<Text style={[styles.profileName, { fontSize: 20 }]}>About</Text>
 				</TouchableOpacity>
+				<Text style={styles.headerTitle}>About</Text>
+				<View style={styles.headerRightPlaceholder} />
 			</View>
 
 			<ScrollView style={styles.settingsList}>
 				<View style={[styles.formSection, styles.card]}>
 					<View style={[styles.settingSection, { borderBottomWidth: 0 }]}>
-						<Text style={styles.sectionTitle}>App Information</Text>
-						<View style={styles.settingItem}>
-							<Text style={styles.settingText}>Version</Text>
-							<Text style={[styles.settingText, { color: colors.text.secondary }]}>
-								{Constants.expoConfig.version}
-							</Text>
+						<Text style={styles.cardTitleCenter}>App Information</Text>
+						<View>
+							{[
+								{
+									text: 'Version',
+									value: Constants.expoConfig.version,
+									type: 'text',
+								},
+								{
+									text: 'Developer',
+									value: 'Ray Abel',
+									type: 'text',
+								},
+								{
+									text: 'Website',
+									value: 'onmylist.pro',
+									type: 'link',
+									onPress: () => Linking.openURL('https://onmylist.pro'),
+								},
+							].map((item, index, array) =>
+								item.type === 'link' ? (
+									<TouchableOpacity
+										key={item.text}
+										style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+										onPress={item.onPress}
+									>
+										<Text style={styles.settingText}>{item.text}</Text>
+										<Text style={[styles.settingText, { color: colors.primary }]}>{item.value}</Text>
+									</TouchableOpacity>
+								) : (
+									<View
+										key={item.text}
+										style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+									>
+										<Text style={styles.settingText}>{item.text}</Text>
+										<Text style={[styles.settingText, { color: colors.text.secondary }]}>{item.value}</Text>
+									</View>
+								)
+							)}
 						</View>
-						<View style={styles.settingItem}>
-							<Text style={styles.settingText}>Developer</Text>
-							<Text style={[styles.settingText, { color: colors.text.secondary }]}>Ray Abel</Text>
-						</View>
-						<TouchableOpacity
-							style={styles.settingItem}
-							onPress={() => Linking.openURL('https://onmylist.pro')}
-						>
-							<Text style={styles.settingText}>Website</Text>
-							<Text style={[styles.settingText, { color: colors.primary }]}>onmylist.pro</Text>
-						</TouchableOpacity>
 					</View>
 				</View>
 
 				<View style={[styles.formSection, styles.card]}>
 					<View style={[styles.settingSection, { borderBottomWidth: 0 }]}>
-						<Text style={styles.sectionTitle}>Legal & Privacy</Text>
-						<TouchableOpacity
-							style={styles.settingItem}
-							onPress={() => Linking.openURL('https://onmylist.pro/privacy')}
-						>
-							<Text style={styles.settingText}>Privacy Policy</Text>
-							<Icon name="open-outline" size={20} color={colors.primary} />
-						</TouchableOpacity>
+						<Text style={styles.cardTitleCenter}>Legal & Privacy</Text>
+						<View>
+							{[
+								{
+									text: 'Terms',
+									onPress: () => Linking.openURL('https://onmylist.pro/terms'),
+								},
+								{
+									text: 'Privacy Policy',
+									onPress: () => Linking.openURL('https://onmylist.pro/privacy'),
+								},
+							].map((item, index, array) => (
+								<TouchableOpacity
+									key={item.text}
+									style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+									onPress={item.onPress}
+								>
+									<Text style={styles.settingText}>{item.text}</Text>
+									<Icon name="open-outline" size={20} color={colors.primary} />
+								</TouchableOpacity>
+							))}
+						</View>
 					</View>
 				</View>
 			</ScrollView>
