@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, spacing } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
 import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -634,65 +634,66 @@ export default function DashboardScreen({ navigation, route }) {
 								onSnooze={handleSnooze}
 							/>
 						) : (
-							<View style={styles.emptyStateContainer}>
-								<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
-								<Text style={styles.congratsMessage}>You're all caught up!</Text>
+							<View style={styles.remindersEmptyState}>
+								<View style={styles.emptyStateTitleRow}>
+									<Icon name="checkmark-circle-outline" size={24} color={colors.success} />
+									<Text style={[styles.emptyStateTitle, { color: colors.success, marginLeft: spacing.sm }]}>
+										You're caught up!
+									</Text>
+								</View>
+								<Text style={styles.emptyStateMessage}>
+									Reminders will appear here when it's time to connect with your contacts.
+								</Text>
 							</View>
 						)}
 					</View>
 
-					{/* Suggested Calls Section */}
-					<View style={styles.section}>
-						<View style={commonStyles.card}>
-							<View style={styles.groupHeader}>
-								<Text style={styles.groupTitle}>Suggested Calls</Text>
-							</View>
+{/* Suggested Calls Section - only show when not empty */}
+{stats?.detailed?.needsAttention && stats.detailed.needsAttention.length > 0 && (
+  <View style={styles.section}>
+    <View style={commonStyles.card}>
+      <View style={styles.groupHeader}>
+        <Text style={styles.groupTitle}>Suggested Calls</Text>
+      </View>
 
-							{!stats?.detailed?.needsAttention ? (
-								<Text style={commonStyles.message}>Loading suggestions...</Text>
-							) : stats.detailed.needsAttention.length === 0 ? (
-								<View style={styles.emptyStateContainer}>
-									<Icon name="checkmark-circle-outline" size={40} color={colors.secondary} />
-									<Text style={styles.congratsMessage}>You're up to date with all your contacts!</Text>
-								</View>
-							) : (
-								<View>
-									{stats.detailed.needsAttention.map((contact, index, array) => (
-										<View
-											key={contact.id}
-											style={[
-												styles.attentionItem,
-												index !== array.length - 1 && {
-													borderBottomWidth: 1,
-													borderBottomColor: colors.border,
-												},
-											]}
-										>
-											<View style={styles.attentionInfo}>
-												<Text style={styles.contactName}>{contact.name}</Text>
-											</View>
-											<TouchableOpacity
-												style={styles.callButton}
-												onPress={() => {
-													const formattedContact = {
-														...contact,
-														first_name: contact.name.split(' ')[0],
-														last_name: contact.name.split(' ').slice(1).join(' '),
-														phone: contact.phone,
-													};
-													setSelectedContact(formattedContact);
-													setShowCallOptions(true);
-												}}
-											>
-												<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
-												<Text style={styles.callButtonText}>Contact</Text>
-											</TouchableOpacity>
-										</View>
-									))}
-								</View>
-							)}
-						</View>
-					</View>
+      <View>
+        {stats.detailed.needsAttention.map((contact, index, array) => (
+          <View
+            key={contact.id}
+            style={[
+              styles.attentionItem,
+              index !== array.length - 1 && {
+                borderBottomWidth: 1,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <View style={styles.attentionInfo}>
+              <Text style={styles.contactName}>{contact.name}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.callButton}
+              onPress={() => {
+                const formattedContact = {
+                  ...contact,
+                  first_name: contact.name.split(' ')[0],
+                  last_name: contact.name.split(' ').slice(1).join(' '),
+                  phone: contact.phone,
+                };
+                setSelectedContact(formattedContact);
+                setShowCallOptions(true);
+              }}
+            >
+              <Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
+              <Text style={styles.callButtonText}>Contact</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    </View>
+  </View>
+)}
+
 				</ScrollView>
 
 				<ActionModal

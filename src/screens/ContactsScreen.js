@@ -620,36 +620,8 @@ export default function ContactsScreen({ navigation }) {
 	};
 
 	const renderContacts = () => {
-		// If there are no contacts - show welcome message
 		if (!contacts.scheduledContacts.length && !contacts.unscheduledContacts.length) {
-			// Remove the ScrollView for the welcome screen
-			return (
-				<View
-					style={{
-						flex: 1,
-						justifyContent: 'center',
-						alignItems: 'center',
-						height: Dimensions.get('window').height - 120,
-					}}
-				>
-					<Image
-						source={require('../../assets/images/sloth.png')}
-						style={styles.welcomeImage}
-						resizeMode="contain"
-					/>
-
-					<Text style={styles.welcomeTitle}>Add Your Contacts</Text>
-
-					<Text style={styles.welcomeText}>
-						Import your contacts, tag them, and let OnMyList keep you connected stress-free.
-					</Text>
-
-					<TouchableOpacity style={styles.welcomeButton} onPress={() => setShowAddModal(true)}>
-						<Icon name="add-circle" size={20} color={colors.text.primary} />
-						<Text style={styles.welcomeButtonText}>Add Contact</Text>
-					</TouchableOpacity>
-				</View>
-			);
+			return null;
 		}
 
 		const organizedContacts = organizeContacts(searchQuery ? filteredContacts : contacts);
@@ -852,7 +824,7 @@ export default function ContactsScreen({ navigation }) {
 						flex: 1,
 						justifyContent: 'center',
 						alignItems: 'center',
-						height: Dimensions.get('window').height - 120, // Added for header height
+						height: Dimensions.get('window').height - 120, // Header height
 					}}
 				>
 					<Image

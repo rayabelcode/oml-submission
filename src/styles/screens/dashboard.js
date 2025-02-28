@@ -250,12 +250,32 @@ const useStyles = () => {
 			marginTop: -spacing.md,
 			marginBottom: spacing.md,
 		},
-		emptyMessage: {
+		remindersEmptyState: {
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingVertical: spacing.xxxl,
+			marginHorizontal: spacing.xl,
+		},
+		emptyStateTitle: {
+			fontSize: 22,
+			fontWeight: '700',
 			textAlign: 'center',
+			marginVertical: spacing.sm,
+		},
+		emptyStateTitleRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			marginVertical: spacing.sm,
+		},
+		emptyStateMessage: {
+			fontSize: 17,
+			fontWeight: '500',
 			color: colors.text.secondary,
-			fontSize: 16,
-			fontStyle: 'italic',
-			paddingVertical: spacing.md,
+			textAlign: 'center',
+			paddingHorizontal: spacing.lg,
+			lineHeight: 22,
+			marginBottom: spacing.md,
 		},
 	});
 };
