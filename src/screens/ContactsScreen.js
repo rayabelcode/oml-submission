@@ -630,9 +630,7 @@ export default function ContactsScreen({ navigation }) {
 						resizeMode="contain"
 					/>
 
-					<Text style={styles.welcomeTitle}>Welcome to OnMyList</Text>
-
-					<Text style={styles.welcomeSubheading}>Keep your circle tight and never miss a catch-up!</Text>
+					<Text style={styles.welcomeTitle}>Add Your Contacts</Text>
 
 					<Text style={styles.welcomeText}>
 						Import your contacts, tag them, and let OnMyList keep you connected stress-free.
@@ -640,7 +638,7 @@ export default function ContactsScreen({ navigation }) {
 
 					<TouchableOpacity style={styles.welcomeButton} onPress={() => setShowAddModal(true)}>
 						<Icon name="add-circle" size={24} color={colors.text.primary} />
-						<Text style={styles.welcomeButtonText}>Add Your First Contact</Text>
+						<Text style={styles.welcomeButtonText}>Add Contact</Text>
 					</TouchableOpacity>
 				</View>
 			);

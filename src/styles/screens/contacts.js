@@ -990,7 +990,7 @@ const useStyles = () => {
 			flex: 1,
 			alignItems: 'center',
 			justifyContent: 'center',
-			paddingVertical: spacing.xl * 3,
+			paddingTop: spacing.xl * 4,
 		},
 		welcomeImage: {
 			width: 120,
@@ -1018,14 +1018,14 @@ const useStyles = () => {
 			marginBottom: spacing.md,
 		},
 		welcomeText: {
-			fontSize: 17,
+			fontSize: 18,
 			color: colors.text.secondary,
 			textAlign: 'center',
-			fontWeight: '700',
+			fontWeight: '600',
 			lineHeight: 24,
 			maxWidth: '90%',
 			paddingHorizontal: spacing.lg,
-			marginTop: spacing.sm,
+			marginTop: spacing.xs,
 			marginBottom: spacing.xs,
 		},
 		welcomeButton: {
@@ -1042,8 +1042,8 @@ const useStyles = () => {
 		welcomeButtonText: {
 			color: colors.text.primary,
 			opacity: 0.9,
-			fontSize: 17,
-			fontWeight: '700',
+			fontSize: 18,
+			fontWeight: '800',
 		},
 	});
 };

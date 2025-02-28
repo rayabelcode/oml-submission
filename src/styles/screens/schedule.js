@@ -116,14 +116,15 @@ const useStyles = () => {
 			opacity: 0.6,
 		},
 		emptyStateTitle: {
-			fontSize: 20,
-			fontWeight: '600',
+			fontSize: 22,
+			fontWeight: '700',
 			color: colors.text.primary,
 			marginBottom: spacing.md,
 			textAlign: 'center',
 		},
 		emptyStateMessage: {
-			fontSize: 16,
+			fontSize: 17,
+			fontWeight: '500',
 			color: colors.text.secondary,
 			textAlign: 'center',
 			marginBottom: spacing.xl,

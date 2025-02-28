@@ -340,13 +340,13 @@ export default function ScheduleScreen({ navigation }) {
 	const EmptyState = () => (
 		<View style={styles.emptyStateContainer}>
 			<Icon name="calendar-outline" size={60} color={colors.text.secondary} style={styles.emptyStateIcon} />
-			<Text style={styles.emptyStateTitle}>No upcoming calls</Text>
+			<Text style={styles.emptyStateTitle}>No Upcoming Calls</Text>
 			<Text style={styles.emptyStateMessage}>
 				When you schedule calls with your contacts, they'll appear here.
 			</Text>
 			<TouchableOpacity
 				style={[commonStyles.primaryButton, styles.emptyStateButton]}
-				onPress={() => navigation.navigate('Contacts')}
+				onPress={() => navigation.navigate('Home')}
 			>
 				<Text style={commonStyles.primaryButtonText}>Go to Contacts</Text>
 			</TouchableOpacity>

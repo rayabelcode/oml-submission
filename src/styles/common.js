@@ -69,9 +69,10 @@ export const useCommonStyles = () => {
 			flexDirection: 'row',
 		},
 		primaryButtonText: {
-			color: colors.background.primary,
-			fontSize: 16,
-			fontWeight: '500',
+			color: colors.text.white,
+			fontSize: 18,
+			fontWeight: '700',
+			opacity: 0.9,
 		},
 		secondaryButton: {
 			backgroundColor: colors.background.primary,
