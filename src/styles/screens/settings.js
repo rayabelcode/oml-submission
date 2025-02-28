@@ -20,7 +20,6 @@ const createStyles = (colors) =>
 			paddingTop: spacing.md,
 			marginHorizontal: spacing.md,
 			marginBottom: spacing.lg,
-			marginTop: spacing.md,
 			shadowColor: '#000',
 			shadowOffset: { width: 0, height: 1 },
 			shadowOpacity: 0.05,
@@ -166,7 +165,7 @@ const createStyles = (colors) =>
 		disabledButton: {
 			opacity: 0.5,
 		},
-		// Header Styles
+		// Header Styles (should match the header styles in stats.js)
 		screenHeader: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -184,7 +183,7 @@ const createStyles = (colors) =>
 			color: colors.text.primary,
 		},
 		headerRightPlaceholder: {
-			width: 40,
+			width: spacing.xxl,
 		},
 		// Setting Item Styles
 		settingItem: {
@@ -202,6 +201,7 @@ const createStyles = (colors) =>
 		settingItemRight: {
 			flexDirection: 'row',
 			alignItems: 'center',
+			marginRight: spacing.sm,
 		},
 		settingText: {
 			fontSize: 18,
@@ -245,8 +245,8 @@ const createStyles = (colors) =>
 			justifyContent: 'flex-start',
 		},
 		profileName: {
-			fontSize: 18,
-			fontWeight: '500',
+			fontSize: 22,
+			fontWeight: '700',
 			color: colors.text.primary,
 			marginLeft: spacing.sm,
 			flexShrink: 1,
@@ -263,7 +263,8 @@ const createStyles = (colors) =>
 			overflow: 'hidden',
 			justifyContent: 'center',
 			alignItems: 'center',
-			marginLeft: 0,
+			marginLeft: spacing.xxs,
+			marginRight: spacing.xs,
 		},
 		avatarImage: {
 			width: '100%',

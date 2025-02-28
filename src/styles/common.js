@@ -16,10 +16,11 @@ export const useCommonStyles = () => {
 		},
 		card: {
 			backgroundColor: colors.background.secondary,
-			padding: spacing.md,
+			paddingHorizontal: spacing.lg,
+			paddingVertical: spacing.md,
 			borderRadius: layout.borderRadius.md,
 			marginBottom: spacing.sm,
-			borderWidth: 1,
+			borderWidth: 0,
 			borderColor: colors.border,
 		},
 		modalContainer: {
@@ -68,9 +69,10 @@ export const useCommonStyles = () => {
 			flexDirection: 'row',
 		},
 		primaryButtonText: {
-			color: colors.background.primary,
-			fontSize: 16,
-			fontWeight: '500',
+			color: colors.text.white,
+			fontSize: 18,
+			fontWeight: '700',
+			opacity: 0.9,
 		},
 		secondaryButton: {
 			backgroundColor: colors.background.primary,
@@ -163,6 +165,26 @@ export const useCommonStyles = () => {
 			width: '100%',
 			height: '100%',
 			borderRadius: 30,
+		},
+		// Main Page Headers
+		pageHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'center',
+			paddingTop: spacing.md,
+			paddingBottom: spacing.xl,
+			marginTop: spacing.sm,
+			opacity: .9,
+		},
+		pageHeaderIcon: {
+			marginRight: spacing.md,
+			color: colors.text.primary,
+		},
+		pageHeaderTitle: {
+			fontSize: 24,
+			fontWeight: '700',
+			color: colors.text.primary,
+			textAlign: 'center',
 		},
 	});
 };

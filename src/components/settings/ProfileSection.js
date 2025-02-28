@@ -9,19 +9,12 @@ import FormattedPhoneNumber from '../general/FormattedPhoneNumber';
 const ProfileSection = ({ userProfile, user }) => {
 	const styles = useStyles();
 	const { colors } = useTheme();
-	const [displayName, setDisplayName] = useState('');
 
-	useEffect(() => {
-		updateDisplayName();
-	}, [userProfile]);
-
-	const updateDisplayName = () => {
-		if (userProfile?.first_name && userProfile?.last_name) {
-			setDisplayName(`${userProfile.first_name} ${userProfile.last_name}`);
-		} else {
-			setDisplayName(user?.email || 'Set up your profile');
-		}
-	};
+	// Calculate display name directly in render for immediate update
+	const displayName =
+		userProfile?.first_name && userProfile?.last_name
+			? `${userProfile.first_name} ${userProfile.last_name}`
+			: user?.email || 'Set up your profile';
 
 	return (
 		<View style={styles.profileBackground}>
@@ -39,7 +32,7 @@ const ProfileSection = ({ userProfile, user }) => {
 							<Icon name="person-circle-outline" size={60} color={colors.text.secondary} />
 						)}
 					</View>
-					<Text style={[styles.profileName, { flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+					<Text style={styles.profileName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
 						{displayName}
 					</Text>
 					{userProfile?.phone && (

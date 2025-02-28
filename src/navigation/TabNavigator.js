@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import React, { useEffect } from 'react';
 
 import DashboardScreen from '../screens/DashboardScreen';
-import StatsScreen from '../screens/StatsScreen';
+import ScheduleScreen from '../screens/ScheduleScreen';
 import SettingsStack from './SettingsStack';
 import ContactsStack from './ContactsStack';
 
@@ -35,17 +35,20 @@ export default function TabNavigator() {
 			screenOptions={({ route }) => ({
 				tabBarIcon: ({ focused, color, size }) => {
 					const iconNames = {
-						Contacts: focused ? 'people' : 'people-outline',
+						Home: focused ? 'people' : 'people-outline',
+						Schedule: focused ? 'calendar-clear' : 'calendar-clear-outline',
 						Dashboard: focused ? 'grid' : 'grid-outline',
-						Stats: focused ? 'stats-chart' : 'stats-chart-outline',
 						Settings: focused ? 'settings' : 'settings-outline',
 					}[route.name];
-					return <Icon name={iconNames} size={size * 1.05} color={color} />; // Scale up icon size
+
+					// Increase Home icon size
+					const adjustedSize = route.name === 'Home' ? size * 1.2 : size * 1;
+					return <Icon name={iconNames} size={adjustedSize} color={color} />;
 				},
 				tabBarStyle: {
 					backgroundColor: colors.background.primary,
 					borderTopColor: colors.border,
-					borderTopWidth: 1,
+					borderTopWidth: 0.5,
 					paddingTop: 2,
 					paddingBottom: Platform.OS === 'ios' ? 8 : 4,
 					height: Platform.OS === 'ios' ? 80 : 60,
@@ -58,13 +61,13 @@ export default function TabNavigator() {
 					color: colors.text.primary,
 					opacity: 0.9,
 					fontWeight: '600',
-					fontSize: Platform.OS === 'ios' ? 11 : 11, // Font size on iOS : Android
+					fontSize: Platform.OS === 'ios' ? 12 : 11, // Font size on iOS : Android
 				},
 			})}
 		>
-			<Tab.Screen name="Contacts" component={ContactsStack} />
+			<Tab.Screen name="Home" component={ContactsStack} />
+			<Tab.Screen name="Schedule" component={ScheduleScreen} />
 			<Tab.Screen name="Dashboard" component={DashboardScreen} />
-			<Tab.Screen name="Stats" component={StatsScreen} />
 			<Tab.Screen name="Settings" component={SettingsStack} />
 		</Tab.Navigator>
 	);

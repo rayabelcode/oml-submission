@@ -15,6 +15,7 @@ const SettingsList = ({
 	navigation,
 	handleExportData,
 	handleDeleteAccount,
+	onStatsPress,
 }) => {
 	const { colors, spacing } = useTheme();
 	const styles = useStyles();
@@ -106,26 +107,32 @@ const SettingsList = ({
 				<Text style={styles.cardTitle}>Privacy | Data</Text>
 				<View>
 					{[
-						{
-							icon: 'shield-outline',
-							text: 'Privacy & Data',
-							onPress: () => navigation.navigate('Privacy'),
-						},
-					].map((item, index, array) => (
-						<TouchableOpacity
-							key={item.text}
-							style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
-							onPress={item.onPress}
-						>
-							<View style={styles.settingItemLeft}>
-								<Icon name={item.icon} size={20} color={colors.text.secondary} />
-								<Text style={styles.settingText}>{item.text}</Text>
-							</View>
-							<View style={styles.settingItemRight}>
-								<Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
-							</View>
-						</TouchableOpacity>
-					))}
+    {
+        icon: 'stats-chart',
+        text: 'Stats',
+        onPress: () => navigation.navigate('Stats'),
+    },
+    {
+        icon: 'shield-outline',
+        text: 'Privacy & Data',
+        onPress: () => navigation.navigate('Privacy'),
+    },
+].map((item, index, array) => (
+    <TouchableOpacity
+        key={item.text}
+        style={[styles.settingItem, index === array.length - 1 && { borderBottomWidth: 0 }]}
+        onPress={item.onPress}
+    >
+        <View style={styles.settingItemLeft}>
+            <Icon name={item.icon} size={20} color={colors.text.secondary} />
+            <Text style={styles.settingText}>{item.text}</Text>
+        </View>
+        <View style={styles.settingItemRight}>
+            <Icon name="chevron-forward-outline" size={20} color={colors.text.secondary} />
+        </View>
+    </TouchableOpacity>
+))
+}
 				</View>
 			</View>
 

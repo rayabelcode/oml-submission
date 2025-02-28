@@ -120,21 +120,6 @@ export const useStyles = (colors) => {
 			marginTop: spacing.xs,
 			marginLeft: spacing.xs,
 		},
-		attentionItem: {
-			flexDirection: 'row',
-			justifyContent: 'space-between',
-			alignItems: 'center',
-			paddingVertical: spacing.md,
-		},
-		attentionInfo: {
-			flex: 1,
-		},
-		contactName: {
-			fontSize: 16,
-			fontWeight: '600',
-			color: colors.text.primary,
-			marginLeft: spacing.md,
-		},
 		overdueDays: {
 			fontSize: 14,
 			fontWeight: '500',
@@ -144,35 +129,6 @@ export const useStyles = (colors) => {
 			color: colors.warning,
 			marginTop: spacing.xs,
 		},
-		callButton: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			backgroundColor: colors.primary,
-			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.sm,
-			borderRadius: layout.borderRadius.sm,
-			marginLeft: spacing.md,
-		},
-		callButtonText: {
-			color: colors.text.white,
-			marginLeft: spacing.sm,
-			fontSize: 16,
-			fontWeight: '700',
-		},
-		sectionDescription: {
-			fontSize: 14,
-			color: colors.text.secondary,
-			textAlign: 'center',
-			marginTop: -spacing.md,
-			marginBottom: spacing.md,
-		},
-		emptyMessage: {
-			textAlign: 'center',
-			color: colors.text.secondary,
-			fontSize: 16,
-			fontStyle: 'italic',
-			paddingVertical: spacing.md,
-		},		
 		insightItem: {
 			flexDirection: 'row',
 			alignItems: 'center',
@@ -221,6 +177,26 @@ export const useStyles = (colors) => {
 			fontSize: 16,
 			fontWeight: '500',
 			textAlign: 'center',
+		},
+		// Header Styles (should match the header styles in settings.js)
+		screenHeader: {
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'space-between',
+			paddingHorizontal: spacing.md,
+			paddingTop: spacing.md,
+			paddingBottom: spacing.sm,
+		},
+		headerBackButton: {
+			padding: spacing.xs,
+		},
+		headerTitle: {
+			fontSize: 20,
+			fontWeight: '600',
+			color: colors.text.primary,
+		},
+		headerRightPlaceholder: {
+			width: spacing.xxl,
 		},
 	});
 };
