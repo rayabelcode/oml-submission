@@ -987,35 +987,22 @@ const useStyles = () => {
 		},
 		// Welcome Screen
 		welcomeContainer: {
-			flex: 1,
 			alignItems: 'center',
 			justifyContent: 'center',
-			paddingTop: spacing.xl * 4,
+			padding: spacing.lg,
+			width: '100%',
 		},
 		welcomeImage: {
-			width: 120,
-			height: 120,
+			width: 100,
+			height: 100,
 			marginBottom: spacing.lg,
 		},
 		welcomeTitle: {
 			fontSize: 28,
-			fontWeight: '800',
+			fontWeight: '700',
 			color: colors.text.primary,
 			marginBottom: spacing.sm,
 			textAlign: 'center',
-		},
-		welcomeSubheading: {
-			fontSize: 17,
-			color: colors.text.primary,
-			opacity: 0.75,
-			fontWeight: '800',
-			textAlign: 'center',
-			lineHeight: 22,
-			width: '100%',
-			paddingHorizontal: spacing.md,
-			paddingVertical: spacing.sm,
-			backgroundColor: colors.background.tertiary,
-			marginBottom: spacing.md,
 		},
 		welcomeText: {
 			fontSize: 18,
@@ -1042,8 +1029,8 @@ const useStyles = () => {
 		welcomeButtonText: {
 			color: colors.text.primary,
 			opacity: 0.9,
-			fontSize: 18,
-			fontWeight: '800',
+			fontSize: 20,
+			fontWeight: '700',
 		},
 	});
 };
