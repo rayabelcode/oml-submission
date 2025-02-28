@@ -40,6 +40,9 @@ const ProfileScreen = ({ navigation }) => {
 							// Clean up all subscriptions before signing out
 							cleanupSubscriptions();
 
+							// Small delay to make sure cleanup completes
+							await new Promise((resolve) => setTimeout(resolve, 800));
+
 							const { error } = await signOut();
 							if (error) throw error;
 						} catch (error) {
