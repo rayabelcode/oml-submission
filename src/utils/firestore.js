@@ -30,32 +30,44 @@ let activeSubscriptions = new Map();
 
 // Helper function to clean up subscriptions
 export const cleanupSubscriptions = () => {
-	try {
-		// Make sure activeSubscriptions exists
-		if (!activeSubscriptions) {
-			activeSubscriptions = new Map();
-			return;
-		}
-
-		// Unsubscribe from all listeners
-		activeSubscriptions.forEach((unsubscribe, key) => {
-			if (typeof unsubscribe === 'function') {
-				try {
-					unsubscribe();
-					activeSubscriptions.delete(key);
-				} catch (error) {
-					console.log(`Error unsubscribing from ${key}:`, error);
-				}
+	return new Promise((resolve) => {
+		try {
+			if (!activeSubscriptions) {
+				activeSubscriptions = new Map();
+				return resolve();
 			}
-		});
 
-		// Clear the map
-		activeSubscriptions.clear();
-	} catch (error) {
-		console.error('Error in cleanupSubscriptions:', error);
-		// Reset the map if there's an error
-		activeSubscriptions = new Map();
-	}
+			const subscriptions = Array.from(activeSubscriptions.entries());
+			if (subscriptions.length === 0) {
+				return resolve();
+			}
+
+			// Create an array of cleanup promises
+			const cleanupPromises = subscriptions.map(([key, unsubscribe]) => {
+				return new Promise((resolveCleanup) => {
+					try {
+						if (typeof unsubscribe === 'function') {
+							unsubscribe();
+							activeSubscriptions.delete(key);
+						}
+					} catch (err) {
+						console.log(`Error unsubscribing from ${key}:`, err);
+					}
+					resolveCleanup();
+				});
+			});
+
+			// Wait for all cleanup operations to complete
+			Promise.all(cleanupPromises).then(() => {
+				activeSubscriptions.clear();
+				resolve();
+			});
+		} catch (error) {
+			console.error('Error in cleanupSubscriptions:', error);
+			activeSubscriptions = new Map();
+			resolve();
+		}
+	});
 };
 
 // User functions
@@ -121,7 +133,7 @@ export const subscribeToContacts = (userId, callback) => {
 		const contactsRef = collection(db, 'contacts');
 		const q = query(contactsRef, where('user_id', '==', userId), orderBy('first_name'), orderBy('last_name'));
 
-		// Try to get cached data first
+		// Try to use cached data first
 		cacheManager.getCachedContacts(userId).then((cached) => {
 			if (cached) {
 				callback(cached);
@@ -131,6 +143,15 @@ export const subscribeToContacts = (userId, callback) => {
 		const unsubscribe = onSnapshot(
 			q,
 			async (querySnapshot) => {
+				// Check if user is still authenticated before processing
+				if (!auth.currentUser) {
+					console.log('User no longer authenticated, unsubscribing');
+					if (typeof unsubscribe === 'function') {
+						unsubscribe();
+					}
+					return;
+				}
+
 				const contacts = [];
 				querySnapshot.forEach((doc) => {
 					const contactData = doc.data();
@@ -144,13 +165,11 @@ export const subscribeToContacts = (userId, callback) => {
 					unscheduledContacts: contacts.filter((contact) => !contact.next_contact),
 				};
 
-				// Save to cache
 				await cacheManager.saveContacts(userId, formattedContacts);
 				callback(formattedContacts);
 			},
 			async (error) => {
 				console.error('Contacts subscription error:', error);
-				// Try to get cached data on error
 				const cached = await cacheManager.getCachedContacts(userId);
 				if (cached) {
 					callback(cached);
@@ -160,12 +179,10 @@ export const subscribeToContacts = (userId, callback) => {
 			}
 		);
 
-		// Store the unsubscribe function
 		activeSubscriptions.set(`contacts_${userId}`, unsubscribe);
 		return unsubscribe;
 	} catch (error) {
 		console.error('Error setting up contacts subscription:', error);
-		// Try to get cached data on setup error
 		cacheManager.getCachedContacts(userId).then((cached) => {
 			if (cached) {
 				callback(cached);

@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
 		return unsubscribe;
 	}, []);
 
-	// Clearing all user-related data
+	// Clear all user-related data
 	const clearAllUserData = async () => {
 		try {
 			// Clear notifications
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
 	const signInWithApple = async () => {
 		try {
-			// Clear previous user data first
+			// Clear previous user data
 			await clearAllUserData();
 
 			const credential = await AppleAuthentication.signInAsync({
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
 
 	const signUp = async ({ email, password }) => {
 		try {
-			// Clear previous user data first
+			// Clear previous user data
 			await clearAllUserData();
 
 			const { user } = await createUserWithEmailAndPassword(auth, email, password);
@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }) => {
 
 	const signIn = async ({ email, password }) => {
 		try {
-			// Clear previous user data first
+			// Clear previous user data
 			await clearAllUserData();
 
 			const { user } = await signInWithEmailAndPassword(auth, email, password);
@@ -107,16 +107,16 @@ export const AuthProvider = ({ children }) => {
 
 	const signOut = async () => {
 		try {
-			// Clear notifications and cached data
-			await clearAllUserData();
-
-			// Cleanup subscriptions
+			// Clean up all subscriptions and await promise
 			await Promise.resolve(cleanupSubscriptions());
 
-			// Wait for cleanup to complete
-			await new Promise((resolve) => setTimeout(resolve, 300));
+			// Clear all user data
+			await clearAllUserData();
 
-			// Sign out
+			// Delay to make sure all cleanup operations have completed
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			// Sign out of Firebase
 			await firebaseSignOut(auth);
 			setUser(null);
 			return { error: null };
