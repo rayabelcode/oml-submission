@@ -132,6 +132,32 @@ class NotificationCoordinator {
 		}
 	}
 
+	async clearAllNotifications() {
+		try {
+			// Cancel all scheduled notifications
+			await Notifications.cancelAllScheduledNotificationsAsync();
+
+			// Clear the notification map
+			this.notificationMap.clear();
+			await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.NOTIFICATION_MAP);
+
+			// Clear pending queue
+			this.pendingQueue.clear();
+			await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.PENDING_QUEUE);
+
+			// Clear follow-up notifications
+			await AsyncStorage.removeItem('follow_up_notifications');
+
+			// Reset badge count
+			await this.resetBadge();
+
+			return true;
+		} catch (error) {
+			console.error('[NotificationCoordinator] Error clearing all notifications:', error);
+			return false;
+		}
+	}
+
 	async requestPermissions() {
 		try {
 			const { status: existingStatus } = await Notifications.getPermissionsAsync();

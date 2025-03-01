@@ -55,6 +55,9 @@ import { act } from 'react-test-renderer';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { auth } from '../../config/firebase';
 import { Alert } from 'react-native';
+import { cacheManager } from '../../utils/cache';
+import { notificationCoordinator } from '../../utils/notificationCoordinator';
+import * as Notifications from 'expo-notifications';
 import {
 	onAuthStateChanged,
 	signInWithEmailAndPassword,
@@ -64,6 +67,25 @@ import {
 	signInWithCredential,
 	OAuthProvider,
 } from 'firebase/auth';
+
+jest.mock('../../utils/cache', () => ({
+	cacheManager: {
+		clearAllUserData: jest.fn().mockResolvedValue(true),
+	},
+}));
+
+jest.mock('../../utils/notificationCoordinator', () => ({
+	notificationCoordinator: {
+		clearAllNotifications: jest.fn().mockResolvedValue(true),
+		notificationMap: new Map(),
+	},
+}));
+
+jest.mock('expo-notifications', () => ({
+	...jest.requireActual('expo-notifications'),
+	cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(true),
+	setBadgeCountAsync: jest.fn().mockResolvedValue(true),
+}));
 
 // Mock Alert
 jest.spyOn(Alert, 'alert');
@@ -352,5 +374,157 @@ describe('Account Deletion', () => {
 
 		expect(error).toBeTruthy();
 		expect(error.message).toBe('Deletion failed');
+	});
+});
+
+describe('Data Clearing', () => {
+	beforeEach(() => {
+		jest.clearAllMocks();
+
+		// Default mock user for onAuthStateChanged
+		onAuthStateChanged.mockImplementation((auth, callback) => {
+			callback({ uid: 'test-user-id' });
+			return () => {};
+		});
+	});
+
+	it('clears cache and notifications on sign in', async () => {
+		signInWithEmailAndPassword.mockResolvedValueOnce({
+			user: { email: 'test@example.com', uid: 'test-user-id' },
+		});
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await result.current.signIn({
+				email: 'test@example.com',
+				password: 'password123',
+			});
+		});
+
+		// Check if cache and notifications were cleared
+		expect(cacheManager.clearAllUserData).toHaveBeenCalled();
+		expect(notificationCoordinator.clearAllNotifications).toHaveBeenCalled();
+	});
+
+	it('clears cache and notifications on sign up', async () => {
+		createUserWithEmailAndPassword.mockResolvedValueOnce({
+			user: { email: 'new@example.com', uid: 'new-user-id' },
+		});
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await result.current.signUp({
+				email: 'new@example.com',
+				password: 'password123',
+			});
+		});
+
+		// Check if cache and notifications were cleared
+		expect(cacheManager.clearAllUserData).toHaveBeenCalled();
+		expect(notificationCoordinator.clearAllNotifications).toHaveBeenCalled();
+	});
+
+	it('clears cache and notifications on Apple sign in', async () => {
+		const mockAppleCredential = {
+			identityToken: 'mock-token',
+			nonce: 'mock-nonce',
+			fullName: {
+				givenName: 'John',
+				familyName: 'Doe',
+			},
+		};
+
+		require('expo-apple-authentication').signInAsync.mockResolvedValueOnce(mockAppleCredential);
+
+		signInWithCredential.mockResolvedValueOnce({
+			user: {
+				email: 'apple@example.com',
+				uid: 'apple-user-id',
+			},
+		});
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await result.current.signInWithApple();
+		});
+
+		// Check if cache and notifications were cleared
+		expect(cacheManager.clearAllUserData).toHaveBeenCalled();
+		expect(notificationCoordinator.clearAllNotifications).toHaveBeenCalled();
+	});
+
+	it('clears cache and notifications on sign out', async () => {
+		signOut.mockResolvedValueOnce();
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		await act(async () => {
+			await result.current.signOut();
+		});
+
+		// Check if cache and notifications were cleared
+		expect(cacheManager.clearAllUserData).toHaveBeenCalled();
+		expect(notificationCoordinator.clearAllNotifications).toHaveBeenCalled();
+	});
+
+	it('handles errors during data clearing on sign out', async () => {
+		// Mock an error during cache clearing
+		cacheManager.clearAllUserData.mockRejectedValueOnce(new Error('Cache clearing failed'));
+
+		signOut.mockResolvedValueOnce();
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		// Call signOut
+		let response;
+		await act(async () => {
+			response = await result.current.signOut();
+		});
+
+		// Should still attempt to sign out even if cache clearing fails
+		expect(signOut).toHaveBeenCalled();
+
+		expect(cacheManager.clearAllUserData).toHaveBeenCalled();
+	});
+
+	it('proceeds with login even if data clearing fails', async () => {
+		// Mock an error during notification clearing
+		notificationCoordinator.clearAllNotifications.mockRejectedValueOnce(
+			new Error('Notification clearing failed')
+		);
+
+		signInWithEmailAndPassword.mockResolvedValueOnce({
+			user: { email: 'test@example.com', uid: 'test-user-id' },
+		});
+
+		const { result } = renderHook(() => useAuth(), {
+			wrapper: AuthProvider,
+		});
+
+		let response;
+		await act(async () => {
+			response = await result.current.signIn({
+				email: 'test@example.com',
+				password: 'password123',
+			});
+		});
+
+		// Should still successfully log in
+		expect(response.data).toBeTruthy();
+		expect(response.error).toBeNull();
+		expect(signInWithEmailAndPassword).toHaveBeenCalled();
 	});
 });

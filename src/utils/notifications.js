@@ -184,15 +184,7 @@ class NotificationService {
 	}
 
 	async clearAllNotifications() {
-		try {
-			await Notifications.cancelAllScheduledNotificationsAsync();
-			this.badgeCount = 0;
-			await AsyncStorage.setItem('badgeCount', '0');
-			return true;
-		} catch (error) {
-			console.error('Error clearing all notifications:', error);
-			return false;
-		}
+		return await notificationCoordinator.clearAllNotifications();
 	}
 
 	async incrementBadge() {

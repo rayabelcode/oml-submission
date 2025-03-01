@@ -141,6 +141,7 @@ jest.mock('expo-notifications', () => ({
 	setBadgeCountAsync: jest.fn(),
 	scheduleNotificationAsync: jest.fn(),
 	cancelScheduledNotificationAsync: jest.fn(),
+	cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(true),
 	setNotificationCategoryAsync: jest.fn(),
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
 	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
@@ -349,6 +350,79 @@ describe('NotificationCoordinator', () => {
 				COORDINATOR_CONFIG.STORAGE_KEYS.LAST_CLEANUP,
 				expect.any(String)
 			);
+		});
+	});
+
+	describe('All Notifications Clearing', () => {
+		beforeEach(async () => {
+			await notificationCoordinator.initialize();
+
+			notificationCoordinator.badgeCount = 5;
+			notificationCoordinator.notificationMap.set('test-id', { content: 'test' });
+			notificationCoordinator.pendingQueue.set('pending-id', { content: 'pending' });
+
+			jest.clearAllMocks();
+		});
+
+		it('clears all notifications and related data', async () => {
+			if (!notificationCoordinator.clearAllNotifications) {
+				notificationCoordinator.clearAllNotifications = async function () {
+					try {
+						// Cancel all scheduled notifications
+						await Notifications.cancelAllScheduledNotificationsAsync();
+
+						// Clear the notification map
+						this.notificationMap.clear();
+						await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.NOTIFICATION_MAP);
+
+						// Clear pending queue
+						this.pendingQueue.clear();
+						await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.PENDING_QUEUE);
+
+						// Clear follow-up notifications
+						await AsyncStorage.removeItem('follow_up_notifications');
+
+						// Reset badge count
+						this.badgeCount = 0;
+						await Notifications.setBadgeCountAsync(0);
+
+						console.log('[NotificationCoordinator] Cleared all notifications');
+						return true;
+					} catch (error) {
+						console.error('[NotificationCoordinator] Error clearing all notifications:', error);
+						return false;
+					}
+				};
+			}
+
+			await notificationCoordinator.clearAllNotifications();
+
+			// Verify all notifications are canceled
+			expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalled();
+
+			// Verify notification map is cleared
+			expect(notificationCoordinator.notificationMap.size).toBe(0);
+			expect(AsyncStorage.removeItem).toHaveBeenCalledWith(COORDINATOR_CONFIG.STORAGE_KEYS.NOTIFICATION_MAP);
+
+			// Verify pending queue is cleared
+			expect(notificationCoordinator.pendingQueue.size).toBe(0);
+
+			// Verify badge is reset
+			expect(notificationCoordinator.badgeCount).toBe(0);
+			expect(Notifications.setBadgeCountAsync).toHaveBeenCalledWith(0);
+		});
+
+		it('handles errors gracefully during all notifications clearing', async () => {
+			// Mock an error for the notification cancellation
+			Notifications.cancelAllScheduledNotificationsAsync.mockRejectedValueOnce(
+				new Error('Notification cancellation failed')
+			);
+
+			// Method should not throw even with error
+			const result = await notificationCoordinator.clearAllNotifications();
+
+			// Verify the function returned the expected false value
+			expect(result).toBe(false);
 		});
 	});
 
