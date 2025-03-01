@@ -27,6 +27,7 @@ import {
 } from '../utils/firestore';
 import { NotificationsView } from '../components/dashboard/NotificationsView';
 import { notificationService } from '../utils/notifications';
+import { eventEmitter } from '../utils/notifications';
 import ContactCard from '../components/dashboard/ContactCard';
 import ActionModal from '../components/general/ActionModal';
 import { useFocusEffect } from '@react-navigation/native';
@@ -193,6 +194,17 @@ export default function DashboardScreen({ navigation, route }) {
 			}
 		}, [user])
 	);
+
+	useEffect(() => {
+		// Listen for new follow-up notifications
+		const listener = () => loadReminders();
+		eventEmitter.on('followUpCreated', listener);
+
+		// Clean up
+		return () => {
+			eventEmitter.off('followUpCreated', listener);
+		};
+	}, []);
 
 	// Function to show reminders
 	const loadReminders = async () => {
