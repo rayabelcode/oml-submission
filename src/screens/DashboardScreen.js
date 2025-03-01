@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
 	Text,
 	View,
@@ -8,6 +8,7 @@ import {
 	Alert,
 	KeyboardAvoidingView,
 	Platform,
+	ActivityIndicator,
 } from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
@@ -125,6 +126,8 @@ export default function DashboardScreen({ navigation, route }) {
 	const { colors } = useTheme();
 	const styles = useStyles();
 	const commonStyles = useCommonStyles();
+	const [isLoading, setIsLoading] = useState(true);
+	const initialLoadCompletedRef = useRef(false);
 	const [contacts, setContacts] = useState([]);
 	const [refreshing, setRefreshing] = useState(false);
 	const [loading, setLoading] = useState(true);
@@ -136,6 +139,7 @@ export default function DashboardScreen({ navigation, route }) {
 	const [stats, setStats] = useState(null);
 	const [showCallOptions, setShowCallOptions] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
+
 	const [remindersState, setRemindersState] = useState({
 		data: [],
 		loading: true,
@@ -193,6 +197,11 @@ export default function DashboardScreen({ navigation, route }) {
 	// Function to show reminders
 	const loadReminders = async () => {
 		try {
+			// Show loading animation on first load
+			if (!initialLoadCompletedRef.current) {
+				setIsLoading(true);
+			}
+
 			// Get cloud reminders
 			const [scheduledReminders, customReminders, followUpReminders] = await Promise.all([
 				getScheduledReminders(user.uid),
@@ -293,6 +302,10 @@ export default function DashboardScreen({ navigation, route }) {
 				loading: false,
 				error: null,
 			});
+
+			// Mark initial load as completed and stop loading
+			initialLoadCompletedRef.current = true;
+			setIsLoading(false);
 		} catch (error) {
 			console.error('[DashboardScreen] Error loading reminders:', error);
 			setRemindersState({
@@ -300,6 +313,10 @@ export default function DashboardScreen({ navigation, route }) {
 				loading: false,
 				error: 'Failed to load reminders',
 			});
+
+			// Still mark as completed even on error
+			initialLoadCompletedRef.current = true;
+			setIsLoading(false);
 			Alert.alert('Error', 'Failed to load reminders');
 		}
 	};
@@ -605,6 +622,14 @@ export default function DashboardScreen({ navigation, route }) {
 		);
 	}
 
+	if (isLoading && !initialLoadCompletedRef.current) {
+		return (
+			<View style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+				<ActivityIndicator size="extra-large" color={colors.primary} />
+			</View>
+		);
+	}
+
 	return (
 		<KeyboardAvoidingView
 			behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -648,52 +673,51 @@ export default function DashboardScreen({ navigation, route }) {
 						)}
 					</View>
 
-{/* Suggested Calls Section - only show when not empty */}
-{stats?.detailed?.needsAttention && stats.detailed.needsAttention.length > 0 && (
-  <View style={styles.section}>
-    <View style={commonStyles.card}>
-      <View style={styles.groupHeader}>
-        <Text style={styles.groupTitle}>Suggested Calls</Text>
-      </View>
+					{/* Suggested Calls Section - only show when not empty */}
+					{stats?.detailed?.needsAttention && stats.detailed.needsAttention.length > 0 && (
+						<View style={styles.section}>
+							<View style={commonStyles.card}>
+								<View style={styles.groupHeader}>
+									<Text style={styles.groupTitle}>Suggested Calls</Text>
+								</View>
 
-      <View>
-        {stats.detailed.needsAttention.map((contact, index, array) => (
-          <View
-            key={contact.id}
-            style={[
-              styles.attentionItem,
-              index !== array.length - 1 && {
-                borderBottomWidth: 1,
-                borderBottomColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.attentionInfo}>
-              <Text style={styles.contactName}>{contact.name}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.callButton}
-              onPress={() => {
-                const formattedContact = {
-                  ...contact,
-                  first_name: contact.name.split(' ')[0],
-                  last_name: contact.name.split(' ').slice(1).join(' '),
-                  phone: contact.phone,
-                };
-                setSelectedContact(formattedContact);
-                setShowCallOptions(true);
-              }}
-            >
-              <Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
-              <Text style={styles.callButtonText}>Contact</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-    </View>
-  </View>
-)}
-
+								<View>
+									{stats.detailed.needsAttention.map((contact, index, array) => (
+										<View
+											key={contact.id}
+											style={[
+												styles.attentionItem,
+												index !== array.length - 1 && {
+													borderBottomWidth: 1,
+													borderBottomColor: colors.border,
+												},
+											]}
+										>
+											<View style={styles.attentionInfo}>
+												<Text style={styles.contactName}>{contact.name}</Text>
+											</View>
+											<TouchableOpacity
+												style={styles.callButton}
+												onPress={() => {
+													const formattedContact = {
+														...contact,
+														first_name: contact.name.split(' ')[0],
+														last_name: contact.name.split(' ').slice(1).join(' '),
+														phone: contact.phone,
+													};
+													setSelectedContact(formattedContact);
+													setShowCallOptions(true);
+												}}
+											>
+												<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
+												<Text style={styles.callButtonText}>Contact</Text>
+											</TouchableOpacity>
+										</View>
+									))}
+								</View>
+							</View>
+						</View>
+					)}
 				</ScrollView>
 
 				<ActionModal
