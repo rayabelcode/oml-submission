@@ -154,7 +154,7 @@ const ProfileScreen = ({ navigation }) => {
 			{loggingOut && (
 				<View style={styles.loadingOverlay}>
 					<ActivityIndicator size="large" color={colors.primary} />
-					<Text style={styles.loadingText}>Logging Out...</Text>
+					<Text style={styles.loadingText}>Logging Out</Text>
 				</View>
 			)}
 

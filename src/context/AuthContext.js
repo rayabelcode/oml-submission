@@ -72,7 +72,54 @@ export const AuthProvider = ({ children }) => {
 			});
 			return { data: user, error: null };
 		} catch (error) {
-			return { data: null, error };
+			// Handle Apple authentication errors
+			const errorMessage = error.message || '';
+
+			if (errorMessage.includes('canceled') || errorMessage.includes('cancelled')) {
+				console.log('User cancelled Apple Sign In');
+				// Return specific error for cancellation
+				return {
+					data: null,
+					error: {
+						code: 'auth/cancelled',
+						message: 'Sign in was cancelled',
+					},
+				};
+			}
+
+			if (errorMessage.includes('invalid') || errorMessage.includes('authorization')) {
+				console.log('Apple Sign In authorization needs renewal');
+				return {
+					data: null,
+					error: {
+						code: 'auth/authorization-expired',
+						message: 'Your Apple ID authorization needs to be renewed. Please try again.',
+					},
+				};
+			}
+
+			if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+				console.log('Network error during Apple Sign In');
+				return {
+					data: null,
+					error: {
+						code: 'auth/network-error',
+						message: 'Cannot connect to Apple services. Please check your connection.',
+					},
+				};
+			}
+
+			// Log full error for debugging
+			console.error('Apple sign in error:', error);
+
+			// Return generic error for other cases
+			return {
+				data: null,
+				error: {
+					code: 'auth/apple-sign-in-failed',
+					message: 'Failed to sign in with Apple. Please try again.',
+				},
+			};
 		}
 	};
 
