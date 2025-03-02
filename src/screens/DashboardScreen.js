@@ -693,6 +693,11 @@ export default function DashboardScreen({ navigation, route }) {
 									<Text style={styles.groupTitle}>Suggested Calls</Text>
 								</View>
 
+								{/* Explanation text */}
+								<Text style={styles.contactReason}>
+									Based on your contact schedules
+								</Text>
+
 								<View>
 									{stats.detailed.needsAttention.map((contact, index, array) => (
 										<View
