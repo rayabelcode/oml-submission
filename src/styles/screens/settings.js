@@ -125,7 +125,7 @@ const createStyles = (colors) =>
 			alignSelf: 'center',
 			marginTop: spacing.xs,
 			marginBottom: spacing.md,
-		},		
+		},
 		primaryButtonText: {
 			color: colors.text.white,
 			fontWeight: '700',
@@ -158,8 +158,8 @@ const createStyles = (colors) =>
 		},
 		dangerButtonText: {
 			color: colors.background.primary,
-			fontWeight: '700',
-			fontSize: 17,
+			fontWeight: '800',
+			fontSize: 18,
 			marginLeft: spacing.xs,
 		},
 		disabledButton: {
@@ -390,8 +390,15 @@ const createStyles = (colors) =>
 			right: 0,
 			bottom: 0,
 			backgroundColor: colors.background.overlay,
+			zIndex: 999,
 			justifyContent: 'center',
 			alignItems: 'center',
+		},
+		loadingText: {
+			color: 'white',
+			marginTop: spacing.xl,
+			fontSize: 20,
+			fontWeight: '700',
 		},
 		safeArea: {
 			flex: 1,

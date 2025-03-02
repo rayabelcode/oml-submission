@@ -11,6 +11,9 @@ import {
 import { auth } from '../config/firebase';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { createUserDocument, cleanupSubscriptions } from '../utils/firestore';
+import { cacheManager } from '../utils/cache';
+import { notificationCoordinator } from '../utils/notificationCoordinator';
+import * as Notifications from 'expo-notifications';
 
 const AuthContext = createContext({});
 
@@ -27,8 +30,27 @@ export const AuthProvider = ({ children }) => {
 		return unsubscribe;
 	}, []);
 
+	// Clear all user-related data
+	const clearAllUserData = async () => {
+		try {
+			// Clear notifications
+			await notificationCoordinator.clearAllNotifications();
+
+			// Clear all cached data
+			await cacheManager.clearAllUserData();
+
+			return true;
+		} catch (error) {
+			console.error('[AuthContext] Error clearing user data:', error);
+			return false;
+		}
+	};
+
 	const signInWithApple = async () => {
 		try {
+			// Clear previous user data
+			await clearAllUserData();
+
 			const credential = await AppleAuthentication.signInAsync({
 				requestedScopes: [
 					AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -50,12 +72,62 @@ export const AuthProvider = ({ children }) => {
 			});
 			return { data: user, error: null };
 		} catch (error) {
-			return { data: null, error };
+			// Handle Apple authentication errors
+			const errorMessage = error.message || '';
+
+			if (errorMessage.includes('canceled') || errorMessage.includes('cancelled')) {
+				console.log('User cancelled Apple Sign In');
+				// Return specific error for cancellation
+				return {
+					data: null,
+					error: {
+						code: 'auth/cancelled',
+						message: 'Sign in was cancelled',
+					},
+				};
+			}
+
+			if (errorMessage.includes('invalid') || errorMessage.includes('authorization')) {
+				console.log('Apple Sign In authorization needs renewal');
+				return {
+					data: null,
+					error: {
+						code: 'auth/authorization-expired',
+						message: 'Your Apple ID authorization needs to be renewed. Please try again.',
+					},
+				};
+			}
+
+			if (errorMessage.includes('network') || errorMessage.includes('connection')) {
+				console.log('Network error during Apple Sign In');
+				return {
+					data: null,
+					error: {
+						code: 'auth/network-error',
+						message: 'Cannot connect to Apple services. Please check your connection.',
+					},
+				};
+			}
+
+			// Log full error for debugging
+			console.error('Apple sign in error:', error);
+
+			// Return generic error for other cases
+			return {
+				data: null,
+				error: {
+					code: 'auth/apple-sign-in-failed',
+					message: 'Failed to sign in with Apple. Please try again.',
+				},
+			};
 		}
 	};
 
 	const signUp = async ({ email, password }) => {
 		try {
+			// Clear previous user data
+			await clearAllUserData();
+
 			const { user } = await createUserWithEmailAndPassword(auth, email, password);
 			await createUserDocument(user.uid, {
 				email: user.email,
@@ -70,6 +142,9 @@ export const AuthProvider = ({ children }) => {
 
 	const signIn = async ({ email, password }) => {
 		try {
+			// Clear previous user data
+			await clearAllUserData();
+
 			const { user } = await signInWithEmailAndPassword(auth, email, password);
 			return { data: user, error: null };
 		} catch (error) {
@@ -79,13 +154,16 @@ export const AuthProvider = ({ children }) => {
 
 	const signOut = async () => {
 		try {
-			// Cleanup subscriptions
+			// Clean up all subscriptions and await promise
 			await Promise.resolve(cleanupSubscriptions());
 
-			// Wait for cleanup to complete
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// Clear all user data
+			await clearAllUserData();
 
-			// Sign out
+			// Delay to make sure all cleanup operations have completed
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
+			// Sign out of Firebase
 			await firebaseSignOut(auth);
 			setUser(null);
 			return { error: null };
@@ -111,7 +189,7 @@ export const AuthProvider = ({ children }) => {
 
 	const value = {
 		user,
-		setUser, // Expose setUser
+		setUser,
 		signUp,
 		signIn,
 		signOut,

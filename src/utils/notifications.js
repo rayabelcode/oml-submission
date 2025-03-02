@@ -6,6 +6,8 @@ import { scheduledCallService } from './scheduledCalls';
 import { schedulingHistory } from './scheduler/schedulingHistory';
 import { NOTIFICATION_MAP_KEY, REMINDER_TYPES } from '../../constants/notificationConstants';
 import { notificationCoordinator } from './notificationCoordinator';
+import { EventEmitter } from 'events';
+const eventEmitter = new EventEmitter();
 
 class NotificationService {
 	constructor() {
@@ -162,6 +164,8 @@ class NotificationService {
 
 			await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(notificationsList));
 
+			eventEmitter.emit('followUpCreated');
+
 			// Update badge count properly
 			const currentBadge = await Notifications.getBadgeCountAsync();
 			await Notifications.setBadgeCountAsync(currentBadge + 1);
@@ -184,15 +188,7 @@ class NotificationService {
 	}
 
 	async clearAllNotifications() {
-		try {
-			await Notifications.cancelAllScheduledNotificationsAsync();
-			this.badgeCount = 0;
-			await AsyncStorage.setItem('badgeCount', '0');
-			return true;
-		} catch (error) {
-			console.error('Error clearing all notifications:', error);
-			return false;
-		}
+		return await notificationCoordinator.clearAllNotifications();
 	}
 
 	async incrementBadge() {
@@ -253,3 +249,5 @@ class NotificationService {
 }
 
 export const notificationService = new NotificationService();
+
+export { eventEmitter };

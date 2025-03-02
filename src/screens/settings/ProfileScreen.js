@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import {
+	View,
+	Text,
+	Image,
+	TouchableOpacity,
+	ScrollView,
+	TextInput,
+	Alert,
+	ActivityIndicator,
+} from 'react-native';
 import { useStyles } from '../../styles/screens/settings';
 import { useTheme } from '../../context/ThemeContext';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -22,6 +31,7 @@ const ProfileScreen = ({ navigation }) => {
 	const profilePhotoRef = useRef(null);
 	const [hasChanges, setHasChanges] = useState(false);
 	const lastNameInputRef = useRef(null);
+	const [loggingOut, setLoggingOut] = useState(false);
 
 	const handleLogout = async () => {
 		Alert.alert(
@@ -37,8 +47,11 @@ const ProfileScreen = ({ navigation }) => {
 					style: 'destructive',
 					onPress: async () => {
 						try {
+							// Set loading state
+							setLoggingOut(true);
+
 							// Clean up all subscriptions before signing out
-							cleanupSubscriptions();
+							await Promise.resolve(cleanupSubscriptions());
 
 							// Small delay to make sure cleanup completes
 							await new Promise((resolve) => setTimeout(resolve, 800));
@@ -46,6 +59,7 @@ const ProfileScreen = ({ navigation }) => {
 							const { error } = await signOut();
 							if (error) throw error;
 						} catch (error) {
+							setLoggingOut(false);
 							Alert.alert('Error', error.message);
 						}
 					},
@@ -136,6 +150,14 @@ const ProfileScreen = ({ navigation }) => {
 
 	return (
 		<View style={styles.container}>
+			{/* Loading overlay for logout */}
+			{loggingOut && (
+				<View style={styles.loadingOverlay}>
+					<ActivityIndicator size="large" color={colors.primary} />
+					<Text style={styles.loadingText}>Logging Out</Text>
+				</View>
+			)}
+
 			{/* Header with back button and title */}
 			<View style={styles.screenHeader}>
 				<TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
@@ -225,9 +247,9 @@ const ProfileScreen = ({ navigation }) => {
 				{/* Logout Card */}
 				<View style={styles.settingsCard}>
 					<Text style={styles.cardTitleCenter}>Session</Text>
-					<TouchableOpacity style={styles.dangerButton} onPress={handleLogout}>
-						<Icon name="log-out-outline" size={24} color={colors.background.primary} />
-						<Text style={styles.dangerButtonText}>Log Out</Text>
+					<TouchableOpacity style={styles.dangerButton} onPress={handleLogout} disabled={loggingOut}>
+						<Icon name="log-out" size={25} color={colors.background.primary} />
+						<Text style={styles.dangerButtonText}>{loggingOut ? 'Logging Out...' : 'Log Out'}</Text>
 					</TouchableOpacity>
 				</View>
 			</ScrollView>

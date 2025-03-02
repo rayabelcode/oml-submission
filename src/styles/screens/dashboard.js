@@ -215,6 +215,13 @@ const useStyles = () => {
 		attentionInfo: {
 			flex: 1,
 		},
+		contactReason: {
+			fontSize: 14,
+			fontWeight: '500',
+			textAlign: 'center',
+			color: colors.text.secondary,
+			marginBottom: spacing.xs,
+		},
 		contactName: {
 			fontSize: 18,
 			fontWeight: '700',

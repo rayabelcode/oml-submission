@@ -8,6 +8,7 @@ import { completeFollowUp } from '../../utils/callHandler';
 import { cleanupService } from '../../utils/cleanup';
 import { SchedulingService } from '../../utils/scheduler/scheduler';
 import { handleNotificationResponse } from '../../utils/notifications/notificationHandler';
+import { eventEmitter } from '../../utils/notifications';
 import * as Notifications from 'expo-notifications';
 import {
 	getReminder,
@@ -99,6 +100,9 @@ jest.mock('expo-notifications', () => ({
 	scheduleNotificationAsync: jest.fn(),
 	cancelScheduledNotificationAsync: jest.fn(),
 	getAllScheduledNotificationsAsync: jest.fn(),
+	presentNotificationAsync: jest.fn().mockReturnValue('mock-notification-id'),
+	getBadgeCountAsync: jest.fn().mockResolvedValue(0),
+	setBadgeCountAsync: jest.fn().mockResolvedValue(1),
 }));
 
 // Mock NetInfo
@@ -866,5 +870,45 @@ describe('Complete Reminder Lifecycle', () => {
 				})
 			);
 		});
+	});
+
+	it('emits an event when a follow-up notification is created', async () => {
+		const mockNotifications = require('expo-notifications');
+		mockNotifications.scheduleNotificationAsync.mockResolvedValue('mock-notification-id');
+		mockNotifications.presentNotificationAsync.mockResolvedValue('mock-notification-id');
+		mockNotifications.getBadgeCountAsync.mockResolvedValue(0);
+		mockNotifications.setBadgeCountAsync.mockResolvedValue(1);
+
+		// Mock AsyncStorage
+		const AsyncStorage = require('@react-native-async-storage/async-storage');
+		AsyncStorage.getItem.mockResolvedValue(JSON.stringify([]));
+		AsyncStorage.setItem.mockResolvedValue(undefined);
+
+		// Mock the event emitter
+		const { eventEmitter } = require('../../utils/notifications');
+		const emitSpy = jest.spyOn(eventEmitter, 'emit');
+
+		// Create a simple mock contact
+		const mockContact = {
+			id: 'contact-123',
+			first_name: 'John',
+			last_name: 'Doe',
+			callData: {
+				startTime: new Date().toISOString(),
+				type: 'phone',
+			},
+		};
+
+		// Future time to make sure we use scheduleNotificationAsync
+		const futureTime = new Date(Date.now() + 60000);
+
+		// Get the notification service
+		const { notificationService } = require('../../utils/notifications');
+
+		// Call method that should emit the event
+		await notificationService.scheduleCallFollowUp(mockContact, futureTime);
+
+		// Verify the event was emitted
+		expect(emitSpy).toHaveBeenCalledWith('followUpCreated');
 	});
 });

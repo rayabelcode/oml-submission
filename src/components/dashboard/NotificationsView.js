@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
+import React, { useState, useCallback, useRef, memo, useMemo } from 'react';
 import {
 	View,
 	Text,
@@ -292,6 +292,16 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 
 	const handleSubmitNotes = useCallback((reminderId, notes) => onComplete(reminderId, notes), [onComplete]);
 
+	// Always sort reminders before rendering (with null check)
+	const sortedReminders = useMemo(() => {
+		if (!reminders || reminders.length === 0) return [];
+		return [...reminders].sort((a, b) => {
+			const dateA = new Date(a.scheduledTime || 0);
+			const dateB = new Date(b.scheduledTime || 0);
+			return dateA - dateB;
+		});
+	}, [reminders]);
+
 	return (
 		<ScrollView
 			style={[styles.notificationsContainer, { backgroundColor: 'transparent' }]}
@@ -303,12 +313,12 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 		>
 			{loading ? (
 				<Text style={styles.message}>Loading notifications...</Text>
-			) : reminders.length === 0 ? (
+			) : !reminders || sortedReminders.length === 0 ? (
 				<Text style={styles.message}>No notifications</Text>
 			) : (
-				reminders.map((reminder) => (
+				sortedReminders.map((reminder, index) => (
 					<ReminderCard
-						key={reminder.firestoreId}
+						key={reminder.firestoreId || `reminder-${index}`}
 						reminder={reminder}
 						onComplete={onComplete}
 						onSnooze={onSnooze}

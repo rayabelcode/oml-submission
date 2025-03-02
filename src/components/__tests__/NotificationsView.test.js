@@ -250,4 +250,133 @@ describe('NotificationsView', () => {
 		const customCallReminders = getAllByText('12/31/2024 Custom Call Reminder');
 		expect(customCallReminders).toHaveLength(2);
 	});
+
+	it('sorts reminders by scheduledTime correctly', () => {
+		// Create reminders with out-of-order dates
+		const unsortedReminders = [
+			{
+				firestoreId: 'reminder3',
+				scheduledTime: '2024-11-01T10:00:00.000Z', // November 1st
+				localId: 'local3',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'Last Person',
+			},
+			{
+				firestoreId: 'reminder1',
+				scheduledTime: '2024-10-15T10:00:00.000Z', // October 15th - should come first
+				localId: 'local1',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'First Person',
+			},
+			{
+				firestoreId: 'reminder2',
+				scheduledTime: '2024-10-20T10:00:00.000Z', // October 20th - should come second
+				localId: 'local2',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'Middle Person',
+			},
+		];
+
+		// Render the component with unsorted reminders
+		const { getAllByText } = render(<NotificationsView {...defaultProps} reminders={unsortedReminders} />);
+
+		// Get all reminder titles containing "Person"
+		const personElements = getAllByText(/Person$/);
+
+		// First should be "First Person" (earliest date)
+		expect(personElements[0].props.children).toBe('First Person');
+
+		// Second should be "Middle Person"
+		expect(personElements[1].props.children).toBe('Middle Person');
+
+		// Third should be "Last Person" (latest date)
+		expect(personElements[2].props.children).toBe('Last Person');
+	});
+
+	it('handles empty or null reminders gracefully', () => {
+		// Test with null reminders
+		const { getByText: getByText1 } = render(<NotificationsView {...defaultProps} reminders={null} />);
+		expect(getByText1('No notifications')).toBeTruthy();
+
+		// Test with undefined reminders
+		const { getByText: getByText2 } = render(<NotificationsView {...defaultProps} reminders={undefined} />);
+		expect(getByText2('No notifications')).toBeTruthy();
+
+		// Test with empty array reminders
+		const { getByText: getByText3 } = render(<NotificationsView {...defaultProps} reminders={[]} />);
+		expect(getByText3('No notifications')).toBeTruthy();
+	});
+
+	it('handles reminders with missing or invalid scheduledTime', () => {
+		const problematicReminders = [
+			{
+				firestoreId: 'reminder1',
+				// Missing scheduledTime
+				localId: 'local1',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'Missing Date',
+			},
+			{
+				firestoreId: 'reminder2',
+				scheduledTime: 'invalid-date-string',
+				localId: 'local2',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'Invalid Date',
+			},
+			{
+				firestoreId: 'reminder3',
+				scheduledTime: '2024-12-31T17:21:18.881Z', // Valid date
+				localId: 'local3',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'Valid Date',
+			},
+		];
+
+		// Component should not crash with problematic data
+		const { getByText } = render(<NotificationsView {...defaultProps} reminders={problematicReminders} />);
+
+		// Should still render the valid reminder
+		expect(getByText('Valid Date')).toBeTruthy();
+	});
+
+	it('applies sorting consistently even when reminders change', () => {
+		// Start with one set of reminders
+		const initialReminders = [
+			{
+				firestoreId: 'reminder1',
+				scheduledTime: '2024-12-01T17:21:18.881Z',
+				localId: 'local1',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'December Person',
+			},
+		];
+
+		const { rerender, getByText } = render(
+			<NotificationsView {...defaultProps} reminders={initialReminders} />
+		);
+
+		expect(getByText('December Person')).toBeTruthy();
+
+		// Add a new reminder with an earlier date
+		const updatedReminders = [
+			...initialReminders,
+			{
+				firestoreId: 'reminder2',
+				scheduledTime: '2024-11-01T17:21:18.881Z', // November - should come first
+				localId: 'local2',
+				type: REMINDER_TYPES.SCHEDULED,
+				contactName: 'November Person',
+			},
+		];
+
+		// Rerender with the new reminders
+		rerender(<NotificationsView {...defaultProps} reminders={updatedReminders} />);
+
+		// Get all contact elements
+		const contactElements = [getByText('November Person'), getByText('December Person')];
+
+		// November should appear before December in the DOM
+		expect(contactElements[0].props.children).toBe('November Person');
+		expect(contactElements[1].props.children).toBe('December Person');
+	});
 });

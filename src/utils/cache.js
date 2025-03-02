@@ -146,6 +146,33 @@ export const cacheManager = {
 		}
 	},
 
+	async clearAllUserData() {
+		try {
+			// Get all keys in AsyncStorage
+			const allKeys = await AsyncStorage.getAllKeys();
+
+			// Filter for keys related to user data and notifications
+			const keysToRemove = allKeys.filter(
+				(key) =>
+					key.includes('cached_') ||
+					key.includes('follow_up_notifications') ||
+					key.includes('notification_map') ||
+					key.includes('last_updated') ||
+					key.includes('scheduling_history') ||
+					key === 'badgeCount'
+			);
+
+			if (keysToRemove.length > 0) {
+				await AsyncStorage.multiRemove(keysToRemove);
+			}
+
+			return true;
+		} catch (error) {
+			console.error('[CacheManager] Error clearing all user data:', error);
+			return false;
+		}
+	},
+
 	async updateLastUpdated(id, cacheType) {
 		try {
 			await AsyncStorage.setItem(CACHE_KEYS.LAST_UPDATED + cacheType + id, new Date().toISOString());

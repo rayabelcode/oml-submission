@@ -10,6 +10,7 @@ import {
 	ScrollView,
 	SafeAreaView,
 	Animated,
+	Alert,
 } from 'react-native';
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -41,10 +42,16 @@ const AuthSection = ({
 	const handleAppleSignIn = async () => {
 		try {
 			const result = await signInWithApple();
+
 			if (result.error) {
+				// Don't show alerts for user cancellation
+				if (result.error.code !== 'auth/cancelled') {
+					Alert.alert('Sign In Issue', result.error.message);
+				}
 				console.log(result.error);
 			}
 		} catch (error) {
+			Alert.alert('Sign In Failed', 'There was an unexpected problem signing in with Apple.');
 			console.log(error);
 		}
 	};
