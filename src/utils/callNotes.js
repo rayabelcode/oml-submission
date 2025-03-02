@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationCoordinator } from './notificationCoordinator';
 import { REMINDER_TYPES } from '../../constants/notificationConstants';
 import { navigate } from '../navigation/RootNavigation';
+import { getContactById } from './firestore';
 
 class CallNotesService {
 	constructor() {
