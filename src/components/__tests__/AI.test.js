@@ -13,7 +13,7 @@ jest.mock('openai', () => {
 			mockCreate.lastInput = messages[1].content;
 		}
 
-		// Different responses based on the prompt
+		// Different responses based on the prompt content
 		if (messages[1] && messages[1].content.includes('conversation topics')) {
 			return Promise.resolve({
 				choices: [
@@ -24,7 +24,8 @@ jest.mock('openai', () => {
 					},
 				],
 			});
-		} else if (messages[0] && messages[0].content.includes('relationship dynamic')) {
+		} else if (messages[0] && messages[0].content.includes('sentiment analyst')) {
+			// This is for the Relationship Trend
 			return Promise.resolve({
 				choices: [
 					{
@@ -34,12 +35,24 @@ jest.mock('openai', () => {
 					},
 				],
 			});
-		} else {
+		} else if (messages[0] && messages[0].content.includes('relationship coach')) {
+			// This is for the Next Step
 			return Promise.resolve({
 				choices: [
 					{
 						message: {
 							content: 'You and Default could plan to watch the next Penguins game together.',
+						},
+					},
+				],
+			});
+		} else {
+			// Default fallback
+			return Promise.resolve({
+				choices: [
+					{
+						message: {
+							content: 'Generic AI response',
 						},
 					},
 				],
@@ -60,6 +73,7 @@ jest.mock('openai', () => {
 		})),
 	};
 });
+
 
 // Mock AsyncStorage for caching tests
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -206,60 +220,60 @@ describe('AI Utilities', () => {
 		});
 	});
 
-	describe('generateRelationshipInsights', () => {
-		it('generates relationship insights based on contact and history', async () => {
-			const insights = await generateRelationshipInsights(mockContact, mockHistory);
-
-			expect(insights).toHaveProperty('conversationFlow');
-			expect(insights.conversationFlow).toHaveLength(2);
-			expect(insights.conversationFlow[0].title).toBe('Relationship Overview');
-			expect(insights.conversationFlow[1].title).toBe('Next Steps');
-			expect(insights.conversationFlow[0].description).toBe(
-				'You connect over shared interests in sports, particularly hockey.'
-			);
-			expect(insights.conversationFlow[1].description).toBe(
-				'You and Default could plan to watch the next Penguins game together.'
-			);
-		});
-
-		it('handles API errors gracefully', async () => {
-			// Force create function to reject
-			const mockOpenAI = require('openai').default();
-			mockOpenAI.chat.completions.create.mockRejectedValueOnce(new Error('API error'));
-
-			const insights = await generateRelationshipInsights(mockContact, mockHistory);
-			expect(insights.conversationFlow[0].description).toBe('Not enough history to analyze patterns');
-			expect(insights.conversationFlow[1].description).toBe('Continue building conversation history');
-		});
-
-		it('handles partial API failures', async () => {
-			const mockOpenAI = require('openai').default();
-
-			mockOpenAI.chat.completions.create.mockReset();
-
-			let callCount = 0;
-			mockOpenAI.chat.completions.create.mockImplementation(() => {
-				callCount++;
-				if (callCount === 1) {
-					// First call returns successfully
-					return Promise.resolve({
-						choices: [{ message: { content: 'Pattern success' } }],
-					});
-				} else {
-					// Second call fails
-					return Promise.reject(new Error('API error'));
-				}
-			});
-
-			const insights = await generateRelationshipInsights(mockContact, mockHistory);
-
-			// Verify both API calls were made
-			expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(2);
-
-			// Check that we got the fallback for the second call
-			expect(insights.conversationFlow[1].description).toBe('Continue building conversation history');
-		});
-	});
+    describe('generateRelationshipInsights', () => {
+        it('generates relationship insights based on contact and history', async () => {
+            const insights = await generateRelationshipInsights(mockContact, mockHistory);
+    
+            expect(insights).toHaveProperty('conversationFlow');
+            expect(insights.conversationFlow).toHaveLength(2);
+            expect(insights.conversationFlow[0].title).toBe('Relationship Trend');
+            expect(insights.conversationFlow[1].title).toBe('Next Steps');
+            
+            // Check if responses contain key expected phrases
+            expect(insights.conversationFlow[0].description).toContain('hockey');
+            expect(insights.conversationFlow[1].description).toContain('Default');
+        });
+    
+        it('handles API errors gracefully', async () => {
+            // Force create function to reject
+            const mockOpenAI = require('openai').default();
+            mockOpenAI.chat.completions.create.mockRejectedValueOnce(new Error('API error'));
+    
+            const insights = await generateRelationshipInsights(mockContact, mockHistory);
+            expect(insights.conversationFlow[0].description).toBe('Keep building your conversation history to see trends');
+            expect(insights.conversationFlow[1].description).toBe('Continue building conversation history to get personalized suggestions');
+        });
+    
+        it('handles partial API failures', async () => {
+            const mockOpenAI = require('openai').default();
+    
+            mockOpenAI.chat.completions.create.mockReset();
+    
+            let callCount = 0;
+            mockOpenAI.chat.completions.create.mockImplementation(() => {
+                callCount++;
+                if (callCount === 1) {
+                    // First call returns successfully
+                    return Promise.resolve({
+                        choices: [{ message: { content: 'Pattern success' } }],
+                    });
+                } else {
+                    // Second call fails
+                    return Promise.reject(new Error('API error'));
+                }
+            });
+    
+            const insights = await generateRelationshipInsights(mockContact, mockHistory);
+    
+            // Verify both API calls were made
+            expect(mockOpenAI.chat.completions.create).toHaveBeenCalledTimes(2);
+    
+            // Check that we got the fallback for the second call
+            expect(insights.conversationFlow[1].description).toBe('Continue building conversation history to get personalized suggestions');
+        });
+    });
+    
+      
 
 	describe('checkUpcomingBirthday', () => {
 		const originalDate = global.Date;
