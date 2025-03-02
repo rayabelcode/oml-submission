@@ -8,6 +8,7 @@ import {
 	Alert,
 	KeyboardAvoidingView,
 	Platform,
+	ActivityIndicator,
 } from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
@@ -636,7 +637,7 @@ export default function DashboardScreen({ navigation, route }) {
 	if (isLoading && !initialLoadCompletedRef.current) {
 		return (
 			<View style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-				{/* <ActivityIndicator size="extra-large" color={colors.primary} /> */}
+				<ActivityIndicator size="extra-large" color={colors.primary} />
 			</View>
 		);
 	}

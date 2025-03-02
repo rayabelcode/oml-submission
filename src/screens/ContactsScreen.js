@@ -840,7 +840,7 @@ export default function ContactsScreen({ navigation }) {
 					</Text>
 
 					<TouchableOpacity style={styles.welcomeButton} onPress={() => setShowAddModal(true)}>
-						<Icon name="add-circle" size={24} color={colors.text.primary} />
+						<Icon name="add-circle" size={24} color={colors.text.white} />
 						<Text style={styles.welcomeButtonText}>Add Contact</Text>
 					</TouchableOpacity>
 				</View>
