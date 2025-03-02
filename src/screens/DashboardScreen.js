@@ -8,7 +8,6 @@ import {
 	Alert,
 	KeyboardAvoidingView,
 	Platform,
-	ActivityIndicator,
 } from 'react-native';
 import { useStyles } from '../styles/screens/dashboard';
 import { useCommonStyles } from '../styles/common';
@@ -637,7 +636,7 @@ export default function DashboardScreen({ navigation, route }) {
 	if (isLoading && !initialLoadCompletedRef.current) {
 		return (
 			<View style={[commonStyles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-				<ActivityIndicator size="extra-large" color={colors.primary} />
+				{/* <ActivityIndicator size="extra-large" color={colors.primary} /> */}
 			</View>
 		);
 	}
@@ -694,9 +693,7 @@ export default function DashboardScreen({ navigation, route }) {
 								</View>
 
 								{/* Explanation text */}
-								<Text style={styles.contactReason}>
-									Based on your contact schedules
-								</Text>
+								<Text style={styles.contactReason}>Based on your contact schedules</Text>
 
 								<View>
 									{stats.detailed.needsAttention.map((contact, index, array) => (

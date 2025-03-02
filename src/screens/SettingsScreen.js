@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
+import { View, Alert, Platform, ScrollView } from 'react-native';
 import { useStyles } from '../styles/screens/settings';
 import { spacing, useTheme } from '../context/ThemeContext';
 import { StatusBar } from 'expo-status-bar';
@@ -374,7 +374,7 @@ export default function SettingsScreen({ navigation }) {
 	if (!initialProfileLoaded) {
 		return (
 			<View style={[styles.container, styles.loadingOverlay]}>
-				<ActivityIndicator size="large" color={colors.primary} />
+				{/* <ActivityIndicator size="large" color={colors.primary} /> */}
 			</View>
 		);
 	}
@@ -414,7 +414,7 @@ export default function SettingsScreen({ navigation }) {
 			{/* Loading Overlay */}
 			{loading && (
 				<View style={styles.loadingOverlay}>
-					<ActivityIndicator size="large" color={colors.primary} />
+					{/* <ActivityIndicator size="large" color={colors.primary} /> */}
 				</View>
 			)}
 		</View>
