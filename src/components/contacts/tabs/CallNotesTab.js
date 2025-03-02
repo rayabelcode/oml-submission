@@ -78,6 +78,9 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 			setSuggestionCache(newCache);
 			await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
 
+			// Clear AI recap cache for this contact
+			await AsyncStorage.removeItem(`${contact.id}-ai-recap`);
+
 			setCallNotes('');
 			setCallDate(new Date());
 		} catch (error) {
@@ -118,6 +121,9 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 						delete newCache[cacheKey];
 						setSuggestionCache(newCache);
 						await AsyncStorage.setItem('suggestionCache', JSON.stringify(newCache));
+
+						// Clear AI recap cache for this contact
+						await AsyncStorage.removeItem(`${contact.id}-ai-recap`);
 					} catch (error) {
 						console.error('Error deleting history:', error);
 						Alert.alert('Error', 'Failed to delete history entry');
@@ -152,6 +158,9 @@ const CallNotesTab = ({ contact, history = [], setHistory, setSelectedContact })
 				contact_history: updatedHistory,
 			};
 			setSelectedContact(updatedContact);
+
+			// Clear AI recap cache for this contact
+			await AsyncStorage.removeItem(`${contact.id}-ai-recap`);
 
 			setEditMode(null);
 			setEditingText('');
