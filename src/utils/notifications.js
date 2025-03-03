@@ -139,16 +139,10 @@ class NotificationService {
 
 		try {
 			// Schedule or present the notification
-			if (time <= new Date()) {
-				localNotificationId = await Notifications.presentNotificationAsync(notificationContent);
-			} else {
-				localNotificationId = await Notifications.scheduleNotificationAsync({
-					content: notificationContent,
-					trigger: {
-						date: time,
-					},
-				});
-			}
+			localNotificationId = await Notifications.scheduleNotificationAsync({
+				content: notificationContent,
+				trigger: time <= new Date() ? null : { date: time },
+			});
 
 			// Store in AsyncStorage
 			let stored = await AsyncStorage.getItem('follow_up_notifications');

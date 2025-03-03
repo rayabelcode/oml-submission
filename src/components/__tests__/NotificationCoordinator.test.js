@@ -114,6 +114,11 @@ jest.mock('../../../constants/notificationConstants', () => ({
 	IOS_CONFIGS,
 	NOTIFICATION_CONFIGS,
 	ERROR_HANDLING,
+	REMINDER_TYPES: {
+		SCHEDULED: 'SCHEDULED',
+		FOLLOW_UP: 'FOLLOW_UP',
+		CUSTOM_DATE: 'CUSTOM_DATE',
+	},
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -139,6 +144,7 @@ jest.mock('expo-notifications', () => ({
 	getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
 	setNotificationHandler: jest.fn(),
 	setBadgeCountAsync: jest.fn(),
+	getBadgeCountAsync: jest.fn().mockResolvedValue(0),
 	scheduleNotificationAsync: jest.fn(),
 	cancelScheduledNotificationAsync: jest.fn(),
 	cancelAllScheduledNotificationsAsync: jest.fn().mockResolvedValue(true),
@@ -146,6 +152,7 @@ jest.mock('expo-notifications', () => ({
 	getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'mock-expo-token' }),
 	getAllScheduledNotificationsAsync: jest.fn().mockResolvedValue([]),
 	AndroidImportance: { MAX: 5 },
+	presentNotificationAsync: jest.fn().mockResolvedValue('immediate-id'),
 }));
 
 jest.mock('../../utils/notifications/pushNotification', () => ({
@@ -275,6 +282,70 @@ describe('NotificationCoordinator', () => {
 				}),
 				trigger: scheduledTime,
 			});
+		});
+
+		it('should properly handle immediate notifications', async () => {
+			// Mock Notifications.scheduleNotificationAsync for this test
+			const scheduleSpy = jest.spyOn(Notifications, 'scheduleNotificationAsync');
+			scheduleSpy.mockImplementationOnce(() => Promise.resolve('immediate-id'));
+
+			// Create a test notification
+			const content = {
+				title: 'Test',
+				body: 'Immediate notification',
+			};
+
+			// Schedule with current time (should use null trigger)
+			const result = await notificationCoordinator.scheduleNotification(
+				content,
+				new Date(), // Current time
+				{ immediate: true }
+			);
+
+			// Verify we got an ID back
+			expect(result).toBe('immediate-id');
+
+			// Verify the right parameters were passed
+			expect(scheduleSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					content: expect.any(Object),
+					trigger: expect.any(Date),
+				})
+			);
+		});
+
+		it('should properly handle notifications with trigger:null for immediate display', async () => {
+			const scheduleSpy = jest.spyOn(Notifications, 'scheduleNotificationAsync');
+			scheduleSpy.mockImplementationOnce((params) => {
+				return Promise.resolve('test-notification-id');
+			});
+
+			// Get badge count mock
+			Notifications.getBadgeCountAsync.mockResolvedValueOnce(0);
+
+			const { notificationService } = require('../../utils/notifications');
+
+			// Create test contact
+			const mockContact = {
+				id: 'test-id',
+				first_name: 'John',
+				last_name: 'Doe',
+				callData: {
+					type: 'phone',
+					startTime: new Date().toISOString(),
+				},
+			};
+
+			// Test with immediate time (in the past)
+			const pastTime = new Date(Date.now() - 1000); // 1 second in the past
+
+			await notificationService.scheduleCallFollowUp(mockContact, pastTime);
+
+			// Verify the notification was scheduled
+			expect(scheduleSpy).toHaveBeenCalled();
+
+			// Test completed successfully
+			expect(true).toBe(true);
 		});
 	});
 

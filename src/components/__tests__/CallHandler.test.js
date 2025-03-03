@@ -35,6 +35,7 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
 jest.mock('@react-native-async-storage/async-storage', () => ({
 	setItem: jest.fn(),
 	removeItem: jest.fn(),
+	getItem: jest.fn(),
 }));
 
 // Mock Alert separately to avoid react-native import issues
@@ -138,6 +139,46 @@ describe('CallHandler', () => {
 			const success = await callHandler.initiateCall(mockContact, 'unsupported');
 			expect(success).toBeFalsy();
 			expect(Alert.alert).toHaveBeenCalled();
+		});
+
+		it('should handle scheduling delayed follow-up notifications', async () => {
+			// Temporarily restore real CallHandler for this test
+			jest.dontMock('../../utils/callHandler');
+
+			const { callHandler: realCallHandler } = jest.requireActual('../../utils/callHandler');
+
+			const originalNotificationService = realCallHandler.notificationService;
+			realCallHandler.notificationService = mockNotificationService;
+
+			// Mock AsyncStorage
+			const AsyncStorage = require('@react-native-async-storage/async-storage');
+			AsyncStorage.getItem.mockResolvedValue('true');
+
+			// Spy on setTimeout
+			const originalSetTimeout = global.setTimeout;
+			let timeoutFn;
+			global.setTimeout = jest.fn((fn, delay) => {
+				timeoutFn = fn;
+				return 1;
+			});
+
+			await realCallHandler.initiateCall(mockContact, 'phone');
+
+			// Verify setTimeout was called
+			expect(global.setTimeout).toHaveBeenCalled();
+
+			// Run the timeout function
+			await timeoutFn();
+
+			// Verify notification was scheduled
+			expect(mockNotificationService.scheduleCallFollowUp).toHaveBeenCalled();
+
+			// Restore originals
+			realCallHandler.notificationService = originalNotificationService;
+			global.setTimeout = originalSetTimeout;
+
+			// Re-mock callHandler for other tests
+			jest.doMock('../../utils/callHandler');
 		});
 	});
 

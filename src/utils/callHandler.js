@@ -61,17 +61,29 @@ class CallHandler {
 					// Initialize both services
 					await Promise.all([this.notificationService.initialize(), callNotesService.initialize()]);
 
-					const followUpTime = new Date(Date.now() + 5000);
-					const notificationId = await this.notificationService.scheduleCallFollowUp(
-						{
-							...contact,
-							callData: {
-								type: callType,
-								startTime: callStartTime.toISOString(),
-							},
+					// Save the contact info for the delayed notification
+					const contactWithCallData = {
+						...contact,
+						callData: {
+							type: callType,
+							startTime: callStartTime.toISOString(),
 						},
-						followUpTime
-					);
+					};
+
+					// Delay for Follow Up notifications in milliseconds (1 second = 1000)
+					const FOLLOW_UP_DELAY_MS = 15000;
+
+					// SetTimeout to delay the notification
+					setTimeout(async () => {
+						try {
+							await this.notificationService.scheduleCallFollowUp(
+								contactWithCallData,
+								new Date() // Use current time when the timeout fires
+							);
+						} catch (error) {
+							console.error('[CallHandler] Error scheduling delayed follow-up:', error);
+						}
+					}, FOLLOW_UP_DELAY_MS);
 				}
 			}
 
