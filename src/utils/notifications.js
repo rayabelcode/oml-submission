@@ -145,12 +145,25 @@ class NotificationService {
 		}
 	}
 
+	// Generate a random prompt for the follow-up notification
+	getRandomPrompt(contact) {
+		const prompts = [
+			`How did your call with ${contact.first_name} go?`,
+			`Any action items from your chat with ${contact.first_name}?`,
+			`Want to write a quick note from your call with ${contact.first_name}?`,
+			`Need to remember anything from your conversation with ${contact.first_name}?`,
+			`What should you follow up on with ${contact.first_name}?`,
+		];
+		return prompts[Math.floor(Math.random() * prompts.length)];
+	}
+
 	async scheduleCallFollowUp(contact, time) {
 		const followUpId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
 
 		const notificationContent = {
 			title: 'Call Follow Up',
-			body: `How did your call with ${contact.first_name} go?`,
+			// Radom prompt for the body
+			body: this.getRandomPrompt(contact),
 			data: {
 				type: REMINDER_TYPES.FOLLOW_UP,
 				contactId: contact.id,
