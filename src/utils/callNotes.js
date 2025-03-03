@@ -30,24 +30,33 @@ class CallNotesService {
 		try {
 			const data = response.notification.request.content.data;
 			if (data.type === REMINDER_TYPES.FOLLOW_UP) {
+				// When "Add Notes" action is pressed
 				if (response.actionIdentifier === 'add_notes') {
-					const notes = response.userText?.trim();
-					if (notes) {
-						await this.handleFollowUpComplete(data.followUpId, notes);
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						// Mark follow-up as completed
+						await this.handleFollowUpComplete(data.followUpId, response.userText || '');
+
+						// Navigate to notes tab
+						navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: data.followUpId,
+						});
+
+						const { eventEmitter } = require('./notifications');
+						eventEmitter.emit('followUpCompleted', data.followUpId);
 					}
 				} else if (response.actionIdentifier === 'dismiss') {
 					await this.handleFollowUpComplete(data.followUpId);
 				} else {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						// Clear the notification from local storage and update the UI
 						await this.handleFollowUpComplete(data.followUpId, '');
 
-						// Emit event to refresh the dashboard
 						const { eventEmitter } = require('./notifications');
 						eventEmitter.emit('followUpCompleted', data.followUpId);
 
-						// Navigate to contact details
 						navigate('ContactDetails', {
 							contact: contact,
 							initialTab: 'Notes',

@@ -28,6 +28,33 @@ class NotificationService {
 				}),
 			});
 
+			// Set up notification categories for iOS
+			if (Platform.OS === 'ios') {
+				await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
+					{
+						identifier: 'add_notes',
+						buttonTitle: 'Add Notes',
+						options: {
+							opensAppToForeground: true,
+							isDestructive: false,
+							isAuthenticationRequired: false,
+							textInput: {
+								submitButtonTitle: 'Save',
+								placeholder: 'Enter call notes...',
+							},
+						},
+					},
+					{
+						identifier: 'dismiss',
+						buttonTitle: 'Dismiss',
+						options: {
+							opensAppToForeground: false,
+							isDestructive: true,
+						},
+					},
+				]);
+			}
+
 			// Request permissions during initialization
 			await this.requestPermissions();
 
