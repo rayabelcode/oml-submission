@@ -1027,7 +1027,7 @@ const useStyles = () => {
 			marginBottom: spacing.xl,
 		},
 		welcomeButtonText: {
-			color: colors.text.primary,
+			color: colors.text.white,
 			opacity: 0.9,
 			fontSize: 20,
 			fontWeight: '700',

@@ -6,6 +6,7 @@ import MainTab from './AITabs/MainTab';
 import FlowTab from './AITabs/FlowTab';
 import { generateTopicSuggestions, generateRelationshipInsights } from '../../utils/ai';
 import { createStyles } from '../../styles/components/aiModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AIModal = ({ show, onClose, contact, history }) => {
 	const { colors, spacing, layout } = useTheme();
@@ -20,28 +21,59 @@ const AIModal = ({ show, onClose, contact, history }) => {
 
 	const loadContent = async () => {
 		setLoading(true);
-		const suggestions = await generateTopicSuggestions(contact, history);
+		try {
+			// Try to get cached content first
+			const cacheKey = `${contact.id}-ai-recap`;
+			const cachedDataString = await AsyncStorage.getItem(cacheKey);
 
-		const hasHistory = history && history.length > 0;
-		let conversationFlow;
+			if (cachedDataString) {
+				const cachedData = JSON.parse(cachedDataString);
+				setContent(cachedData);
+				setLoading(false);
+				return;
+			}
 
-		if (hasHistory) {
-			const insights = await generateRelationshipInsights(contact, history);
-			conversationFlow = insights.conversationFlow;
-		} else {
-			conversationFlow = [
-				{
-					title: 'New Connection',
-					description: 'Not enough conversation history yet to analyze patterns',
-				},
-			];
+			// No cache exists, generate new content
+			const suggestions = await generateTopicSuggestions(contact, history);
+
+			const hasHistory = history && history.length > 0;
+			let conversationFlow;
+
+			if (hasHistory) {
+				const insights = await generateRelationshipInsights(contact, history);
+				conversationFlow = insights.conversationFlow;
+			} else {
+				conversationFlow = [
+					{
+						title: 'New Connection',
+						description: 'Not enough conversation history yet to analyze patterns',
+					},
+				];
+			}
+
+			const newContent = {
+				suggestions,
+				conversationFlow,
+			};
+
+			// Save the generated content to cache
+			await AsyncStorage.setItem(cacheKey, JSON.stringify(newContent));
+
+			setContent(newContent);
+		} catch (error) {
+			console.error('Error loading AI content:', error);
+			setContent({
+				suggestions: ['Unable to generate suggestions at this time.'],
+				conversationFlow: [
+					{
+						title: 'Error',
+						description: 'There was a problem generating insights. Please try again later.',
+					},
+				],
+			});
+		} finally {
+			setLoading(false);
 		}
-
-		setContent({
-			suggestions,
-			conversationFlow,
-		});
-		setLoading(false);
 	};
 
 	return (
@@ -54,7 +86,7 @@ const AIModal = ({ show, onClose, contact, history }) => {
 							<View style={styles.headerLeft} />
 							<Text style={styles.modalTitle}>AI Suggestions</Text>
 							<TouchableOpacity style={styles.headerRight} onPress={onClose}>
-								<Icon name="close-circle-outline" size={35} color={colors.warning} />
+								<Icon name="close" size={35} color={colors.warning} />
 							</TouchableOpacity>
 						</View>
 						<View style={styles.tabSelector}>

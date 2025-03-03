@@ -10,6 +10,8 @@ import { SchedulingService } from '../../utils/scheduler/scheduler';
 import { handleNotificationResponse } from '../../utils/notifications/notificationHandler';
 import { eventEmitter } from '../../utils/notifications';
 import * as Notifications from 'expo-notifications';
+import { callNotesService } from '../../utils/callNotes';
+import { navigate } from '../../navigation/RootNavigation';
 import {
 	getReminder,
 	getContactById,
@@ -274,6 +276,7 @@ jest.mock('../../utils/notificationCoordinator', () => ({
 		scheduleNotification: jest.fn().mockResolvedValue('notification-id'),
 		cancelNotification: jest.fn().mockResolvedValue(true),
 		saveNotificationMap: jest.fn().mockResolvedValue(true),
+		decrementBadge: jest.fn().mockResolvedValue(0),
 		scheduleCustomDateReminder: jest.fn().mockImplementation(async (reminder) => {
 			const mockNotifications = require('expo-notifications');
 			await mockNotifications.scheduleNotificationAsync({
@@ -338,6 +341,73 @@ jest.mock('../../utils/scheduler/scheduler', () => {
 		},
 	};
 });
+
+// Mock callNotesService
+jest.mock('../../utils/callNotes', () => ({
+	callNotesService: {
+		handleNotificationResponse: jest.fn().mockImplementation(async (response) => {
+			const data = response.notification.request.content.data;
+			if (data.type === 'FOLLOW_UP') {
+				if (response.actionIdentifier === 'add_notes') {
+					const notes = response.userText?.trim();
+					if (notes) {
+						await require('../../utils/callNotes').callNotesService.handleFollowUpComplete(
+							data.followUpId,
+							notes
+						);
+					}
+				} else if (response.actionIdentifier === 'dismiss') {
+					await require('../../utils/callNotes').callNotesService.handleFollowUpComplete(data.followUpId);
+				} else {
+					const contact = await require('../../utils/firestore').getContactById(data.contactId);
+					if (contact) {
+						// Mark notification as being handled
+						await require('../../utils/callNotes').callNotesService.handleFollowUpComplete(
+							data.followUpId,
+							''
+						);
+
+						// Emit event to refresh dashboard
+						const { eventEmitter } = require('../../utils/notifications');
+						eventEmitter.emit('followUpCompleted', data.followUpId);
+
+						// Navigate to contact details
+						require('../../navigation/RootNavigation').navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: data.followUpId,
+						});
+					}
+				}
+			}
+			return true;
+		}),
+
+		handleFollowUpComplete: jest.fn().mockImplementation(async (followUpId, notes = '') => {
+			// Remove from AsyncStorage
+			const AsyncStorage = require('@react-native-async-storage/async-storage');
+			const stored = await AsyncStorage.getItem('follow_up_notifications');
+			if (stored) {
+				const notificationsList = JSON.parse(stored);
+				const updatedList = notificationsList.filter((item) => item.id !== followUpId);
+				await AsyncStorage.setItem('follow_up_notifications', JSON.stringify(updatedList));
+			}
+
+			// Handle notification cleanup
+			const { notificationCoordinator } = require('../../utils/notificationCoordinator');
+			notificationCoordinator.notificationMap.delete(followUpId);
+			await notificationCoordinator.saveNotificationMap();
+			await notificationCoordinator.decrementBadge();
+
+			return true;
+		}),
+	},
+}));
+
+// Mock for RootNavigation
+jest.mock('../../navigation/RootNavigation', () => ({
+	navigate: jest.fn(),
+}));
 
 const mockUserPreferences = {
 	scheduling_preferences: {
@@ -910,5 +980,65 @@ describe('Complete Reminder Lifecycle', () => {
 
 		// Verify the event was emitted
 		expect(emitSpy).toHaveBeenCalledWith('followUpCreated');
+	});
+
+	it('should clear follow-up notification from dashboard when tapped and navigate to Notes tab', async () => {
+		// Arrange - Set up mocks
+		const mockContact = {
+			id: 'contact-123',
+			first_name: 'John',
+			last_name: 'Doe',
+		};
+
+		const mockNotificationResponse = {
+			actionIdentifier: 'default', // simulating a tap on the notification
+			notification: {
+				request: {
+					content: {
+						data: {
+							type: REMINDER_TYPES.FOLLOW_UP,
+							contactId: mockContact.id,
+							followUpId: 'followup-123',
+						},
+					},
+				},
+			},
+		};
+
+		// Mock local storage
+		const AsyncStorage = require('@react-native-async-storage/async-storage');
+		AsyncStorage.getItem.mockResolvedValue(
+			JSON.stringify([{ id: 'followup-123', localNotificationId: 'notification-123' }])
+		);
+
+		// Mock getContactById to return test contact
+		const firestore = require('../../utils/firestore');
+		firestore.getContactById.mockResolvedValue(mockContact);
+
+		// Mock eventEmitter
+		const { eventEmitter } = require('../../utils/notifications');
+		const emitSpy = jest.spyOn(eventEmitter, 'emit');
+
+		// Act - Call the method
+		await callNotesService.handleNotificationResponse(mockNotificationResponse);
+
+		// Assert
+		expect(firestore.getContactById).toHaveBeenCalledWith(mockContact.id);
+
+		// Verify handleFollowUpComplete was called to clear the notification
+		expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+			'follow_up_notifications',
+			expect.stringMatching(/\[\]/) // Should be an empty array after removal
+		);
+
+		// Verify that the event was emitted to refresh dashboard
+		expect(emitSpy).toHaveBeenCalledWith('followUpCompleted', 'followup-123');
+
+		// Verify correct navigation with focus on the Notes tab
+		expect(navigate).toHaveBeenCalledWith('ContactDetails', {
+			contact: mockContact,
+			initialTab: 'Notes', // Verify we navigate to Notes tab
+			reminderId: 'followup-123',
+		});
 	});
 });

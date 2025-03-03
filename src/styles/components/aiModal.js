@@ -1,7 +1,7 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { height: screenHeight } = Dimensions.get('window');
-const MODAL_HEIGHT = screenHeight * 0.7;
+const MODAL_HEIGHT = screenHeight * 0.8; // 80% of screen height
 
 export const createStyles = (colors, spacing, layout) =>
 	StyleSheet.create({
@@ -12,12 +12,14 @@ export const createStyles = (colors, spacing, layout) =>
 			backgroundColor: colors.background.overlay,
 		},
 		modalContent: {
-			width: '85%',
-			maxWidth: 340,
+			width: '90%',
+			maxWidth: 420,
 			height: MODAL_HEIGHT,
 			backgroundColor: colors.background.primary,
 			borderRadius: layout.borderRadius.lg,
-			padding: spacing.lg,
+			paddingHorizontal: spacing.xl,
+			borderWidth: 3,
+			borderColor: colors.border,
 		},
 		headerContainer: {
 			width: '100%',
@@ -26,6 +28,7 @@ export const createStyles = (colors, spacing, layout) =>
 			flexDirection: 'row',
 			alignItems: 'center',
 			justifyContent: 'space-between',
+			marginTop: spacing.md,
 			marginBottom: spacing.md,
 		},
 		headerLeft: {

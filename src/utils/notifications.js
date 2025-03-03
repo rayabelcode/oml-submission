@@ -28,6 +28,33 @@ class NotificationService {
 				}),
 			});
 
+			// Set up notification categories for iOS
+			if (Platform.OS === 'ios') {
+				await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
+					{
+						identifier: 'add_notes',
+						buttonTitle: 'Add Notes',
+						options: {
+							opensAppToForeground: true,
+							isDestructive: false,
+							isAuthenticationRequired: false,
+							textInput: {
+								submitButtonTitle: 'Save',
+								placeholder: 'Enter call notes...',
+							},
+						},
+					},
+					{
+						identifier: 'dismiss',
+						buttonTitle: 'Dismiss',
+						options: {
+							opensAppToForeground: false,
+							isDestructive: true,
+						},
+					},
+				]);
+			}
+
 			// Request permissions during initialization
 			await this.requestPermissions();
 
@@ -118,12 +145,25 @@ class NotificationService {
 		}
 	}
 
+	// Generate a random prompt for the follow-up notification
+	getRandomPrompt(contact) {
+		const prompts = [
+			`How did your call with ${contact.first_name} go?`,
+			`Any action items from your chat with ${contact.first_name}?`,
+			`Want to write a quick note from your call with ${contact.first_name}?`,
+			`Need to remember anything from your conversation with ${contact.first_name}?`,
+			`What should you follow up on with ${contact.first_name}?`,
+		];
+		return prompts[Math.floor(Math.random() * prompts.length)];
+	}
+
 	async scheduleCallFollowUp(contact, time) {
 		const followUpId = `FOLLOW_UP_${contact.id}_${Date.now()}`;
 
 		const notificationContent = {
 			title: 'Call Follow Up',
-			body: `How did your call with ${contact.first_name} go?`,
+			// Radom prompt for the body
+			body: this.getRandomPrompt(contact),
 			data: {
 				type: REMINDER_TYPES.FOLLOW_UP,
 				contactId: contact.id,
@@ -139,16 +179,10 @@ class NotificationService {
 
 		try {
 			// Schedule or present the notification
-			if (time <= new Date()) {
-				localNotificationId = await Notifications.presentNotificationAsync(notificationContent);
-			} else {
-				localNotificationId = await Notifications.scheduleNotificationAsync({
-					content: notificationContent,
-					trigger: {
-						date: time,
-					},
-				});
-			}
+			localNotificationId = await Notifications.scheduleNotificationAsync({
+				content: notificationContent,
+				trigger: time <= new Date() ? null : { date: time },
+			});
 
 			// Store in AsyncStorage
 			let stored = await AsyncStorage.getItem('follow_up_notifications');
