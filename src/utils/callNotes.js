@@ -40,6 +40,14 @@ class CallNotesService {
 				} else {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
+						// Clear the notification from local storage and update the UI
+						await this.handleFollowUpComplete(data.followUpId, '');
+
+						// Emit event to refresh the dashboard
+						const { eventEmitter } = require('./notifications');
+						eventEmitter.emit('followUpCompleted', data.followUpId);
+
+						// Navigate to contact details
 						navigate('ContactDetails', {
 							contact: contact,
 							initialTab: 'Notes',

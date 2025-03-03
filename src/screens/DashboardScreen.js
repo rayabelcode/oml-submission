@@ -724,7 +724,6 @@ export default function DashboardScreen({ navigation, route }) {
 													setShowCallOptions(true);
 												}}
 											>
-												<Icon name="chatbox-ellipses-outline" size={20} color={colors.text.white} />
 												<Text style={styles.callButtonText}>Contact</Text>
 											</TouchableOpacity>
 										</View>
