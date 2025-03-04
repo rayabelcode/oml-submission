@@ -2,31 +2,26 @@ import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { snoozeHandler, initializeSnoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
-import { REMINDER_TYPES } from '../../../constants/notificationConstants';
+import { REMINDER_TYPES, SNOOZE_OPTIONS } from '../../../constants/notificationConstants';
 import { navigate } from '../../navigation/RootNavigation';
-import { getContactById, getReminder } from '../firestore';
+import { getContactById } from '../firestore';
 import { callHandler } from '../callHandler';
 import { auth } from '../../config/firebase';
 import { DateTime } from 'luxon';
 
 export const handleNotificationResponse = async (response) => {
-	console.log('Notification response received:', {
-		actionId: response.actionIdentifier,
-		category: response.notification.request.content.categoryIdentifier,
-		data: response.notification.request.content.data,
-	});
-
 	const data = response.notification.request.content.data || {};
+
+	// Find the reminder ID - it could be in different fields depending on the notification source
+	const reminderId = data.reminderId || data.id || data.firestoreId;
 
 	switch (data.type) {
 		case REMINDER_TYPES.SCHEDULED:
 		case REMINDER_TYPES.CUSTOM_DATE:
 			if (response.actionIdentifier === 'call_now') {
-				console.log(`Initiating call to contact: ${data.contactId}`);
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						// Show contact options dialog - exactly like dashboard
 						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
 							{
 								text: 'Phone',
@@ -50,8 +45,6 @@ export const handleNotificationResponse = async (response) => {
 					console.error('Error initiating call:', error);
 				}
 			} else if (response.actionIdentifier === 'snooze') {
-				// Handle snooze using the exact same process as DashboardScreen's handleSnooze
-				console.log(`Processing snooze for reminder: ${data.reminderId}`);
 				try {
 					// Get the current user ID
 					const userId = auth.currentUser?.uid;
@@ -65,38 +58,39 @@ export const handleNotificationResponse = async (response) => {
 					// Initialize the snooze handler
 					await initializeSnoozeHandler(userId);
 
-					// Get all available snooze options for this reminder - using the existing function
-					const options = await snoozeHandler.getAvailableSnoozeOptions(data.reminderId);
-					if (!options || options.length === 0) {
-						Alert.alert('Error', 'No available snooze options');
-						return;
+					// Try to get custom options if we have reminder ID
+					let options = SNOOZE_OPTIONS;
+
+					if (reminderId) {
+						try {
+							options = await snoozeHandler.getAvailableSnoozeOptions(reminderId);
+						} catch (optionError) {
+							// Fall back to default options
+						}
 					}
 
-					// Create option handlers - like in DashboardScreen
-					const optionsWithHandlers = options.map((option) => ({
-						...option,
+					if (!options || options.length === 0) {
+						options = SNOOZE_OPTIONS;
+					}
+
+					// Create buttons for snooze options
+					const buttons = options.map((option) => ({
+						text: option.text,
+						style: option.id === 'skip' ? 'destructive' : 'default',
 						onPress: async () => {
 							try {
-								console.log(`Selected snooze option: ${option.id}`);
 								await snoozeHandler.handleSnooze(
 									data.contactId,
 									option.id,
 									DateTime.now(),
-									data.type || 'SCHEDULED',
-									data.reminderId
+									data.type,
+									reminderId
 								);
 							} catch (error) {
-								console.error('Error in snooze process:', error);
-								Alert.alert('Error', 'Unable to snooze reminder. Please try again.');
+								console.error('Error processing snooze:', error);
+								Alert.alert('Error', 'Failed to snooze reminder. Please try again.');
 							}
 						},
-					}));
-
-					// Create buttons for Alert dialog
-					const buttons = optionsWithHandlers.map((option) => ({
-						text: option.text,
-						style: option.id === 'skip' ? 'destructive' : 'default',
-						onPress: option.onPress,
 					}));
 
 					buttons.push({
@@ -111,14 +105,13 @@ export const handleNotificationResponse = async (response) => {
 				}
 			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
 				// If the notification is tapped (default action), navigate to the contact's Notes tab
-				console.log(`Opening ContactDetails for contact: ${data.contactId}`);
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
 						navigate('ContactDetails', {
 							contact: contact,
 							initialTab: 'Notes',
-							reminderId: data.reminderId,
+							reminderId: reminderId,
 						});
 					}
 				} catch (error) {
@@ -159,7 +152,6 @@ export const handleNotificationResponse = async (response) => {
 };
 
 export const setupNotificationHandlers = () => {
-	console.log('Setting up global notification response handler');
 	return Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
 };
 

@@ -91,6 +91,7 @@ class NotificationCoordinator {
 
 	async setupIOSCategories() {
 		if (Platform.OS === 'ios') {
+			// Register FOLLOW_UP category
 			await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
 				{
 					identifier: 'add_notes',
@@ -113,7 +114,26 @@ class NotificationCoordinator {
 				},
 			]);
 
+			// Register SCHEDULED category
 			await Notifications.setNotificationCategoryAsync('SCHEDULED', [
+				{
+					identifier: 'call_now',
+					buttonTitle: 'Call Now',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+				{
+					identifier: 'snooze',
+					buttonTitle: 'Snooze',
+					options: {
+						opensAppToForeground: true,
+					},
+				},
+			]);
+
+			// Register CUSTOM_DATE category
+			await Notifications.setNotificationCategoryAsync('CUSTOM_DATE', [
 				{
 					identifier: 'call_now',
 					buttonTitle: 'Call Now',

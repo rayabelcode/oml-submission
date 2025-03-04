@@ -80,6 +80,28 @@ export const IOS_CONFIGS = {
 				],
 			},
 
+			CUSTOM_DATE: {
+				identifier: 'CUSTOM_DATE',
+				actions: [
+					{
+						identifier: 'call_now',
+						title: 'Call Now',
+						options: {
+							isDestructive: false,
+							isAuthenticationRequired: false,
+						},
+					},
+					{
+						identifier: 'snooze',
+						title: 'Snooze',
+						options: {
+							isDestructive: false,
+							isAuthenticationRequired: false,
+						},
+					},
+				],
+			},
+
 			SCHEDULED: {
 				identifier: 'SCHEDULED',
 				actions: [
