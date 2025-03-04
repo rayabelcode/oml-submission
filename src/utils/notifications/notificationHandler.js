@@ -1,11 +1,12 @@
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
-import { snoozeHandler } from '../scheduler/snoozeHandler';
+import { snoozeHandler, initializeSnoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
 import { navigate } from '../../navigation/RootNavigation';
-import { getContactById } from '../firestore';
+import { getContactById, getReminder } from '../firestore';
 import { callHandler } from '../callHandler';
+import { auth } from '../../config/firebase';
 
 export const handleNotificationResponse = async (response) => {
 	console.log('Notification response received:', {
@@ -24,43 +25,107 @@ export const handleNotificationResponse = async (response) => {
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						await callHandler.initiateCall(contact, 'phone');
+						// Show contact options dialog
+						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
+							{
+								text: 'Phone',
+								onPress: () => callHandler.initiateCall(contact, 'phone'),
+							},
+							{
+								text: 'FaceTime',
+								onPress: () => callHandler.initiateCall(contact, 'facetime'),
+							},
+							{
+								text: 'Text',
+								onPress: () => callHandler.initiateCall(contact, 'text'),
+							},
+							{
+								text: 'Cancel',
+								style: 'cancel',
+							},
+						]);
 					}
 				} catch (error) {
 					console.error('Error initiating call:', error);
 				}
 			} else if (response.actionIdentifier === 'snooze') {
-				console.log(`Showing snooze options for reminder: ${data.reminderId}`);
+				console.log(`Processing snooze for reminder: ${data.reminderId}`);
 				try {
-					const options = await snoozeHandler.getAvailableSnoozeOptions(data.reminderId);
+					// Get the current user ID
+					const userId = auth.currentUser?.uid || data.userId;
 
-					if (!options || options.length === 0) {
-						console.log('No snooze options available');
+					if (!userId) {
+						console.error('No user ID available for snooze handling');
+						Alert.alert('Error', 'Please make sure you are logged in to snooze reminders.');
 						return;
 					}
 
-					const buttons = options.map((option) => ({
-						text: option.text,
-						onPress: () => {
-							console.log(`Selected snooze option: ${option.id}`);
-							return snoozeHandler.handleSnooze(
-								data.contactId,
-								option.id,
-								undefined,
-								data.type,
-								data.reminderId
-							);
+					// Initialize the snooze handler with the user ID
+					await initializeSnoozeHandler(userId);
+
+					// Use hardcoded snooze options directly
+					Alert.alert('Snooze Options', 'When would you like to be reminded?', [
+						{
+							text: 'Later Today',
+							onPress: () => {
+								console.log('Snoozing for later today');
+								return snoozeHandler.handleSnooze(
+									data.contactId,
+									'later_today',
+									undefined,
+									data.type,
+									data.reminderId
+								);
+							},
 						},
-					}));
-
-					buttons.push({
-						text: 'Cancel',
-						style: 'cancel',
-					});
-
-					Alert.alert('Snooze Options', 'When would you like to be reminded?', buttons);
+						{
+							text: 'Tomorrow',
+							onPress: () => {
+								console.log('Snoozing for tomorrow');
+								return snoozeHandler.handleSnooze(
+									data.contactId,
+									'tomorrow',
+									undefined,
+									data.type,
+									data.reminderId
+								);
+							},
+						},
+						{
+							text: 'Next Week',
+							onPress: () => {
+								console.log('Snoozing for next week');
+								return snoozeHandler.handleSnooze(
+									data.contactId,
+									'next_week',
+									undefined,
+									data.type,
+									data.reminderId
+								);
+							},
+						},
+						{
+							text: 'Skip',
+							style: 'destructive',
+							onPress: () => {
+								console.log('Skipping reminder');
+								return snoozeHandler.handleSnooze(
+									data.contactId,
+									'skip',
+									undefined,
+									data.type,
+									data.reminderId
+								);
+							},
+						},
+						{
+							text: 'Cancel',
+							style: 'cancel',
+						},
+					]);
 				} catch (error) {
 					console.error('Error handling snooze options:', error);
+					Alert.alert('Error', 'Could not process snooze request. Please try again later.');
 				}
 			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
 				// If the notification is tapped (default action), navigate to the contact's Notes tab
