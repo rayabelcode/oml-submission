@@ -155,13 +155,13 @@ export const processReminders = onSchedule(
           sound: "default",
           title: "Scheduled Call",
           body: `Time to call ${reminder.contactName}`,
+          categoryIdentifier: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
-          categoryIdentifier: "SCHEDULED"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -387,13 +387,13 @@ export const processCustomReminders = onSchedule(
           sound: "default",
           title: "Custom Call Reminder",
           body: `Time to call ${reminder.contactName}`,
+          categoryIdentifier: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
-          categoryIdentifier: "CUSTOM_DATE"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -510,13 +510,13 @@ export const processSnoozedScheduledReminders = onSchedule(
           sound: "default",
           title: "Snoozed Call Reminder",
           body: `Time to call ${reminder.contactName}`,
+          categoryIdentifier: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
-          categoryIdentifier: "SCHEDULED"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -634,13 +634,13 @@ export const processSnoozedCustomReminders = onSchedule(
           sound: "default",
           title: "Snoozed Custom Call Reminder",
           body: `Time to call ${reminder.contactName}`,
+          categoryIdentifier: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
-          categoryIdentifier: "CUSTOM_DATE"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
