@@ -1,29 +1,110 @@
-import { Notifications } from 'expo-notifications';
+import * as Notifications from 'expo-notifications';
+import { Alert } from 'react-native';
 import { snoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
 import { REMINDER_TYPES } from '../../../constants/notificationConstants';
+import { navigate } from '../../navigation/RootNavigation';
+import { getContactById } from '../firestore';
+import { callHandler } from '../callHandler';
 
 export const handleNotificationResponse = async (response) => {
-	const data = response.notification.request.content.data;
-	if (!data.type) return;
+	console.log('Notification response received:', {
+		actionId: response.actionIdentifier,
+		category: response.notification.request.content.categoryIdentifier,
+		data: response.notification.request.content.data,
+	});
+
+	const data = response.notification.request.content.data || {};
 
 	switch (data.type) {
 		case REMINDER_TYPES.SCHEDULED:
 		case REMINDER_TYPES.CUSTOM_DATE:
-			if (response.actionIdentifier === 'snooze') {
-				await snoozeHandler.handleSnooze(data.contactId, 'later_today', undefined, data.type);
+			if (response.actionIdentifier === 'call_now') {
+				console.log(`Initiating call to contact: ${data.contactId}`);
+				try {
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						await callHandler.initiateCall(contact, 'phone');
+					}
+				} catch (error) {
+					console.error('Error initiating call:', error);
+				}
+			} else if (response.actionIdentifier === 'snooze') {
+				console.log(`Showing snooze options for reminder: ${data.reminderId}`);
+				try {
+					const options = await snoozeHandler.getAvailableSnoozeOptions(data.reminderId);
+
+					if (!options || options.length === 0) {
+						console.log('No snooze options available');
+						return;
+					}
+
+					const buttons = options.map((option) => ({
+						text: option.text,
+						onPress: () => {
+							console.log(`Selected snooze option: ${option.id}`);
+							return snoozeHandler.handleSnooze(
+								data.contactId,
+								option.id,
+								undefined,
+								data.type,
+								data.reminderId
+							);
+						},
+					}));
+
+					buttons.push({
+						text: 'Cancel',
+						style: 'cancel',
+					});
+
+					Alert.alert('Snooze Options', 'When would you like to be reminded?', buttons);
+				} catch (error) {
+					console.error('Error handling snooze options:', error);
+				}
+			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+				// If the notification is tapped (default action), navigate to the contact's Notes tab
+				console.log(`Opening ContactDetails for contact: ${data.contactId}`);
+				try {
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: data.reminderId,
+						});
+					}
+				} catch (error) {
+					console.error('Error navigating to contact:', error);
+				}
 			}
 			break;
 
 		case REMINDER_TYPES.FOLLOW_UP:
 			if (response.actionIdentifier === 'add_notes') {
 				const notes = response.userText?.trim();
-				if (notes && data.firestoreId) {
-					await callNotesService.handleFollowUpComplete(data.firestoreId, notes);
+				const followUpId = data.followUpId || data.firestoreId;
+				if (notes && followUpId) {
+					await callNotesService.handleFollowUpComplete(followUpId, notes);
 				}
 			} else if (response.actionIdentifier === 'dismiss') {
-				if (data.firestoreId) {
-					await callNotesService.handleFollowUpComplete(data.firestoreId);
+				const followUpId = data.followUpId || data.firestoreId;
+				if (followUpId) {
+					await callNotesService.handleFollowUpComplete(followUpId);
+				}
+			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+				// If FOLLOW_UP notification is tapped, navigate to contact's Notes tab
+				try {
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: data.followUpId || data.firestoreId,
+						});
+					}
+				} catch (error) {
+					console.error('Error navigating to contact:', error);
 				}
 			}
 			break;
@@ -31,5 +112,9 @@ export const handleNotificationResponse = async (response) => {
 };
 
 export const setupNotificationHandlers = () => {
+	console.log('Setting up global notification response handler');
 	return Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
 };
+
+// Auto-initialize the handler
+setupNotificationHandlers();
