@@ -97,7 +97,7 @@ describe('Notification Handler', () => {
 		// SCHEDULED notification tests
 		it('should handle snooze for scheduled reminders', async () => {
 			Alert.alert = jest.fn((title, message, buttons) => {
-				const laterTodayBtn = buttons.find(btn => btn.text.includes('Later Today'));
+				const laterTodayBtn = buttons.find((btn) => btn.text.includes('Later Today'));
 				if (laterTodayBtn) laterTodayBtn.onPress();
 			});
 
@@ -130,7 +130,7 @@ describe('Notification Handler', () => {
 		// CUSTOM_DATE notification tests
 		it('should handle snooze for custom date reminders', async () => {
 			Alert.alert = jest.fn((title, message, buttons) => {
-				const laterTodayBtn = buttons.find(btn => btn.text.includes('Later Today'));
+				const laterTodayBtn = buttons.find((btn) => btn.text.includes('Later Today'));
 				if (laterTodayBtn) laterTodayBtn.onPress();
 			});
 
@@ -155,7 +155,7 @@ describe('Notification Handler', () => {
 			expect(snoozeHandler.getAvailableSnoozeOptions).toHaveBeenCalledWith('test-reminder-id');
 			expect(Alert.alert).toHaveBeenCalled();
 		});
-		
+
 		// Call Now action tests
 		it('should handle call_now action', async () => {
 			const response = {
@@ -254,10 +254,7 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			expect(callNotesService.handleFollowUpComplete).toHaveBeenCalledWith(
-				'test-followup-id',
-				'Test notes'
-			);
+			expect(callNotesService.handleFollowUpComplete).toHaveBeenCalledWith('test-followup-id', 'Test notes');
 		});
 
 		it('should handle follow-up with empty notes', async () => {
@@ -298,9 +295,7 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			expect(callNotesService.handleFollowUpComplete).toHaveBeenCalledWith(
-				'test-followup-id'
-			);
+			expect(callNotesService.handleFollowUpComplete).toHaveBeenCalledWith('test-followup-id');
 		});
 
 		it('should handle tapping a follow-up notification', async () => {
@@ -334,7 +329,7 @@ describe('Notification Handler', () => {
 			// Temporarily remove the user
 			const originalAuth = require('../../config/firebase').auth;
 			require('../../config/firebase').auth = { currentUser: null };
-			
+
 			Alert.alert = jest.fn();
 
 			const response = {
@@ -354,10 +349,10 @@ describe('Notification Handler', () => {
 			await handleNotificationResponse(response);
 
 			expect(Alert.alert).toHaveBeenCalledWith(
-				'Error', 
+				'Error',
 				'Please make sure you are logged in to snooze reminders.'
 			);
-			
+
 			// Restore the user
 			require('../../config/firebase').auth = originalAuth;
 		});
@@ -381,7 +376,7 @@ describe('Notification Handler', () => {
 			};
 
 			await handleNotificationResponse(response);
-			
+
 			// Should still initialize and show options
 			expect(initializeSnoozeHandler).toHaveBeenCalled();
 			expect(Alert.alert).toHaveBeenCalled();
@@ -390,7 +385,7 @@ describe('Notification Handler', () => {
 		it('should handle failed getAvailableSnoozeOptions', async () => {
 			// Mock getAvailableSnoozeOptions to throw
 			snoozeHandler.getAvailableSnoozeOptions.mockRejectedValueOnce(new Error('Test error'));
-			
+
 			Alert.alert = jest.fn();
 
 			const response = {
@@ -417,7 +412,7 @@ describe('Notification Handler', () => {
 		it('should handle getContactById failure', async () => {
 			// Mock getContactById to throw
 			getContactById.mockRejectedValueOnce(new Error('Contact not found'));
-			
+
 			const response = {
 				actionIdentifier: 'default',
 				notification: {
@@ -434,7 +429,7 @@ describe('Notification Handler', () => {
 
 			// Should not throw
 			await expect(handleNotificationResponse(response)).resolves.not.toThrow();
-			
+
 			// Navigate should not be called
 			expect(navigate).not.toHaveBeenCalled();
 		});
@@ -445,7 +440,7 @@ describe('Notification Handler', () => {
 				notification: {
 					request: {
 						content: {
-							data: {} // Empty data
+							data: {}, // Empty data
 						},
 					},
 				},
@@ -500,7 +495,9 @@ describe('Notification Handler', () => {
 	describe('setupNotificationHandlers', () => {
 		it('should register notification listener', () => {
 			setupNotificationHandlers();
-			expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalledWith(handleNotificationResponse);
+			expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalledWith(
+				handleNotificationResponse
+			);
 		});
 	});
 });
