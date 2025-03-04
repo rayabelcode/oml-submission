@@ -188,16 +188,9 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				...doc.data(),
 			}));
 
-			console.log(`Found ${allReminders.length} total reminders to delete`);
-
 			// Delete all reminders in sequence to avoid bloom issues
 			for (const reminder of allReminders) {
 				try {
-					console.log(
-						`Deleting reminder: ${reminder.id}, type: ${reminder.type}, status: ${
-							reminder.status || 'unknown'
-						}`
-					);
 					await deleteReminder(reminder.id);
 				} catch (err) {
 					console.error('Error deleting reminder:', err);
