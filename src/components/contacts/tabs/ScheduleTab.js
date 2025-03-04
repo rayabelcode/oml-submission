@@ -11,7 +11,7 @@ import {
 } from '../../../utils/firestore';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
-import { updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../../config/firebase';
 import { DateTime } from 'luxon';
 import { REMINDER_TYPES } from '../../../../constants/notificationConstants';
@@ -160,32 +160,13 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	}, [loading]);
 
-	const handleUpdateScheduling = async (updates) => {
-		setError(null);
-		setLoading(true);
-		try {
-			await updateContactScheduling(contact.id, updates);
-			setSelectedContact((prev) => ({
-				...prev,
-				scheduling: {
-					...prev.scheduling,
-					...updates,
-				},
-			}));
-		} catch (error) {
-			setError('Failed to update scheduling preferences');
-			console.error('Error updating scheduling preferences:', error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
 	const handleRecurringOff = async () => {
 		try {
 			setFrequency(null);
 			setLoadingType('recurring');
 			setLoading(true);
 
+			// Update contact scheduling info
 			await updateContactScheduling(contact.id, {
 				frequency: null,
 				next_contact: null,
@@ -193,18 +174,37 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				custom_next_date: null,
 			});
 
-			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+			// Get all reminders for this contact without filtering by snoozed status
+			const remindersRef = collection(db, 'reminders');
+			const q = query(
+				remindersRef,
+				where('contact_id', '==', contact.id),
+				where('user_id', '==', auth.currentUser.uid)
+			);
 
-			for (const reminder of existingReminders) {
-				if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
-					try {
-						await deleteReminder(reminder.id);
-					} catch (err) {
-						console.error('Error deleting reminder:', err);
-					}
+			const snapshot = await getDocs(q);
+			const allReminders = snapshot.docs.map((doc) => ({
+				id: doc.id,
+				...doc.data(),
+			}));
+
+			console.log(`Found ${allReminders.length} total reminders to delete`);
+
+			// Delete all reminders in sequence to avoid bloom issues
+			for (const reminder of allReminders) {
+				try {
+					console.log(
+						`Deleting reminder: ${reminder.id}, type: ${reminder.type}, status: ${
+							reminder.status || 'unknown'
+						}`
+					);
+					await deleteReminder(reminder.id);
+				} catch (err) {
+					console.error('Error deleting reminder:', err);
 				}
 			}
 
+			// Update UI
 			setSelectedContact({
 				...contact,
 				scheduling: {
@@ -215,6 +215,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				},
 				next_contact: null,
 			});
+
+			// Refresh the contacts list if available
+			if (loadContacts) {
+				await loadContacts();
+			}
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');

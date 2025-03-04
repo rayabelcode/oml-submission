@@ -7,6 +7,7 @@ import { navigate } from '../../navigation/RootNavigation';
 import { getContactById, getReminder } from '../firestore';
 import { callHandler } from '../callHandler';
 import { auth } from '../../config/firebase';
+import { DateTime } from 'luxon';
 
 export const handleNotificationResponse = async (response) => {
 	console.log('Notification response received:', {
@@ -25,7 +26,7 @@ export const handleNotificationResponse = async (response) => {
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						// Show contact options dialog
+						// Show contact options dialog - exactly like dashboard
 						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
 							{
 								text: 'Phone',
@@ -49,10 +50,11 @@ export const handleNotificationResponse = async (response) => {
 					console.error('Error initiating call:', error);
 				}
 			} else if (response.actionIdentifier === 'snooze') {
+				// Handle snooze using the exact same process as DashboardScreen's handleSnooze
 				console.log(`Processing snooze for reminder: ${data.reminderId}`);
 				try {
 					// Get the current user ID
-					const userId = auth.currentUser?.uid || data.userId;
+					const userId = auth.currentUser?.uid;
 
 					if (!userId) {
 						console.error('No user ID available for snooze handling');
@@ -60,69 +62,49 @@ export const handleNotificationResponse = async (response) => {
 						return;
 					}
 
-					// Initialize the snooze handler with the user ID
+					// Initialize the snooze handler
 					await initializeSnoozeHandler(userId);
 
-					// Use hardcoded snooze options directly
-					Alert.alert('Snooze Options', 'When would you like to be reminded?', [
-						{
-							text: 'Later Today',
-							onPress: () => {
-								console.log('Snoozing for later today');
-								return snoozeHandler.handleSnooze(
+					// Get all available snooze options for this reminder - using the existing function
+					const options = await snoozeHandler.getAvailableSnoozeOptions(data.reminderId);
+					if (!options || options.length === 0) {
+						Alert.alert('Error', 'No available snooze options');
+						return;
+					}
+
+					// Create option handlers - like in DashboardScreen
+					const optionsWithHandlers = options.map((option) => ({
+						...option,
+						onPress: async () => {
+							try {
+								console.log(`Selected snooze option: ${option.id}`);
+								await snoozeHandler.handleSnooze(
 									data.contactId,
-									'later_today',
-									undefined,
-									data.type,
+									option.id,
+									DateTime.now(),
+									data.type || 'SCHEDULED',
 									data.reminderId
 								);
-							},
+							} catch (error) {
+								console.error('Error in snooze process:', error);
+								Alert.alert('Error', 'Unable to snooze reminder. Please try again.');
+							}
 						},
-						{
-							text: 'Tomorrow',
-							onPress: () => {
-								console.log('Snoozing for tomorrow');
-								return snoozeHandler.handleSnooze(
-									data.contactId,
-									'tomorrow',
-									undefined,
-									data.type,
-									data.reminderId
-								);
-							},
-						},
-						{
-							text: 'Next Week',
-							onPress: () => {
-								console.log('Snoozing for next week');
-								return snoozeHandler.handleSnooze(
-									data.contactId,
-									'next_week',
-									undefined,
-									data.type,
-									data.reminderId
-								);
-							},
-						},
-						{
-							text: 'Skip',
-							style: 'destructive',
-							onPress: () => {
-								console.log('Skipping reminder');
-								return snoozeHandler.handleSnooze(
-									data.contactId,
-									'skip',
-									undefined,
-									data.type,
-									data.reminderId
-								);
-							},
-						},
-						{
-							text: 'Cancel',
-							style: 'cancel',
-						},
-					]);
+					}));
+
+					// Create buttons for Alert dialog
+					const buttons = optionsWithHandlers.map((option) => ({
+						text: option.text,
+						style: option.id === 'skip' ? 'destructive' : 'default',
+						onPress: option.onPress,
+					}));
+
+					buttons.push({
+						text: 'Cancel',
+						style: 'cancel',
+					});
+
+					Alert.alert('Snooze Options', 'When would you like to be reminded?', buttons);
 				} catch (error) {
 					console.error('Error handling snooze options:', error);
 					Alert.alert('Error', 'Could not process snooze request. Please try again later.');
