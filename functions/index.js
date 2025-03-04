@@ -155,7 +155,7 @@ export const processReminders = onSchedule(
           sound: "default",
           title: "Scheduled Call",
           body: `Time to call ${reminder.contactName}`,
-          categoryIdentifier: "SCHEDULED",
+          _category: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
@@ -387,7 +387,7 @@ export const processCustomReminders = onSchedule(
           sound: "default",
           title: "Custom Call Reminder",
           body: `Time to call ${reminder.contactName}`,
-          categoryIdentifier: "CUSTOM_DATE",
+          _category: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
@@ -510,7 +510,7 @@ export const processSnoozedScheduledReminders = onSchedule(
           sound: "default",
           title: "Snoozed Call Reminder",
           body: `Time to call ${reminder.contactName}`,
-          categoryIdentifier: "SCHEDULED",
+          _category: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
@@ -634,7 +634,7 @@ export const processSnoozedCustomReminders = onSchedule(
           sound: "default",
           title: "Snoozed Custom Call Reminder",
           body: `Time to call ${reminder.contactName}`,
-          categoryIdentifier: "CUSTOM_DATE",
+          _category: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
