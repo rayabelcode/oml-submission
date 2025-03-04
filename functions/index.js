@@ -161,6 +161,7 @@ export const processReminders = onSchedule(
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
+          categoryIdentifier: "SCHEDULED"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -392,6 +393,7 @@ export const processCustomReminders = onSchedule(
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
+          categoryIdentifier: "CUSTOM_DATE"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -514,6 +516,7 @@ export const processSnoozedScheduledReminders = onSchedule(
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
+          categoryIdentifier: "SCHEDULED"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
@@ -637,6 +640,7 @@ export const processSnoozedCustomReminders = onSchedule(
             contactId: reminder.contact_id,
             userId: reminder.user_id,
           },
+          categoryIdentifier: "CUSTOM_DATE"
         }));
 
         const chunks = expo.chunkPushNotifications(messages);
