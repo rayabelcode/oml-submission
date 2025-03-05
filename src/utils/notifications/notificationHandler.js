@@ -25,15 +25,18 @@ export const handleNotificationResponse = async (response) => {
 						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
 							{
 								text: 'Phone',
+								// Standard phone call
 								onPress: () => callHandler.initiateCall(contact, 'phone'),
 							},
 							{
 								text: 'FaceTime',
-								onPress: () => callHandler.initiateCall(contact, 'facetime'),
+								// FaceTime Video call
+								onPress: () => callHandler.initiateCall(contact, 'facetime-video'),
 							},
 							{
 								text: 'Text',
-								onPress: () => callHandler.initiateCall(contact, 'text'),
+								// Text Message
+								onPress: () => callHandler.initiateCall(contact, 'sms'),
 							},
 							{
 								text: 'Cancel',
