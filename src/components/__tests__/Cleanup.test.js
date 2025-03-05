@@ -391,3 +391,75 @@ describe('CleanupService', () => {
 		});
 	});
 });
+
+describe('Selective Reminder Cleanup', () => {
+	beforeEach(() => {
+		jest.clearAllMocks();
+	});
+
+	it('deletes only SCHEDULED reminders when changing frequency', async () => {
+		// Create mock data
+		const mockScheduledReminder1 = {
+			id: 'scheduled-1',
+			type: REMINDER_TYPES.SCHEDULED,
+			status: 'pending',
+			contact_id: 'test-contact',
+		};
+
+		const mockScheduledReminder2 = {
+			id: 'scheduled-2',
+			type: REMINDER_TYPES.SCHEDULED,
+			status: 'snoozed',
+			contact_id: 'test-contact',
+		};
+
+		const mockCustomDateReminder = {
+			id: 'custom-date-1',
+			type: REMINDER_TYPES.CUSTOM_DATE,
+			status: 'pending',
+			contact_id: 'test-contact',
+		};
+
+		// Create mock snapshot
+		const mockDocs = [
+			{ id: 'scheduled-1', data: () => mockScheduledReminder1 },
+			{ id: 'scheduled-2', data: () => mockScheduledReminder2 },
+			{ id: 'custom-date-1', data: () => mockCustomDateReminder },
+		];
+
+		const mockGetDocs = jest.fn().mockResolvedValue({
+			docs: mockDocs,
+			forEach: jest.fn((callback) => mockDocs.forEach(callback)),
+		});
+
+		// Mock the required methods
+		const originalCollection = require('firebase/firestore').collection;
+		const originalQuery = require('firebase/firestore').query;
+		const originalWhere = require('firebase/firestore').where;
+		const originalGetDocs = require('firebase/firestore').getDocs;
+
+		require('firebase/firestore').collection = jest.fn();
+		require('firebase/firestore').query = jest.fn();
+		require('firebase/firestore').where = jest.fn();
+		require('firebase/firestore').getDocs = mockGetDocs;
+
+		// Call the function
+		const result = await cleanupService.cleanupScheduledReminders('test-contact');
+
+		// Check that it called deleteReminder with the right IDs
+		expect(deleteReminder).toHaveBeenCalledTimes(2);
+		expect(deleteReminder).toHaveBeenCalledWith('scheduled-1');
+		expect(deleteReminder).toHaveBeenCalledWith('scheduled-2');
+		expect(deleteReminder).not.toHaveBeenCalledWith('custom-date-1');
+
+		// Check the returned result
+		expect(result.deletedCount).toBe(2);
+		expect(result.success).toBe(true);
+
+		// Restore original Firebase functions
+		require('firebase/firestore').collection = originalCollection;
+		require('firebase/firestore').query = originalQuery;
+		require('firebase/firestore').where = originalWhere;
+		require('firebase/firestore').getDocs = originalGetDocs;
+	});
+});

@@ -130,6 +130,7 @@ class CleanupService {
 		}
 	}
 
+	// Cleanup a single reminder
 	async cleanupReminder(firestoreId, reminder, localId) {
 		try {
 			// Cancel local notification if it exists
@@ -170,6 +171,46 @@ class CleanupService {
 			initialized: this.initialized,
 			lastCleanupTime: this.lastCleanupTime,
 		};
+	}
+
+	// Cleanup all scheduled reminders for a contact
+	async cleanupScheduledReminders(contactId) {
+		try {
+			const { collection, query, where, getDocs } = require('firebase/firestore');
+			const { db, auth } = require('../config/firebase');
+
+			// Get all reminders for this contact
+			const remindersRef = collection(db, 'reminders');
+			const q = query(
+				remindersRef,
+				where('contact_id', '==', contactId),
+				where('user_id', '==', auth.currentUser.uid)
+			);
+
+			const snapshot = await getDocs(q);
+			const allReminders = snapshot.docs.map((doc) => ({
+				id: doc.id,
+				...doc.data(),
+			}));
+
+			// Only delete SCHEDULED reminders
+			const deletePromises = allReminders
+				.filter((reminder) => reminder.type === REMINDER_TYPES.SCHEDULED)
+				.map((reminder) => deleteReminder(reminder.id));
+
+			// Wait for all deletions to complete
+			if (deletePromises.length > 0) {
+				await Promise.all(deletePromises);
+			}
+
+			return {
+				deletedCount: deletePromises.length,
+				success: true,
+			};
+		} catch (error) {
+			console.error('[CleanupService] Error cleaning scheduled reminders:', error);
+			throw error;
+		}
 	}
 }
 

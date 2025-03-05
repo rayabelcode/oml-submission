@@ -22,6 +22,7 @@ import {
 	DEFAULT_ACTIVE_HOURS,
 } from '../../../utils/scheduler/schedulerConstants';
 import { SchedulingService } from '../../../utils/scheduler/scheduler';
+import { cleanupService } from '../../../utils/cleanup';
 
 const SlotsFilledModal = ({ isVisible, onClose, details, onOptionSelect }) => {
 	const styles = useScheduleStyles();
@@ -348,6 +349,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									}
 
 									setFrequency(option.value);
+
+									// Delete existing SCHEDULED reminders but keep CUSTOM_DATE
+									await cleanupService.cleanupScheduledReminders(contact.id);
+
+									// Continue with updating the frequency
 									const updatedContact = await updateContactScheduling(contact.id, {
 										frequency: option.value,
 									});
