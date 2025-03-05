@@ -85,7 +85,7 @@ export const IOS_CONFIGS = {
 				actions: [
 					{
 						identifier: 'call_now',
-						title: 'Call Now',
+						title: 'Contact Now',
 						options: {
 							isDestructive: false,
 							isAuthenticationRequired: false,
@@ -107,7 +107,7 @@ export const IOS_CONFIGS = {
 				actions: [
 					{
 						identifier: 'call_now',
-						title: 'Call Now',
+						title: 'Contact Now',
 						options: {
 							foreground: true,
 						},
@@ -263,7 +263,7 @@ export const MAX_SNOOZE_ATTEMPTS = 4;
 export const NOTIFICATION_MESSAGES = {
 	MAX_SNOOZE_REACHED: {
 		title: 'Maximum Snooze Reached',
-		message: 'You have snoozed this reminder 4 times. Would you like to skip this call?',
+		message: 'You have snoozed this reminder 4 times. Would you like to skip this contact?',
 	},
 	CONTACT_ACTION: {
 		title: 'Choose an action:',

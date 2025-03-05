@@ -83,7 +83,7 @@ class ScheduledCallService {
 						style: 'cancel',
 					},
 					{
-						text: 'Yes, skip this call',
+						text: 'Yes, skip this contact',
 						style: 'destructive',
 						onPress: () => this.handleSkip(reminder.id),
 					},

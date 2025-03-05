@@ -118,7 +118,7 @@ class NotificationCoordinator {
 			await Notifications.setNotificationCategoryAsync('SCHEDULED', [
 				{
 					identifier: 'call_now',
-					buttonTitle: 'Call Now',
+					buttonTitle: 'Contact Now',
 					options: {
 						opensAppToForeground: true,
 					},
@@ -136,7 +136,7 @@ class NotificationCoordinator {
 			await Notifications.setNotificationCategoryAsync('CUSTOM_DATE', [
 				{
 					identifier: 'call_now',
-					buttonTitle: 'Call Now',
+					buttonTitle: 'Contact Now',
 					options: {
 						opensAppToForeground: true,
 					},
