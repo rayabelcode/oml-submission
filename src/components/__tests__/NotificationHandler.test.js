@@ -45,7 +45,7 @@ jest.mock('../../utils/scheduler/snoozeHandler', () => ({
 		getAvailableSnoozeOptions: jest.fn().mockResolvedValue([
 			{
 				id: 'later_today',
-				text: 'Later Today (+3 hours)',
+				text: 'Later Today',
 			},
 			{
 				id: 'tomorrow',

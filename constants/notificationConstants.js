@@ -205,7 +205,7 @@ export const SNOOZE_OPTIONS = [
 	{
 		id: 'later_today',
 		icon: 'time-outline',
-		text: 'Later Today (+3 hours)',
+		text: 'Later Today',
 		hours: 3,
 	},
 	{
