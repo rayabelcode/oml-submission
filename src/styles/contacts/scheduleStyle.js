@@ -28,7 +28,7 @@ export const useScheduleStyles = () => {
 			paddingVertical: spacing.md,
 			alignItems: 'center',
 			justifyContent: 'center',
-			borderWidth: 1,
+			borderWidth: .5,
 			borderColor: colors.border,
 		},
 		frequencyButtonActive: {
@@ -42,8 +42,8 @@ export const useScheduleStyles = () => {
 			fontWeight: '500',
 		},
 		frequencyTextActive: {
-			color: colors.background.primary,
-			fontWeight: '700',
+			color: colors.text.white,
+			fontWeight: '800',
 		},
 		buttonContent: {
 			flexDirection: 'row',

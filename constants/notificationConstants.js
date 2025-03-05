@@ -80,12 +80,34 @@ export const IOS_CONFIGS = {
 				],
 			},
 
+			CUSTOM_DATE: {
+				identifier: 'CUSTOM_DATE',
+				actions: [
+					{
+						identifier: 'call_now',
+						title: 'Contact Now',
+						options: {
+							isDestructive: false,
+							isAuthenticationRequired: false,
+						},
+					},
+					{
+						identifier: 'snooze',
+						title: 'Snooze',
+						options: {
+							isDestructive: false,
+							isAuthenticationRequired: false,
+						},
+					},
+				],
+			},
+
 			SCHEDULED: {
 				identifier: 'SCHEDULED',
 				actions: [
 					{
 						identifier: 'call_now',
-						title: 'Call Now',
+						title: 'Contact Now',
 						options: {
 							foreground: true,
 						},
@@ -183,7 +205,7 @@ export const SNOOZE_OPTIONS = [
 	{
 		id: 'later_today',
 		icon: 'time-outline',
-		text: 'Later Today (+3 hours)',
+		text: 'Later Today',
 		hours: 3,
 	},
 	{
@@ -241,7 +263,7 @@ export const MAX_SNOOZE_ATTEMPTS = 4;
 export const NOTIFICATION_MESSAGES = {
 	MAX_SNOOZE_REACHED: {
 		title: 'Maximum Snooze Reached',
-		message: 'You have snoozed this reminder 4 times. Would you like to skip this call?',
+		message: 'You have snoozed this reminder 4 times. Would you like to skip this contact?',
 	},
 	CONTACT_ACTION: {
 		title: 'Choose an action:',

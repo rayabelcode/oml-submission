@@ -11,7 +11,7 @@ import {
 } from '../../../utils/firestore';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
-import { updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../../../config/firebase';
 import { DateTime } from 'luxon';
 import { REMINDER_TYPES } from '../../../../constants/notificationConstants';
@@ -22,6 +22,7 @@ import {
 	DEFAULT_ACTIVE_HOURS,
 } from '../../../utils/scheduler/schedulerConstants';
 import { SchedulingService } from '../../../utils/scheduler/scheduler';
+import { cleanupService } from '../../../utils/cleanup';
 
 const SlotsFilledModal = ({ isVisible, onClose, details, onOptionSelect }) => {
 	const styles = useScheduleStyles();
@@ -160,32 +161,27 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	}, [loading]);
 
-	const handleUpdateScheduling = async (updates) => {
-		setError(null);
-		setLoading(true);
-		try {
-			await updateContactScheduling(contact.id, updates);
-			setSelectedContact((prev) => ({
-				...prev,
-				scheduling: {
-					...prev.scheduling,
-					...updates,
-				},
-			}));
-		} catch (error) {
-			setError('Failed to update scheduling preferences');
-			console.error('Error updating scheduling preferences:', error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleRecurringOff = async () => {
+	const handleNoContactPress = async () => {
 		try {
 			setFrequency(null);
-			setLoadingType('recurring');
 			setLoading(true);
 
+			// Important: Set loading types based on what dates exist
+			if (contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) {
+				// Both dates exist - show animation for both
+				setLoadingType('both');
+			} else if (contact.scheduling?.recurring_next_date) {
+				// Only recurring date exists
+				setLoadingType('recurring');
+			} else if (contact.scheduling?.custom_next_date) {
+				// Only custom date exists
+				setLoadingType('custom');
+			} else {
+				// No dates exist at all - do not show any animations
+				setLoadingType('both');
+			}
+
+			// Update contact scheduling info
 			await updateContactScheduling(contact.id, {
 				frequency: null,
 				next_contact: null,
@@ -193,18 +189,30 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				custom_next_date: null,
 			});
 
-			const existingReminders = await getContactReminders(contact.id, auth.currentUser.uid);
+			// Get all reminders for this contact without filtering by snoozed status
+			const remindersRef = collection(db, 'reminders');
+			const q = query(
+				remindersRef,
+				where('contact_id', '==', contact.id),
+				where('user_id', '==', auth.currentUser.uid)
+			);
 
-			for (const reminder of existingReminders) {
-				if (reminder.type === REMINDER_TYPES.SCHEDULED || reminder.type === REMINDER_TYPES.CUSTOM_DATE) {
-					try {
-						await deleteReminder(reminder.id);
-					} catch (err) {
-						console.error('Error deleting reminder:', err);
-					}
+			const snapshot = await getDocs(q);
+			const allReminders = snapshot.docs.map((doc) => ({
+				id: doc.id,
+				...doc.data(),
+			}));
+
+			// Delete all reminders in sequence to avoid bloom issues
+			for (const reminder of allReminders) {
+				try {
+					await deleteReminder(reminder.id);
+				} catch (err) {
+					console.error('Error deleting reminder:', err);
 				}
 			}
 
+			// Update UI
 			setSelectedContact({
 				...contact,
 				scheduling: {
@@ -215,6 +223,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 				},
 				next_contact: null,
 			});
+
+			// Refresh the contacts list if available
+			if (loadContacts) {
+				await loadContacts();
+			}
 		} catch (error) {
 			console.error('Error turning off recurring:', error);
 			setError('Failed to turn off recurring');
@@ -284,35 +297,31 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			<View style={styles.dateSection}>
 				<View style={styles.scheduledDatesContainer}>
 					<View style={styles.nextRecurringBox}>
-						{loading && loadingType === 'recurring' ? (
+						<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
+						{loading && (loadingType === 'recurring' || loadingType === 'both') && loadingType !== 'none' ? (
 							<View style={styles.dotsContainer}>
 								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
 							</View>
 						) : (
-							<>
-								<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
-								<Text style={styles.scheduledDateValue}>
-									{formatStoredDate(contact.scheduling?.recurring_next_date)}
-								</Text>
-							</>
+							<Text style={styles.scheduledDateValue}>
+								{formatStoredDate(contact.scheduling?.recurring_next_date)}
+							</Text>
 						)}
 					</View>
 					<View style={styles.customDateBox}>
-						{loading && loadingType === 'custom' ? (
+						<Text style={styles.scheduledDateLabel}>Custom Date</Text>
+						{loading && (loadingType === 'custom' || loadingType === 'both') && loadingType !== 'none' ? (
 							<View style={styles.dotsContainer}>
 								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
 							</View>
 						) : (
-							<>
-								<Text style={styles.scheduledDateLabel}>Custom Date</Text>
-								<Text style={styles.scheduledDateValue}>
-									{formatStoredDate(contact.scheduling?.custom_next_date)}
-								</Text>
-							</>
+							<Text style={styles.scheduledDateValue}>
+								{formatStoredDate(contact.scheduling?.custom_next_date)}
+							</Text>
 						)}
 					</View>
 				</View>
@@ -350,6 +359,11 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 									}
 
 									setFrequency(option.value);
+
+									// Delete existing SCHEDULED reminders but keep CUSTOM_DATE
+									await cleanupService.cleanupScheduledReminders(contact.id);
+
+									// Continue with updating the frequency
 									const updatedContact = await updateContactScheduling(contact.id, {
 										frequency: option.value,
 									});
@@ -446,7 +460,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 				<TouchableOpacity
 					style={[styles.recurringOffButton, loading && styles.disabledButton]}
-					onPress={handleRecurringOff}
+					onPress={handleNoContactPress}
 					disabled={loading}
 				>
 					<Text style={styles.recurringOffText}>No Contact</Text>

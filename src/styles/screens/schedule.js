@@ -19,19 +19,20 @@ const useStyles = () => {
 			flex: 1,
 		},
 		contactGroup: {
-			marginBottom: spacing.sm,
+			marginBottom: spacing.lg,
 		},
 		groupHeader: {
-			paddingTop: spacing.md,
+			paddingTop: spacing.xs,
 			paddingBottom: spacing.xs,
-			borderBottomWidth: .5,
+			borderBottomWidth: 0,
 			borderBottomColor: colors.border,
-			marginBottom: spacing.md,
+			marginBottom: spacing.sm,
 		},
 		groupTitle: {
 			fontSize: 22,
 			fontWeight: '700',
 			color: colors.text.primary,
+			opacity: 0.9,
 		},
 		contactList: {
 			flex: 1,

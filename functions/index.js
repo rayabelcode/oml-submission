@@ -21,7 +21,7 @@ export const healthCheck = onRequest(
   },
   (req, res) => {
     res.status(200).send("OK");
-  },
+  }
 );
 
 // Function 1: Daily test notification sent at 10:20 AM ET
@@ -107,7 +107,7 @@ export const scheduledNotification = onSchedule(
       console.error("Error in test function:", error);
       return null;
     }
-  },
+  }
 );
 
 // Function 2: Process SCHEDULED reminders
@@ -153,8 +153,9 @@ export const processReminders = onSchedule(
         const messages = userData.expoPushTokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "Scheduled Call",
-          body: `Time to call ${reminder.contactName}`,
+          title: "Scheduled Contact",
+          body: `Time to contact ${reminder.contactName}`,
+          categoryId: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
@@ -232,7 +233,7 @@ export const processReminders = onSchedule(
                 {
                   isCloudFunction: true,
                   enforceActiveHours: true,
-                },
+                }
               );
 
               const updates = {
@@ -246,7 +247,7 @@ export const processReminders = onSchedule(
                   const nextRecurring = await scheduler.scheduleRecurringReminder(
                     contactData,
                     new Date(),
-                    contactData.scheduling.frequency,
+                    contactData.scheduling.frequency
                   );
 
                   console.log("Next recurring calculation result:", {
@@ -316,9 +317,10 @@ export const processReminders = onSchedule(
                 .filter(Boolean)
                 .map((date) => (date instanceof Date ? date : new Date(date)));
 
-              updates.next_contact = possibleDates.length > 0 ?
-                new Date(Math.min(...possibleDates.map((d) => d.getTime()))) :
-                null;
+              updates.next_contact =
+								possibleDates.length > 0
+								  ? new Date(Math.min(...possibleDates.map((d) => d.getTime())))
+								  : null;
 
               batch.update(contactRef, updates);
             }
@@ -341,7 +343,7 @@ export const processReminders = onSchedule(
       console.error("Error processing reminders:", error);
       return null;
     }
-  },
+  }
 );
 
 // Function 3: Process CUSTOM_DATE reminders
@@ -384,8 +386,9 @@ export const processCustomReminders = onSchedule(
         const messages = userData.expoPushTokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "Custom Call Reminder",
-          body: `Time to call ${reminder.contactName}`,
+          title: "Custom Contact Reminder",
+          body: `Time to contact ${reminder.contactName}`,
+          categoryId: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
@@ -443,8 +446,8 @@ export const processCustomReminders = onSchedule(
 
           if (contactDoc.exists) {
             batch.update(contactRef, {
-              "last_contacted": FieldValue.serverTimestamp(),
-              "last_updated": FieldValue.serverTimestamp(),
+              last_contacted: FieldValue.serverTimestamp(),
+              last_updated: FieldValue.serverTimestamp(),
               "scheduling.custom_next_date": null,
             });
           }
@@ -464,7 +467,7 @@ export const processCustomReminders = onSchedule(
       console.error("Error processing custom reminders:", error);
       return null;
     }
-  },
+  }
 );
 
 // Function 4: Process 'snoozed' SCHEDULED reminders
@@ -506,8 +509,9 @@ export const processSnoozedScheduledReminders = onSchedule(
         const messages = userData.expoPushTokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "Snoozed Call Reminder",
-          body: `Time to call ${reminder.contactName}`,
+          title: "Snoozed Contact Reminder",
+          body: `Time to contact ${reminder.contactName}`,
+          categoryId: "SCHEDULED",
           data: {
             type: "SCHEDULED",
             reminderId: reminderDoc.id,
@@ -549,7 +553,7 @@ export const processSnoozedScheduledReminders = onSchedule(
         if (notificationSent) {
           const batch = db.batch();
 
-          // Update current reminder
+          // Mark the snoozed reminder as sent
           batch.update(reminderDoc.ref, {
             status: "sent",
             snoozed: false,
@@ -558,66 +562,15 @@ export const processSnoozedScheduledReminders = onSchedule(
             updated_at: FieldValue.serverTimestamp(),
           });
 
-          // Get contact data and user preferences for scheduling
+          // Update contact's last_contacted timestamp
           const contactRef = db.collection("contacts").doc(reminder.contact_id);
           const contactDoc = await contactRef.get();
-          const userPrefsDoc = await db.collection("user_preferences").doc(reminder.user_id).get();
-          const userPreferences = userPrefsDoc.exists ? userPrefsDoc.data() : {};
 
           if (contactDoc.exists) {
-            const contactData = contactDoc.data();
             const updates = {
               last_contacted: FieldValue.serverTimestamp(),
               last_updated: FieldValue.serverTimestamp(),
             };
-
-            // Calculate next reminder if contact has frequency
-            if (contactData.scheduling?.frequency) {
-              const scheduler = new SchedulingService(userPreferences, [], "America/New_York", {
-                isCloudFunction: true,
-                enforceActiveHours: true,
-              });
-
-              try {
-                const nextRecurring = await scheduler.scheduleRecurringReminder(
-                  contactData,
-                  new Date(),
-                  contactData.scheduling.frequency,
-                );
-
-                if (nextRecurring.scheduledTime) {
-                  updates["scheduling.recurring_next_date"] = nextRecurring.scheduledTime
-                    .toDate()
-                    .toISOString();
-                  updates["next_contact"] = nextRecurring.scheduledTime.toDate();
-
-                  // Create new reminder
-                  const newReminderRef = db.collection("reminders").doc();
-                  const newReminderData = {
-                    created_at: FieldValue.serverTimestamp(),
-                    updated_at: FieldValue.serverTimestamp(),
-                    contact_id: reminder.contact_id,
-                    user_id: reminder.user_id,
-                    status: "pending",
-                    type: "SCHEDULED",
-                    frequency: contactData.scheduling.frequency,
-                    snoozed: false,
-                    needs_attention: false,
-                    completed: false,
-                    completion_time: null,
-                    notes_added: false,
-                    contactName: reminder.contactName,
-                    notified: false,
-                    scheduledTime: nextRecurring.scheduledTime,
-                  };
-
-                  batch.set(newReminderRef, newReminderData);
-                }
-              } catch (error) {
-                console.error("Error calculating next reminder:", error);
-                updates["scheduling.recurring_next_date"] = null;
-              }
-            }
 
             batch.update(contactRef, updates);
           }
@@ -637,7 +590,7 @@ export const processSnoozedScheduledReminders = onSchedule(
       console.error("Error processing snoozed SCHEDULED reminders:", error);
       return null;
     }
-  },
+  }
 );
 
 // Function 5: Process 'snoozed' CUSTOM_DATE reminders
@@ -679,8 +632,9 @@ export const processSnoozedCustomReminders = onSchedule(
         const messages = userData.expoPushTokens.map((token) => ({
           to: token,
           sound: "default",
-          title: "Snoozed Custom Call Reminder",
-          body: `Time to call ${reminder.contactName}`,
+          title: "Snoozed Custom Contact Reminder",
+          body: `Time to contact ${reminder.contactName}`,
+          categoryId: "CUSTOM_DATE",
           data: {
             type: "CUSTOM_DATE",
             reminderId: reminderDoc.id,
@@ -735,8 +689,8 @@ export const processSnoozedCustomReminders = onSchedule(
 
           if (contactDoc.exists) {
             batch.update(contactRef, {
-              "last_contacted": FieldValue.serverTimestamp(),
-              "last_updated": FieldValue.serverTimestamp(),
+              last_contacted: FieldValue.serverTimestamp(),
+              last_updated: FieldValue.serverTimestamp(),
               "scheduling.custom_next_date": null,
             });
           }
@@ -756,5 +710,5 @@ export const processSnoozedCustomReminders = onSchedule(
       console.error("Error processing snoozed CUSTOM_DATE reminders:", error);
       return null;
     }
-  },
+  }
 );

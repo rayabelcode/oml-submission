@@ -273,7 +273,7 @@ const useStyles = () => {
 			flexDirection: 'row',
 			alignItems: 'center',
 			justifyContent: 'center',
-			marginVertical: spacing.sm,
+			marginBottom: spacing.sm,
 		},
 		emptyStateMessage: {
 			fontSize: 17,
