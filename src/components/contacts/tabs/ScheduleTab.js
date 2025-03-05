@@ -161,11 +161,25 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 		}
 	}, [loading]);
 
-	const handleRecurringOff = async () => {
+	const handleNoContactPress = async () => {
 		try {
 			setFrequency(null);
-			setLoadingType('recurring');
 			setLoading(true);
+
+			// Important: Set loading types based on what dates exist
+			if (contact.scheduling?.recurring_next_date && contact.scheduling?.custom_next_date) {
+				// Both dates exist - show animation for both
+				setLoadingType('both');
+			} else if (contact.scheduling?.recurring_next_date) {
+				// Only recurring date exists
+				setLoadingType('recurring');
+			} else if (contact.scheduling?.custom_next_date) {
+				// Only custom date exists
+				setLoadingType('custom');
+			} else {
+				// No dates exist at all - do not show any animations
+				setLoadingType('both');
+			}
 
 			// Update contact scheduling info
 			await updateContactScheduling(contact.id, {
@@ -283,35 +297,31 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 			<View style={styles.dateSection}>
 				<View style={styles.scheduledDatesContainer}>
 					<View style={styles.nextRecurringBox}>
-						{loading && loadingType === 'recurring' ? (
+						<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
+						{loading && (loadingType === 'recurring' || loadingType === 'both') && loadingType !== 'none' ? (
 							<View style={styles.dotsContainer}>
 								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
 							</View>
 						) : (
-							<>
-								<Text style={styles.scheduledDateLabel}>Next Recurring</Text>
-								<Text style={styles.scheduledDateValue}>
-									{formatStoredDate(contact.scheduling?.recurring_next_date)}
-								</Text>
-							</>
+							<Text style={styles.scheduledDateValue}>
+								{formatStoredDate(contact.scheduling?.recurring_next_date)}
+							</Text>
 						)}
 					</View>
 					<View style={styles.customDateBox}>
-						{loading && loadingType === 'custom' ? (
+						<Text style={styles.scheduledDateLabel}>Custom Date</Text>
+						{loading && (loadingType === 'custom' || loadingType === 'both') && loadingType !== 'none' ? (
 							<View style={styles.dotsContainer}>
 								<Animated.View style={[styles.dot, { opacity: dot1 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot2 }]} />
 								<Animated.View style={[styles.dot, { opacity: dot3 }]} />
 							</View>
 						) : (
-							<>
-								<Text style={styles.scheduledDateLabel}>Custom Date</Text>
-								<Text style={styles.scheduledDateValue}>
-									{formatStoredDate(contact.scheduling?.custom_next_date)}
-								</Text>
-							</>
+							<Text style={styles.scheduledDateValue}>
+								{formatStoredDate(contact.scheduling?.custom_next_date)}
+							</Text>
 						)}
 					</View>
 				</View>
@@ -450,7 +460,7 @@ const ScheduleTab = ({ contact, setSelectedContact, loadContacts }) => {
 
 				<TouchableOpacity
 					style={[styles.recurringOffButton, loading && styles.disabledButton]}
-					onPress={handleRecurringOff}
+					onPress={handleNoContactPress}
 					disabled={loading}
 				>
 					<Text style={styles.recurringOffText}>No Contact</Text>
