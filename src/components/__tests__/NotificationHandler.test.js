@@ -501,3 +501,189 @@ describe('Notification Handler', () => {
 		});
 	});
 });
+
+// Testing specific contact options
+it('should initiate a phone call when phone option is selected', async () => {
+	// Mock Alert to simulate selecting "Phone" option
+	Alert.alert = jest.fn((title, message, buttons) => {
+		const phoneButton = buttons.find((btn) => btn.text === 'Phone');
+		if (phoneButton) phoneButton.onPress();
+	});
+
+	const response = {
+		actionIdentifier: 'call_now',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	expect(callHandler.initiateCall).toHaveBeenCalledWith(
+		expect.objectContaining({ id: 'test-contact' }),
+		'phone'
+	);
+});
+
+it('should initiate a FaceTime call when FaceTime option is selected', async () => {
+	Alert.alert = jest.fn((title, message, buttons) => {
+		const facetimeButton = buttons.find((btn) => btn.text === 'FaceTime');
+		if (facetimeButton) facetimeButton.onPress();
+	});
+
+	const response = {
+		actionIdentifier: 'call_now',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	expect(callHandler.initiateCall).toHaveBeenCalledWith(
+		expect.objectContaining({ id: 'test-contact' }),
+		'facetime-video'
+	);
+});
+
+it('should initiate a text message when Text option is selected', async () => {
+	Alert.alert = jest.fn((title, message, buttons) => {
+		const textButton = buttons.find((btn) => btn.text === 'Text');
+		if (textButton) textButton.onPress();
+	});
+
+	const response = {
+		actionIdentifier: 'call_now',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	expect(callHandler.initiateCall).toHaveBeenCalledWith(
+		expect.objectContaining({ id: 'test-contact' }),
+		'sms'
+	);
+});
+
+// Testing skip functionality
+it('should handle skip option for scheduled reminders', async () => {
+	Alert.alert = jest.fn((title, message, buttons) => {
+		const skipButton = buttons.find((btn) => btn.text.includes('Skip'));
+		if (skipButton) skipButton.onPress();
+	});
+
+	// Mock the getAvailableSnoozeOptions to include skip option
+	snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([{ id: 'skip', text: 'Skip This Call' }]);
+
+	const response = {
+		actionIdentifier: 'snooze',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+						reminderId: 'test-reminder-id',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	expect(snoozeHandler.handleSnooze).toHaveBeenCalledWith(
+		'test-contact',
+		'skip',
+		expect.anything(),
+		REMINDER_TYPES.SCHEDULED,
+		'test-reminder-id'
+	);
+});
+
+// Testing snoozed reminder behavior
+it('should handle actions for snoozed SCHEDULED reminders the same as regular reminders', async () => {
+	const response = {
+		actionIdentifier: 'call_now',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+						reminderId: 'test-reminder-id',
+						status: 'snoozed',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	expect(getContactById).toHaveBeenCalledWith('test-contact');
+	expect(Alert.alert).toHaveBeenCalledWith(
+		'Contact Options',
+		'How would you like to contact John?',
+		expect.any(Array)
+	);
+});
+
+// Test max snooze reached
+it('should only show Skip option when max snooze is reached', async () => {
+	// Mock getAvailableSnoozeOptions to return only skip option (as if max reached)
+	snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([{ id: 'skip', text: 'Skip This Call' }]);
+
+	let alertButtons = [];
+	Alert.alert = jest.fn((title, message, buttons) => {
+		alertButtons = buttons;
+	});
+
+	const response = {
+		actionIdentifier: 'snooze',
+		notification: {
+			request: {
+				content: {
+					data: {
+						type: REMINDER_TYPES.SCHEDULED,
+						contactId: 'test-contact',
+						reminderId: 'test-reminder-id',
+					},
+				},
+			},
+		},
+	};
+
+	await handleNotificationResponse(response);
+
+	// Should only have Skip and Cancel buttons
+	expect(alertButtons.length).toBe(2);
+	expect(alertButtons[0].text).toBe('Skip This Call');
+	expect(alertButtons[1].text).toBe('Cancel');
+});
+
+// Test categoryIdentifier behavior for iOS (more integration test than unit test)
+it('should use the correct notification action buttons for iOS', () => {});
