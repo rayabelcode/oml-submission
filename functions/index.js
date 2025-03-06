@@ -556,7 +556,6 @@ export const processSnoozedScheduledReminders = onSchedule(
           // Mark the snoozed reminder as sent
           batch.update(reminderDoc.ref, {
             status: "sent",
-            snoozed: false,
             completion_time: FieldValue.serverTimestamp(),
             notifiedAt: FieldValue.serverTimestamp(),
             updated_at: FieldValue.serverTimestamp(),
@@ -678,7 +677,6 @@ export const processSnoozedCustomReminders = onSchedule(
 
           batch.update(reminderDoc.ref, {
             status: "sent",
-            snoozed: false,
             completion_time: FieldValue.serverTimestamp(),
             notifiedAt: FieldValue.serverTimestamp(),
             updated_at: FieldValue.serverTimestamp(),

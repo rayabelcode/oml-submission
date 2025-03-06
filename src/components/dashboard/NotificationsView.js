@@ -34,6 +34,10 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 
 	const isExpanded = expandedId === reminder.firestoreId;
 
+	// Use snoozed color when status is snoozed (otherwise use the regular type color)
+	const cardColorType =
+		reminder.snoozed === true || reminder.status === 'snoozed' ? 'snoozed' : reminder.type.toLowerCase();
+
 	const handleExpand = useCallback(() => {
 		Keyboard.dismiss();
 		if (isExpanded) {
@@ -63,24 +67,34 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 
 	return (
 		<View style={styles.card}>
-			<View
-				style={[styles.headerRow, { backgroundColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}
-			>
+			<View style={[styles.headerRow, { backgroundColor: colors.reminderTypes[cardColorType] }]}>
 				<View style={styles.titleRow}>
-					<Icon
-						name={
-							reminder.type === REMINDER_TYPES.FOLLOW_UP
-								? 'document-text-outline'
-								: reminder.type === REMINDER_TYPES.SCHEDULED
-								? 'sync-outline'
-								: 'calendar-outline'
-						}
-						size={24}
-						color={colors.text.primary}
-						style={styles.titleIcon}
-					/>
+				<Icon
+    name={
+        reminder.snoozed === true || reminder.status === 'snoozed'
+            ? 'moon-outline'  // Use moon icon for all snoozed reminders
+            : reminder.type === REMINDER_TYPES.FOLLOW_UP
+            ? 'document-text-outline'
+            : reminder.type === REMINDER_TYPES.SCHEDULED
+            ? 'sync-outline'
+            : 'calendar-outline'
+    }
+    size={24}
+    color={colors.text.primary}
+    style={styles.titleIcon}
+/>
 					<Text style={styles.reminderTitle}>
-						{reminder.type === REMINDER_TYPES.FOLLOW_UP
+						{reminder.snoozed === true || reminder.status === 'snoozed'
+							? `Snoozed (${
+									reminder.type === REMINDER_TYPES.SCHEDULED
+										? 'Recurring'
+										: reminder.type === REMINDER_TYPES.CUSTOM_DATE
+										? 'Custom'
+										: reminder.type === REMINDER_TYPES.FOLLOW_UP
+										? 'Follow Up'
+										: 'Reminder'
+							  })`
+							: reminder.type === REMINDER_TYPES.FOLLOW_UP
 							? 'Follow Up Notes'
 							: reminder.type === REMINDER_TYPES.SCHEDULED
 							? 'Recurring Reminder'
@@ -89,7 +103,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 				</View>
 			</View>
 
-			<View style={[styles.cardContent, { borderColor: colors.reminderTypes[reminder.type.toLowerCase()] }]}>
+			<View style={[styles.cardContent, { borderColor: colors.reminderTypes[cardColorType] }]}>
 				<Text style={styles.contactName}>{reminder.contactName}</Text>
 				<Text style={styles.reminderDescription}>
 					{reminder.type === REMINDER_TYPES.FOLLOW_UP
@@ -107,7 +121,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 						{
 							borderLeftWidth: 4,
 							borderRightWidth: 4,
-							borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
+							borderColor: colors.reminderTypes[cardColorType],
 						},
 					]}
 				>
@@ -170,7 +184,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 				style={[
 					styles.cardActions,
 					{
-						borderColor: colors.reminderTypes[reminder.type.toLowerCase()],
+						borderColor: colors.reminderTypes[cardColorType],
 						borderWidth: 4,
 						borderBottomLeftRadius: layout.borderRadius.md,
 						borderBottomRightRadius: layout.borderRadius.md,
@@ -190,7 +204,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									justifyContent: 'center',
 									alignItems: 'center',
 									borderRightWidth: 3,
-									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
+									borderRightColor: colors.reminderTypes[cardColorType],
 								},
 							]}
 							onPress={handleExpand}
@@ -230,7 +244,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									justifyContent: 'center',
 									alignItems: 'center',
 									borderRightWidth: 3,
-									borderRightColor: colors.reminderTypes[reminder.type.toLowerCase()],
+									borderRightColor: colors.reminderTypes[cardColorType],
 								},
 							]}
 							onPress={async () => {
