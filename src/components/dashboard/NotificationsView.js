@@ -69,20 +69,20 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 		<View style={styles.card}>
 			<View style={[styles.headerRow, { backgroundColor: colors.reminderTypes[cardColorType] }]}>
 				<View style={styles.titleRow}>
-				<Icon
-    name={
-        reminder.snoozed === true || reminder.status === 'snoozed'
-            ? 'moon-outline'  // Use moon icon for all snoozed reminders
-            : reminder.type === REMINDER_TYPES.FOLLOW_UP
-            ? 'document-text-outline'
-            : reminder.type === REMINDER_TYPES.SCHEDULED
-            ? 'sync-outline'
-            : 'calendar-outline'
-    }
-    size={24}
-    color={colors.text.primary}
-    style={styles.titleIcon}
-/>
+					<Icon
+						name={
+							reminder.snoozed === true || reminder.status === 'snoozed'
+								? 'moon-outline' // Use moon icon for all snoozed reminders
+								: reminder.type === REMINDER_TYPES.FOLLOW_UP
+								? 'document-text-outline'
+								: reminder.type === REMINDER_TYPES.SCHEDULED
+								? 'sync-outline'
+								: 'calendar-outline'
+						}
+						size={24}
+						color={colors.text.primary}
+						style={styles.titleIcon}
+					/>
 					<Text style={styles.reminderTitle}>
 						{reminder.snoozed === true || reminder.status === 'snoozed'
 							? `Snoozed (${
