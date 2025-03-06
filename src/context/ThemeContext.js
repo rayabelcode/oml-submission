@@ -126,7 +126,7 @@ const darkTheme = {
 		follow_up: '#1C2733', // Light Blue
 		scheduled: '#1C291C', // Light Green
 		custom_date: '#291C33', // Light Purple
-		snoozed: '#8C4A1E', // Warm Orange
+		snoozed: '#732B35', // Warm Red
 	},
 	tags: tagColors.dark, // Dark theme tag colors
 };
@@ -168,7 +168,7 @@ const dimmedTheme = {
 		follow_up: '#1E3A8A', // Light Blue
 		scheduled: '#064E3B', // Light Green
 		custom_date: '#3D1B40', // Light Purple
-		snoozed: '#8C4A1E', // Warm Orange
+		snoozed: '#732B35', // Warm Red
 	},
 	tags: tagColors.dark, // Dark theme tag colors
 };
