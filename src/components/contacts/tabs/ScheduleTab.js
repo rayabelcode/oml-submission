@@ -11,7 +11,7 @@ import {
 } from '../../../utils/firestore';
 import TimePickerModal from '../../modals/TimePickerModal';
 import DatePickerModal from '../../modals/DatePickerModal';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../../../config/firebase';
 import { DateTime } from 'luxon';
 import { REMINDER_TYPES } from '../../../../constants/notificationConstants';

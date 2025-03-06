@@ -380,3 +380,87 @@ describe('NotificationsView', () => {
 		expect(contactElements[1].props.children).toBe('December Person');
 	});
 });
+
+it('displays correct styling for snoozed reminders', () => {
+	const snoozedReminders = [
+		{
+			firestoreId: 'reminder1',
+			scheduledTime: '2024-12-31T17:21:18.881Z',
+			type: 'SCHEDULED',
+			contactName: 'John Doe',
+			status: 'sent',
+			snoozed: true,
+		},
+	];
+
+	const mockProps = {
+		reminders: snoozedReminders,
+		onComplete: jest.fn(),
+		loading: false,
+		onRefresh: jest.fn(),
+		refreshing: false,
+		onSnooze: jest.fn(),
+	};
+
+	const { getByText } = render(<NotificationsView {...mockProps} />);
+
+	// Verify the snoozed title text is displayed correctly
+	expect(getByText('Snoozed (Recurring)')).toBeTruthy();
+});
+
+it('handles different combinations of snoozed and status fields correctly', () => {
+	const mixedReminders = [
+		// Regular reminder (not snoozed)
+		{
+			firestoreId: 'regular',
+			scheduledTime: '2024-12-31T17:21:18.881Z',
+			type: 'SCHEDULED',
+			contactName: 'Regular Reminder',
+			status: 'sent',
+			snoozed: false,
+		},
+		// Previously snoozed, now sent
+		{
+			firestoreId: 'snoozed-sent',
+			scheduledTime: '2024-12-31T18:21:18.881Z',
+			type: 'SCHEDULED',
+			contactName: 'Snoozed Sent',
+			status: 'sent',
+			snoozed: true,
+		},
+		// Custom date snoozed
+		{
+			firestoreId: 'custom-snoozed',
+			scheduledTime: '2024-12-31T19:21:18.881Z',
+			type: 'CUSTOM_DATE',
+			contactName: 'Custom Snoozed',
+			status: 'sent',
+			snoozed: true,
+		},
+	];
+
+	const mockProps = {
+		reminders: mixedReminders,
+		onComplete: jest.fn(),
+		loading: false,
+		onRefresh: jest.fn(),
+		refreshing: false,
+		onSnooze: jest.fn(),
+	};
+
+	const { getByText, getAllByText } = render(<NotificationsView {...mockProps} />);
+
+	// Regular reminder should show "Recurring Reminder"
+	expect(getByText('Recurring Reminder')).toBeTruthy();
+
+	// Snoozed scheduled should show "Snoozed (Recurring)"
+	expect(getByText('Snoozed (Recurring)')).toBeTruthy();
+
+	// Snoozed custom should show "Snoozed (Custom)"
+	expect(getByText('Snoozed (Custom)')).toBeTruthy();
+
+	// All contact names should be displayed
+	expect(getByText('Regular Reminder')).toBeTruthy();
+	expect(getByText('Snoozed Sent')).toBeTruthy();
+	expect(getByText('Custom Snoozed')).toBeTruthy();
+});

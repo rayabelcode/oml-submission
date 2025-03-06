@@ -445,11 +445,22 @@ export const processCustomReminders = onSchedule(
           const contactDoc = await contactRef.get();
 
           if (contactDoc.exists) {
-            batch.update(contactRef, {
+            const contactData = contactDoc.data();
+            const updates = {
               last_contacted: FieldValue.serverTimestamp(),
               last_updated: FieldValue.serverTimestamp(),
               "scheduling.custom_next_date": null,
-            });
+            };
+
+            // Recalculate next_contact based on recurring reminder if it exists
+            if (contactData.scheduling?.recurring_next_date) {
+              updates.next_contact = new Date(contactData.scheduling.recurring_next_date);
+            } else {
+              // No recurring reminder, set next_contact to null
+              updates.next_contact = null;
+            }
+
+            batch.update(contactRef, updates);
           }
 
           await batch.commit();
@@ -556,7 +567,6 @@ export const processSnoozedScheduledReminders = onSchedule(
           // Mark the snoozed reminder as sent
           batch.update(reminderDoc.ref, {
             status: "sent",
-            snoozed: false,
             completion_time: FieldValue.serverTimestamp(),
             notifiedAt: FieldValue.serverTimestamp(),
             updated_at: FieldValue.serverTimestamp(),
@@ -678,21 +688,32 @@ export const processSnoozedCustomReminders = onSchedule(
 
           batch.update(reminderDoc.ref, {
             status: "sent",
-            snoozed: false,
             completion_time: FieldValue.serverTimestamp(),
             notifiedAt: FieldValue.serverTimestamp(),
             updated_at: FieldValue.serverTimestamp(),
           });
 
+          // Update contact's schedule
           const contactRef = db.collection("contacts").doc(reminder.contact_id);
           const contactDoc = await contactRef.get();
 
           if (contactDoc.exists) {
-            batch.update(contactRef, {
+            const contactData = contactDoc.data();
+            const updates = {
               last_contacted: FieldValue.serverTimestamp(),
               last_updated: FieldValue.serverTimestamp(),
               "scheduling.custom_next_date": null,
-            });
+            };
+
+            // Recalculate next_contact based on recurring reminder if it exists
+            if (contactData.scheduling?.recurring_next_date) {
+              updates.next_contact = new Date(contactData.scheduling.recurring_next_date);
+            } else {
+              // No recurring reminder, set next_contact to null
+              updates.next_contact = null;
+            }
+
+            batch.update(contactRef, updates);
           }
 
           await batch.commit();

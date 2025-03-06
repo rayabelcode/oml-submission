@@ -59,7 +59,7 @@ const getScheduledReminders = async (userId) => {
 		remindersRef,
 		where('user_id', '==', userId),
 		where('type', '==', 'SCHEDULED'),
-		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		where('status', 'in', ['pending', 'sent']),
 		orderBy('scheduledTime', 'desc')
 	);
 	const snapshot = await getDocs(scheduledQuery);
@@ -76,7 +76,7 @@ const getCustomReminders = async (userId) => {
 		remindersRef,
 		where('user_id', '==', userId),
 		where('type', '==', 'CUSTOM_DATE'),
-		where('status', 'in', ['pending', 'sent', 'snoozed']),
+		where('status', 'in', ['pending', 'sent']),
 		orderBy('scheduledTime', 'desc')
 	);
 	const snapshot = await getDocs(customQuery);
