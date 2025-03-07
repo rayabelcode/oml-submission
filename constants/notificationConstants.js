@@ -40,13 +40,13 @@ export const FREQUENCY_DISPLAY_MAP = {
 };
 
 // Default max snooze options
-export const DEFAULT_MAX_SNOOZE_ATTEMPTS = 4;
+export const DEFAULT_MAX_SNOOZE_ATTEMPTS = 5;
 
 // Max snooze attempts by frequency
 export const FREQUENCY_SNOOZE_LIMITS = {
 	daily: 1,
-	weekly: 2,
-	biweekly: 3,
+	weekly: 3,
+	biweekly: 4,
 	monthly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
 	quarterly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
 	yearly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
@@ -67,8 +67,16 @@ export const SNOOZE_LIMIT_MESSAGES = {
 	MAX_REACHED: 'Maximum snoozes reached',
 	DAILY_LIMIT: 'Daily reminders can only be snoozed once',
 	WEEKLY_LIMIT: 'Weekly reminders have limited snooze options',
+	DAILY_MAX_REACHED: 'The series will continue tomorrow if you skip',
+	RECURRING_MAX_REACHED: "You've snoozed this call often, do you want to reschedule?",
 	OPTION_UNAVAILABLE: 'This option is not available for this type of reminder',
 };
+
+// Notification action types
+export const OPTION_TYPES = {
+	CONTACT_NOW: 'contact_now',
+	RESCHEDULE: 'reschedule'
+  };
 
 // iOS specific configurations
 export const IOS_CONFIGS = {

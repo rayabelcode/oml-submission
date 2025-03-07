@@ -43,7 +43,7 @@ import {
 	getDocs,
 	orderBy,
 } from 'firebase/firestore';
-import { REMINDER_TYPES } from '../../constants/notificationConstants';
+import { OPTION_TYPES, REMINDER_TYPES } from '../../constants/notificationConstants';
 import { db, auth } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
@@ -52,6 +52,8 @@ import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
 import { calculateStats } from './stats/statsCalculator';
 import CallOptions from '../components/general/CallOptions';
+import { callHandler } from '../utils/callHandler';
+import { navigate } from '../navigation/RootNavigation';
 
 const getScheduledReminders = async (userId) => {
 	const remindersRef = collection(db, 'reminders');
@@ -488,6 +490,33 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	};
 
+	// Function to handle contact now action
+	const handleContactNow = async (contactId) => {
+		try {
+			const contact = await getContactById(contactId);
+			if (!contact) {
+				Alert.alert('Error', 'Could not find contact information');
+				return;
+			}
+
+			setSelectedContact({
+				...contact,
+				first_name: contact.first_name,
+				last_name: contact.last_name,
+				phone: contact.phone,
+			});
+			setShowCallOptions(true);
+
+			// Mark the reminder as completed if there's a selected reminder
+			if (selectedReminder?.firestoreId) {
+				await handleReminderComplete(selectedReminder.firestoreId);
+			}
+		} catch (error) {
+			console.error('Error handling contact now:', error);
+			Alert.alert('Error', 'Could not initiate contact');
+		}
+	};
+
 	// Use enhanced snooze options with stats
 	const handleSnooze = async (reminder) => {
 		if (!reminder?.scheduledTime) {
@@ -519,67 +548,107 @@ export default function DashboardScreen({ navigation, route }) {
 			// Save selected reminder for context
 			setSelectedReminder(reminder);
 
-			// Extract stats from the first option
-			const stats = options[0]?.stats;
-
 			// Add handlers to options
-			const optionsWithHandlers = options.map((option) => ({
-				...option,
-				onPress: async () => {
-					setSnoozeLoading(true);
-					setSnoozeError(null);
-
-					try {
-						await initializeSnoozeHandler(user.uid);
-
-						// If offline, store operation for later
-						if (isOffline) {
-							// Store pending operation
-							await notificationCoordinator.storePendingOperation({
-								type: 'snooze',
-								data: {
-									contactId: reminder.contact_id,
-									optionId: option.id,
-									reminderType: reminder.type || 'SCHEDULED',
-									reminderId: reminder.firestoreId,
-								},
-							});
-
-							// Optimistically update UI
+			const optionsWithHandlers = options.map((option) => {
+				// Special handling for "contact_now" option
+				if (option.id === OPTION_TYPES.CONTACT_NOW) {
+					return {
+						...option,
+						onPress: () => {
 							setShowSnoozeOptions(false);
-							setSnoozeLoading(false);
+							handleContactNow(reminder.contact_id);
+						},
+					};
+				}
 
-							Alert.alert(
-								'Operation Queued',
-								'Your snooze request will be processed when your connection is restored.',
-								[{ text: 'OK' }]
+				// Special handling for "reschedule" option
+				if (option.id === OPTION_TYPES.RESCHEDULE) {
+					return {
+						...option,
+						onPress: async () => {
+							setShowSnoozeOptions(false);
+
+							try {
+								// Get full contact details to pass to navigation
+								const contact = await getContactById(reminder.contact_id);
+								if (!contact) {
+									console.error('Contact not found for reminder:', reminder);
+									Alert.alert('Error', 'Could not find contact information');
+									return;
+								}
+
+								// Navigate to contact's schedule tab
+								navigation.navigate('ContactDetails', {
+									contact: contact,
+									initialTab: 'schedule',
+								});
+							} catch (error) {
+								console.error('Error navigating to contact schedule:', error);
+								Alert.alert('Error', 'Could not open contact details');
+							}
+						},
+					};
+				}
+
+				// Default handling for other options
+				return {
+					...option,
+					onPress: async () => {
+						setSnoozeLoading(true);
+						setSnoozeError(null);
+
+						try {
+							await initializeSnoozeHandler(user.uid);
+
+							// If offline, store operation for later
+							if (isOffline) {
+								// Store pending operation
+								await notificationCoordinator.storePendingOperation({
+									type: 'snooze',
+									data: {
+										contactId: reminder.contact_id,
+										optionId: option.id,
+										reminderType: reminder.type || 'SCHEDULED',
+										reminderId: reminder.firestoreId,
+									},
+								});
+
+								// Optimistically update UI
+								setShowSnoozeOptions(false);
+								setSnoozeLoading(false);
+
+								Alert.alert(
+									'Operation Queued',
+									'Your snooze request will be processed when your connection is restored.',
+									[{ text: 'OK' }]
+								);
+								return;
+							}
+
+							// Online operation
+							await snoozeHandler.handleSnooze(
+								reminder.contact_id,
+								option.id,
+								DateTime.now(),
+								reminder.type || 'SCHEDULED',
+								reminder.firestoreId
 							);
-							return;
+
+							setShowSnoozeOptions(false);
+							await loadReminders();
+						} catch (error) {
+							console.error('Error in snooze process:', error);
+							setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
+						} finally {
+							setSnoozeLoading(false);
 						}
-
-						// Online operation
-						await snoozeHandler.handleSnooze(
-							reminder.contact_id,
-							option.id,
-							DateTime.now(),
-							reminder.type || 'SCHEDULED',
-							reminder.firestoreId
-						);
-
-						setShowSnoozeOptions(false);
-						await loadReminders();
-					} catch (error) {
-						console.error('Error in snooze process:', error);
-						setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
-					} finally {
-						setSnoozeLoading(false);
-					}
-				},
-			}));
+					},
+				};
+			});
 
 			setSnoozeOptions(optionsWithHandlers);
 
-			// Pass stats to ActionModal via separate props
+			// Pass stats to ActionModal
 			setShowSnoozeOptions(true);
 			setSnoozeLoading(false);
 		} catch (error) {

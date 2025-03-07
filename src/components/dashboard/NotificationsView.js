@@ -280,7 +280,6 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 								},
 							]}
 							onPress={() => onSnooze(reminder)}
-							disabled={snoozeStats && snoozeStats.isExhausted}
 						>
 							<Icon name="time-outline" size={24} color={colors.action} />
 							<Text style={[styles.actionText, { color: colors.action }]}>Options</Text>

@@ -49,7 +49,6 @@ export const handleNotificationResponse = async (response) => {
 				}
 			} else if (response.actionIdentifier === 'snooze') {
 				try {
-					// Get the current user ID
 					const userId = auth.currentUser?.uid;
 
 					if (!userId) {
@@ -58,17 +57,27 @@ export const handleNotificationResponse = async (response) => {
 						return;
 					}
 
-					// Initialize the snooze handler
+					// Check for offline status
+					const networkState = await NetInfo.fetch();
+					if (!networkState.isConnected) {
+						Alert.alert(
+							'Offline Mode',
+							'You are currently offline. Snooze actions will be applied when you reconnect.',
+							[{ text: 'Continue' }, { text: 'Cancel', style: 'cancel' }],
+							{ cancelable: true }
+						);
+						// Continue with offline handling if user chooses "Continue"
+					}
+
 					await initializeSnoozeHandler(userId);
 
-					// Try to get custom options if we have reminder ID
-					let options = SNOOZE_OPTIONS;
-
+					// Get enhanced options with stats
+					let options = [];
 					if (reminderId) {
 						try {
 							options = await snoozeHandler.getAvailableSnoozeOptions(reminderId);
 						} catch (optionError) {
-							// Fall back to default options
+							console.error('Error getting snooze options:', optionError);
 						}
 					}
 
@@ -76,32 +85,207 @@ export const handleNotificationResponse = async (response) => {
 						options = SNOOZE_OPTIONS;
 					}
 
-					// Create buttons for snooze options
-					const buttons = options.map((option) => ({
-						text: option.text,
-						style: option.id === 'skip' ? 'destructive' : 'default',
-						onPress: async () => {
-							try {
-								await snoozeHandler.handleSnooze(
-									data.contactId,
-									option.id,
-									DateTime.now(),
-									data.type,
-									reminderId
-								);
-							} catch (error) {
-								console.error('Error processing snooze:', error);
-								Alert.alert('Error', 'Failed to snooze reminder. Please try again.');
-							}
-						},
-					}));
+					// Get stats from first option (all have same stats)
+					const stats = options[0]?.stats;
+					let title = 'Snooze Options';
+					let message = 'When would you like to be reminded?';
+
+					// Special handling for daily reminders that have exhausted snoozes
+					const reminder = await getReminder(reminderId);
+					const frequency = reminder?.frequency || 'default';
+
+					if (stats?.isExhausted && frequency === 'daily') {
+						title = 'Daily Reminder';
+						message = SNOOZE_LIMIT_MESSAGES.DAILY_MAX_REACHED;
+
+						const buttons = [
+							{
+								text: 'Contact Now',
+								onPress: async () => {
+									try {
+										const contact = await getContactById(data.contactId);
+										if (contact) {
+											callHandler.handleCallAction(contact);
+										}
+									} catch (error) {
+										console.error('Error initiating call:', error);
+										Alert.alert('Error', 'Could not initiate contact');
+									}
+								},
+							},
+							{
+								text: 'Skip',
+								style: 'destructive',
+								onPress: async () => {
+									try {
+										await snoozeHandler.handleSkip(data.contactId, DateTime.now(), reminderId);
+									} catch (error) {
+										console.error('Error skipping reminder:', error);
+										Alert.alert('Error', 'Failed to skip reminder');
+									}
+								},
+							},
+							{
+								text: 'Cancel',
+								style: 'cancel',
+							},
+						];
+
+						Alert.alert(title, message, buttons);
+						return;
+					}
+
+					// Handling for reminders that have exhausted snoozes (except daily)
+					if (stats?.isExhausted) {
+						title = 'Scheduling Suggestion';
+						message = SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED;
+
+						const buttons = [
+							{
+								text: 'Later Today',
+								onPress: async () => {
+									try {
+										await snoozeHandler.handleLaterToday(
+											data.contactId,
+											DateTime.now(),
+											data.type,
+											reminderId
+										);
+									} catch (error) {
+										console.error('Error processing snooze:', error);
+										Alert.alert('Error', 'Failed to snooze reminder');
+									}
+								},
+							},
+							{
+								text: 'Tomorrow',
+								onPress: async () => {
+									try {
+										await snoozeHandler.handleTomorrow(data.contactId, DateTime.now(), data.type, reminderId);
+									} catch (error) {
+										console.error('Error processing snooze:', error);
+										Alert.alert('Error', 'Failed to snooze reminder');
+									}
+								},
+							},
+							{
+								text: 'Reschedule',
+								onPress: () => {
+									// Navigate to the contact's schedule screen
+									navigate('ContactDetails', {
+										contact: { id: data.contactId },
+										initialTab: 'schedule',
+									});
+								},
+							},
+							{
+								text: 'Skip',
+								style: 'destructive',
+								onPress: async () => {
+									try {
+										await snoozeHandler.handleSkip(data.contactId, DateTime.now(), reminderId);
+									} catch (error) {
+										console.error('Error skipping reminder:', error);
+										Alert.alert('Error', 'Failed to skip reminder');
+									}
+								},
+							},
+							{
+								text: 'Cancel',
+								style: 'cancel',
+							},
+						];
+
+						Alert.alert(title, message, buttons);
+						return;
+					}
+
+					// Normal handling for other cases
+					if (stats) {
+						if (stats.frequencySpecific) {
+							message = `${stats.frequencySpecific}\n${message}`;
+						}
+						if (stats.message) {
+							title = `Snooze Options (${stats.message})`;
+						}
+					}
+
+					// Create buttons for alert from available options
+					const buttons = options.map((option) => {
+						// Handle special option types
+						if (option.id === OPTION_TYPES.CONTACT_NOW) {
+							return {
+								text: option.text,
+								onPress: async () => {
+									try {
+										const contact = await getContactById(data.contactId);
+										if (contact) {
+											callHandler.handleCallAction(contact);
+										}
+									} catch (error) {
+										console.error('Error initiating call:', error);
+										Alert.alert('Error', 'Could not initiate contact');
+									}
+								},
+							};
+						}
+
+						if (option.id === OPTION_TYPES.RESCHEDULE) {
+							return {
+								text: option.text,
+								onPress: () => {
+									navigate('ContactDetails', {
+										contact: { id: data.contactId },
+										initialTab: 'schedule',
+									});
+								},
+							};
+						}
+
+						// Standard snooze options
+						return {
+							text: option.text,
+							style: option.id === 'skip' ? 'destructive' : 'default',
+							onPress: async () => {
+								try {
+									await snoozeHandler.handleSnooze(
+										data.contactId,
+										option.id,
+										DateTime.now(),
+										data.type,
+										reminderId
+									);
+								} catch (error) {
+									console.error('Error processing snooze:', error);
+									// Store failed operation for sync later if offline
+									if (!networkState.isConnected) {
+										await notificationCoordinator.storePendingOperation({
+											type: 'snooze',
+											data: {
+												contactId: data.contactId,
+												optionId: option.id,
+												reminderId: reminderId,
+												reminderType: data.type,
+											},
+										});
+										Alert.alert(
+											'Operation Queued',
+											'Your snooze request will be processed when back online.'
+										);
+									} else {
+										Alert.alert('Error', 'Failed to snooze reminder. Please try again.');
+									}
+								}
+							},
+						};
+					});
 
 					buttons.push({
 						text: 'Cancel',
 						style: 'cancel',
 					});
 
-					Alert.alert('Snooze Options', 'When would you like to be reminded?', buttons);
+					Alert.alert(title, message, buttons);
 				} catch (error) {
 					console.error('Error handling snooze options:', error);
 					Alert.alert('Error', 'Could not process snooze request. Please try again later.');

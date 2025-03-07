@@ -9,6 +9,7 @@ import {
 	SNOOZE_INDICATORS,
 	SNOOZE_LIMIT_MESSAGES,
 	PATTERN_TRACKING,
+	OPTION_TYPES,
 } from '../../../constants/notificationConstants';
 import { SchedulingService } from './scheduler';
 import {
@@ -428,7 +429,6 @@ export class SnoozeHandler {
 	}
 
 	async getAvailableSnoozeOptions(reminderId) {
-		// Base options list
 		const allOptions = [
 			{
 				id: 'later_today',
@@ -450,62 +450,126 @@ export class SnoozeHandler {
 				icon: 'close-circle-outline',
 				text: 'Skip This Call',
 			},
+			{
+				id: OPTION_TYPES.CONTACT_NOW,
+				icon: 'call-outline',
+				text: 'Contact Now',
+			},
+			{
+				id: OPTION_TYPES.RESCHEDULE,
+				icon: 'calendar-number-outline',
+				text: 'Reschedule',
+			},
 		];
 
 		try {
-			// Check for offline status
+			// Check network status
 			const networkState = await NetInfo.fetch();
 			const isOffline = !networkState.isConnected;
 
+			// Get reminder details
 			const reminder = await getReminder(reminderId);
 			if (!reminder) {
-				console.warn('Reminder not found, returning all options');
-				return allOptions;
+				console.warn('Reminder not found, returning standard options');
+				return allOptions
+					.filter((o) => ['later_today', 'tomorrow', 'next_week', 'skip'].includes(o.id))
+					.map((o) => ({ ...o, offline: isOffline }));
 			}
 
-			// Get stats directly from the reminder object
+			// Calculate snooze stats
 			const stats = computeSnoozeStats(reminder);
-			const frequency = reminder?.frequency;
+			const frequency = reminder?.frequency || 'default';
 
-			// Max snooze check - if exhausted, only allow skip
-			if (stats.isExhausted) {
-				return allOptions
-					.filter((opt) => opt.id === 'skip')
-					.map((option) => ({
-						...option,
-						stats: stats,
+			// DAILY REMINDERS SPECIAL HANDLING
+			if (frequency === 'daily') {
+				if (stats.remaining > 0) {
+					// Daily reminders with remaining snoozes - only offer "Later Today" or "Skip"
+					return allOptions
+						.filter((o) => o.id === 'later_today' || o.id === 'skip')
+						.map((o) => ({
+							...o,
+							stats,
+							offline: isOffline,
+						}));
+				} else {
+					// Daily reminders with no remaining snoozes - offer "Contact Now" or "Skip"
+					return allOptions
+						.filter((o) => o.id === OPTION_TYPES.CONTACT_NOW || o.id === 'skip')
+						.map((o) => ({
+							...o,
+							stats: {
+								...stats,
+								frequencySpecific: SNOOZE_LIMIT_MESSAGES.DAILY_MAX_REACHED,
+								message: SNOOZE_LIMIT_MESSAGES.MAX_REACHED,
+							},
+							offline: isOffline,
+						}));
+				}
+			}
+
+			// WEEKLY REMINDERS - more limited options
+			if (frequency === 'weekly') {
+				const baseOptions = allOptions.filter(
+					(o) => o.id === 'later_today' || o.id === 'tomorrow' || o.id === 'skip'
+				);
+
+				if (stats.isExhausted) {
+					// Reschedule option for exhausted weekly reminders
+					baseOptions.push(allOptions.find((o) => o.id === OPTION_TYPES.RESCHEDULE));
+
+					return baseOptions.map((o) => ({
+						...o,
+						stats: {
+							...stats,
+							message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
+						},
 						offline: isOffline,
 					}));
+				}
+
+				return baseOptions.map((o) => ({
+					...o,
+					stats,
+					offline: isOffline,
+				}));
 			}
 
-			// Frequency-specific filtering
-			let availableOptions;
-			switch (frequency) {
-				case 'daily':
-					availableOptions =
-						stats.remaining <= 0
-							? allOptions.filter((opt) => opt.id === 'skip')
-							: allOptions.filter((opt) => opt.id === 'later_today' || opt.id === 'skip');
-					break;
-				case 'weekly':
-					availableOptions = allOptions.filter(
-						(opt) => opt.id === 'later_today' || opt.id === 'tomorrow' || opt.id === 'skip'
-					);
-					break;
-				default:
-					availableOptions = allOptions;
+			// OTHER FREQUENCIES
+			if (stats.isExhausted) {
+				// When exhausted, show limited snooze options + reschedule
+				return [
+					...allOptions
+						.filter((o) => o.id === 'later_today' || o.id === 'tomorrow' || o.id === 'skip')
+						.map((o) => ({
+							...o,
+							stats: {
+								...stats,
+								message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
+							},
+							offline: isOffline,
+						})),
+					{
+						...allOptions.find((o) => o.id === OPTION_TYPES.RESCHEDULE),
+						stats: {
+							...stats,
+							message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
+						},
+						offline: isOffline,
+					},
+				];
 			}
 
-			// Add stats to each option
-			return availableOptions.map((option) => ({
-				...option,
-				stats: stats,
-				offline: isOffline,
-				disabled: stats.isExhausted && option.id !== 'skip',
-			}));
+			// Normal case - show all standard options
+			return allOptions
+				.filter((o) => ['later_today', 'tomorrow', 'next_week', 'skip'].includes(o.id))
+				.map((o) => ({
+					...o,
+					stats,
+					offline: isOffline,
+				}));
 		} catch (error) {
 			console.error('Error getting snooze options:', error);
-			return allOptions;
+			return allOptions.filter((o) => ['later_today', 'tomorrow', 'next_week', 'skip'].includes(o.id));
 		}
 	}
 
