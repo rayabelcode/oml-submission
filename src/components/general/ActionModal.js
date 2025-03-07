@@ -10,6 +10,9 @@ const ActionModal = ({
 	loading = false,
 	error = null,
 	title = '',
+	statusMessage = null,
+	statusIndicator = null,
+	frequencyMessage = null,
 }) => {
 	const { colors, spacing, layout } = useTheme();
 	const [modalVisible, setModalVisible] = useState(show);
@@ -69,6 +72,20 @@ const ActionModal = ({
 			]).start();
 		}
 	}, [show]);
+
+	// Helper to get status-based color
+	const getStatusColor = () => {
+		if (!statusIndicator) return colors.text.primary;
+
+		switch (statusIndicator) {
+			case 'warning':
+				return colors.warning || '#FFA500';
+			case 'critical':
+				return colors.danger;
+			default:
+				return colors.text.primary;
+		}
+	};
 
 	const styles = StyleSheet.create({
 		modalOverlay: {
@@ -152,10 +169,50 @@ const ActionModal = ({
 			fontWeight: '500',
 			color: colors.primary,
 		},
+		// Styles for status and frequency displays
+		statusContainer: {
+			padding: spacing.md,
+			margin: spacing.sm,
+			marginTop: spacing.lg,
+			borderRadius: layout.borderRadius.md,
+			backgroundColor: colors.background.tertiary,
+			alignItems: 'center',
+		},
+		statusText: {
+			fontSize: 16,
+			fontWeight: '600',
+			textAlign: 'center',
+			color: (props) => getStatusColor(),
+		},
+		frequencyContainer: {
+			paddingHorizontal: spacing.md,
+			marginHorizontal: spacing.sm,
+			marginBottom: spacing.sm,
+			alignItems: 'center',
+		},
+		frequencyText: {
+			fontSize: 14,
+			fontStyle: 'italic',
+			color: colors.text.secondary,
+			textAlign: 'center',
+		},
+		offlineIndicator: {
+			position: 'absolute',
+			right: spacing.md,
+			top: spacing.md,
+			backgroundColor: colors.warning || '#FFA500',
+			paddingHorizontal: spacing.sm,
+			paddingVertical: spacing.xs,
+			borderRadius: layout.borderRadius.sm,
+		},
+		offlineText: {
+			fontSize: 12,
+			color: colors.text.white,
+			fontWeight: '600',
+		},
 	});
 
 	if (!show) return null;
-
 	if (!modalVisible) return null;
 
 	return (
@@ -190,6 +247,30 @@ const ActionModal = ({
 								</View>
 							</View>
 						)}
+
+						{/* Status message display */}
+						{statusMessage && (
+							<View
+								style={[
+									styles.statusContainer,
+									statusIndicator === 'warning' && {
+										borderColor: colors.warning || '#FFA500',
+										borderWidth: 1,
+									},
+									statusIndicator === 'critical' && { borderColor: colors.danger, borderWidth: 1 },
+								]}
+							>
+								<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
+							</View>
+						)}
+
+						{/* Frequency-specific message display */}
+						{frequencyMessage && (
+							<View style={styles.frequencyContainer}>
+								<Text style={styles.frequencyText}>{frequencyMessage}</Text>
+							</View>
+						)}
+
 						{loading ? (
 							<View style={styles.loadingContainer}>
 								<ActivityIndicator size="large" color={colors.primary} />
@@ -207,7 +288,7 @@ const ActionModal = ({
 							<View style={styles.optionsContainer}>
 								{options.map((option) => (
 									<TouchableOpacity
-										key={option.id}
+										key={option.id || Math.random().toString()}
 										style={[styles.button, option.disabled && { opacity: 0.5 }]}
 										onPress={option.onPress}
 										disabled={option.disabled}
@@ -230,6 +311,13 @@ const ActionModal = ({
 										>
 											{option.text}
 										</Text>
+
+										{/* Offline indicator if needed */}
+										{option.offline && (
+											<View style={styles.offlineIndicator}>
+												<Text style={styles.offlineText}>Offline</Text>
+											</View>
+										)}
 									</TouchableOpacity>
 								))}
 							</View>

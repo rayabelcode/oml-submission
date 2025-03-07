@@ -18,6 +18,7 @@ import { Image as ExpoImage } from 'expo-image';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import {
 	fetchUpcomingContacts,
 	subscribeToContacts,
@@ -52,7 +53,6 @@ import * as Notifications from 'expo-notifications';
 import { calculateStats } from './stats/statsCalculator';
 import CallOptions from '../components/general/CallOptions';
 
-// Helper functions for reminders
 const getScheduledReminders = async (userId) => {
 	const remindersRef = collection(db, 'reminders');
 	const scheduledQuery = query(
@@ -140,6 +140,7 @@ export default function DashboardScreen({ navigation, route }) {
 	const [stats, setStats] = useState(null);
 	const [showCallOptions, setShowCallOptions] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
+	const [isOffline, setIsOffline] = useState(false);
 
 	const [remindersState, setRemindersState] = useState({
 		data: [],
@@ -147,7 +148,22 @@ export default function DashboardScreen({ navigation, route }) {
 		error: null,
 	});
 
-	// Handle navigation from notifications
+	// Setup network status listener
+	useEffect(() => {
+		const unsubscribe = NetInfo.addEventListener((state) => {
+			setIsOffline(!state.isConnected);
+		});
+
+		// Initial check
+		NetInfo.fetch().then((state) => {
+			setIsOffline(!state.isConnected);
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	}, []);
+
 	useEffect(() => {
 		if (route.params?.initialView === 'notifications') {
 			setViewMode('notifications');
@@ -156,7 +172,6 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	}, [route.params]);
 
-	// Refresh data when screen is focused
 	useFocusEffect(
 		React.useCallback(() => {
 			if (user) {
@@ -164,7 +179,6 @@ export default function DashboardScreen({ navigation, route }) {
 				loadReminders();
 				loadStats();
 
-				// Set up real-time listener
 				const contactsUnsubscribe = subscribeToContacts(user.uid, async (contactsList) => {
 					const upcomingContacts = await fetchUpcomingContacts(user.uid);
 					if (upcomingContacts) {
@@ -178,7 +192,6 @@ export default function DashboardScreen({ navigation, route }) {
 					}
 				});
 
-				// New reminders subscription
 				const remindersUnsubscribe = subscribeToReminders(user.uid, 'sent', () => {
 					loadReminders();
 				});
@@ -196,35 +209,28 @@ export default function DashboardScreen({ navigation, route }) {
 	);
 
 	useEffect(() => {
-		// Listen for new follow-up notifications
 		const listener = () => loadReminders();
 		eventEmitter.on('followUpCreated', listener);
 
-		// Clean up
 		return () => {
 			eventEmitter.off('followUpCreated', listener);
 		};
 	}, []);
 
-	// Function to show reminders
 	const loadReminders = async () => {
 		try {
-			// Show loading animation on first load
 			if (!initialLoadCompletedRef.current) {
 				setIsLoading(true);
 			}
 
-			// Get cloud reminders
 			const [scheduledReminders, customReminders, followUpReminders] = await Promise.all([
 				getScheduledReminders(user.uid),
 				getCustomReminders(user.uid),
 				getFollowUpReminders(user.uid),
 			]);
 
-			// Get local notifications
 			const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
 
-			// Process local follow-up notifications
 			const processReminder = (notification) => {
 				const content = notification.content || notification.request?.content;
 				const data = content?.data || {};
@@ -259,16 +265,13 @@ export default function DashboardScreen({ navigation, route }) {
 				};
 			};
 
-			// Get follow-up reminders from local notifications
 			const followUpFromNotifications = scheduledNotifications
 				.filter((notification) => notification.content?.data?.type === 'FOLLOW_UP')
 				.map(processReminder);
 
-			// Get stored follow-up notifications
 			const storedFollowUp = await AsyncStorage.getItem('follow_up_notifications');
 			const localFollowUpReminders = storedFollowUp ? JSON.parse(storedFollowUp) : [];
 
-			// Process stored follow-ups
 			const processedFollowUps = localFollowUpReminders.map((local) => ({
 				type: 'FOLLOW_UP',
 				firestoreId: local.id,
@@ -278,16 +281,13 @@ export default function DashboardScreen({ navigation, route }) {
 				status: 'pending',
 			}));
 
-			// Process each type according to rules
 			const now = DateTime.now();
 			const sevenDaysAgo = now.minus({ days: 7 }).toJSDate();
 
-			// Combine all follow-ups from different sources
 			const allFollowUps = [...followUpReminders, ...followUpFromNotifications, ...processedFollowUps].filter(
 				(r) => new Date(r.scheduledTime) >= sevenDaysAgo
 			);
 
-			// Process SCHEDULED and CUSTOM_DATE reminders
 			const groupedScheduled = groupByContact(
 				scheduledReminders.filter(
 					(r) =>
@@ -304,7 +304,6 @@ export default function DashboardScreen({ navigation, route }) {
 			);
 			const newestCustom = getNewestPerContact(groupedCustom);
 
-			// Combine and sort all reminders
 			const sortedReminders = [...allFollowUps, ...newestScheduled, ...newestCustom].sort(
 				(a, b) => new Date(a.scheduledTime) - new Date(b.scheduledTime)
 			);
@@ -315,7 +314,6 @@ export default function DashboardScreen({ navigation, route }) {
 				error: null,
 			});
 
-			// Mark initial load as completed and stop loading
 			initialLoadCompletedRef.current = true;
 			setIsLoading(false);
 		} catch (error) {
@@ -326,14 +324,12 @@ export default function DashboardScreen({ navigation, route }) {
 				error: 'Failed to load reminders',
 			});
 
-			// Still mark as completed even on error
 			initialLoadCompletedRef.current = true;
 			setIsLoading(false);
 			Alert.alert('Error', 'Failed to load reminders');
 		}
 	};
 
-	// Function to handle reminder completion
 	const handleReminderComplete = async (reminderId, notes = '') => {
 		try {
 			const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
@@ -342,7 +338,6 @@ export default function DashboardScreen({ navigation, route }) {
 				return;
 			}
 
-			// Handle Firestore updates first
 			switch (reminder.type) {
 				case 'SCHEDULED':
 				case 'CUSTOM_DATE':
@@ -356,16 +351,13 @@ export default function DashboardScreen({ navigation, route }) {
 					return;
 			}
 
-			// Handle notification cleanup for SCHEDULED and CUSTOM_DATE
 			try {
-				// Cancel any scheduled notifications
 				try {
 					await Notifications.cancelScheduledNotificationAsync(reminderId);
 				} catch (error) {
 					console.log('No scheduled notification found for:', reminderId);
 				}
 
-				// Dismiss any presented notifications
 				try {
 					const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
 					const matchingNotification = presentedNotifications.find(
@@ -378,7 +370,6 @@ export default function DashboardScreen({ navigation, route }) {
 					console.log('Error dismissing presented notification:', error);
 				}
 
-				// Clean up notification coordinator mapping
 				const mapping = notificationCoordinator.notificationMap.get(reminderId);
 				if (mapping) {
 					if (mapping.localId && mapping.localId !== reminderId) {
@@ -392,14 +383,11 @@ export default function DashboardScreen({ navigation, route }) {
 					await notificationCoordinator.saveNotificationMap();
 				}
 
-				// Update badge count
 				await notificationCoordinator.decrementBadge();
 			} catch (notificationError) {
 				console.error('Error cleaning up notifications:', notificationError);
-				// Don't throw here - we still want to update UI even if notification cleanup fails
 			}
 
-			// Update UI
 			setRemindersState((prev) => ({
 				...prev,
 				data: prev.data.filter((r) => r.firestoreId !== reminderId),
@@ -412,14 +400,12 @@ export default function DashboardScreen({ navigation, route }) {
 
 	const handleFollowUpComplete = async (reminderId, notes) => {
 		try {
-			// Cancel the local notification
 			try {
 				await Notifications.cancelScheduledNotificationAsync(reminderId);
 			} catch (error) {
 				console.log('No scheduled notification found for:', reminderId);
 			}
 
-			// Try to cancel any presented notifications
 			try {
 				const presentedNotifications = await Notifications.getPresentedNotificationsAsync();
 				const matchingNotification = presentedNotifications.find(
@@ -432,7 +418,6 @@ export default function DashboardScreen({ navigation, route }) {
 				console.log('Error dismissing presented notification:', error);
 			}
 
-			// Remove from notification coordinator
 			const mapping = notificationCoordinator.notificationMap.get(reminderId);
 			if (mapping) {
 				if (mapping.localId && mapping.localId !== reminderId) {
@@ -446,7 +431,6 @@ export default function DashboardScreen({ navigation, route }) {
 				await notificationCoordinator.saveNotificationMap();
 			}
 
-			// Handle notes if provided
 			if (notes) {
 				const reminder = remindersState.data.find((r) => r.firestoreId === reminderId);
 				const contactId = reminder.data?.contactId;
@@ -468,19 +452,15 @@ export default function DashboardScreen({ navigation, route }) {
 				}
 			}
 
-			// Update UI
 			setRemindersState((prev) => ({
 				...prev,
 				data: prev.data.filter((r) => r.firestoreId !== reminderId),
 			}));
 
-			// Update badge count
 			await notificationCoordinator.decrementBadge();
 
-			// Make sure notification service handles cleanup
 			await notificationService.handleFollowUpComplete(reminderId);
 
-			// Update AsyncStorage
 			try {
 				const storedNotifications = await AsyncStorage.getItem('follow_up_notifications');
 				if (storedNotifications) {
@@ -508,7 +488,7 @@ export default function DashboardScreen({ navigation, route }) {
 		}
 	};
 
-	// Options for snoozing reminders
+	// Use enhanced snooze options with stats
 	const handleSnooze = async (reminder) => {
 		if (!reminder?.scheduledTime) {
 			console.error('Invalid reminder data:', reminder);
@@ -516,54 +496,108 @@ export default function DashboardScreen({ navigation, route }) {
 			return;
 		}
 
-		// Get the snooze options based on reminder's frequency and snooze count
-		const options = await snoozeHandler.getAvailableSnoozeOptions(reminder.firestoreId);
-		if (!options || options.length === 0) {
-			Alert.alert('Error', 'No available snooze options');
-			return;
+		// Show offline warning if needed
+		if (isOffline) {
+			Alert.alert(
+				'Limited Connection',
+				'You appear to be offline. Snooze requests will be processed when your connection is restored.',
+				[{ text: 'Continue' }]
+			);
 		}
 
-		// Set the selected reminder BEFORE creating options
-		setSelectedReminder(reminder);
+		try {
+			setSnoozeLoading(true);
+			// Get enhanced options with stats
+			const options = await snoozeHandler.getAvailableSnoozeOptions(reminder.firestoreId);
 
-		// Create options with handlers that use closure over the reminder
-		const optionsWithHandlers = options.map((option) => ({
-			...option,
-			onPress: async () => {
-				setSnoozeLoading(true);
-				setSnoozeError(null);
+			if (!options || options.length === 0) {
+				Alert.alert('Error', 'No available snooze options');
+				setSnoozeLoading(false);
+				return;
+			}
 
-				try {
-					await initializeSnoozeHandler(user.uid);
+			// Save selected reminder for context
+			setSelectedReminder(reminder);
 
-					await snoozeHandler.handleSnooze(
-						reminder.contact_id,
-						option.id,
-						DateTime.now(),
-						reminder.type || 'SCHEDULED',
-						reminder.firestoreId
-					);
+			// Extract stats from the first option
+			const stats = options[0]?.stats;
 
-					setShowSnoozeOptions(false);
-					await loadReminders();
-				} catch (error) {
-					console.error('Error in snooze process:', error);
-					setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
-				} finally {
-					setSnoozeLoading(false);
-				}
-			},
-		}));
+			// Add handlers to options
+			const optionsWithHandlers = options.map((option) => ({
+				...option,
+				onPress: async () => {
+					setSnoozeLoading(true);
+					setSnoozeError(null);
 
-		setSnoozeOptions(optionsWithHandlers);
-		setShowSnoozeOptions(true);
+					try {
+						await initializeSnoozeHandler(user.uid);
+
+						// If offline, store operation for later
+						if (isOffline) {
+							// Store pending operation
+							await notificationCoordinator.storePendingOperation({
+								type: 'snooze',
+								data: {
+									contactId: reminder.contact_id,
+									optionId: option.id,
+									reminderType: reminder.type || 'SCHEDULED',
+									reminderId: reminder.firestoreId,
+								},
+							});
+
+							// Optimistically update UI
+							setShowSnoozeOptions(false);
+							setSnoozeLoading(false);
+
+							Alert.alert(
+								'Operation Queued',
+								'Your snooze request will be processed when your connection is restored.',
+								[{ text: 'OK' }]
+							);
+							return;
+						}
+
+						// Online operation
+						await snoozeHandler.handleSnooze(
+							reminder.contact_id,
+							option.id,
+							DateTime.now(),
+							reminder.type || 'SCHEDULED',
+							reminder.firestoreId
+						);
+
+						setShowSnoozeOptions(false);
+						await loadReminders();
+					} catch (error) {
+						console.error('Error in snooze process:', error);
+						setSnoozeError(error.message || 'Unable to snooze reminder. Please try again.');
+					} finally {
+						setSnoozeLoading(false);
+					}
+				},
+			}));
+
+			setSnoozeOptions(optionsWithHandlers);
+
+			// Extract messages for the modal
+			const statusMessage = stats?.message || null;
+			const statusIndicator = stats?.indicator || null;
+			const frequencyMessage = stats?.frequencySpecific || null;
+
+			// Pass to ActionModal
+			setShowSnoozeOptions(true);
+			setSnoozeLoading(false);
+		} catch (error) {
+			console.error('Error preparing snooze options:', error);
+			setSnoozeError('Failed to prepare snooze options.');
+			setSnoozeLoading(false);
+		}
 	};
 
 	async function loadContacts() {
 		try {
 			if (!user) return;
 
-			// Load cached data
 			const cachedContacts = await cacheManager.getCachedUpcomingContacts(user.uid);
 			if (cachedContacts) {
 				setContacts(
@@ -575,7 +609,6 @@ export default function DashboardScreen({ navigation, route }) {
 				);
 			}
 
-			// Fetch fresh data from Firestore
 			const freshContacts = await fetchUpcomingContacts(user.uid);
 			if (freshContacts) {
 				setContacts(
@@ -585,7 +618,6 @@ export default function DashboardScreen({ navigation, route }) {
 						return dateA - dateB;
 					})
 				);
-				// Update cache
 				await cacheManager.saveUpcomingContacts(user.uid, freshContacts);
 			}
 		} catch (error) {
@@ -599,13 +631,11 @@ export default function DashboardScreen({ navigation, route }) {
 	const loadStats = async () => {
 		if (!user) return;
 		try {
-			// Try to load from cache first
 			const cachedStats = await cacheManager.getCachedStats(user.uid);
 			if (cachedStats) {
 				setStats(cachedStats);
 			}
 
-			// Fetch fresh stats
 			const calculatedStats = await calculateStats(user.uid);
 			setStats(calculatedStats);
 			await cacheManager.saveStats(user.uid, calculatedStats);
@@ -650,6 +680,27 @@ export default function DashboardScreen({ navigation, route }) {
 		>
 			<View style={[commonStyles.container, { backgroundColor: 'transparent' }]}>
 				<StatusBar style="auto" />
+
+				{/* Offline indicator */}
+				{isOffline && (
+					<View
+						style={{
+							backgroundColor: colors.warning || '#FFA500',
+							padding: 8,
+							alignItems: 'center',
+						}}
+					>
+						<Text
+							style={{
+								color: '#fff',
+								fontWeight: 'bold',
+							}}
+						>
+							Offline Mode - Limited functionality available
+						</Text>
+					</View>
+				)}
+
 				<ScrollView
 					style={{ flex: 1 }}
 					refreshControl={<RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} />}
@@ -745,6 +796,9 @@ export default function DashboardScreen({ navigation, route }) {
 					error={snoozeError}
 					options={snoozeOptions}
 					title="Snooze Options"
+					statusMessage={selectedReminder?.stats?.message || null}
+					statusIndicator={selectedReminder?.stats?.indicator || null}
+					frequencyMessage={selectedReminder?.stats?.frequencySpecific || null}
 				/>
 			</View>
 			{selectedContact && (

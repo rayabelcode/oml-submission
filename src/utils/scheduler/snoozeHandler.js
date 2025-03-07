@@ -4,7 +4,10 @@ import { db } from '../../config/firebase';
 import {
 	REMINDER_STATUS,
 	SNOOZE_OPTIONS,
-	MAX_SNOOZE_ATTEMPTS,
+	DEFAULT_MAX_SNOOZE_ATTEMPTS,
+	FREQUENCY_SNOOZE_LIMITS,
+	SNOOZE_INDICATORS,
+	SNOOZE_LIMIT_MESSAGES,
 	PATTERN_TRACKING,
 } from '../../../constants/notificationConstants';
 import { SchedulingService } from './scheduler';
@@ -16,13 +19,53 @@ import {
 	getReminder,
 } from '../firestore';
 import { schedulingHistory } from './schedulingHistory';
+import NetInfo from '@react-native-community/netinfo';
+
+// Get max snooze attempts based on frequency
+function getMaxSnoozeAttemptsForFrequency(frequency) {
+	return FREQUENCY_SNOOZE_LIMITS[frequency] || DEFAULT_MAX_SNOOZE_ATTEMPTS;
+}
+
+// Calculate snooze stats from a reminder object
+function computeSnoozeStats(reminder) {
+	const frequency = reminder?.frequency || 'default';
+	const snoozeCount = reminder?.snooze_count || reminder?.snooze_history?.length || 0;
+	const maxAllowed = getMaxSnoozeAttemptsForFrequency(frequency);
+	const remaining = Math.max(0, maxAllowed - snoozeCount);
+
+	return {
+		remaining,
+		total: maxAllowed,
+		isLast: remaining === 1,
+		isExhausted: remaining === 0,
+		message:
+			remaining > 1
+				? SNOOZE_LIMIT_MESSAGES.REMAINING(remaining)
+				: remaining === 1
+				? SNOOZE_LIMIT_MESSAGES.LAST_REMAINING
+				: SNOOZE_LIMIT_MESSAGES.MAX_REACHED,
+		indicator:
+			remaining > 1
+				? SNOOZE_INDICATORS.NORMAL
+				: remaining === 1
+				? SNOOZE_INDICATORS.WARNING
+				: SNOOZE_INDICATORS.CRITICAL,
+		frequencySpecific:
+			frequency === 'daily'
+				? SNOOZE_LIMIT_MESSAGES.DAILY_LIMIT
+				: frequency === 'weekly'
+				? SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT
+				: null,
+	};
+}
 
 export class SnoozeHandler {
 	constructor(userId, timezone) {
 		this.userId = userId;
 		this.timezone = timezone;
 		this.schedulingService = null;
-		this.patternCache = new Map(); // Cache pattern analysis results
+		this.patternCache = new Map();
+		this.previouslyConnected = true;
 	}
 
 	async initialize() {
@@ -31,16 +74,13 @@ export class SnoozeHandler {
 		}
 
 		try {
-			// Get user preferences with fallback
 			const userPrefs = await getUserPreferences(this.userId);
 			if (!userPrefs) {
 				throw new Error('Failed to load user preferences');
 			}
 
-			// Get active reminders with fallback
 			const activeReminders = await getActiveReminders(this.userId);
 
-			// Create scheduling service with guaranteed preferences
 			this.schedulingService = new SchedulingService(
 				userPrefs.scheduling_preferences || {
 					minimumGapMinutes: 20,
@@ -64,13 +104,11 @@ export class SnoozeHandler {
 		}
 	}
 
-	// Get time window based on contact frequency
 	async getAnalysisWindow(contactId) {
 		try {
 			const contact = await getContactById(contactId);
 			const frequency = contact?.scheduling?.frequency || 'monthly';
 
-			// Adjust window based on contact frequency
 			switch (frequency) {
 				case 'weekly':
 					return PATTERN_TRACKING.TIME_WINDOW.MIN;
@@ -88,18 +126,15 @@ export class SnoozeHandler {
 		}
 	}
 
-	// Patterns by time period
 	async findOptimalTime(contactId, baseTime, snoozeType) {
 		try {
 			const patterns = await schedulingHistory.analyzeContactPatterns(contactId);
 			if (!patterns?.successRates?.byHour) return null;
 
-			// Get success rates for current time period
 			const hour = baseTime.hour;
 			const periodRates = Object.entries(patterns.successRates.byHour)
 				.filter(([h]) => {
 					const hourNum = parseInt(h);
-					// Look within same time period (morning/afternoon/evening)
 					return Math.abs(hourNum - hour) <= 3;
 				})
 				.sort(([, a], [, b]) => b.successRate - a.successRate);
@@ -108,7 +143,7 @@ export class SnoozeHandler {
 				return baseTime.set({ hour: parseInt(periodRates[0][0]), minute: 0 });
 			}
 
-			return baseTime.plus({ hours: 3 }); // fallback
+			return baseTime.plus({ hours: 3 });
 		} catch (error) {
 			console.error('Error finding optimal time:', error);
 			return null;
@@ -130,7 +165,6 @@ export class SnoozeHandler {
 			const hour = currentTime.hour;
 			let minMinutes, maxMinutes;
 
-			// Keep existing time calculation logic
 			if (hour >= 0 && hour < 4) {
 				minMinutes = 20;
 				maxMinutes = 40;
@@ -155,7 +189,6 @@ export class SnoozeHandler {
 				id: contactId,
 			});
 
-			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -172,7 +205,6 @@ export class SnoozeHandler {
 				snooze_count: increment(1),
 			});
 
-			// Track for analytics
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
@@ -180,7 +212,6 @@ export class SnoozeHandler {
 				'later_today'
 			);
 
-			// Schedule new local notification
 			if (availableTime) {
 				const contact = await getContactById(contactId);
 				const reminderData = {
@@ -222,7 +253,6 @@ export class SnoozeHandler {
 				id: contactId,
 			});
 
-			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -295,7 +325,6 @@ export class SnoozeHandler {
 				throw new Error('No available time slot found');
 			}
 
-			// Only update the reminder document
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
 					scheduledTime: Timestamp.fromDate(availableTime),
@@ -379,7 +408,6 @@ export class SnoozeHandler {
 			throw new Error('Contact ID is required');
 		}
 
-		// Make sure currentTime is a DateTime object
 		currentTime = DateTime.isDateTime(currentTime) ? currentTime : DateTime.now();
 
 		const snoozeOption = SNOOZE_OPTIONS.find((opt) => opt.id === option);
@@ -399,9 +427,8 @@ export class SnoozeHandler {
 		}
 	}
 
-	// Snooze options based on reminder frequency
 	async getAvailableSnoozeOptions(reminderId) {
-		// Default options that will always be available
+		// Base options list
 		const allOptions = [
 			{
 				id: 'later_today',
@@ -426,36 +453,58 @@ export class SnoozeHandler {
 		];
 
 		try {
+			// Check for offline status
+			const networkState = await NetInfo.fetch();
+			const isOffline = !networkState.isConnected;
+
 			const reminder = await getReminder(reminderId);
 			if (!reminder) {
 				console.warn('Reminder not found, returning all options');
 				return allOptions;
 			}
 
+			// Get stats directly from the reminder object
+			const stats = computeSnoozeStats(reminder);
 			const frequency = reminder?.frequency;
-			const snoozeCount = reminder?.snooze_count || 0;
 
-			if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
-				return allOptions.filter((opt) => opt.id === 'skip');
+			// Max snooze check - if exhausted, only allow skip
+			if (stats.isExhausted) {
+				return allOptions
+					.filter((opt) => opt.id === 'skip')
+					.map((option) => ({
+						...option,
+						stats: stats,
+						offline: isOffline,
+					}));
 			}
 
+			// Frequency-specific filtering
+			let availableOptions;
 			switch (frequency) {
 				case 'daily':
-					return snoozeCount > 0
-						? allOptions.filter((opt) => opt.id === 'skip')
-						: allOptions.filter((opt) => opt.id === 'later_today' || opt.id === 'skip');
-
+					availableOptions =
+						stats.remaining <= 0
+							? allOptions.filter((opt) => opt.id === 'skip')
+							: allOptions.filter((opt) => opt.id === 'later_today' || opt.id === 'skip');
+					break;
 				case 'weekly':
-					return allOptions.filter(
+					availableOptions = allOptions.filter(
 						(opt) => opt.id === 'later_today' || opt.id === 'tomorrow' || opt.id === 'skip'
 					);
-
+					break;
 				default:
-					return allOptions;
+					availableOptions = allOptions;
 			}
+
+			// Add stats to each option
+			return availableOptions.map((option) => ({
+				...option,
+				stats: stats,
+				offline: isOffline,
+				disabled: stats.isExhausted && option.id !== 'skip',
+			}));
 		} catch (error) {
 			console.error('Error getting snooze options:', error);
-			// Return all options if there's an error, rather than an empty array
 			return allOptions;
 		}
 	}
@@ -467,8 +516,10 @@ export class SnoozeHandler {
 
 export const snoozeHandler = new SnoozeHandler();
 
-// Method to set the userId
 export const initializeSnoozeHandler = async (userId) => {
 	snoozeHandler.userId = userId;
 	await snoozeHandler.initialize();
 };
+
+// Export utility functions
+export { computeSnoozeStats, getMaxSnoozeAttemptsForFrequency };

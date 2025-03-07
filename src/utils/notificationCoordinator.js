@@ -13,6 +13,8 @@ import { sendPushNotification, scheduleLocalNotificationWithPush } from './notif
 import { doc, getUserProfile, updateDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { reminderSync } from './notifications/reminderSync';
+import { snoozeHandler, initializeSnoozeHandler } from './scheduler/snoozeHandler';
+import { DateTime } from 'luxon';
 
 class NotificationCoordinator {
 	constructor() {
@@ -21,6 +23,7 @@ class NotificationCoordinator {
 		this.notificationMap = new Map();
 		this.services = new Map();
 		this.pendingQueue = new Map();
+		this.pendingOperations = new Map(); // For offline operations
 		this.lastCleanupTime = null;
 		this.lastSyncTime = null;
 		this.appStateSubscription = null;
@@ -35,12 +38,10 @@ class NotificationCoordinator {
 		if (this.initialized) return;
 
 		try {
-			// Set up iOS specific notification categories
 			if (Platform.OS === 'ios') {
 				await this.setupIOSCategories();
 			}
 
-			// Configure notification handler
 			Notifications.setNotificationHandler({
 				handleNotification: async () => ({
 					shouldShowAlert: true,
@@ -50,10 +51,8 @@ class NotificationCoordinator {
 				}),
 			});
 
-			// Request permissions
 			await this.requestPermissions();
 
-			// Get Expo push token and store in Firestore only if user is authenticated
 			if (Platform.OS === 'ios' && auth.currentUser) {
 				try {
 					const token = (
@@ -75,7 +74,6 @@ class NotificationCoordinator {
 				}
 			}
 
-			// Initialization services
 			await this.loadStoredData();
 			await this.initializeServices();
 			this.setupEventListeners();
@@ -91,7 +89,6 @@ class NotificationCoordinator {
 
 	async setupIOSCategories() {
 		if (Platform.OS === 'ios') {
-			// Register FOLLOW_UP category
 			await Notifications.setNotificationCategoryAsync('FOLLOW_UP', [
 				{
 					identifier: 'add_notes',
@@ -114,7 +111,6 @@ class NotificationCoordinator {
 				},
 			]);
 
-			// Register SCHEDULED category
 			await Notifications.setNotificationCategoryAsync('SCHEDULED', [
 				{
 					identifier: 'call_now',
@@ -132,7 +128,6 @@ class NotificationCoordinator {
 				},
 			]);
 
-			// Register CUSTOM_DATE category
 			await Notifications.setNotificationCategoryAsync('CUSTOM_DATE', [
 				{
 					identifier: 'call_now',
@@ -154,21 +149,20 @@ class NotificationCoordinator {
 
 	async clearAllNotifications() {
 		try {
-			// Cancel all scheduled notifications
 			await Notifications.cancelAllScheduledNotificationsAsync();
 
-			// Clear the notification map
 			this.notificationMap.clear();
 			await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.NOTIFICATION_MAP);
 
-			// Clear pending queue
 			this.pendingQueue.clear();
 			await AsyncStorage.removeItem(COORDINATOR_CONFIG.STORAGE_KEYS.PENDING_QUEUE);
 
-			// Clear follow-up notifications
+			// Clear pending operations
+			this.pendingOperations.clear();
+			await AsyncStorage.removeItem('pendingOperations');
+
 			await AsyncStorage.removeItem('follow_up_notifications');
 
-			// Reset badge count
 			await this.resetBadge();
 
 			return true;
@@ -208,7 +202,6 @@ class NotificationCoordinator {
 				});
 			}
 
-			// Start reminder sync
 			await reminderSync.start();
 
 			return true;
@@ -220,30 +213,30 @@ class NotificationCoordinator {
 
 	async loadStoredData() {
 		try {
-			const [storedBadgeCount, storedMap, storedQueue, storedCleanupTime, storedSyncTime] = await Promise.all(
-				[
+			const [storedBadgeCount, storedMap, storedQueue, storedCleanupTime, storedSyncTime, storedOperations] =
+				await Promise.all([
 					AsyncStorage.getItem('badgeCount'),
 					AsyncStorage.getItem(COORDINATOR_CONFIG.STORAGE_KEYS.NOTIFICATION_MAP),
 					AsyncStorage.getItem(COORDINATOR_CONFIG.STORAGE_KEYS.PENDING_QUEUE),
 					AsyncStorage.getItem(COORDINATOR_CONFIG.STORAGE_KEYS.LAST_CLEANUP),
 					AsyncStorage.getItem(COORDINATOR_CONFIG.STORAGE_KEYS.LAST_SYNC),
-				]
-			);
+					AsyncStorage.getItem('pendingOperations'),
+				]);
 
 			this.badgeCount = storedBadgeCount ? parseInt(storedBadgeCount, 10) : 0;
 			this.notificationMap = storedMap ? new Map(JSON.parse(storedMap)) : new Map();
 			this.pendingQueue = storedQueue ? new Map(JSON.parse(storedQueue)) : new Map();
+			this.pendingOperations = storedOperations ? new Map(JSON.parse(storedOperations)) : new Map();
 			this.lastCleanupTime = storedCleanupTime ? new Date(storedCleanupTime) : null;
 			this.lastSyncTime = storedSyncTime ? new Date(storedSyncTime) : null;
 
-			// Update badge count on load
 			await Notifications.setBadgeCountAsync(this.badgeCount);
 		} catch (error) {
 			console.error('Error loading stored data:', error);
-			// Initialize with defaults if load fails
 			this.badgeCount = 0;
 			this.notificationMap = new Map();
 			this.pendingQueue = new Map();
+			this.pendingOperations = new Map();
 			this.lastCleanupTime = null;
 			this.lastSyncTime = null;
 		}
@@ -258,20 +251,17 @@ class NotificationCoordinator {
 	}
 
 	setupEventListeners() {
-		// App State Changes
 		this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange.bind(this));
-
-		// Network Changes
 		this.networkSubscription = NetInfo.addEventListener(this.handleNetworkChange.bind(this));
 	}
 
 	async handleAppStateChange(nextAppState) {
 		if (nextAppState === 'active') {
-			// Start reminder sync if user is authenticated
 			if (auth.currentUser && !reminderSync.initialized) {
 				await reminderSync.start();
 			}
 			await this.syncPendingNotifications();
+			await this.processPendingOperations();
 			await this.performCleanup();
 		}
 	}
@@ -279,6 +269,7 @@ class NotificationCoordinator {
 	async handleNetworkChange(state) {
 		if (state.isConnected) {
 			await this.syncPendingNotifications();
+			await this.processPendingOperations();
 		}
 	}
 
@@ -291,7 +282,6 @@ class NotificationCoordinator {
 			const userId = auth.currentUser?.uid;
 			if (!userId) throw new Error('User not authenticated');
 
-			// Handle replacing existing notification
 			if (options.replaceId) {
 				const existingNotification = this.notificationMap.get(options.replaceId);
 				if (existingNotification) {
@@ -299,10 +289,8 @@ class NotificationCoordinator {
 				}
 			}
 
-			// Ensure we have a Date object
 			const triggerTime = scheduledTime instanceof Date ? scheduledTime : new Date(scheduledTime);
 
-			// Prepare notification content
 			const finalContent = {
 				...content,
 				...(Platform.OS === 'ios' &&
@@ -311,16 +299,13 @@ class NotificationCoordinator {
 					}),
 			};
 
-			// Schedule the local notification using Date object directly
 			const localNotificationId = await Notifications.scheduleNotificationAsync({
 				content: finalContent,
 				trigger: triggerTime,
 			});
 
-			// Calculate seconds until notification
 			const secondsUntilNotification = Math.max(0, Math.floor((triggerTime - new Date()) / 1000));
 
-			// Store in notification map
 			this.notificationMap.set(localNotificationId, {
 				content: finalContent,
 				scheduledTime: triggerTime,
@@ -331,7 +316,6 @@ class NotificationCoordinator {
 
 			await this.saveNotificationMap();
 
-			// Handle push notification
 			if (secondsUntilNotification > 0) {
 				try {
 					const userDoc = await getUserProfile(userId);
@@ -351,7 +335,6 @@ class NotificationCoordinator {
 				}
 			}
 
-			// Handle offline queue if needed
 			if (!options.skipQueue && !(await this.checkConnectivity())) {
 				await this.addToPendingQueue(localNotificationId, finalContent, triggerTime, options);
 			}
@@ -413,7 +396,7 @@ class NotificationCoordinator {
 			return state.isConnected && state.isInternetReachable;
 		} catch (error) {
 			console.error('Error checking connectivity:', error);
-			return false; // Fail safe - assume offline
+			return false;
 		}
 	}
 
@@ -424,7 +407,7 @@ class NotificationCoordinator {
 
 		this.pendingQueue.set(notificationId, {
 			content,
-			scheduledTime, // Store the Date object
+			scheduledTime,
 			options,
 			timestamp: new Date().toISOString(),
 		});
@@ -435,15 +418,111 @@ class NotificationCoordinator {
 		);
 	}
 
+	// Store a pending operation (for offline snooze functionality)
+	async storePendingOperation(operation) {
+		const operationId = `op_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+		this.pendingOperations.set(operationId, {
+			...operation,
+			timestamp: new Date().toISOString(),
+			processed: false,
+		});
+
+		await AsyncStorage.setItem(
+			'pendingOperations',
+			JSON.stringify(Array.from(this.pendingOperations.entries()))
+		);
+
+		return operationId;
+	}
+
+	// Process all pending operations when back online
+	async processPendingOperations() {
+		if (!(await this.checkConnectivity()) || this.pendingOperations.size === 0) {
+			return;
+		}
+
+		// Initialize snooze handler if we have any snooze operations
+		const hasSnoozeOperations = Array.from(this.pendingOperations.values()).some(
+			(op) => op.type === 'snooze' && !op.processed
+		);
+
+		if (hasSnoozeOperations && auth.currentUser) {
+			await initializeSnoozeHandler(auth.currentUser.uid);
+		}
+
+		const successfulIds = [];
+
+		for (const [id, operation] of this.pendingOperations) {
+			// Skip already processed operations
+			if (operation.processed) continue;
+
+			try {
+				if (operation.type === 'snooze') {
+					const { contactId, optionId, reminderType, reminderId } = operation.data;
+
+					// Execute the snooze operation
+					await snoozeHandler.handleSnooze(contactId, optionId, DateTime.now(), reminderType, reminderId);
+
+					// Mark as processed
+					operation.processed = true;
+					successfulIds.push(id);
+				}
+			} catch (error) {
+				console.error(`Error processing operation ${id}:`, error);
+				// Don't add to successfulIds - will retry later
+			}
+		}
+
+		// Update operation status
+		for (const id of successfulIds) {
+			const operation = this.pendingOperations.get(id);
+			if (operation) {
+				operation.processed = true;
+			}
+		}
+
+		// Save updated operations
+		await AsyncStorage.setItem(
+			'pendingOperations',
+			JSON.stringify(Array.from(this.pendingOperations.entries()))
+		);
+
+		// Clean up old operations (processed and more than 7 days old)
+		await this.cleanupProcessedOperations();
+	}
+
+	// Remove old processed operations
+	async cleanupProcessedOperations() {
+		const now = new Date();
+		const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+		const oldProcessedIds = Array.from(this.pendingOperations.entries())
+			.filter(([, operation]) => {
+				return operation.processed && new Date(operation.timestamp) < sevenDaysAgo;
+			})
+			.map(([id]) => id);
+
+		for (const id of oldProcessedIds) {
+			this.pendingOperations.delete(id);
+		}
+
+		if (oldProcessedIds.length > 0) {
+			await AsyncStorage.setItem(
+				'pendingOperations',
+				JSON.stringify(Array.from(this.pendingOperations.entries()))
+			);
+		}
+	}
+
 	startMaintenanceIntervals() {
-		// Cleanup interval
 		setInterval(async () => {
 			await this.performCleanup();
 		}, COORDINATOR_CONFIG.CLEANUP_INTERVAL);
 
-		// Sync interval
 		setInterval(async () => {
 			await this.syncPendingNotifications();
+			await this.processPendingOperations();
 		}, COORDINATOR_CONFIG.SYNC_INTERVAL);
 	}
 
@@ -452,12 +531,10 @@ class NotificationCoordinator {
 			const now = new Date();
 			const promises = [];
 
-			// Clean up notification map
 			for (const [id, data] of this.notificationMap) {
 				const timestamp = new Date(data.timestamp);
 				const age = now - timestamp;
 
-				// Null check and default type
 				const notificationType = data.options?.type || 'FOLLOW_UP';
 				const timeoutConfig = NOTIFICATION_CONFIGS[notificationType]?.CLEANUP?.TIMEOUT;
 
@@ -469,6 +546,9 @@ class NotificationCoordinator {
 			await Promise.all(promises);
 			this.lastCleanupTime = now;
 			await AsyncStorage.setItem(COORDINATOR_CONFIG.STORAGE_KEYS.LAST_CLEANUP, now.toISOString());
+
+			// Also clean up processed operations
+			await this.cleanupProcessedOperations();
 		} catch (error) {
 			console.error('Error during cleanup:', error);
 		}
@@ -493,10 +573,8 @@ class NotificationCoordinator {
 			results.filter((r) => r.status === 'fulfilled').map((r) => r.value)
 		);
 
-		// Remove successful notifications from pending queue
 		successfulIds.forEach((id) => this.pendingQueue.delete(id));
 
-		// Update stored pending queue
 		await AsyncStorage.setItem(
 			COORDINATOR_CONFIG.STORAGE_KEYS.PENDING_QUEUE,
 			JSON.stringify(Array.from(this.pendingQueue.entries()))
@@ -506,7 +584,6 @@ class NotificationCoordinator {
 		await AsyncStorage.setItem(COORDINATOR_CONFIG.STORAGE_KEYS.LAST_SYNC, this.lastSyncTime.toISOString());
 	}
 
-	// Badge management
 	async incrementBadge() {
 		this.badgeCount++;
 		await AsyncStorage.setItem('badgeCount', this.badgeCount.toString());
@@ -542,7 +619,6 @@ class NotificationCoordinator {
 			this.networkSubscription();
 		}
 
-		// Stop reminder sync
 		reminderSync.stop();
 	}
 }
