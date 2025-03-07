@@ -68,20 +68,6 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 		setHasText(text.trim().length > 0);
 	}, []);
 
-	// Get the appropriate snooze button style based on stats
-	const getSnoozeButtonStyle = () => {
-		if (!snoozeStats) return {};
-
-		switch (snoozeStats.indicator) {
-			case 'warning':
-				return { borderColor: colors.warning || '#FFA500', borderWidth: 1 };
-			case 'critical':
-				return { borderColor: colors.danger, borderWidth: 1 };
-			default:
-				return {};
-		}
-	};
-
 	return (
 		<View style={styles.card}>
 			<View style={[styles.headerRow, { backgroundColor: colors.reminderTypes[cardColorType] }]}>
@@ -292,44 +278,12 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									alignItems: 'center',
 									position: 'relative', // For badge positioning
 								},
-								getSnoozeButtonStyle(),
 							]}
 							onPress={() => onSnooze(reminder)}
 							disabled={snoozeStats && snoozeStats.isExhausted}
 						>
 							<Icon name="time-outline" size={24} color={colors.action} />
 							<Text style={[styles.actionText, { color: colors.action }]}>Options</Text>
-
-							{/* Show snooze count badge if we have stats and there are snoozes remaining */}
-							{snoozeStats && snoozeStats.remaining > 0 && (
-								<View
-									style={[
-										styles.snoozeBadge || {
-											position: 'absolute',
-											top: 0,
-											right: 0,
-											backgroundColor: snoozeStats.isLast ? colors.warning || '#FFA500' : colors.primary,
-											borderRadius: 12,
-											width: 24,
-											height: 24,
-											justifyContent: 'center',
-											alignItems: 'center',
-										},
-									]}
-								>
-									<Text
-										style={[
-											styles.snoozeBadgeText || {
-												color: colors.text.white,
-												fontSize: 12,
-												fontWeight: 'bold',
-											},
-										]}
-									>
-										{snoozeStats.remaining}
-									</Text>
-								</View>
-							)}
 						</TouchableOpacity>
 					</>
 				)}

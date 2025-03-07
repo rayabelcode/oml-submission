@@ -579,12 +579,7 @@ export default function DashboardScreen({ navigation, route }) {
 
 			setSnoozeOptions(optionsWithHandlers);
 
-			// Extract messages for the modal
-			const statusMessage = stats?.message || null;
-			const statusIndicator = stats?.indicator || null;
-			const frequencyMessage = stats?.frequencySpecific || null;
-
-			// Pass to ActionModal
+			// Pass stats to ActionModal via separate props
 			setShowSnoozeOptions(true);
 			setSnoozeLoading(false);
 		} catch (error) {
@@ -796,9 +791,9 @@ export default function DashboardScreen({ navigation, route }) {
 					error={snoozeError}
 					options={snoozeOptions}
 					title="Snooze Options"
-					statusMessage={selectedReminder?.stats?.message || null}
-					statusIndicator={selectedReminder?.stats?.indicator || null}
-					frequencyMessage={selectedReminder?.stats?.frequencySpecific || null}
+					statusMessage={snoozeOptions[0]?.stats?.message}
+					statusIndicator={snoozeOptions[0]?.stats?.indicator}
+					frequencyMessage={snoozeOptions[0]?.stats?.frequencySpecific}
 				/>
 			</View>
 			{selectedContact && (

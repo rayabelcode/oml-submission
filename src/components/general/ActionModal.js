@@ -73,7 +73,6 @@ const ActionModal = ({
 		}
 	}, [show]);
 
-	// Helper to get status-based color
 	const getStatusColor = () => {
 		if (!statusIndicator) return colors.text.primary;
 
@@ -92,10 +91,13 @@ const ActionModal = ({
 			flex: 1,
 			justifyContent: 'center',
 			alignItems: 'center',
+			backgroundColor: colors.background.overlay,
 		},
 		modalContent: {
 			width: '85%',
 			maxWidth: 340,
+			// backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.lg,
 			shadowColor: '#000',
 			shadowOffset: { width: 0, height: 2 },
 			shadowOpacity: 0.25,
@@ -110,6 +112,7 @@ const ActionModal = ({
 			backgroundColor: colors.background.whiteText,
 			borderRadius: layout.borderRadius.lg,
 			alignSelf: 'center',
+			marginBottom: spacing.md,
 		},
 		headerText: {
 			fontSize: 22,
@@ -169,20 +172,18 @@ const ActionModal = ({
 			fontWeight: '500',
 			color: colors.primary,
 		},
-		// Styles for status and frequency displays
 		statusContainer: {
 			padding: spacing.md,
 			margin: spacing.sm,
-			marginTop: spacing.lg,
+			marginTop: 0,
+			marginBottom: spacing.sm,
 			borderRadius: layout.borderRadius.md,
-			backgroundColor: colors.background.tertiary,
 			alignItems: 'center',
 		},
 		statusText: {
 			fontSize: 16,
 			fontWeight: '600',
 			textAlign: 'center',
-			color: (props) => getStatusColor(),
 		},
 		frequencyContainer: {
 			paddingHorizontal: spacing.md,
@@ -221,7 +222,6 @@ const ActionModal = ({
 				style={[
 					styles.modalOverlay,
 					{
-						backgroundColor: colors.background.overlay,
 						opacity: overlayAnim,
 					},
 				]}
@@ -241,33 +241,10 @@ const ActionModal = ({
 						]}
 					>
 						{title && (
-							<View style={{ alignItems: 'center' }}>
+							<View style={{ alignItems: 'center', paddingTop: spacing.md }}>
 								<View style={styles.modalHeader}>
 									<Text style={styles.headerText}>{title}</Text>
 								</View>
-							</View>
-						)}
-
-						{/* Status message display */}
-						{statusMessage && (
-							<View
-								style={[
-									styles.statusContainer,
-									statusIndicator === 'warning' && {
-										borderColor: colors.warning || '#FFA500',
-										borderWidth: 1,
-									},
-									statusIndicator === 'critical' && { borderColor: colors.danger, borderWidth: 1 },
-								]}
-							>
-								<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
-							</View>
-						)}
-
-						{/* Frequency-specific message display */}
-						{frequencyMessage && (
-							<View style={styles.frequencyContainer}>
-								<Text style={styles.frequencyText}>{frequencyMessage}</Text>
 							</View>
 						)}
 
@@ -285,42 +262,70 @@ const ActionModal = ({
 								</TouchableOpacity>
 							</View>
 						) : (
-							<View style={styles.optionsContainer}>
-								{options.map((option) => (
-									<TouchableOpacity
-										key={option.id || Math.random().toString()}
-										style={[styles.button, option.disabled && { opacity: 0.5 }]}
-										onPress={option.onPress}
-										disabled={option.disabled}
+							<>
+								{/* Status message display - no background */}
+								{statusMessage && (
+									<View
+										style={[
+											styles.statusContainer,
+											statusIndicator === 'warning' && {
+												borderColor: colors.warning || '#FFA500',
+												borderWidth: 1,
+											},
+											statusIndicator === 'critical' && {
+												borderColor: colors.danger,
+												borderWidth: 1,
+											},
+										]}
 									>
-										<View style={styles.iconContainer}>
-											<Icon
-												name={option.icon}
-												size={28}
-												color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
-											/>
-										</View>
-										<Text
-											style={[
-												styles.buttonText,
-												{
-													color:
-														option.textColor || (option.id === 'skip' ? colors.danger : colors.text.primary),
-												},
-											]}
-										>
-											{option.text}
-										</Text>
+										<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
+									</View>
+								)}
 
-										{/* Offline indicator if needed */}
-										{option.offline && (
-											<View style={styles.offlineIndicator}>
-												<Text style={styles.offlineText}>Offline</Text>
+								{/* Frequency-specific message display */}
+								{frequencyMessage && (
+									<View style={styles.frequencyContainer}>
+										<Text style={styles.frequencyText}>{frequencyMessage}</Text>
+									</View>
+								)}
+								<View style={styles.optionsContainer}>
+									{options.map((option) => (
+										<TouchableOpacity
+											key={option.id || Math.random().toString()}
+											style={[styles.button, option.disabled && { opacity: 0.5 }]}
+											onPress={option.onPress}
+											disabled={option.disabled}
+										>
+											<View style={styles.iconContainer}>
+												<Icon
+													name={option.icon}
+													size={28}
+													color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
+												/>
 											</View>
-										)}
-									</TouchableOpacity>
-								))}
-							</View>
+											<Text
+												style={[
+													styles.buttonText,
+													{
+														color:
+															option.textColor ||
+															(option.id === 'skip' ? colors.danger : colors.text.primary),
+													},
+												]}
+											>
+												{option.text}
+											</Text>
+
+											{/* Offline indicator if needed */}
+											{option.offline && (
+												<View style={styles.offlineIndicator}>
+													<Text style={styles.offlineText}>Offline</Text>
+												</View>
+											)}
+										</TouchableOpacity>
+									))}
+								</View>
+							</>
 						)}
 					</Animated.View>
 				</TouchableOpacity>
