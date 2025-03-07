@@ -206,15 +206,9 @@ describe('Notification Handler', () => {
 
 	describe('handleNotificationResponse', () => {
 		// SCHEDULED notification tests
-		it('should handle snooze for scheduled reminders', async () => {
-			// Set up buttons capture
-			let capturedButtons = [];
-			Alert.alert = jest.fn((title, message, buttons = []) => {
-				capturedButtons = buttons;
-				// Find and click the 'Later Today' button
-				const laterTodayBtn = buttons.find((btn) => btn.text === 'Later Today');
-				if (laterTodayBtn && laterTodayBtn.onPress) laterTodayBtn.onPress();
-			});
+		it('should handle snooze for scheduled reminders by navigating to Dashboard', async () => {
+			// Clear the navigate mock
+			navigate.mockClear();
 
 			const response = {
 				actionIdentifier: 'snooze',
@@ -233,26 +227,21 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			// Verify alert was shown
-			expect(Alert.alert).toHaveBeenCalled();
-
-			// Verify buttons exist
-			expect(capturedButtons.length).toBeGreaterThan(0);
-
-			// No need to verify initializeSnoozeHandler since it might be mocked differently in the implementation
-			expect(snoozeHandler.getAvailableSnoozeOptions).toHaveBeenCalledWith('test-reminder-id');
+			// Check for navigation with correct params
+			expect(navigate).toHaveBeenCalledWith('Dashboard', {
+				openSnoozeForReminder: expect.objectContaining({
+					firestoreId: 'test-reminder-id',
+					contact_id: 'test-contact',
+					type: REMINDER_TYPES.SCHEDULED,
+					scheduledTime: expect.any(Date),
+				}),
+			});
 		});
 
 		// CUSTOM_DATE notification tests
-		it('should handle snooze for custom date reminders', async () => {
-			// Set up buttons capture
-			let capturedButtons = [];
-			Alert.alert = jest.fn((title, message, buttons = []) => {
-				capturedButtons = buttons;
-				// Find and click the 'Later Today' button
-				const laterTodayBtn = buttons.find((btn) => btn.text === 'Later Today');
-				if (laterTodayBtn && laterTodayBtn.onPress) laterTodayBtn.onPress();
-			});
+		it('should handle snooze for custom date reminders by navigating to Dashboard', async () => {
+			// Clear the navigate mock
+			navigate.mockClear();
 
 			const response = {
 				actionIdentifier: 'snooze',
@@ -271,14 +260,15 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			// Verify alert was shown
-			expect(Alert.alert).toHaveBeenCalled();
-
-			// Verify buttons exist
-			expect(capturedButtons.length).toBeGreaterThan(0);
-
-			// No need to verify initializeSnoozeHandler since it might be mocked differently in the implementation
-			expect(snoozeHandler.getAvailableSnoozeOptions).toHaveBeenCalledWith('test-reminder-id');
+			// Check for navigation with the right params
+			expect(navigate).toHaveBeenCalledWith('Dashboard', {
+				openSnoozeForReminder: expect.objectContaining({
+					firestoreId: 'test-reminder-id',
+					contact_id: 'test-contact',
+					type: REMINDER_TYPES.CUSTOM_DATE,
+					scheduledTime: expect.any(Date),
+				}),
+			});
 		});
 
 		// Call Now action tests
@@ -482,8 +472,10 @@ describe('Notification Handler', () => {
 			require('../../config/firebase').auth = originalAuth;
 		});
 
-		it('should handle missing reminder ID', async () => {
-			Alert.alert = jest.fn();
+		it('should handle missing reminder ID gracefully when snoozing', async () => {
+			// Clear mocks
+			navigate.mockClear();
+			Alert.alert.mockClear();
 
 			const response = {
 				actionIdentifier: 'snooze',
@@ -502,35 +494,14 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			// We expect Alert.alert to be called for the error or with fallback options
-			expect(Alert.alert).toHaveBeenCalled();
-		});
-
-		it('should handle failed getAvailableSnoozeOptions', async () => {
-			// Mock getAvailableSnoozeOptions to throw
-			snoozeHandler.getAvailableSnoozeOptions.mockRejectedValueOnce(new Error('Test error'));
-
-			Alert.alert = jest.fn();
-
-			const response = {
-				actionIdentifier: 'snooze',
-				notification: {
-					request: {
-						content: {
-							data: {
-								type: REMINDER_TYPES.SCHEDULED,
-								contactId: 'test-contact',
-								reminderId: 'test-reminder-id',
-							},
-						},
-					},
-				},
-			};
-
-			await handleNotificationResponse(response);
-
-			// Should fall back to default options
-			expect(Alert.alert).toHaveBeenCalled();
+			// Should still navigate to Dashboard but with undefined firestoreId
+			expect(navigate).toHaveBeenCalledWith('Dashboard', {
+				openSnoozeForReminder: expect.objectContaining({
+					contact_id: 'test-contact',
+					type: REMINDER_TYPES.SCHEDULED,
+					scheduledTime: expect.any(Date),
+				}),
+			});
 		});
 
 		it('should handle getContactById failure', async () => {
@@ -714,30 +685,8 @@ it('should initiate a text message when Text option is selected', async () => {
 
 // Testing skip functionality
 it('should handle skip option for scheduled reminders', async () => {
-	// Mock getAvailableSnoozeOptions to return skip option
-	snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-		{
-			id: 'skip',
-			text: 'Skip This Call',
-			stats: {
-				remaining: 2,
-				total: 3,
-			},
-		},
-	]);
-
-	// Set up Alert mock to click the skip button
-	let skipButtonPressed = false;
-	Alert.alert = jest.fn((title, message, buttons = []) => {
-		const skipButton = buttons.find((btn) => btn.text === 'Skip This Call');
-		if (skipButton && skipButton.onPress) {
-			skipButton.onPress();
-			skipButtonPressed = true;
-		}
-	});
-
-	// Reset handleSnooze mock
-	snoozeHandler.handleSnooze.mockClear();
+	// Just check navigation
+	navigate.mockClear();
 
 	const response = {
 		actionIdentifier: 'snooze',
@@ -756,14 +705,10 @@ it('should handle skip option for scheduled reminders', async () => {
 
 	await handleNotificationResponse(response);
 
-	// Verify Alert.alert was called
-	expect(Alert.alert).toHaveBeenCalled();
-
-	// Verify skip button was pressed
-	expect(skipButtonPressed).toBe(true);
-
-	// If the alert is clicked, handleSnooze should be called with skip
-	expect(snoozeHandler.getAvailableSnoozeOptions).toHaveBeenCalled();
+	// Should navigate to Dashboard where actual skip handling will happen
+	expect(navigate).toHaveBeenCalledWith('Dashboard', {
+		openSnoozeForReminder: expect.any(Object),
+	});
 });
 
 // Testing snoozed reminder behavior
@@ -796,23 +741,8 @@ it('should handle actions for snoozed SCHEDULED reminders the same as regular re
 
 // Test max snooze reached
 it('should only show Skip option when max snooze is reached', async () => {
-	// Mock getAvailableSnoozeOptions to return only Skip
-	snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-		{
-			id: 'skip',
-			text: 'Skip This Call',
-			stats: {
-				isExhausted: true,
-				indicator: 'critical',
-				message: 'Maximum snoozes reached',
-			},
-		},
-	]);
-
-	let alertButtons;
-	Alert.alert = jest.fn((title, message, buttons = []) => {
-		alertButtons = buttons;
-	});
+	// Clear navigate mock
+	navigate.mockClear();
 
 	const response = {
 		actionIdentifier: 'snooze',
@@ -831,553 +761,19 @@ it('should only show Skip option when max snooze is reached', async () => {
 
 	await handleNotificationResponse(response);
 
-	// Verify Alert.alert was called
-	expect(Alert.alert).toHaveBeenCalled();
+	// Verify navigation to Dashboard
+	expect(navigate).toHaveBeenCalledWith('Dashboard', {
+		openSnoozeForReminder: expect.any(Object),
+	});
 });
-
-// New tests for frequency-specific behavior
 
 describe('Frequency-specific snooze behavior', () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
 	});
 
-	it('should show special daily reminder options after max snooze', async () => {
-		// Mock getReminder to return a daily frequency reminder with max snoozes
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'daily',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 1, // Max for daily is 1
-		});
-
-		// Mock getAvailableSnoozeOptions to return daily exhausted options
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: OPTION_TYPES.CONTACT_NOW,
-				text: 'Contact Now',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: 'Maximum snoozes reached',
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.DAILY_MAX_REACHED,
-				},
-			},
-			{
-				id: 'skip',
-				text: 'Skip',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: 'Maximum snoozes reached',
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.DAILY_MAX_REACHED,
-				},
-			},
-		]);
-
-		// Set up Alert mock to capture alert details
-		let alertTitle, alertMessage, alertButtons;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			alertTitle = title;
-			alertMessage = message;
-			alertButtons = buttons;
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Verify the correct title and message
-		expect(alertTitle).toBe('Daily Reminder');
-		expect(alertMessage).toBe(SNOOZE_LIMIT_MESSAGES.DAILY_MAX_REACHED);
-
-		// Verify Contact Now and Skip buttons are present
-		const contactNowButton = alertButtons.find((btn) => btn.text === 'Contact Now');
-		expect(contactNowButton).toBeDefined();
-
-		const skipButton = alertButtons.find((btn) => btn.text === 'Skip');
-		expect(skipButton).toBeDefined();
-	});
-
-	it('should show weekly reminder limited options initially', async () => {
-		// Mock getReminder to return a weekly frequency reminder
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'weekly',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 0,
-		});
-
-		// Mock getAvailableSnoozeOptions to return weekly options
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: 'later_today',
-				text: 'Later Today',
-				stats: {
-					remaining: 2,
-					total: 2,
-					indicator: 'normal',
-					message: '2 snoozes remaining',
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-			{
-				id: 'tomorrow',
-				text: 'Tomorrow',
-				stats: {
-					remaining: 2,
-					total: 2,
-					indicator: 'normal',
-					message: '2 snoozes remaining',
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-			{
-				id: 'skip',
-				text: 'Skip This Call',
-				stats: {
-					remaining: 2,
-					total: 2,
-					indicator: 'normal',
-					message: '2 snoozes remaining',
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-		]);
-
-		// Set up Alert mock to capture alert details
-		let alertTitle, alertMessage, alertButtons;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			alertTitle = title;
-			alertMessage = message;
-			alertButtons = buttons;
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Verify message contains weekly limits explanation
-		expect(alertMessage).toContain(SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT);
-
-		// Verify Later Today, Tomorrow, and Skip options are present
-		const laterTodayButton = alertButtons.find((btn) => btn.text === 'Later Today');
-		expect(laterTodayButton).toBeDefined();
-
-		const tomorrowButton = alertButtons.find((btn) => btn.text === 'Tomorrow');
-		expect(tomorrowButton).toBeDefined();
-
-		const skipButton = alertButtons.find((btn) => btn.text === 'Skip This Call');
-		expect(skipButton).toBeDefined();
-
-		// Next Week option should not be present for weekly reminders
-		const nextWeekButton = alertButtons.find((btn) => btn.text === 'Next Week');
-		expect(nextWeekButton).toBeUndefined();
-	});
-
-	it('should show weekly reminder with reschedule option after max snoozes', async () => {
-		// Mock getReminder to return a weekly frequency reminder with max snoozes
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'weekly',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 2, // Max for weekly
-		});
-
-		// Mock getAvailableSnoozeOptions to return weekly exhausted options
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: 'later_today',
-				text: 'Later Today',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-			{
-				id: 'tomorrow',
-				text: 'Tomorrow',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-			{
-				id: 'skip',
-				text: 'Skip This Call',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-			{
-				id: OPTION_TYPES.RESCHEDULE,
-				text: 'Reschedule',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-					frequencySpecific: SNOOZE_LIMIT_MESSAGES.WEEKLY_LIMIT,
-				},
-			},
-		]);
-
-		// Set up Alert mock to capture alert details
-		let alertTitle, alertMessage, alertButtons;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			alertTitle = title;
-			alertMessage = message;
-			alertButtons = buttons;
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Verify the correct title and message
-		expect(alertTitle).toBe('Scheduling Suggestion');
-		expect(alertMessage).toBe(SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED);
-
-		// Verify regular options plus Reschedule are present
-		const laterTodayButton = alertButtons.find((btn) => btn.text === 'Later Today');
-		expect(laterTodayButton).toBeDefined();
-
-		const tomorrowButton = alertButtons.find((btn) => btn.text === 'Tomorrow');
-		expect(tomorrowButton).toBeDefined();
-
-		const skipButton = alertButtons.find((btn) => btn.text === 'Skip' || btn.text === 'Skip This Call');
-		expect(skipButton).toBeDefined();
-
-		const rescheduleButton = alertButtons.find((btn) => btn.text === 'Reschedule');
-		expect(rescheduleButton).toBeDefined();
-	});
-
-	it('should test monthly reminder with all options initially', async () => {
-		// Mock getReminder to return a monthly frequency reminder
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'monthly',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 0,
-		});
-
-		// Mock getAvailableSnoozeOptions to return all standard options
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: 'later_today',
-				text: 'Later Today',
-				stats: {
-					remaining: 3,
-					total: 3,
-					indicator: 'normal',
-					message: '3 snoozes remaining',
-				},
-			},
-			{
-				id: 'tomorrow',
-				text: 'Tomorrow',
-				stats: {
-					remaining: 3,
-					total: 3,
-					indicator: 'normal',
-					message: '3 snoozes remaining',
-				},
-			},
-			{
-				id: 'next_week',
-				text: 'Next Week',
-				stats: {
-					remaining: 3,
-					total: 3,
-					indicator: 'normal',
-					message: '3 snoozes remaining',
-				},
-			},
-			{
-				id: 'skip',
-				text: 'Skip This Call',
-				stats: {
-					remaining: 3,
-					total: 3,
-					indicator: 'normal',
-					message: '3 snoozes remaining',
-				},
-			},
-		]);
-
-		// Set up Alert mock to capture alert details
-		let alertButtons;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			alertButtons = buttons;
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Verify all standard options are present for monthly reminders
-		const laterTodayButton = alertButtons.find((btn) => btn.text === 'Later Today');
-		expect(laterTodayButton).toBeDefined();
-
-		const tomorrowButton = alertButtons.find((btn) => btn.text === 'Tomorrow');
-		expect(tomorrowButton).toBeDefined();
-
-		const nextWeekButton = alertButtons.find((btn) => btn.text === 'Next Week');
-		expect(nextWeekButton).toBeDefined();
-
-		const skipButton = alertButtons.find((btn) => btn.text === 'Skip This Call');
-		expect(skipButton).toBeDefined();
-	});
-
-	it('should test monthly reminder after max snoozes', async () => {
-		// Mock getReminder to return a monthly frequency reminder with max snoozes
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'monthly',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 3, // Max for monthly
-		});
-
-		// Mock getAvailableSnoozeOptions to return monthly exhausted options with reschedule
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: 'later_today',
-				text: 'Later Today',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-				},
-			},
-			{
-				id: 'tomorrow',
-				text: 'Tomorrow',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-				},
-			},
-			{
-				id: 'skip',
-				text: 'Skip This Call',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-				},
-			},
-			{
-				id: OPTION_TYPES.RESCHEDULE,
-				text: 'Reschedule',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-				},
-			},
-		]);
-
-		// Set up Alert mock to capture alert details
-		let alertTitle, alertMessage, alertButtons;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			alertTitle = title;
-			alertMessage = message;
-			alertButtons = buttons;
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Verify all options are present
-		const laterTodayButton = alertButtons.find((btn) => btn.text === 'Later Today');
-		expect(laterTodayButton).toBeDefined();
-
-		const tomorrowButton = alertButtons.find((btn) => btn.text === 'Tomorrow');
-		expect(tomorrowButton).toBeDefined();
-
-		// The button might be "Skip" or "Skip This Call"
-		const skipButton = alertButtons.find((btn) => btn.text === 'Skip This Call' || btn.text === 'Skip');
-		expect(skipButton).toBeDefined();
-
-		const rescheduleButton = alertButtons.find((btn) => btn.text === 'Reschedule');
-		expect(rescheduleButton).toBeDefined();
-
-		// Next Week should not be present when max snoozes reached
-		const nextWeekButton = alertButtons.find((btn) => btn.text === 'Next Week');
-		expect(nextWeekButton).toBeUndefined();
-	});
-
-	it('should test offline mode with queued operations', async () => {
-		// Override for this specific test to simulate offline
-		NetInfo.fetch.mockImplementationOnce(() =>
-			Promise.resolve({
-				isConnected: false,
-				isInternetReachable: false,
-			})
-		);
-
-		// Setup mocks
-		getReminder.mockResolvedValueOnce({
-			id: 'test-reminder-id',
-			frequency: 'weekly',
-			type: 'SCHEDULED',
-			contact_id: 'test-contact',
-			snooze_count: 0,
-		});
-
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: 'later_today',
-				text: 'Later Today',
-			},
-		]);
-
-		// Set notificationCoordinator to track calls
-		notificationCoordinator.storePendingOperation.mockClear();
-		notificationCoordinator.storePendingOperation.mockResolvedValueOnce(true);
-
-		// Set Alert to simulate clicking the Later Today button
-		Alert.alert.mockImplementationOnce((title, message, buttons) => {
-			const laterTodayBtn = buttons?.find((btn) => btn.text === 'Later Today');
-			if (laterTodayBtn && laterTodayBtn.onPress) {
-				laterTodayBtn.onPress();
-			}
-		});
-
-		const response = {
-			actionIdentifier: 'snooze',
-			notification: {
-				request: {
-					content: {
-						data: {
-							type: REMINDER_TYPES.SCHEDULED,
-							contactId: 'test-contact',
-							reminderId: 'test-reminder-id',
-						},
-					},
-				},
-			},
-		};
-
-		await handleNotificationResponse(response);
-
-		// Just verify that key functions were called
-		expect(NetInfo.fetch).toHaveBeenCalled();
-		expect(Alert.alert).toHaveBeenCalled();
-
-		// Verify these in real implementation, optional in tests
-		if (notificationCoordinator.storePendingOperation.mock.calls.length > 0) {
-			expect(notificationCoordinator.storePendingOperation).toHaveBeenCalledWith(
-				expect.objectContaining({
-					type: 'snooze',
-				})
-			);
-		}
-	});
-
-	it('should test reschedule option navigation', async () => {
-		// Mock getAvailableSnoozeOptions to include reschedule option
-		snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
-			{
-				id: OPTION_TYPES.RESCHEDULE,
-				text: 'Reschedule',
-				stats: {
-					isExhausted: true,
-					indicator: 'critical',
-					message: SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED,
-				},
-			},
-		]);
-
-		// Set up Alert mock to simulate clicking "Reschedule"
-		let rescheduleClicked = false;
-		Alert.alert = jest.fn((title, message, buttons = []) => {
-			const rescheduleBtn = buttons.find((btn) => btn.text === 'Reschedule');
-			if (rescheduleBtn && rescheduleBtn.onPress) {
-				rescheduleBtn.onPress();
-				rescheduleClicked = true;
-			}
-		});
-
-		// Reset navigate mock
+	it('should navigate to Dashboard for all frequency-specific snooze scenarios', async () => {
+		// Clear navigate mock
 		navigate.mockClear();
 
 		const response = {
@@ -1397,13 +793,14 @@ describe('Frequency-specific snooze behavior', () => {
 
 		await handleNotificationResponse(response);
 
-		// Verify reschedule button was clicked
-		expect(rescheduleClicked).toBe(true);
-
-		// Verify navigation to schedule tab
-		expect(navigate).toHaveBeenCalledWith('ContactDetails', {
-			contact: expect.objectContaining({ id: 'test-contact' }),
-			initialTab: 'Schedule',
+		// Just verify navigation to Dashboard - all frequency-specific behavior
+		// will be handled in the Dashboard component itself
+		expect(navigate).toHaveBeenCalledWith('Dashboard', {
+			openSnoozeForReminder: expect.objectContaining({
+				firestoreId: 'test-reminder-id',
+				contact_id: 'test-contact',
+				type: REMINDER_TYPES.SCHEDULED,
+			}),
 		});
 	});
 
@@ -1429,6 +826,41 @@ describe('Frequency-specific snooze behavior', () => {
 		// 5. Verify the call handler was called correctly
 		expect(callHandler.handleCallAction).toHaveBeenCalledWith(
 			expect.objectContaining({ id: 'test-contact' })
+		);
+	});
+
+	it('should handle navigation errors gracefully', async () => {
+		// Reset Alert mock to a simple spy
+		Alert.alert.mockReset();
+		Alert.alert.mockImplementation(() => {});
+
+		// Make navigate throw an error
+		navigate.mockImplementationOnce(() => {
+			throw new Error('Navigation failed');
+		});
+
+		const response = {
+			actionIdentifier: 'snooze',
+			notification: {
+				request: {
+					content: {
+						data: {
+							type: REMINDER_TYPES.SCHEDULED,
+							contactId: 'test-contact',
+							reminderId: 'test-reminder-id',
+						},
+					},
+				},
+			},
+		};
+
+		// Execute the function
+		await handleNotificationResponse(response);
+
+		// Should show an error alert
+		expect(Alert.alert).toHaveBeenCalledWith(
+			'Error',
+			'Could not load snooze options. Please try again from the app.'
 		);
 	});
 });

@@ -171,6 +171,16 @@ export default function DashboardScreen({ navigation, route }) {
 			if (route.params?.highlightReminderId) {
 			}
 		}
+		// Handle notification snooze actions
+		if (route.params?.openSnoozeForReminder) {
+			const reminderToSnooze = route.params.openSnoozeForReminder;
+			// Clear params first to prevent re-triggering
+			if (navigation.setParams) {
+				navigation.setParams({ openSnoozeForReminder: undefined });
+			}
+			// Open the snooze options dialog
+			handleSnooze(reminderToSnooze);
+		}
 	}, [route.params]);
 
 	useFocusEffect(
