@@ -750,18 +750,31 @@ export default function DashboardScreen({ navigation, route }) {
 				{isOffline && (
 					<View
 						style={{
-							backgroundColor: colors.warning || '#FFA500',
-							padding: 8,
+							backgroundColor: colors.primary || '#FFA500',
+							padding: spacing.sm,
+							marginTop: spacing.xs,
 							alignItems: 'center',
 						}}
 					>
 						<Text
 							style={{
-								color: '#fff',
-								fontWeight: 'bold',
+								color: colors.text.white,
+								fontWeight: 800,
+								textAlign: 'center',
 							}}
 						>
-							Offline Mode - Limited functionality available
+							Offline Mode
+						</Text>
+						<Text
+							style={{
+								color: colors.text.white,
+								fontSize: 12,
+								fontWeight: 600,
+								textAlign: 'center',
+								opacity: 0.9,
+							}}
+						>
+							Will Sync When Connection Is Restored
 						</Text>
 					</View>
 				)}
