@@ -2,12 +2,19 @@ import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { snoozeHandler, initializeSnoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
-import { REMINDER_TYPES, SNOOZE_OPTIONS } from '../../../constants/notificationConstants';
+import {
+	REMINDER_TYPES,
+	SNOOZE_OPTIONS,
+	SNOOZE_LIMIT_MESSAGES,
+	OPTION_TYPES,
+} from '../../../constants/notificationConstants';
 import { navigate } from '../../navigation/RootNavigation';
-import { getContactById } from '../firestore';
+import { getContactById, getReminder } from '../firestore';
 import { callHandler } from '../callHandler';
 import { auth } from '../../config/firebase';
 import { DateTime } from 'luxon';
+import NetInfo from '@react-native-community/netinfo';
+import { notificationCoordinator } from '../notificationCoordinator';
 
 export const handleNotificationResponse = async (response) => {
 	const data = response.notification.request.content.data || {};
@@ -57,9 +64,18 @@ export const handleNotificationResponse = async (response) => {
 						return;
 					}
 
-					// Check for offline status
-					const networkState = await NetInfo.fetch();
-					if (!networkState.isConnected) {
+					// Check for offline status with error handling
+					let isConnected = true;
+					try {
+						const networkState = await NetInfo.fetch();
+						isConnected = networkState.isConnected;
+					} catch (netError) {
+						console.warn('NetInfo check failed, assuming connected', netError);
+						// Default to connected in case of error
+						isConnected = true;
+					}
+
+					if (!isConnected) {
 						Alert.alert(
 							'Offline Mode',
 							'You are currently offline. Snooze actions will be applied when you reconnect.',
@@ -91,7 +107,12 @@ export const handleNotificationResponse = async (response) => {
 					let message = 'When would you like to be reminded?';
 
 					// Special handling for daily reminders that have exhausted snoozes
-					const reminder = await getReminder(reminderId);
+					let reminder;
+					try {
+						reminder = await getReminder(reminderId);
+					} catch (reminderError) {
+						console.warn('Error fetching reminder details:', reminderError);
+					}
 					const frequency = reminder?.frequency || 'default';
 
 					if (stats?.isExhausted && frequency === 'daily') {
@@ -258,7 +279,7 @@ export const handleNotificationResponse = async (response) => {
 								} catch (error) {
 									console.error('Error processing snooze:', error);
 									// Store failed operation for sync later if offline
-									if (!networkState.isConnected) {
+									if (!isConnected) {
 										await notificationCoordinator.storePendingOperation({
 											type: 'snooze',
 											data: {

@@ -52,8 +52,6 @@ import { notificationCoordinator } from '../utils/notificationCoordinator';
 import * as Notifications from 'expo-notifications';
 import { calculateStats } from './stats/statsCalculator';
 import CallOptions from '../components/general/CallOptions';
-import { callHandler } from '../utils/callHandler';
-import { navigate } from '../navigation/RootNavigation';
 import { getContactById } from '../utils/firestore';
 
 const getScheduledReminders = async (userId) => {
