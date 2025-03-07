@@ -68,7 +68,6 @@ class NotificationService {
 				this.notificationMap = new Map(JSON.parse(storedMap));
 			}
 
-			// Initialize sub-services
 			await Promise.all([
 				callNotesService.initialize(),
 				scheduledCallService.initialize(),
