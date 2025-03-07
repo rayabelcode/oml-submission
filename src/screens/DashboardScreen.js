@@ -54,6 +54,7 @@ import { calculateStats } from './stats/statsCalculator';
 import CallOptions from '../components/general/CallOptions';
 import { callHandler } from '../utils/callHandler';
 import { navigate } from '../navigation/RootNavigation';
+import { getContactById } from '../utils/firestore';
 
 const getScheduledReminders = async (userId) => {
 	const remindersRef = collection(db, 'reminders');
@@ -580,7 +581,7 @@ export default function DashboardScreen({ navigation, route }) {
 								// Navigate to contact's schedule tab
 								navigation.navigate('ContactDetails', {
 									contact: contact,
-									initialTab: 'schedule',
+									initialTab: 'Schedule',
 								});
 							} catch (error) {
 								console.error('Error navigating to contact schedule:', error);

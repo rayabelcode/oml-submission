@@ -174,7 +174,7 @@ export const handleNotificationResponse = async (response) => {
 									// Navigate to the contact's schedule screen
 									navigate('ContactDetails', {
 										contact: { id: data.contactId },
-										initialTab: 'schedule',
+										initialTab: 'Schedule',
 									});
 								},
 							},
@@ -236,7 +236,7 @@ export const handleNotificationResponse = async (response) => {
 								onPress: () => {
 									navigate('ContactDetails', {
 										contact: { id: data.contactId },
-										initialTab: 'schedule',
+										initialTab: 'Schedule',
 									});
 								},
 							};
