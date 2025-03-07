@@ -197,20 +197,6 @@ const ActionModal = ({
 			color: colors.text.secondary,
 			textAlign: 'center',
 		},
-		offlineIndicator: {
-			position: 'absolute',
-			right: spacing.md,
-			top: spacing.md,
-			backgroundColor: colors.warning || '#FFA500',
-			paddingHorizontal: spacing.sm,
-			paddingVertical: spacing.xs,
-			borderRadius: layout.borderRadius.sm,
-		},
-		offlineText: {
-			fontSize: 12,
-			color: colors.text.white,
-			fontWeight: '600',
-		},
 	});
 
 	if (!show) return null;
@@ -315,13 +301,6 @@ const ActionModal = ({
 											>
 												{option.text}
 											</Text>
-
-											{/* Offline indicator if needed */}
-											{option.offline && (
-												<View style={styles.offlineIndicator}>
-													<Text style={styles.offlineText}>Offline</Text>
-												</View>
-											)}
 										</TouchableOpacity>
 									))}
 								</View>
