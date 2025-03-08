@@ -12,6 +12,7 @@ const ActionModal = ({
 	title = '',
 	statusMessage = null,
 	statusIndicator = null,
+	onStatusMessagePress = null,
 	frequencyMessage = null,
 }) => {
 	const { colors, spacing, layout } = useTheme();
@@ -299,7 +300,17 @@ const ActionModal = ({
 								]}
 							>
 								{statusMessage && (
-									<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
+									<TouchableOpacity
+										onPress={onStatusMessagePress}
+										activeOpacity={onStatusMessagePress ? 0.6 : 1}
+										disabled={!onStatusMessagePress}
+									>
+										<Text
+											style={[styles.statusText, { color: getStatusColor() }, onStatusMessagePress && {}]}
+										>
+											{statusMessage}
+										</Text>
+									</TouchableOpacity>
 								)}
 								{frequencyMessage && <Text style={styles.frequencyText}>{frequencyMessage}</Text>}
 							</View>

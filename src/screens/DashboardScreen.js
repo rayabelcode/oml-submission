@@ -43,7 +43,7 @@ import {
 	getDocs,
 	orderBy,
 } from 'firebase/firestore';
-import { OPTION_TYPES, REMINDER_TYPES } from '../../constants/notificationConstants';
+import { OPTION_TYPES, REMINDER_TYPES, SNOOZE_LIMIT_MESSAGES } from '../../constants/notificationConstants';
 import { db, auth } from '../config/firebase';
 import { cacheManager } from '../utils/cache';
 import { snoozeHandler, initializeSnoozeHandler } from '../utils/scheduler/snoozeHandler';
@@ -901,6 +901,23 @@ export default function DashboardScreen({ navigation, route }) {
 					statusMessage={snoozeOptions[0]?.stats?.isExhausted ? snoozeOptions[0]?.stats?.message : null}
 					statusIndicator={snoozeOptions[0]?.stats?.indicator}
 					frequencyMessage={snoozeOptions[0]?.stats?.frequencySpecific}
+					onStatusMessagePress={
+						// Link Handler if theres is a RECURRING_MAX_REACHED message AND a reschedule option
+						snoozeOptions[0]?.stats?.message === SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED &&
+						snoozeOptions.some((opt) => opt.id === OPTION_TYPES.RESCHEDULE)
+							? () => {
+									// Find reschedule option
+									const rescheduleOption = snoozeOptions.find((opt) => opt.id === OPTION_TYPES.RESCHEDULE);
+									setShowSnoozeOptions(false);
+									// Short delay to so modal is closed before navigating
+									setTimeout(() => {
+										if (rescheduleOption && rescheduleOption.onPress) {
+											rescheduleOption.onPress();
+										}
+									}, 300);
+							  }
+							: null
+					}
 				/>
 			</View>
 			{selectedContact && (
