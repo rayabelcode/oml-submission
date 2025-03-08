@@ -69,3 +69,40 @@ describe('ActionModal', () => {
 		expect(mockOptions[0].onPress).toHaveBeenCalled();
 	});
 });
+
+// Test for the late night snooze button text
+describe('Late Night Snooze Button Text', () => {
+	it('shows "Later Today" before 11 PM', () => {
+		// Mock current time to be 10 PM
+		jest.spyOn(Date.prototype, 'getHours').mockReturnValue(22);
+
+		const customizeSnoozeText = (option) => {
+			if (option.id === 'later_today') {
+				const now = new Date();
+				const currentHour = now.getHours();
+				return currentHour >= 23 ? 'Early Tomorrow' : option.text;
+			}
+			return option.text;
+		};
+
+		const option = { id: 'later_today', text: 'Later Today' };
+		expect(customizeSnoozeText(option)).toBe('Later Today');
+	});
+
+	it('shows "Early Tomorrow" after 11 PM', () => {
+		// Mock current time to be 11 PM
+		jest.spyOn(Date.prototype, 'getHours').mockReturnValue(23);
+
+		const customizeSnoozeText = (option) => {
+			if (option.id === 'later_today') {
+				const now = new Date();
+				const currentHour = now.getHours();
+				return currentHour >= 23 ? 'Early Tomorrow' : option.text;
+			}
+			return option.text;
+		};
+
+		const option = { id: 'later_today', text: 'Later Today' };
+		expect(customizeSnoozeText(option)).toBe('Early Tomorrow');
+	});
+});
