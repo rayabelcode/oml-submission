@@ -68,7 +68,7 @@ export const SNOOZE_LIMIT_MESSAGES = {
 	DAILY_LIMIT: null,
 	WEEKLY_LIMIT: null,
 	DAILY_MAX_REACHED: 'Your daily notifications for this call will continue tomorrow if you skip.',
-	RECURRING_MAX_REACHED: "You've snoozed this contact often, do you want to reschedule?",
+	RECURRING_MAX_REACHED: "You've snoozed this often, want to reschedule?",
 	OPTION_UNAVAILABLE: 'This option is not available for this type of reminder',
 };
 

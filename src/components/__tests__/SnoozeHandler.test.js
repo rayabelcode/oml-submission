@@ -622,7 +622,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Reschedule',
 			  stats: { 
 				isExhausted: true,
-				message: "You've snoozed this contact often, do you want to reschedule?" 
+				message: "You've snoozed this often, want to reschedule?" 
 			  }
 			}
 		  ]);
@@ -658,7 +658,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Reschedule',
 			  stats: { 
 				isExhausted: true,
-				message: "You've snoozed this contact often, do you want to reschedule?" 
+				message: "You've snoozed this often, want to reschedule?" 
 			  }
 			}
 		  ]);
@@ -673,7 +673,7 @@ describe('SnoozeHandler', () => {
 		  });
 		  
 		  const recurringOption = options.find((o) => o.id === 'reschedule');
-		  expect(recurringOption.stats?.message).toContain('snoozed this contact often');
+		  expect(recurringOption.stats?.message).toContain('snoozed this often');
 		});
 	  });
 	  
