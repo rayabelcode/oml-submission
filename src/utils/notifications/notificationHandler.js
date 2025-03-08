@@ -5,7 +5,7 @@ import { callNotesService } from '../callNotes';
 import { scheduledCallService } from '../scheduledCalls';
 import { REMINDER_TYPES, OPTION_TYPES } from '../../../constants/notificationConstants';
 import { navigate } from '../../navigation/RootNavigation';
-import { getContactById } from '../firestore';
+import { getContactById, completeScheduledReminder } from '../firestore';
 import { callHandler } from '../callHandler';
 import { auth } from '../../config/firebase';
 
@@ -20,24 +20,16 @@ export const handleNotificationResponse = async (response) => {
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
-							{
-								text: 'Phone',
-								onPress: () => callHandler.initiateCall(contact, 'phone'),
+						// Navigate to Dashboard with parameters to show call options
+						navigate('Dashboard', {
+							initialView: 'notifications',
+							openCallOptionsForContact: contact,
+							reminderToComplete: {
+								firestoreId: reminderId,
+								type: data.type,
+								contact_id: data.contactId,
 							},
-							{
-								text: 'FaceTime',
-								onPress: () => callHandler.initiateCall(contact, 'facetime-video'),
-							},
-							{
-								text: 'Text',
-								onPress: () => callHandler.initiateCall(contact, 'sms'),
-							},
-							{
-								text: 'Cancel',
-								style: 'cancel',
-							},
-						]);
+						});
 					}
 				} catch (error) {
 					console.error('Error initiating call:', error);

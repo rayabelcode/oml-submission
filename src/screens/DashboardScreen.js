@@ -167,7 +167,6 @@ export default function DashboardScreen({ navigation, route }) {
 
 	useEffect(() => {
 		if (route.params?.initialView === 'notifications') {
-			setViewMode('notifications');
 			if (route.params?.highlightReminderId) {
 			}
 		}
@@ -180,6 +179,23 @@ export default function DashboardScreen({ navigation, route }) {
 			}
 			// Open the snooze options dialog
 			handleSnooze(reminderToSnooze);
+		}
+		// Handle notification call options actions
+		if (route.params?.openCallOptionsForContact) {
+			const contact = route.params.openCallOptionsForContact;
+			const reminderToComplete = route.params.reminderToComplete;
+			// Clear params first to prevent re-triggering
+			if (navigation.setParams) {
+				navigation.setParams({
+					openCallOptionsForContact: undefined,
+					reminderToComplete: undefined,
+				});
+			}
+			// Set selected contact and reminder for the modal
+			setSelectedContact(contact);
+			setSelectedReminder(reminderToComplete);
+			// Show call options modal
+			setShowCallOptions(true);
 		}
 	}, [route.params]);
 
@@ -891,9 +907,12 @@ export default function DashboardScreen({ navigation, route }) {
 				<CallOptions
 					show={showCallOptions}
 					contact={selectedContact}
+					reminder={selectedReminder}
+					onComplete={handleReminderComplete}
 					onClose={() => {
 						setShowCallOptions(false);
 						setSelectedContact(null);
+						setSelectedReminder(null);
 					}}
 				/>
 			)}

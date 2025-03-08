@@ -302,6 +302,7 @@ describe('Notification Handler', () => {
 							data: {
 								type: REMINDER_TYPES.SCHEDULED,
 								contactId: 'test-contact',
+								reminderId: 'test-reminder-id',
 							},
 						},
 					},
@@ -311,11 +312,15 @@ describe('Notification Handler', () => {
 			await handleNotificationResponse(response);
 
 			expect(getContactById).toHaveBeenCalledWith('test-contact');
-			expect(Alert.alert).toHaveBeenCalledWith(
-				'Contact Options',
-				'How would you like to contact John?',
-				expect.any(Array)
-			);
+			expect(navigate).toHaveBeenCalledWith('Dashboard', {
+				initialView: 'notifications',
+				openCallOptionsForContact: expect.objectContaining({ id: 'test-contact' }),
+				reminderToComplete: {
+					firestoreId: 'test-reminder-id',
+					type: REMINDER_TYPES.SCHEDULED,
+					contact_id: 'test-contact',
+				},
+			});
 		});
 
 		// Default action (tapping) tests
@@ -634,17 +639,11 @@ describe('Notification Handler', () => {
 	});
 });
 
-// Testing specific contact options
-it('should initiate a phone call when phone option is selected', async () => {
+// Testing contact options
+it('should navigate to Dashboard with call options when Contact Now option is selected', async () => {
 	// Clear previous mocks
 	getContactById.mockClear();
-	callHandler.initiateCall.mockClear();
-
-	// Set up mocks to simulate button press
-	Alert.alert.mockImplementation((title, message, buttons) => {
-		const phoneButton = buttons.find((btn) => btn.text === 'Phone');
-		if (phoneButton) phoneButton.onPress();
-	});
+	navigate.mockClear();
 
 	const response = {
 		actionIdentifier: 'call_now',
@@ -654,6 +653,7 @@ it('should initiate a phone call when phone option is selected', async () => {
 					data: {
 						type: REMINDER_TYPES.SCHEDULED,
 						contactId: 'test-contact',
+						reminderId: 'test-reminder-id',
 					},
 				},
 			},
@@ -662,67 +662,16 @@ it('should initiate a phone call when phone option is selected', async () => {
 
 	await handleNotificationResponse(response);
 
-	// Verify the call handler was called with correct parameters
-	expect(callHandler.initiateCall).toHaveBeenCalledWith(
-		expect.objectContaining({ id: 'test-contact' }),
-		'phone'
-	);
-});
-
-it('should initiate a FaceTime call when FaceTime option is selected', async () => {
-	Alert.alert = jest.fn((title, message, buttons) => {
-		const facetimeButton = buttons.find((btn) => btn.text === 'FaceTime');
-		if (facetimeButton) facetimeButton.onPress();
+	expect(getContactById).toHaveBeenCalledWith('test-contact');
+	expect(navigate).toHaveBeenCalledWith('Dashboard', {
+		initialView: 'notifications',
+		openCallOptionsForContact: expect.objectContaining({ id: 'test-contact' }),
+		reminderToComplete: {
+			firestoreId: 'test-reminder-id',
+			type: REMINDER_TYPES.SCHEDULED,
+			contact_id: 'test-contact',
+		},
 	});
-
-	const response = {
-		actionIdentifier: 'call_now',
-		notification: {
-			request: {
-				content: {
-					data: {
-						type: REMINDER_TYPES.SCHEDULED,
-						contactId: 'test-contact',
-					},
-				},
-			},
-		},
-	};
-
-	await handleNotificationResponse(response);
-
-	expect(callHandler.initiateCall).toHaveBeenCalledWith(
-		expect.objectContaining({ id: 'test-contact' }),
-		'facetime-video'
-	);
-});
-
-it('should initiate a text message when Text option is selected', async () => {
-	Alert.alert = jest.fn((title, message, buttons) => {
-		const textButton = buttons.find((btn) => btn.text === 'Text');
-		if (textButton) textButton.onPress();
-	});
-
-	const response = {
-		actionIdentifier: 'call_now',
-		notification: {
-			request: {
-				content: {
-					data: {
-						type: REMINDER_TYPES.SCHEDULED,
-						contactId: 'test-contact',
-					},
-				},
-			},
-		},
-	};
-
-	await handleNotificationResponse(response);
-
-	expect(callHandler.initiateCall).toHaveBeenCalledWith(
-		expect.objectContaining({ id: 'test-contact' }),
-		'sms'
-	);
 });
 
 // Testing skip functionality
@@ -759,6 +708,9 @@ it('should handle skip option for scheduled reminders', async () => {
 
 // Testing snoozed reminder behavior
 it('should handle actions for snoozed SCHEDULED reminders the same as regular reminders', async () => {
+	getContactById.mockClear();
+	navigate.mockClear();
+
 	const response = {
 		actionIdentifier: 'call_now',
 		notification: {
@@ -778,11 +730,15 @@ it('should handle actions for snoozed SCHEDULED reminders the same as regular re
 	await handleNotificationResponse(response);
 
 	expect(getContactById).toHaveBeenCalledWith('test-contact');
-	expect(Alert.alert).toHaveBeenCalledWith(
-		'Contact Options',
-		'How would you like to contact John?',
-		expect.any(Array)
-	);
+	expect(navigate).toHaveBeenCalledWith('Dashboard', {
+		initialView: 'notifications',
+		openCallOptionsForContact: expect.objectContaining({ id: 'test-contact' }),
+		reminderToComplete: {
+			firestoreId: 'test-reminder-id',
+			type: REMINDER_TYPES.SCHEDULED,
+			contact_id: 'test-contact',
+		},
+	});
 });
 
 // Test max snooze reached
