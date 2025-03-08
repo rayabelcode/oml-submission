@@ -74,19 +74,6 @@ const ActionModal = ({
 		}
 	}, [show]);
 
-	const getStatusColor = () => {
-		if (!statusIndicator) return colors.text.primary;
-
-		switch (statusIndicator) {
-			case 'warning':
-				return colors.warning || '#FFA500';
-			case 'critical':
-				return colors.danger;
-			default:
-				return colors.text.primary;
-		}
-	};
-
 	const styles = StyleSheet.create({
 		modalOverlay: {
 			flex: 1,
@@ -185,8 +172,9 @@ const ActionModal = ({
 		// Status message (e.g. "Maximum Snoozes Reached")
 		statusText: {
 			fontSize: 17,
-			fontWeight: '700',
+			fontWeight: '600',
 			textAlign: 'center',
+			opacity: 0.8,
 		},
 		// Text below status message
 		frequencyText: {
@@ -284,7 +272,7 @@ const ActionModal = ({
 							</>
 						)}
 
-						{/* Combined Status and Frequency message display */}
+						{/* Status and Frequency message display box */}
 						{(statusMessage || frequencyMessage) && (
 							<View
 								style={[
@@ -294,8 +282,8 @@ const ActionModal = ({
 										borderWidth: 1,
 									},
 									statusIndicator === 'critical' && {
-										borderColor: colors.danger,
-										borderWidth: 0.3,
+										borderColor: colors.primary,
+										borderWidth: 0.5,
 									},
 								]}
 							>
@@ -306,7 +294,17 @@ const ActionModal = ({
 										disabled={!onStatusMessagePress}
 									>
 										<Text
-											style={[styles.statusText, { color: getStatusColor() }, onStatusMessagePress && {}]}
+											style={[
+												styles.statusText,
+												{
+													color:
+														statusIndicator === 'warning'
+															? colors.warning || '#FFA500' // Warning messages like "Last snooze remaining"
+															: statusIndicator === 'critical'
+															? colors.text.white // Critical messages like "Maximum snoozes reached"
+															: colors.text.primary, // Default text color for normal status messages
+												},
+											]}
 										>
 											{statusMessage}
 										</Text>
