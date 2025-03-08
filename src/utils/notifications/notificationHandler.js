@@ -34,10 +34,7 @@ export const handleNotificationResponse = async (response) => {
 				} catch (error) {
 					console.error('Error initiating call:', error);
 				}
-			} else if (
-				response.actionIdentifier === 'snooze' ||
-				response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER
-			) {
+			} else if (response.actionIdentifier === 'snooze') {
 				try {
 					// Use scheduledCallService to show snooze options
 					const reminder = {
@@ -51,7 +48,22 @@ export const handleNotificationResponse = async (response) => {
 					console.error('Error showing snooze options:', error);
 					Alert.alert('Error', 'Could not load snooze options. Please try again from the app.');
 				}
+			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+				try {
+					// For short press - navigate to contact notes tab
+					const contact = await getContactById(data.contactId);
+					if (contact) {
+						navigate('ContactDetails', {
+							contact: contact,
+							initialTab: 'Notes',
+							reminderId: reminderId,
+						});
+					}
+				} catch (error) {
+					console.error('Error navigating to contact:', error);
+				}
 			}
+
 			break;
 
 		case REMINDER_TYPES.FOLLOW_UP:

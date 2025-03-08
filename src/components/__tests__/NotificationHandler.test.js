@@ -326,7 +326,8 @@ describe('Notification Handler', () => {
 		// Default action (tapping) tests
 		it('should navigate to contact on tap for scheduled reminders', async () => {
 			// Setup mocks
-			scheduledCallService.showSnoozeOptions.mockClear();
+			navigate.mockClear();
+			getContactById.mockClear();
 
 			const response = {
 				actionIdentifier: Notifications.DEFAULT_ACTION_IDENTIFIER,
@@ -345,20 +346,19 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			// Check that scheduledCallService.showSnoozeOptions was called with the right params
-			expect(scheduledCallService.showSnoozeOptions).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: 'test-reminder-id',
-					contactId: 'test-contact',
-					type: REMINDER_TYPES.SCHEDULED,
-				})
-			);
+			// Check that navigate was called with the right params to go to contact notes
+			expect(getContactById).toHaveBeenCalledWith('test-contact');
+			expect(navigate).toHaveBeenCalledWith('ContactDetails', {
+				contact: expect.objectContaining({ id: 'test-contact' }),
+				initialTab: 'Notes',
+				reminderId: 'test-reminder-id',
+			});
 		});
 
 		it('should navigate to contact on tap for custom date reminders', async () => {
 			// Set up the mocks
+			navigate.mockClear();
 			getContactById.mockClear();
-			scheduledCallService.showSnoozeOptions.mockClear();
 
 			const response = {
 				actionIdentifier: Notifications.DEFAULT_ACTION_IDENTIFIER,
@@ -377,14 +377,13 @@ describe('Notification Handler', () => {
 
 			await handleNotificationResponse(response);
 
-			// Check that scheduledCallService.showSnoozeOptions was called
-			expect(scheduledCallService.showSnoozeOptions).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: 'test-reminder-id',
-					contactId: 'test-contact',
-					type: REMINDER_TYPES.CUSTOM_DATE,
-				})
-			);
+			// Check that navigate was called to go to contact notes
+			expect(getContactById).toHaveBeenCalledWith('test-contact');
+			expect(navigate).toHaveBeenCalledWith('ContactDetails', {
+				contact: expect.objectContaining({ id: 'test-contact' }),
+				initialTab: 'Notes',
+				reminderId: 'test-reminder-id',
+			});
 		});
 
 		// FOLLOW_UP notification tests
