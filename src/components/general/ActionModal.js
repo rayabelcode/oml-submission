@@ -273,7 +273,7 @@ const ActionModal = ({
 						)}
 
 						{/* Status and Frequency message display box */}
-						{(statusMessage || frequencyMessage) && (
+						{!loading && !error && (statusMessage || frequencyMessage) && (
 							<View
 								style={[
 									styles.statusContainer,
