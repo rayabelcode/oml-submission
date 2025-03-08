@@ -882,7 +882,7 @@ export default function DashboardScreen({ navigation, route }) {
 					error={snoozeError}
 					options={snoozeOptions}
 					title="Snooze Options"
-					statusMessage={snoozeOptions[0]?.stats?.message}
+					statusMessage={snoozeOptions[0]?.stats?.isExhausted ? snoozeOptions[0]?.stats?.message : null}
 					statusIndicator={snoozeOptions[0]?.stats?.indicator}
 					frequencyMessage={snoozeOptions[0]?.stats?.frequencySpecific}
 				/>

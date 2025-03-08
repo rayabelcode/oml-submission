@@ -112,7 +112,7 @@ const ActionModal = ({
 			backgroundColor: colors.background.whiteText,
 			borderRadius: layout.borderRadius.lg,
 			alignSelf: 'center',
-			marginBottom: spacing.md,
+			marginBottom: spacing.xxs,
 		},
 		headerText: {
 			fontSize: 22,
@@ -172,30 +172,30 @@ const ActionModal = ({
 			fontWeight: '500',
 			color: colors.primary,
 		},
+		// Box for status message
 		statusContainer: {
 			padding: spacing.md,
-			margin: spacing.sm,
-			marginTop: 0,
-			marginBottom: spacing.sm,
-			borderRadius: layout.borderRadius.md,
+			marginHorizontal: spacing.sm,
+			marginTop: spacing.lg,
+			borderRadius: layout.borderRadius.lg,
 			alignItems: 'center',
+			backgroundColor: colors.background.whiteText,
 		},
+		// Status message (e.g. "Maximum Snoozes Reached")
 		statusText: {
-			fontSize: 16,
-			fontWeight: '600',
+			fontSize: 17,
+			fontWeight: '700',
 			textAlign: 'center',
 		},
-		frequencyContainer: {
-			paddingHorizontal: spacing.md,
-			marginHorizontal: spacing.sm,
-			marginBottom: spacing.sm,
-			alignItems: 'center',
-		},
+		// Text below status message
 		frequencyText: {
-			fontSize: 14,
+			fontSize: 16,
+			lineHeight: 19,
+			fontWeight: '500',
 			fontStyle: 'italic',
 			color: colors.text.secondary,
 			textAlign: 'center',
+			marginTop: statusMessage ? spacing.xs : 0,
 		},
 	});
 
@@ -249,31 +249,7 @@ const ActionModal = ({
 							</View>
 						) : (
 							<>
-								{/* Status message display - no background */}
-								{statusMessage && (
-									<View
-										style={[
-											styles.statusContainer,
-											statusIndicator === 'warning' && {
-												borderColor: colors.warning || '#FFA500',
-												borderWidth: 1,
-											},
-											statusIndicator === 'critical' && {
-												borderColor: colors.danger,
-												borderWidth: 1,
-											},
-										]}
-									>
-										<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
-									</View>
-								)}
-
-								{/* Frequency-specific message display */}
-								{frequencyMessage && (
-									<View style={styles.frequencyContainer}>
-										<Text style={styles.frequencyText}>{frequencyMessage}</Text>
-									</View>
-								)}
+								{/* Action options */}
 								<View style={styles.optionsContainer}>
 									{options.map((option) => (
 										<TouchableOpacity
@@ -305,6 +281,28 @@ const ActionModal = ({
 									))}
 								</View>
 							</>
+						)}
+
+						{/* Combined Status and Frequency message display */}
+						{(statusMessage || frequencyMessage) && (
+							<View
+								style={[
+									styles.statusContainer,
+									statusIndicator === 'warning' && {
+										borderColor: colors.warning || '#FFA500',
+										borderWidth: 1,
+									},
+									statusIndicator === 'critical' && {
+										borderColor: colors.danger,
+										borderWidth: 0.3,
+									},
+								]}
+							>
+								{statusMessage && (
+									<Text style={[styles.statusText, { color: getStatusColor() }]}>{statusMessage}</Text>
+								)}
+								{frequencyMessage && <Text style={styles.frequencyText}>{frequencyMessage}</Text>}
+							</View>
 						)}
 					</Animated.View>
 				</TouchableOpacity>

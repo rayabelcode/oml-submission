@@ -64,11 +64,11 @@ export const SNOOZE_INDICATORS = {
 export const SNOOZE_LIMIT_MESSAGES = {
 	REMAINING: (count) => `${count} snooze${count !== 1 ? 's' : ''} remaining`,
 	LAST_REMAINING: 'This is your last available snooze',
-	MAX_REACHED: 'Maximum snoozes reached',
-	DAILY_LIMIT: 'Daily reminders can only be snoozed once',
-	WEEKLY_LIMIT: 'Weekly reminders have limited snooze options',
-	DAILY_MAX_REACHED: 'The series will continue tomorrow if you skip',
-	RECURRING_MAX_REACHED: "You've snoozed this call often, do you want to reschedule?",
+	MAX_REACHED: 'Maximum Snoozes Reached',
+	DAILY_LIMIT: null,
+	WEEKLY_LIMIT: null,
+	DAILY_MAX_REACHED: 'Your daily notifications for this call will continue tomorrow if you skip.',
+	RECURRING_MAX_REACHED: "You've snoozed this contact often, do you want to reschedule?",
 	OPTION_UNAVAILABLE: 'This option is not available for this type of reminder',
 };
 

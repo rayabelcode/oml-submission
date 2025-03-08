@@ -575,7 +575,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Contact Now',
 			  stats: { 
 				isExhausted: true,
-				frequencySpecific: 'The series will continue tomorrow if you skip' 
+				frequencySpecific: 'Your daily notifications for this call will continue tomorrow if you skip.' 
 			  }
 			},
 			{ 
@@ -583,7 +583,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Skip',
 			  stats: { 
 				isExhausted: true,
-				frequencySpecific: 'The series will continue tomorrow if you skip' 
+				frequencySpecific: 'Your daily notifications for this call will continue tomorrow if you skip.' 
 			  }
 			}
 		  ]);
@@ -598,7 +598,7 @@ describe('SnoozeHandler', () => {
 		  });
 		  
 		  const dailyOption = options.find((o) => o.id === 'contact_now' || o.id === 'skip');
-		  expect(dailyOption.stats?.frequencySpecific).toContain('series will continue tomorrow');
+		  expect(dailyOption.stats?.frequencySpecific).toContain('will continue tomorrow');
 		  
 		  // Weekly max reached options
 		  snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
@@ -622,7 +622,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Reschedule',
 			  stats: { 
 				isExhausted: true,
-				message: "You've snoozed this call often, do you want to reschedule?" 
+				message: "You've snoozed this contact often, do you want to reschedule?" 
 			  }
 			}
 		  ]);
@@ -658,7 +658,7 @@ describe('SnoozeHandler', () => {
 			  text: 'Reschedule',
 			  stats: { 
 				isExhausted: true,
-				message: "You've snoozed this call often, do you want to reschedule?" 
+				message: "You've snoozed this contact often, do you want to reschedule?" 
 			  }
 			}
 		  ]);
@@ -673,7 +673,7 @@ describe('SnoozeHandler', () => {
 		  });
 		  
 		  const recurringOption = options.find((o) => o.id === 'reschedule');
-		  expect(recurringOption.stats?.message).toContain('snoozed this call often');
+		  expect(recurringOption.stats?.message).toContain('snoozed this contact often');
 		});
 	  });
 	  

@@ -457,7 +457,7 @@ export class SnoozeHandler {
 			},
 			{
 				id: OPTION_TYPES.RESCHEDULE,
-				icon: 'calendar-number-outline',
+				icon: 'refresh-outline',
 				text: 'Reschedule',
 			},
 		];

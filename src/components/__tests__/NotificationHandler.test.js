@@ -80,8 +80,8 @@ jest.mock('../../../constants/notificationConstants', () => ({
 		RESCHEDULE: 'reschedule',
 	},
 	SNOOZE_LIMIT_MESSAGES: {
-		DAILY_MAX_REACHED: 'The series will continue tomorrow if you skip',
-		RECURRING_MAX_REACHED: "You've snoozed this call often, do you want to reschedule?",
+		DAILY_MAX_REACHED: 'Your daily notifications for this call will continue tomorrow if you skip.',
+		RECURRING_MAX_REACHED: "You've snoozed this contact often, do you want to reschedule?",
 		WEEKLY_LIMIT: 'Weekly reminders have limited snooze options',
 		DAILY_LIMIT: 'Daily reminders can only be snoozed once',
 	},
