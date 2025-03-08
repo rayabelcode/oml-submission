@@ -2,17 +2,15 @@ import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { snoozeHandler, initializeSnoozeHandler } from '../scheduler/snoozeHandler';
 import { callNotesService } from '../callNotes';
-import { REMINDER_TYPES, SNOOZE_OPTIONS } from '../../../constants/notificationConstants';
+import { scheduledCallService } from '../scheduledCalls';
+import { REMINDER_TYPES, OPTION_TYPES } from '../../../constants/notificationConstants';
 import { navigate } from '../../navigation/RootNavigation';
-import { getContactById } from '../firestore';
+import { getContactById, completeScheduledReminder } from '../firestore';
 import { callHandler } from '../callHandler';
 import { auth } from '../../config/firebase';
-import { DateTime } from 'luxon';
 
 export const handleNotificationResponse = async (response) => {
 	const data = response.notification.request.content.data || {};
-
-	// Find the reminder ID - it could be in different fields depending on the notification source
 	const reminderId = data.reminderId || data.id || data.firestoreId;
 
 	switch (data.type) {
@@ -22,93 +20,37 @@ export const handleNotificationResponse = async (response) => {
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
-						Alert.alert('Contact Options', `How would you like to contact ${contact.first_name}?`, [
-							{
-								text: 'Phone',
-								// Standard phone call
-								onPress: () => callHandler.initiateCall(contact, 'phone'),
+						// Navigate to Dashboard with parameters to show call options
+						navigate('Dashboard', {
+							initialView: 'notifications',
+							openCallOptionsForContact: contact,
+							reminderToComplete: {
+								firestoreId: reminderId,
+								type: data.type,
+								contact_id: data.contactId,
 							},
-							{
-								text: 'FaceTime',
-								// FaceTime Video call
-								onPress: () => callHandler.initiateCall(contact, 'facetime-video'),
-							},
-							{
-								text: 'Text',
-								// Text Message
-								onPress: () => callHandler.initiateCall(contact, 'sms'),
-							},
-							{
-								text: 'Cancel',
-								style: 'cancel',
-							},
-						]);
+						});
 					}
 				} catch (error) {
 					console.error('Error initiating call:', error);
 				}
 			} else if (response.actionIdentifier === 'snooze') {
 				try {
-					// Get the current user ID
-					const userId = auth.currentUser?.uid;
-
-					if (!userId) {
-						console.error('No user ID available for snooze handling');
-						Alert.alert('Error', 'Please make sure you are logged in to snooze reminders.');
-						return;
-					}
-
-					// Initialize the snooze handler
-					await initializeSnoozeHandler(userId);
-
-					// Try to get custom options if we have reminder ID
-					let options = SNOOZE_OPTIONS;
-
-					if (reminderId) {
-						try {
-							options = await snoozeHandler.getAvailableSnoozeOptions(reminderId);
-						} catch (optionError) {
-							// Fall back to default options
-						}
-					}
-
-					if (!options || options.length === 0) {
-						options = SNOOZE_OPTIONS;
-					}
-
-					// Create buttons for snooze options
-					const buttons = options.map((option) => ({
-						text: option.text,
-						style: option.id === 'skip' ? 'destructive' : 'default',
-						onPress: async () => {
-							try {
-								await snoozeHandler.handleSnooze(
-									data.contactId,
-									option.id,
-									DateTime.now(),
-									data.type,
-									reminderId
-								);
-							} catch (error) {
-								console.error('Error processing snooze:', error);
-								Alert.alert('Error', 'Failed to snooze reminder. Please try again.');
-							}
-						},
-					}));
-
-					buttons.push({
-						text: 'Cancel',
-						style: 'cancel',
-					});
-
-					Alert.alert('Snooze Options', 'When would you like to be reminded?', buttons);
+					// Use scheduledCallService to show snooze options
+					const reminder = {
+						id: reminderId,
+						contactId: data.contactId,
+						type: data.type,
+						scheduledTime: new Date(),
+					};
+					await scheduledCallService.showSnoozeOptions(reminder);
 				} catch (error) {
-					console.error('Error handling snooze options:', error);
-					Alert.alert('Error', 'Could not process snooze request. Please try again later.');
+					console.error('Error showing snooze options:', error);
+					Alert.alert('Error', 'Could not load snooze options. Please try again from the app.');
 				}
 			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-				// If the notification is tapped (default action), navigate to the contact's Notes tab
 				try {
+					// For short press - navigate to contact notes tab
 					const contact = await getContactById(data.contactId);
 					if (contact) {
 						navigate('ContactDetails', {
@@ -121,6 +63,7 @@ export const handleNotificationResponse = async (response) => {
 					console.error('Error navigating to contact:', error);
 				}
 			}
+
 			break;
 
 		case REMINDER_TYPES.FOLLOW_UP:
@@ -136,7 +79,6 @@ export const handleNotificationResponse = async (response) => {
 					await callNotesService.handleFollowUpComplete(followUpId);
 				}
 			} else if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-				// If FOLLOW_UP notification is tapped, navigate to contact's Notes tab
 				try {
 					const contact = await getContactById(data.contactId);
 					if (contact) {
@@ -158,5 +100,4 @@ export const setupNotificationHandlers = () => {
 	return Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
 };
 
-// Auto-initialize the handler
 setupNotificationHandlers();

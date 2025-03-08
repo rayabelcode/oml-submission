@@ -11,107 +11,103 @@ import {
 	MAX_SNOOZE_ATTEMPTS,
 	NOTIFICATION_MESSAGES,
 } from '../../constants/notificationConstants';
+// Using direct navigation import to avoid circular dependencies
+import { navigate } from '../navigation/RootNavigation';
 
 class ScheduledCallService {
 	constructor() {
 		this.initialized = false;
-		this.subscription = null;
+		// Removed notification subscription - handled by notificationHandler.js now
 	}
 
 	async initialize() {
 		if (this.initialized) return;
-
-		try {
-			this.subscription = Notifications.addNotificationResponseReceivedListener(
-				this.handleNotificationResponse
-			);
-
-			this.initialized = true;
-			return true;
-		} catch (error) {
-			console.error('Failed to initialize scheduled calls service:', error);
-			return false;
-		}
+		this.initialized = true;
+		return true;
 	}
 
-	handleNotificationResponse = async (response) => {
-		try {
-			const data = response.notification.request.content.data;
-			if (data.type === REMINDER_TYPES.SCHEDULED && data.firestoreId && data.contactId) {
-				const reminder = await getReminder(data.firestoreId);
-				const contact = await getContactById(data.contactId);
-
-				if (!reminder || !contact) {
-					console.error('Failed to load reminder or contact details');
-					return;
-				}
-
-				Alert.alert(`Contact ${contact.first_name}`, NOTIFICATION_MESSAGES.CONTACT_ACTION.title, [
-					{
-						text: 'Call',
-						onPress: () => {
-							if (global.navigationRef) {
-								global.navigationRef.navigate('ContactDetails', { contact });
-							}
-						},
-					},
-					{
-						text: 'Snooze',
-						onPress: () => this.showSnoozeOptions(reminder),
-					},
-					{
-						text: 'Cancel',
-						style: 'cancel',
-					},
-				]);
-			}
-		} catch (error) {
-			console.error('[ScheduledCallService] Error handling notification response:', error);
-		}
-	};
-
+	// Updated to use navigation as the primary approach for consistency
 	showSnoozeOptions = async (reminder) => {
-		const snoozeCount = reminder.snooze_history?.length || 0;
+		try {
+			// Using navigationRef removed to avoid testing issues
+			navigate('Dashboard', {
+				openSnoozeForReminder: {
+					firestoreId: reminder.id,
+					contact_id: reminder.contactId || reminder.contact_id,
+					type: reminder.type || REMINDER_TYPES.SCHEDULED,
+					scheduledTime:
+						reminder.scheduledTime instanceof Date
+							? reminder.scheduledTime
+							: new Date(reminder.scheduledTime),
+				},
+			});
+		} catch (error) {
+			// Fallback if navigation fails
+			console.error('Navigation failed:', error);
 
-		if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
-			Alert.alert(
-				NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.title,
-				NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.message,
-				[
-					{
-						text: 'No, keep reminder',
-						style: 'cancel',
+			const snoozeCount = reminder.snooze_history?.length || 0;
+
+			if (snoozeCount >= MAX_SNOOZE_ATTEMPTS) {
+				Alert.alert(
+					NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.title,
+					NOTIFICATION_MESSAGES.MAX_SNOOZE_REACHED.message,
+					[
+						{
+							text: 'No, keep reminder',
+							style: 'cancel',
+						},
+						{
+							text: 'Yes, skip this contact',
+							style: 'destructive',
+							onPress: () => this.handleSkip(reminder.id),
+						},
+					]
+				);
+				return;
+			}
+
+			Alert.alert('Snooze Options', 'Choose when to be reminded:', [
+				{
+					text: 'In 1 hour',
+					onPress: () => this.handleSnooze(reminder.id, { hours: 1, id: '1h' }),
+				},
+				{
+					text: 'In 3 hours',
+					onPress: () => this.handleSnooze(reminder.id, { hours: 3, id: '3h' }),
+				},
+				{
+					text: 'Tomorrow',
+					onPress: () => this.handleSnooze(reminder.id, { days: 1, id: '1d' }),
+				},
+				{
+					text: 'Contact Now',
+					onPress: async () => {
+						try {
+							const contact = await getContactById(reminder.contactId || reminder.contact_id);
+							if (contact) {
+								// Direct navigation instead of using callHandler
+								navigate('ContactDetails', {
+									contact: contact,
+									initialAction: 'call',
+								});
+							}
+						} catch (error) {
+							console.error('Error initiating call:', error);
+							Alert.alert('Error', 'Could not initiate contact');
+						}
 					},
-					{
-						text: 'Yes, skip this contact',
-						style: 'destructive',
-						onPress: () => this.handleSkip(reminder.id),
-					},
-				]
-			);
-			return;
+				},
+				{
+					text: 'Skip',
+					style: 'destructive',
+					onPress: () => this.handleSkip(reminder.id),
+				},
+				{
+					text: 'Cancel',
+					style: 'cancel',
+				},
+			]);
 		}
-
-		// Show snooze options directly
-		Alert.alert('Snooze Options', 'Choose when to be reminded:', [
-			{
-				text: 'In 1 hour',
-				onPress: () => this.handleSnooze(reminder.id, { hours: 1, id: '1h' }),
-			},
-			{
-				text: 'In 3 hours',
-				onPress: () => this.handleSnooze(reminder.id, { hours: 3, id: '3h' }),
-			},
-			{
-				text: 'Tomorrow',
-				onPress: () => this.handleSnooze(reminder.id, { days: 1, id: '1d' }),
-			},
-
-			{
-				text: 'Cancel',
-				style: 'cancel',
-			},
-		]);
 	};
 
 	async handleSnooze(reminderId, option) {
@@ -141,7 +137,7 @@ class ScheduledCallService {
 				updated_at: new Date(),
 			});
 
-			const contact = await getContactById(reminder.contactId);
+			const contact = await getContactById(reminder.contactId || reminder.contact_id);
 			await this.scheduleContactReminder(contact, newTime, reminder.userId);
 
 			const schedulingHistoryService = notificationCoordinator.getService('schedulingHistory');
@@ -212,10 +208,9 @@ class ScheduledCallService {
 				sound: true,
 			};
 
-			// Use the Date object directly as the trigger
 			const localNotificationId = await notificationCoordinator.scheduleNotification(
 				notificationContent,
-				date // Pass Date object directly
+				date
 			);
 
 			console.log('📎 Scheduled notification:', {
@@ -233,7 +228,7 @@ class ScheduledCallService {
 			return { firestoreId, localNotificationId };
 		} catch (error) {
 			console.error('Error scheduling contact reminder:', error);
-			throw error; // Throw error for better error tracking
+			throw error;
 		}
 	}
 

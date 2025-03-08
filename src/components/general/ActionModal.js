@@ -10,6 +10,10 @@ const ActionModal = ({
 	loading = false,
 	error = null,
 	title = '',
+	statusMessage = null,
+	statusIndicator = null,
+	onStatusMessagePress = null,
+	frequencyMessage = null,
 }) => {
 	const { colors, spacing, layout } = useTheme();
 	const [modalVisible, setModalVisible] = useState(show);
@@ -75,10 +79,13 @@ const ActionModal = ({
 			flex: 1,
 			justifyContent: 'center',
 			alignItems: 'center',
+			backgroundColor: colors.background.overlay,
 		},
 		modalContent: {
 			width: '85%',
 			maxWidth: 340,
+			// backgroundColor: colors.background.secondary,
+			borderRadius: layout.borderRadius.lg,
 			shadowColor: '#000',
 			shadowOffset: { width: 0, height: 2 },
 			shadowOpacity: 0.25,
@@ -93,6 +100,7 @@ const ActionModal = ({
 			backgroundColor: colors.background.whiteText,
 			borderRadius: layout.borderRadius.lg,
 			alignSelf: 'center',
+			marginBottom: spacing.xxs,
 		},
 		headerText: {
 			fontSize: 22,
@@ -152,10 +160,35 @@ const ActionModal = ({
 			fontWeight: '500',
 			color: colors.primary,
 		},
+		// Box for status message
+		statusContainer: {
+			padding: spacing.md,
+			marginHorizontal: spacing.sm,
+			marginTop: spacing.lg,
+			borderRadius: layout.borderRadius.lg,
+			alignItems: 'center',
+			backgroundColor: colors.background.whiteText,
+		},
+		// Status message (e.g. "Maximum Snoozes Reached")
+		statusText: {
+			fontSize: 17,
+			fontWeight: '600',
+			textAlign: 'center',
+			opacity: 0.8,
+		},
+		// Text below status message
+		frequencyText: {
+			fontSize: 16,
+			lineHeight: 19,
+			fontWeight: '500',
+			fontStyle: 'italic',
+			color: colors.text.secondary,
+			textAlign: 'center',
+			marginTop: statusMessage ? spacing.xs : 0,
+		},
 	});
 
 	if (!show) return null;
-
 	if (!modalVisible) return null;
 
 	return (
@@ -164,7 +197,6 @@ const ActionModal = ({
 				style={[
 					styles.modalOverlay,
 					{
-						backgroundColor: colors.background.overlay,
 						opacity: overlayAnim,
 					},
 				]}
@@ -184,12 +216,13 @@ const ActionModal = ({
 						]}
 					>
 						{title && (
-							<View style={{ alignItems: 'center' }}>
+							<View style={{ alignItems: 'center', paddingTop: spacing.md }}>
 								<View style={styles.modalHeader}>
 									<Text style={styles.headerText}>{title}</Text>
 								</View>
 							</View>
 						)}
+
 						{loading ? (
 							<View style={styles.loadingContainer}>
 								<ActivityIndicator size="large" color={colors.primary} />
@@ -204,34 +237,80 @@ const ActionModal = ({
 								</TouchableOpacity>
 							</View>
 						) : (
-							<View style={styles.optionsContainer}>
-								{options.map((option) => (
+							<>
+								{/* Action options */}
+								<View style={styles.optionsContainer}>
+									{options.map((option) => (
+										<TouchableOpacity
+											key={option.id || Math.random().toString()}
+											style={[styles.button, option.disabled && { opacity: 0.5 }]}
+											onPress={option.onPress}
+											disabled={option.disabled}
+										>
+											<View style={styles.iconContainer}>
+												<Icon
+													name={option.icon}
+													size={28}
+													color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
+												/>
+											</View>
+											<Text
+												style={[
+													styles.buttonText,
+													{
+														color:
+															option.textColor ||
+															(option.id === 'skip' ? colors.danger : colors.text.primary),
+													},
+												]}
+											>
+												{option.text}
+											</Text>
+										</TouchableOpacity>
+									))}
+								</View>
+							</>
+						)}
+
+						{/* Status and Frequency message display box */}
+						{!loading && !error && (statusMessage || frequencyMessage) && (
+							<View
+								style={[
+									styles.statusContainer,
+									statusIndicator === 'warning' && {
+										borderColor: colors.warning || '#FFA500',
+										borderWidth: 1,
+									},
+									statusIndicator === 'critical' && {
+										borderColor: colors.primary,
+										borderWidth: 0.5,
+									},
+								]}
+							>
+								{statusMessage && (
 									<TouchableOpacity
-										key={option.id}
-										style={[styles.button, option.disabled && { opacity: 0.5 }]}
-										onPress={option.onPress}
-										disabled={option.disabled}
+										onPress={onStatusMessagePress}
+										activeOpacity={onStatusMessagePress ? 0.6 : 1}
+										disabled={!onStatusMessagePress}
 									>
-										<View style={styles.iconContainer}>
-											<Icon
-												name={option.icon}
-												size={28}
-												color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
-											/>
-										</View>
 										<Text
 											style={[
-												styles.buttonText,
+												styles.statusText,
 												{
 													color:
-														option.textColor || (option.id === 'skip' ? colors.danger : colors.text.primary),
+														statusIndicator === 'warning'
+															? colors.warning || '#FFA500' // Warning messages like "Last snooze remaining"
+															: statusIndicator === 'critical'
+															? colors.text.white // Critical messages like "Maximum snoozes reached"
+															: colors.text.primary, // Default text color for normal status messages
 												},
 											]}
 										>
-											{option.text}
+											{statusMessage}
 										</Text>
 									</TouchableOpacity>
-								))}
+								)}
+								{frequencyMessage && <Text style={styles.frequencyText}>{frequencyMessage}</Text>}
 							</View>
 						)}
 					</Animated.View>

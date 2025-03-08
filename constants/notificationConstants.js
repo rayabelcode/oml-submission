@@ -39,6 +39,45 @@ export const FREQUENCY_DISPLAY_MAP = {
 	custom: 'Custom',
 };
 
+// Default max snooze options
+export const DEFAULT_MAX_SNOOZE_ATTEMPTS = 5;
+
+// Max snooze attempts by frequency
+export const FREQUENCY_SNOOZE_LIMITS = {
+	daily: 1,
+	weekly: 3,
+	biweekly: 4,
+	monthly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
+	quarterly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
+	yearly: DEFAULT_MAX_SNOOZE_ATTEMPTS,
+	default: DEFAULT_MAX_SNOOZE_ATTEMPTS,
+};
+
+// Snooze indicator constants
+export const SNOOZE_INDICATORS = {
+	NORMAL: 'normal',
+	WARNING: 'warning',
+	CRITICAL: 'critical',
+};
+
+// Message constants for snooze limits
+export const SNOOZE_LIMIT_MESSAGES = {
+	REMAINING: (count) => `${count} snooze${count !== 1 ? 's' : ''} remaining`,
+	LAST_REMAINING: 'This is your last available snooze',
+	MAX_REACHED: 'Maximum Snoozes Reached',
+	DAILY_LIMIT: null,
+	WEEKLY_LIMIT: null,
+	DAILY_MAX_REACHED: 'Your daily notifications for this call will continue tomorrow if you skip.',
+	RECURRING_MAX_REACHED: "You've snoozed this often, want to reschedule?",
+	OPTION_UNAVAILABLE: 'This option is not available for this type of reminder',
+};
+
+// Notification action types
+export const OPTION_TYPES = {
+	CONTACT_NOW: 'contact_now',
+	RESCHEDULE: 'reschedule'
+  };
+
 // iOS specific configurations
 export const IOS_CONFIGS = {
 	NOTIFICATION_SETTINGS: {
@@ -258,12 +297,11 @@ export const PATTERN_TRACKING = {
 	},
 };
 
-export const MAX_SNOOZE_ATTEMPTS = 4;
-
 export const NOTIFICATION_MESSAGES = {
 	MAX_SNOOZE_REACHED: {
 		title: 'Maximum Snooze Reached',
-		message: 'You have snoozed this reminder 4 times. Would you like to skip this contact?',
+		message:
+			'You have reached the maximum number of snoozes for this reminder. Would you like to skip this contact?',
 	},
 	CONTACT_ACTION: {
 		title: 'Choose an action:',

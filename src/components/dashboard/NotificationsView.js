@@ -16,6 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { REMINDER_TYPES, FREQUENCY_DISPLAY_MAP } from '../../../constants/notificationConstants';
 import CallOptions from '../../components/general/CallOptions';
 import { getContactById } from '../../utils/firestore';
+import { computeSnoozeStats } from '../../utils/scheduler/snoozeHandler';
 
 const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpandedId, onSubmitNotes }) => {
 	const styles = useStyles();
@@ -24,6 +25,9 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 	const noteInputRef = useRef('');
 	const [showCallOptions, setShowCallOptions] = useState(false);
 	const [selectedContact, setSelectedContact] = useState(null);
+
+	// Get snooze stats directly from the reminder
+	const snoozeStats = useMemo(() => computeSnoozeStats(reminder), [reminder]);
 
 	const date = reminder.scheduledTime ? new Date(reminder.scheduledTime) : new Date();
 	const formattedDate = date.toLocaleDateString('en-US', {
@@ -34,7 +38,6 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 
 	const isExpanded = expandedId === reminder.firestoreId;
 
-	// Use snoozed color when status is snoozed (otherwise use the regular type color)
 	const cardColorType =
 		reminder.snoozed === true || reminder.status === 'snoozed' ? 'snoozed' : reminder.type.toLowerCase();
 
@@ -72,7 +75,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 					<Icon
 						name={
 							reminder.snoozed === true || reminder.status === 'snoozed'
-								? 'moon-outline' // Use moon icon for all snoozed reminders
+								? 'moon-outline'
 								: reminder.type === REMINDER_TYPES.FOLLOW_UP
 								? 'document-text-outline'
 								: reminder.type === REMINDER_TYPES.SCHEDULED
@@ -273,6 +276,7 @@ const ReminderCard = memo(({ reminder, onComplete, onSnooze, expandedId, setExpa
 									flex: 1,
 									justifyContent: 'center',
 									alignItems: 'center',
+									position: 'relative', // For badge positioning
 								},
 							]}
 							onPress={() => onSnooze(reminder)}
@@ -306,7 +310,6 @@ export function NotificationsView({ reminders, onComplete, loading, onRefresh, r
 
 	const handleSubmitNotes = useCallback((reminderId, notes) => onComplete(reminderId, notes), [onComplete]);
 
-	// Always sort reminders before rendering (with null check)
 	const sortedReminders = useMemo(() => {
 		if (!reminders || reminders.length === 0) return [];
 		return [...reminders].sort((a, b) => {

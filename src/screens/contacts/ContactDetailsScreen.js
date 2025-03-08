@@ -35,6 +35,19 @@ const ContactDetailsScreen = ({ route, navigation }) => {
 		}
 	}, [contact]);
 
+	// Handle initialTab parameter from navigation
+	useEffect(() => {
+		if (route.params?.initialTab) {
+			// Convert tab name to index
+			const tabMap = { Notes: 0, Schedule: 1, Profile: 2 };
+			const tabIndex = tabMap[route.params.initialTab];
+
+			if (tabIndex !== undefined) {
+				setSelectedIndex(tabIndex);
+			}
+		}
+	}, [route.params]);
+
 	// Set up real-time subscription
 	const loadContactData = useCallback(async () => {
 		try {

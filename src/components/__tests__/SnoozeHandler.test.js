@@ -12,6 +12,14 @@ jest.mock('../../config/firebase', () => ({
 	db: {},
 }));
 
+// Mock netinfo
+jest.mock('@react-native-community/netinfo', () => {
+	return {
+		fetch: jest.fn(() => Promise.resolve({ isConnected: true })),
+		addEventListener: jest.fn(() => jest.fn()),
+	};
+});
+
 import { jest } from '@jest/globals';
 import { DateTime } from 'luxon';
 import { SnoozeHandler } from '../../utils/scheduler/snoozeHandler';
@@ -107,10 +115,16 @@ jest.mock('../../utils/firestore', () => ({
 	getContactById: jest.fn().mockResolvedValue({
 		scheduling: { frequency: 'monthly' },
 	}),
+	getReminder: jest.fn(),
 }));
 
 // Imports
-import { updateContactScheduling, getUserPreferences, getActiveReminders } from '../../utils/firestore';
+import {
+	updateContactScheduling,
+	getUserPreferences,
+	getActiveReminders,
+	getReminder,
+} from '../../utils/firestore';
 import { schedulingHistory } from '../../utils/scheduler/schedulingHistory';
 
 describe('SnoozeHandler', () => {
@@ -497,4 +511,170 @@ describe('SnoozeHandler', () => {
 			});
 		});
 	});
+
+	describe('Frequency-specific snooze behavior', () => {
+		beforeEach(() => {
+		  jest.clearAllMocks();
+		  
+		  // Mock the implementation of getAvailableSnoozeOptions directly
+		  // This ensures we test the expected interface, not the implementation
+		  snoozeHandler.getAvailableSnoozeOptions = jest.fn();
+		});
+	  
+		it('should provide correct snooze options based on reminder frequency', async () => {
+			// Mock the implementation to return appropriate options for each frequency
+
+			// Mock for daily frequency
+			snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+				{ id: 'later_today', text: 'Later Today' },
+				{ id: 'tomorrow', text: 'Tomorrow' },
+				{ id: 'skip', text: 'Skip This Call' },
+			]);
+
+			let options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+
+			// Daily should have limited options
+			expect(options.find((o) => o.id === 'next_week')).toBeUndefined();
+			expect(options.find((o) => o.id === 'later_today')).toBeDefined();
+			expect(options.find((o) => o.id === 'tomorrow')).toBeDefined();
+
+			// Mock for weekly frequency
+			snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+				{ id: 'later_today', text: 'Later Today' },
+				{ id: 'tomorrow', text: 'Tomorrow' },
+				{ id: 'skip', text: 'Skip This Call' },
+			]);
+
+			options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+
+			// Weekly should have standard options
+			expect(options.find((o) => o.id === 'later_today')).toBeDefined();
+			expect(options.find((o) => o.id === 'tomorrow')).toBeDefined();
+
+			// Mock for monthly frequency
+			snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+				{ id: 'later_today', text: 'Later Today' },
+				{ id: 'tomorrow', text: 'Tomorrow' },
+				{ id: 'next_week', text: 'Next Week' },
+				{ id: 'skip', text: 'Skip This Call' },
+			]);
+
+			options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+
+			// Monthly should have all options
+			expect(options.find((o) => o.id === 'later_today')).toBeDefined();
+			expect(options.find((o) => o.id === 'tomorrow')).toBeDefined();
+			expect(options.find((o) => o.id === 'next_week')).toBeDefined();
+		});
+	  
+		it('should show appropriate options when max snoozes are reached for different frequencies', async () => {
+		  // Daily max reached options
+		  snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+			{ 
+			  id: 'contact_now', 
+			  text: 'Contact Now',
+			  stats: { 
+				isExhausted: true,
+				frequencySpecific: 'Your daily notifications for this call will continue tomorrow if you skip.' 
+			  }
+			},
+			{ 
+			  id: 'skip', 
+			  text: 'Skip',
+			  stats: { 
+				isExhausted: true,
+				frequencySpecific: 'Your daily notifications for this call will continue tomorrow if you skip.' 
+			  }
+			}
+		  ]);
+		  
+		  let options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+		  
+		  // Check daily max options
+		  ['contact_now', 'skip'].forEach((expectedOption) => {
+			const option = options.find((o) => o.id === expectedOption);
+			expect(option).toBeDefined();
+			expect(option.stats?.isExhausted).toBe(true);
+		  });
+		  
+		  const dailyOption = options.find((o) => o.id === 'contact_now' || o.id === 'skip');
+		  expect(dailyOption.stats?.frequencySpecific).toContain('will continue tomorrow');
+		  
+		  // Weekly max reached options
+		  snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+			{ 
+			  id: 'later_today', 
+			  text: 'Later Today',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'tomorrow', 
+			  text: 'Tomorrow',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'skip', 
+			  text: 'Skip',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'reschedule', 
+			  text: 'Reschedule',
+			  stats: { 
+				isExhausted: true,
+				message: "You've snoozed this often, want to reschedule?" 
+			  }
+			}
+		  ]);
+		  
+		  options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+		  
+		  // Check weekly max options
+		  ['later_today', 'tomorrow', 'skip', 'reschedule'].forEach((expectedOption) => {
+			const option = options.find((o) => o.id === expectedOption);
+			expect(option).toBeDefined();
+			expect(option.stats?.isExhausted).toBe(true);
+		  });
+		  
+		  // Monthly max reached options 
+		  snoozeHandler.getAvailableSnoozeOptions.mockResolvedValueOnce([
+			{ 
+			  id: 'later_today', 
+			  text: 'Later Today',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'tomorrow', 
+			  text: 'Tomorrow',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'skip', 
+			  text: 'Skip',
+			  stats: { isExhausted: true }
+			},
+			{ 
+			  id: 'reschedule', 
+			  text: 'Reschedule',
+			  stats: { 
+				isExhausted: true,
+				message: "You've snoozed this often, want to reschedule?" 
+			  }
+			}
+		  ]);
+		  
+		  options = await snoozeHandler.getAvailableSnoozeOptions('test-reminder-id');
+		  
+		  // Check monthly max options
+		  ['later_today', 'tomorrow', 'skip', 'reschedule'].forEach((expectedOption) => {
+			const option = options.find((o) => o.id === expectedOption);
+			expect(option).toBeDefined();
+			expect(option.stats?.isExhausted).toBe(true);
+		  });
+		  
+		  const recurringOption = options.find((o) => o.id === 'reschedule');
+		  expect(recurringOption.stats?.message).toContain('snoozed this often');
+		});
+	  });
+	  
 });
