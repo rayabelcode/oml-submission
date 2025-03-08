@@ -14,6 +14,7 @@ const ActionModal = ({
 	statusIndicator = null,
 	onStatusMessagePress = null,
 	frequencyMessage = null,
+	customizeOptionText = null,
 }) => {
 	const { colors, spacing, layout } = useTheme();
 	const [modalVisible, setModalVisible] = useState(show);
@@ -240,34 +241,41 @@ const ActionModal = ({
 							<>
 								{/* Action options */}
 								<View style={styles.optionsContainer}>
-									{options.map((option) => (
-										<TouchableOpacity
-											key={option.id || Math.random().toString()}
-											style={[styles.button, option.disabled && { opacity: 0.5 }]}
-											onPress={option.onPress}
-											disabled={option.disabled}
-										>
-											<View style={styles.iconContainer}>
-												<Icon
-													name={option.icon}
-													size={28}
-													color={option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)}
-												/>
-											</View>
-											<Text
-												style={[
-													styles.buttonText,
-													{
-														color:
-															option.textColor ||
-															(option.id === 'skip' ? colors.danger : colors.text.primary),
-													},
-												]}
+									{options.map((option) => {
+										// Use customizeOptionText if provided (otherwise use default text)
+										const displayText = customizeOptionText ? customizeOptionText(option) : option.text;
+
+										return (
+											<TouchableOpacity
+												key={option.id || Math.random().toString()}
+												style={[styles.button, option.disabled && { opacity: 0.5 }]}
+												onPress={option.onPress}
+												disabled={option.disabled}
 											>
-												{option.text}
-											</Text>
-										</TouchableOpacity>
-									))}
+												<View style={styles.iconContainer}>
+													<Icon
+														name={option.icon}
+														size={28}
+														color={
+															option.iconColor || (option.id === 'skip' ? colors.danger : colors.primary)
+														}
+													/>
+												</View>
+												<Text
+													style={[
+														styles.buttonText,
+														{
+															color:
+																option.textColor ||
+																(option.id === 'skip' ? colors.danger : colors.text.primary),
+														},
+													]}
+												>
+													{displayText}
+												</Text>
+											</TouchableOpacity>
+										);
+									})}
 								</View>
 							</>
 						)}

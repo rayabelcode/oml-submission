@@ -105,6 +105,16 @@ const getFollowUpReminders = async (userId) => {
 	}));
 };
 
+// Customize snooze text based on time of day
+const customizeSnoozeText = (option) => {
+	if (option.id === 'later_today') {
+		const now = new Date();
+		const currentHour = now.getHours();
+		return currentHour >= 23 ? 'Early Tomorrow' : option.text;
+	}
+	return option.text;
+};
+
 const groupByContact = (reminders) => {
 	return reminders.reduce((acc, reminder) => {
 		if (!acc[reminder.contact_id]) {
@@ -901,6 +911,7 @@ export default function DashboardScreen({ navigation, route }) {
 					statusMessage={snoozeOptions[0]?.stats?.isExhausted ? snoozeOptions[0]?.stats?.message : null}
 					statusIndicator={snoozeOptions[0]?.stats?.indicator}
 					frequencyMessage={snoozeOptions[0]?.stats?.frequencySpecific}
+					customizeOptionText={customizeSnoozeText}
 					onStatusMessagePress={
 						// Link Handler if theres is a RECURRING_MAX_REACHED message AND a reschedule option
 						snoozeOptions[0]?.stats?.message === SNOOZE_LIMIT_MESSAGES.RECURRING_MAX_REACHED &&
