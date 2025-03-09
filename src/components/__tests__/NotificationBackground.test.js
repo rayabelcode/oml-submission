@@ -199,7 +199,7 @@ describe('Background Mode Tests', () => {
 
 		it('should maintain push token registration in background', async () => {
 			const { doc, updateDoc } = require('firebase/firestore');
-			const { db } = require('../../config/firebase'); // Add this import
+			const { db } = require('../../config/firebase');
 
 			// Clear previous calls
 			updateDoc.mockClear();
