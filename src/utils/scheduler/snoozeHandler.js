@@ -159,13 +159,16 @@ export class SnoozeHandler {
 	) {
 		try {
 			if (!this.schedulingService) await this.initialize();
-			if (!this.schedulingService) {
-				throw new Error('Failed to initialize scheduling service');
-			}
+
+			// Ensure consistent timezone usage with fallback
+			const timezone = this.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+			currentTime = currentTime.setZone(timezone);
+			const now = DateTime.now().setZone(timezone);
 
 			const hour = currentTime.hour;
 			let minMinutes, maxMinutes;
 
+			// Standard time additions based on time of day
 			if (hour >= 0 && hour < 4) {
 				minMinutes = 20;
 				maxMinutes = 40;
@@ -183,16 +186,70 @@ export class SnoozeHandler {
 				maxMinutes = 210;
 			}
 
-			const minutesToAdd = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
-			const proposedTime = currentTime.plus({ minutes: minutesToAdd }).toJSDate();
+			let minutesToAdd = Math.floor(Math.random() * (maxMinutes - minMinutes + 1)) + minMinutes;
+			let proposedTime = currentTime.plus({ minutes: minutesToAdd });
 
-			const availableTime = await this.schedulingService.findAvailableTimeSlot(proposedTime, {
-				id: contactId,
-			});
+			// Check if we need to push to next day for late night
+			const minutesUntilMidnight = currentTime.endOf('day').diff(currentTime, 'minutes').minutes;
+
+			if (
+				hour >= 21 &&
+				proposedTime.day === currentTime.day &&
+				proposedTime.diff(now, 'minutes').minutes < 15
+			) {
+				// Push to 1-4 hours after midnight
+				minutesToAdd = minutesUntilMidnight + Math.floor(Math.random() * 180) + 60;
+				proposedTime = currentTime.plus({ minutes: minutesToAdd });
+			}
+
+			// Find available time slot with error handling
+			let finalTime;
+			try {
+				finalTime = await this.schedulingService.findAvailableTimeSlot(proposedTime.toJSDate(), {
+					id: contactId,
+				});
+			} catch (error) {
+				// If findAvailableTimeSlot throws an error or returns null, use our fallback
+				console.debug('Using fallback scheduling: Original error:', error.message);
+
+				// Create a fallback time in the early morning (2-4:30 AM)
+				const randomHour = 2 + Math.floor(Math.random() * 2.5);
+				const randomMinute = Math.floor(Math.random() * 4) * 15;
+				finalTime = now.plus({ days: 1 }).set({ hour: randomHour, minute: randomMinute }).toJSDate();
+			}
+
+			// Make sure we don't schedule in the past
+			if (!finalTime || finalTime < now.toJSDate()) {
+				// Try up to 3 times with increasing offsets
+				for (let attempt = 0; attempt < 3; attempt++) {
+					try {
+						proposedTime = currentTime.plus({
+							days: 1,
+							minutes: Math.floor(Math.random() * 180) + 60 + attempt * 60,
+						});
+
+						finalTime = await this.schedulingService.findAvailableTimeSlot(proposedTime.toJSDate(), {
+							id: contactId,
+						});
+
+						if (finalTime && finalTime >= now.toJSDate()) break;
+					} catch (error) {
+						console.warn(`Retry ${attempt + 1} failed:`, error.message);
+					}
+				}
+
+				// If still in the past or not set, use random time in early morning
+				if (!finalTime || finalTime < now.toJSDate()) {
+					const randomHour = 2 + Math.floor(Math.random() * 2.5);
+					const randomMinute = Math.floor(Math.random() * 4) * 15;
+					finalTime = now.plus({ days: 1 }).set({ hour: randomHour, minute: randomMinute }).toJSDate();
+					console.debug('Using fallback time:', finalTime);
+				}
+			}
 
 			if (reminderId) {
 				await updateDoc(doc(db, 'reminders', reminderId), {
-					scheduledTime: Timestamp.fromDate(availableTime),
+					scheduledTime: Timestamp.fromDate(finalTime),
 					status: REMINDER_STATUS.SNOOZED,
 					updated_at: serverTimestamp(),
 					snoozed: true,
@@ -209,23 +266,24 @@ export class SnoozeHandler {
 			await schedulingHistory.trackSnooze(
 				contactId,
 				currentTime,
-				DateTime.fromJSDate(availableTime),
+				DateTime.fromJSDate(finalTime),
 				'later_today'
 			);
 
-			if (availableTime) {
+			if (finalTime) {
 				const contact = await getContactById(contactId);
 				const reminderData = {
 					id: reminderId || contactId,
 					contactName: `${contact.first_name} ${contact.last_name}`,
-					scheduledTime: availableTime,
+					scheduledTime: finalTime,
 					contact_id: contactId,
 					user_id: this.userId,
 					type: reminderType,
 				};
 				await this.schedulingService.scheduleNotificationForReminder(reminderData);
 			}
-			return availableTime;
+
+			return finalTime;
 		} catch (error) {
 			console.error('Error in handleLaterToday:', error);
 			throw error;
